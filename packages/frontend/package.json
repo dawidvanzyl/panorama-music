@@ -6,5 +6,8 @@
     "dev": "echo \"dev not yet implemented\"",
     "build": "echo \"build not yet implemented\"",
     "test": "echo \"test not yet implemented\""
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }
