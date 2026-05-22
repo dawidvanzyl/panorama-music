@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "",
-    "build": "",
-    "test": ""
+    "dev": "echo \"dev not yet implemented\"",
+    "build": "echo \"build not yet implemented\"",
+    "test": "echo \"test not yet implemented\""
   }
 }
