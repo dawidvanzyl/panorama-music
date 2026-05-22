@@ -1,0 +1,10 @@
+{
+  "name": "@panorama/backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"dev not yet implemented\"",
+    "build": "echo \"build not yet implemented\"",
+    "test": "echo \"test not yet implemented\""
+  }
+}
