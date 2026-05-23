@@ -1,0 +1,64 @@
+services:
+  db-dev:
+    image: postgres:16-alpine
+    profiles: [dev]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: panorama_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-qa:
+    image: postgres:16-alpine
+    profiles: [qa]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: panorama_qa
+    ports:
+      - "5433:5432"
+    volumes:
+      - qa-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    profiles: [qa]
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db-qa:5432/panorama_qa
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db-qa:
+        condition: service_healthy
+
+  frontend:
+    profiles: [qa]
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  dev-db-data:
+  qa-db-data:
