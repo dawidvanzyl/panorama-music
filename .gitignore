@@ -3,6 +3,9 @@ node_modules/
 dist/
 build/
 
+# Generated
+**/src/generated/
+
 # Environment
 .env
 .env.*
