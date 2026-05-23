@@ -41,6 +41,8 @@ jobs:
 
       - name: Generate Prisma client
         working-directory: packages/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/panorama_ci
         run: npx prisma generate
 
       - name: Typecheck backend
