@@ -36,8 +36,8 @@ services:
   backend:
     profiles: [qa]
     build:
-      context: ./packages/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: packages/backend/Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db-qa:5432/panorama_qa
       PORT: 3000
@@ -50,8 +50,8 @@ services:
   frontend:
     profiles: [qa]
     build:
-      context: ./packages/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: packages/frontend/Dockerfile
       args:
         VITE_API_URL: http://localhost:3000
     ports:

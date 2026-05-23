@@ -14,7 +14,7 @@ QA testing is performed against a fully Dockerised local environment. The QA dat
 
 Before beginning QA on a new milestone, reset the QA database to a clean, fully seeded baseline:
 
-    docker compose --profile qa down
+    docker compose --profile qa up -d db-qa
     npm run db:reset:qa --workspace=packages/backend
 
 ### Start the QA environment
@@ -27,7 +27,7 @@ Before beginning QA on a new milestone, reset the QA database to a clean, fully 
 |---|---|
 | Frontend | http://localhost:5173 |
 | Backend API | http://localhost:3000 |
-| Database | Internal only — not exposed on host |
+| Database | localhost:5433 |
 
 ### Stop the QA environment
 
