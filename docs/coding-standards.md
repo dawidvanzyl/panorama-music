@@ -26,10 +26,10 @@ This document defines the naming conventions, module structure rules, API respon
 
 ## 2. Module Structure
 
-Every domain module lives under `src/modules/{name}/` and follows this layer structure:
+Every domain module lives under `packages/backend/src/modules/{name}/` and follows this layer structure:
 
 ```
-modules/{name}/
+packages/backend/src/modules/{name}/
 ├── domain/          # Entities, value objects, repository interfaces, domain errors
 ├── application/     # Use cases, DTOs, application service interfaces
 ├── api/             # Fastify route handlers, request/response schemas
@@ -38,12 +38,14 @@ modules/{name}/
 
 ### Dependency rules
 
-| Layer            | May import from                          |
-| ---------------- | ---------------------------------------- |
-| `domain/`        | Nothing — no imports from any other layer |
-| `application/`   | `domain/` only                           |
-| `api/`           | `application/` and `domain/`             |
-| `infrastructure/`| `domain/` only                           |
+These rules govern imports **between module layers and between modules**. External packages (e.g., Prisma, Zod, Fastify) and shared/generated code (e.g., `src/generated/`, `src/shared/`) may be imported by any layer that legitimately requires them.
+
+| Layer             | May import from                           |
+| ----------------- | ----------------------------------------- |
+| `domain/`         | Nothing — no imports from any other layer |
+| `application/`    | `domain/` only                            |
+| `api/`            | `application/` and `domain/`              |
+| `infrastructure/` | `domain/` only                            |
 
 No layer may import from another module's non-domain layer.
 
