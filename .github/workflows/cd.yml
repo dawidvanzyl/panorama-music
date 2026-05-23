@@ -44,7 +44,6 @@ jobs:
           node-version: '20'
       - run: npm ci
       - name: Deploy to Vercel
-        working-directory: packages/frontend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
