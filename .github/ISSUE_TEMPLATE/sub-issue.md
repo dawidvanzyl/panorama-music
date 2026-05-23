@@ -1,8 +1,8 @@
 ---
 name: Sub-Issue
 about: Implementation sub-issue linked to a milestone epic backlog item
-title: "[M?] Short descriptive title"
-labels: ""
+title: '[M?] Short descriptive title'
+labels: ''
 assignees: dawidvanzyl
 ---
 
@@ -23,9 +23,11 @@ One paragraph. What this issue implements and why it exists in the context of th
 ## Scope
 
 **In scope:**
+
 - What this issue explicitly covers
 
 **Out of scope:**
+
 - What is explicitly deferred to another issue or milestone
 
 ---
