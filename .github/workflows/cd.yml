@@ -5,6 +5,13 @@ on:
     tags:
       - 'milestone/*'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
 jobs:
   migrate:
     name: Run Prisma migrations
@@ -42,7 +49,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel --prod --token $VERCEL_TOKEN
+        run: npx vercel@54.4.1 --prod --token $VERCEL_TOKEN
 
   deploy-backend:
     name: Deploy backend to Render
