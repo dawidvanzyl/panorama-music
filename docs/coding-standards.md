@@ -55,8 +55,8 @@ No layer may import from another module's non-domain layer.
 
 - **No `any`** — enforced by ESLint.
 - Prefer `type` over `interface` for plain data shapes; use `interface` only when extension is intended.
-- Prefer explicit return types on exported functions.
-- Use `const` enums for all application enumerations.
+- Prefer explicit return types on exported functions (not linter-enforced; apply as a convention for all public API boundaries).
+- Use `const enum` for all application enumerations.
 - No barrel files (`index.ts` re-exports) unless explicitly needed — import directly from source files.
 
 ---
