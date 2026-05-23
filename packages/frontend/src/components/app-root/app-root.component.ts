@@ -4,4 +4,6 @@ export class AppRootComponent extends HTMLElement {
   }
 }
 
-customElements.define('app-root', AppRootComponent);
+if (!customElements.get('app-root')) {
+  customElements.define('app-root', AppRootComponent);
+}
