@@ -6,10 +6,12 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"test not yet implemented\""
+    "test": "echo \"test not yet implemented\"",
+    "db:reset:qa": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5433/panorama_qa prisma migrate reset --schema=prisma/schema.prisma --force"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "cross-env": "^7.0.3",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   },
