@@ -3,12 +3,19 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "echo \"dev not yet implemented\"",
-    "build": "echo \"build not yet implemented\"",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "test": "echo \"test not yet implemented\""
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@fastify/sensible": "^6.0.4",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5"
   }
 }
