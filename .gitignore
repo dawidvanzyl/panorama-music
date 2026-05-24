@@ -1,0 +1,25 @@
+# C# / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.lock.json
+*.nupkg
+*.snupkg
+TestResults/
+
+# Node / Vite / Frontend
+node_modules/
+dist/
+.cache/
+*.local
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+@PanoramaMusic.Api_HostAddress = http://localhost:5102
+
+GET {{PanoramaMusic.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
