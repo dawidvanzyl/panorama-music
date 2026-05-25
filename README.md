@@ -15,4 +15,23 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 ```bash
 # Build the backend
 dotnet build src/PanoramaMusic.sln
+
+# Run the API
+dotnet run --project src/PanoramaMusic.Api
+```
+
+The API will start on `https://localhost:7162` / `http://localhost:5102` (or the port shown in the console).
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check — returns `200 OK` |
+
+### Swagger UI
+
+Swagger UI is available in the **Development** environment at:
+
+```
+https://localhost:7162/swagger
 ```
