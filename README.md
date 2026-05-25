@@ -20,7 +20,7 @@ dotnet build src/PanoramaMusic.sln
 dotnet run --project src/PanoramaMusic.Api
 ```
 
-The API will start on `https://localhost:5001` (or the port shown in the console).
+The API will start on `https://localhost:7162` / `http://localhost:5102` (or the port shown in the console).
 
 ### Endpoints
 
@@ -33,19 +33,5 @@ The API will start on `https://localhost:5001` (or the port shown in the console
 Swagger UI is available in the **Development** environment at:
 
 ```
-https://localhost:5001/swagger
-```
-
-## Project Structure
-
-```
-src/
-├── PanoramaMusic.Api/            # ASP.NET Core Minimal API (entry point)
-│   └── Routes/                   # Route registration extensions
-├── PanoramaMusic.Application/    # Application layer (use cases)
-│   └── Common/                   # Shared application abstractions
-├── PanoramaMusic.Domain/         # Domain layer (entities, value objects)
-│   └── Common/                   # Shared domain primitives
-└── PanoramaMusic.Infrastructure/ # Infrastructure layer (data access, external services)
-    └── Common/                   # Shared infrastructure utilities
+https://localhost:7162/swagger
 ```
