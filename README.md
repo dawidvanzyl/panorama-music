@@ -4,23 +4,48 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 
 ## Tech Stack
 
-- **Backend:** .NET 10, ASP.NET Core Minimal API
-- **Backend (planned):** Dapper, DbUp, PostgreSQL
+- **Backend:** .NET 10, ASP.NET Core Minimal API, Dapper, Npgsql, DbUp
+- **Database:** PostgreSQL
 - **Frontend:** Vite, Web Components, TypeScript, ESLint, Prettier
 - **Testing (planned):** xUnit
 - **Infrastructure (planned):** Docker Compose
 
 ## Getting Started
 
+### Prerequisites
+
+- .NET 10 SDK
+- PostgreSQL instance (local or via Docker)
+
+### Configuration
+
+The API reads the database connection string from `ConnectionStrings:DefaultConnection`.
+
+For local development, `appsettings.Development.json` is pre-configured for a Docker PostgreSQL instance:
+
+```
+Host=localhost;Port=5432;Database=panorama_music_dev;Username=postgres;Password=postgres
+```
+
+In production, set the environment variable:
+
+```
+ConnectionStrings__DefaultConnection=<your-connection-string>
+```
+
+### Running the API
+
 ```bash
 # Build the backend
 dotnet build src/PanoramaMusic.sln
 
-# Run the API
+# Run the API (requires PostgreSQL to be available)
 dotnet run --project src/PanoramaMusic.Api
 ```
 
 The API will start on `https://localhost:7162` / `http://localhost:5102` (or the port shown in the console).
+
+On startup, DbUp runs any pending migrations automatically.
 
 ### Endpoints
 
@@ -35,3 +60,4 @@ Swagger UI is available in the **Development** environment at:
 ```
 https://localhost:7162/swagger
 ```
+
