@@ -12,18 +12,15 @@ jobs:
   backend-ci:
     name: Backend CI
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        dotnet-version: ["10.0.x"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ matrix.dotnet-version }}
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore src/PanoramaMusic.sln
@@ -48,7 +45,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.13.0"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -65,5 +62,5 @@ jobs:
         working-directory: frontend
 
       - name: Build
-        run: npm run build
+        run: npx vite build
         working-directory: frontend

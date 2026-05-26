@@ -19,7 +19,7 @@ The CI workflow runs on every push and pull request to `develop`.
 | Job | Steps |
 |-----|-------|
 | `backend-ci` | `dotnet restore` → `dotnet build` → `dotnet test` → `dotnet format --verify-no-changes` |
-| `frontend-ci` | `npm ci` → `eslint` → `tsc --noEmit` → `vite build` |
+| `frontend-ci` | `npm ci` → `npm run lint` → `npm run typecheck` (`tsc --noEmit`) → `npx vite build` |
 
 Both jobs run in parallel. Formatting or lint failures will block the workflow.
 
