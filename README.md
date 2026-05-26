@@ -8,7 +8,7 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 - **Database:** PostgreSQL
 - **Frontend:** Vite, Web Components, TypeScript, ESLint, Prettier
 - **Testing (planned):** xUnit
-- **Infrastructure (planned):** Docker Compose
+- **Infrastructure:** Docker Compose
 
 ## Getting Started
 
@@ -16,6 +16,7 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 
 - .NET 10 SDK
 - PostgreSQL instance (local or via Docker)
+- Docker and Docker Compose (for Docker-based workflows)
 
 ### Configuration
 
@@ -61,3 +62,39 @@ Swagger UI is available in the **Development** environment at:
 https://localhost:7162/swagger
 ```
 
+## Docker Compose
+
+Two profiles are available: `dev` (database only) and `qa` (full stack).
+
+### Setup
+
+Copy `.env.example` to `.env` and adjust values as needed:
+
+```bash
+cp .env.example .env
+```
+
+### Dev profile — PostgreSQL only
+
+Starts a PostgreSQL container on port `5432`. Use this for local development alongside `dotnet run`.
+
+```bash
+docker compose --profile dev up -d
+```
+
+### QA profile — full stack
+
+Builds the API (with embedded frontend) and starts PostgreSQL + the API container. The application is served at `http://localhost:3000`.
+
+```bash
+docker compose --profile qa up --build
+```
+
+Verify the stack is healthy:
+
+```bash
+curl http://localhost:3000/api/health
+# → 200 OK
+```
+
+> The backend serves the Vite-built frontend as static files via `UseStaticFiles()`. No separate frontend container or nginx is required.

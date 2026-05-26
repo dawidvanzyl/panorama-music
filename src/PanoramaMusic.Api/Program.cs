@@ -32,6 +32,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapHealthRoutes();
+
+// SPA fallback: serve index.html for non-API routes
+app.MapFallbackToFile("index.html");
 
 app.Run();
