@@ -52,7 +52,10 @@ app.UseStaticFiles();
 
 app.MapHealthRoutes();
 
-// SPA fallback: serve index.html for non-API routes
+// Return 404 for unmatched /api/* routes so typos don't silently return the SPA
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+
+// SPA fallback: serve index.html for all other unmatched routes
 app.MapFallbackToFile("index.html");
 
 app.Run();

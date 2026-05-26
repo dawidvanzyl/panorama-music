@@ -30,6 +30,11 @@ WORKDIR /app
 COPY --from=api-build /app/publish ./
 COPY --from=frontend-build /app/frontend/dist ./wwwroot
 
+# Bind to port 3000 by default so the image behaves consistently whether run
+# via Compose or standalone (docker run).  ASPNETCORE_URLS in Compose overrides
+# this but keeps the same value, so there is no conflict.
+ENV ASPNETCORE_HTTP_PORTS=3000
+
 EXPOSE 3000
 
 ENTRYPOINT ["dotnet", "PanoramaMusic.Api.dll"]
