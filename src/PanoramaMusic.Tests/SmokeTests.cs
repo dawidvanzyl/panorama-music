@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Xunit;
 
 namespace PanoramaMusic.Tests;
@@ -15,6 +15,6 @@ public class SmokeTests
         var actual = true;
 
         // Assert
-        actual.Should().Be(expected);
+        actual.ShouldBe(expected);
     }
 }
