@@ -20,7 +20,9 @@ COPY global.json ./
 RUN dotnet publish src/PanoramaMusic.Api/PanoramaMusic.Api.csproj \
     -c Release \
     -o /app/publish \
-    --no-self-contained
+    --no-self-contained \
+    /p:UseSharedCompilation=false \
+    -m:1
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
