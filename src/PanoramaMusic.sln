@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Infrastructur
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Api", "PanoramaMusic.Api\PanoramaMusic.Api.csproj", "{D39AD31F-1090-4529-B9E7-E969E2F3A9C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Tests", "PanoramaMusic.Tests\PanoramaMusic.Tests.csproj", "{4A7CF3CA-0BD5-4499-81C2-C6CDE75E1FE0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Tests", "PanoramaMusic.Tests\PanoramaMusic.Tests.csproj", "{4A7CF3CA-0BD5-4499-81C2-C6CDE75E1FE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
