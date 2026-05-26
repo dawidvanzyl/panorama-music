@@ -1,5 +1,5 @@
 using PanoramaMusic.Api.Routes;
-using PanoramaMusic.Infrastructure;
+using PanoramaMusic.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
