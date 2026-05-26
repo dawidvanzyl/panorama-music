@@ -129,6 +129,25 @@ RESET_DB=true docker compose --profile qa up --build
 
 > `RESET_DB` defaults to `false`. It is safe to leave the variable present in `.env`; only the value `true` (case-insensitive) triggers a reset.
 
+## Deployment
+
+The application is deployed to [Render](https://render.com) as a Docker Web Service.
+
+- **Production URL:** https://panorama-music.onrender.com
+- **Health check:** `GET https://panorama-music.onrender.com/api/health`
+
+> Render's free tier spins down after 15 minutes of inactivity. The first request after a period of inactivity will take longer to respond while the service restarts.
+
+### Environment variables (Render)
+
+| Variable | Description |
+|---|---|
+| `ConnectionStrings__DefaultConnection` | Neon PostgreSQL connection pooling URL |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `JWT__Secret` | JWT signing secret (placeholder until M1) |
+
+On first deployment, DbUp automatically runs all pending migrations against the Neon database.
+
 #### Adding seed data
 
 Add numbered SQL files to `src/PanoramaMusic.Infrastructure/Persistence/Seeds/`, following the same `S001__description.sql` convention. They are embedded in the assembly at build time and executed in alphabetical order after every reset.
