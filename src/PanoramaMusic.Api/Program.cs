@@ -1,12 +1,20 @@
 using PanoramaMusic.Api.Routes;
+using PanoramaMusic.Infrastructure;
+using PanoramaMusic.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+
+builder.Services.AddInfrastructure(connectionString);
+
 var app = builder.Build();
 
+DatabaseMigrator.Run(connectionString);
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
