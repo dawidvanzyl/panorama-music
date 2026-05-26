@@ -5,13 +5,17 @@ namespace PanoramaMusic.Infrastructure.Persistence;
 
 public static class DatabaseMigrator
 {
-    public static void Run(string connectionString)
+    public static void Run(string connectionString, bool ensureDatabase = false)
     {
-        EnsureDatabase.For.PostgresqlDatabase(connectionString);
+        if (ensureDatabase)
+        {
+            EnsureDatabase.For.PostgresqlDatabase(connectionString);
+        }
 
         UpgradeEngine upgrader = DeployChanges.To
             .PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(typeof(DatabaseMigrator).Assembly)
+            .JournalToPostgresqlTable("public", "__schema_versions")
             .LogToConsole()
             .Build();
 

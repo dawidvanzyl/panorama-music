@@ -7,14 +7,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+}
 
 builder.Services.AddInfrastructure(connectionString);
 
 var app = builder.Build();
 
-DatabaseMigrator.Run(connectionString);
+DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelopment());
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
