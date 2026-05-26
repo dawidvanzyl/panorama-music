@@ -13,30 +13,15 @@ public static class DatabaseMigrator
             EnsureDatabase.For.PostgresqlDatabase(connectionString);
         }
 
-        UpgradeEngine upgrader = DeployChanges.To
-            .PostgresqlDatabase(connectionString)
-            .WithScriptsEmbeddedInAssembly(
-                typeof(DatabaseMigrator).Assembly,
-                name => name.Contains(".Migrations."))
-            .JournalToPostgresqlTable("public", "__schema_versions")
-            .LogToConsole()
-            .Build();
-
-        DatabaseUpgradeResult result = upgrader.PerformUpgrade();
-
-        if (!result.Successful)
-        {
-            throw new InvalidOperationException(
-                $"Database migration failed: {result.Error.Message}",
-                result.Error
-            );
-        }
+        RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration");
+        RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment");
+        RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed");
     }
 
     /// <summary>
-    /// Drops and recreates the public schema, wiping all tables and the
-    /// migration journal.  Intended for QA reset only — never call in
-    /// production.
+    /// Drops and recreates the public schema, wiping all tables, functions,
+    /// seeds, and migration journals. Intended for QA reset only — never call
+    /// in production.
     /// </summary>
     public static void Reset(string connectionString)
     {
@@ -50,5 +35,31 @@ public static class DatabaseMigrator
             GRANT ALL ON SCHEMA public TO PUBLIC;
             """;
         command.ExecuteNonQuery();
+    }
+
+    private static void RunScripts(
+        string connectionString,
+        string folderMarker,
+        string journalTable,
+        string label)
+    {
+        UpgradeEngine upgrader = DeployChanges.To
+            .PostgresqlDatabase(connectionString)
+            .WithScriptsEmbeddedInAssembly(
+                typeof(DatabaseMigrator).Assembly,
+                name => name.Contains(folderMarker))
+            .JournalToPostgresqlTable("public", journalTable)
+            .LogToConsole()
+            .Build();
+
+        DatabaseUpgradeResult result = upgrader.PerformUpgrade();
+
+        if (!result.Successful)
+        {
+            throw new InvalidOperationException(
+                $"Database {label} failed: {result.Error.Message}",
+                result.Error
+            );
+        }
     }
 }

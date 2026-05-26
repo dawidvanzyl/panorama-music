@@ -30,11 +30,6 @@ if (resetDatabase)
 
 DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelopment());
 
-if (resetDatabase)
-{
-    DatabaseSeeder.Run(connectionString);
-}
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
