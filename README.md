@@ -142,11 +142,11 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 
 | Variable | Description |
 |---|---|
-| `ConnectionStrings__DefaultConnection` | Neon PostgreSQL connection pooling URL |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string (use Neon's pooled connection string) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `JWT__Secret` | JWT signing secret (placeholder until M1) |
 
-On first deployment, DbUp automatically runs all pending migrations against the Neon database.
+On startup, DbUp automatically runs all pending migrations against the Neon database.
 
 #### Adding seed data
 
