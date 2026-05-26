@@ -11,7 +11,7 @@ C#, ASP.NET Core, Dapper, DbUp, and xUnit conventions for the Panorama Music pro
 
 1. [C# General Conventions](#1-c-general-conventions)
 2. [Layer Conventions](#2-layer-conventions)
-3. [Dapper Query Patterns](#3-dapper-query-patterns)
+3. [Data Access Patterns](#3-data-access-patterns)
 4. [DbUp Migration Conventions](#4-dbup-migration-conventions)
 5. [xUnit Test Conventions](#5-xunit-test-conventions)
 
@@ -130,23 +130,62 @@ src/PanoramaMusic.Domain/
 
 ---
 
-## 3. Dapper Query Patterns
+## 3. Data Access Patterns
 
-The project uses **Dapper** over raw `NpgsqlConnection`. There is no Entity Framework Core.
+The project uses **Dapper** over `NpgsqlConnection`. There is no Entity Framework Core.
 
-### 3.1 Dependency Injection
+### 3.1 No Inline SQL
 
-Connections are registered as transient and injected into repositories:
+Inline SQL is **prohibited** in repository classes. Every data access operation must go through a PL/pgSQL function in the `api` schema. Repository classes are responsible only for calling those functions and mapping results.
+
+### 3.2 PL/pgSQL Function Conventions
+
+All functions live in the `api` schema, which is created via a baseline migration before any function scripts run.
+
+**Naming**
+- `snake_case`, verb-first: `get_songs`, `create_song`, `delete_song_by_id`.
+- Always qualify with the schema: `api.get_songs`.
+
+**Parameters**
+- Named, `snake_case`, prefixed with `p_` to avoid column name collisions:
+  `p_song_id`, `p_title`, `p_artist`.
+
+**Return types**
+- Multi-row result: `RETURNS TABLE(id uuid, title text, artist text)`
+- Single scalar: `RETURNS uuid`, `RETURNS int`, etc.
+- Command with no result: `RETURNS void`
+
+**Definition template**
+```sql
+CREATE OR REPLACE FUNCTION api.get_songs()
+RETURNS TABLE(id uuid, title text, artist text)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT s.id, s.title, s.artist
+    FROM songs s
+    ORDER BY s.title;
+END;
+$$;
+```
+
+**Signature changes**
+- Use `CREATE OR REPLACE FUNCTION` for all function scripts.
+- If a parameter signature changes incompatibly (e.g. parameter type or count), the script must explicitly `DROP FUNCTION api.<name>(...) CASCADE` before recreating.
+
+### 3.3 Calling Functions via Dapper
+
+Always pass `commandType: CommandType.StoredProcedure`. The function name must include the schema: `api.function_name`. Parameters are passed as anonymous objects matching the `p_` parameter names.
+
+**Dependency injection** — connections are registered as transient and injected into repositories:
 
 ```csharp
 // Infrastructure/Extensions/ServiceCollectionExtensions.cs
 services.AddTransient<NpgsqlConnection>(_ => new NpgsqlConnection(connectionString));
 ```
 
-Repositories receive `NpgsqlConnection` via constructor injection.
-
-### 3.2 Repository Pattern
-
+**Query (multi-row)**
 ```csharp
 // Infrastructure/Repositories/SongRepository.cs
 namespace PanoramaMusic.Infrastructure.Repositories;
@@ -155,34 +194,43 @@ public class SongRepository(NpgsqlConnection connection) : ISongRepository
 {
     public async Task<IEnumerable<Song>> GetAllAsync(CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, title, artist
-            FROM songs
-            ORDER BY title;
-            """;
-
-        return await connection.QueryAsync<Song>(sql);
+        return await connection.QueryAsync<Song>(
+            "api.get_songs",
+            commandType: CommandType.StoredProcedure);
     }
 }
 ```
 
+**Command (no result)**
+```csharp
+public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+{
+    await connection.ExecuteAsync(
+        "api.delete_song_by_id",
+        new { p_song_id = id },
+        commandType: CommandType.StoredProcedure);
+}
+```
+
 Rules:
-- SQL is always a `const string` using raw string literals (`"""`).
 - Use `QueryAsync` / `ExecuteAsync` — no synchronous Dapper methods.
-- Pass parameters as anonymous objects: `new { Id = id }`.
-- Never build SQL by string concatenation — always use parameterised queries.
-- Keep SQL readable: uppercase keywords, one clause per line.
+- Never pass raw SQL strings — always use the `api.<function_name>` identifier.
 
-### 3.3 Transactions
+### 3.4 Transactions
 
-Use `connection.BeginTransaction()` and pass the transaction explicitly to Dapper:
+Open the connection explicitly, then pass the transaction to every Dapper call:
 
 ```csharp
 await connection.OpenAsync(ct);
 await using var tx = await connection.BeginTransactionAsync(ct);
 try
 {
-    await connection.ExecuteAsync(sql, param, transaction: tx);
+    await connection.ExecuteAsync(
+        "api.create_song",
+        new { p_title = title, p_artist = artist },
+        transaction: tx,
+        commandType: CommandType.StoredProcedure);
+
     await tx.CommitAsync(ct);
 }
 catch
@@ -196,9 +244,20 @@ catch
 
 ## 4. DbUp Migration Conventions
 
-Migrations live in `src/PanoramaMusic.Infrastructure/Persistence/Migrations/` and are embedded resources.
+Scripts live under `src/PanoramaMusic.Infrastructure/Persistence/` and are embedded resources. The folder structure separates concerns into three sub-folders:
+
+```
+src/PanoramaMusic.Infrastructure/Persistence/
+  Migrations/    ← schema changes (tables, indexes, constraints)
+  Functions/     ← PL/pgSQL function definitions (api schema)
+  Seeds/         ← seed data
+```
+
+Each sub-folder is scanned independently by `DatabaseMigrator`.
 
 ### 4.1 File Naming
+
+All three sub-folders use the same convention:
 
 ```
 V{###}__{snake_case_description}.sql
@@ -207,12 +266,20 @@ V{###}__{snake_case_description}.sql
 - `{###}` — zero-padded three-digit sequence number, e.g. `001`, `002`, `042`.
 - Double underscore (`__`) separates the version from the description.
 - Description is `snake_case`, all lowercase, concise.
+- Sequences are **independent per folder** — `Migrations/V001__...` and `Functions/V001__...` do not conflict.
 
 **Examples:**
 ```
-V001__baseline.sql
-V002__add_songs_table.sql
-V003__add_artist_column_to_songs.sql
+Migrations/
+  V001__baseline.sql
+  V002__add_songs_table.sql
+
+Functions/
+  V001__get_songs.sql
+  V002__create_song.sql
+
+Seeds/
+  S001__baseline_seed.sql
 ```
 
 ### 4.2 Migration Rules
@@ -220,20 +287,66 @@ V003__add_artist_column_to_songs.sql
 - Migrations are **irreversible** — never modify an already-applied script.
 - Each migration must be idempotent where possible (use `IF NOT EXISTS`, `IF EXISTS`).
 - The journal table is `public.__schema_versions`.
-- Seed scripts follow the same naming scheme with an `S` prefix (`S001__baseline_seed.sql`) and live in `Persistence/Seeds/`.
 
-### 4.3 Embedding
+### 4.3 api Schema Bootstrap
 
-Set `Build Action` to `Embedded Resource` in the `.csproj`, or use the glob:
+The `api` schema must exist before any function scripts run. Create it in a schema migration:
+
+```sql
+-- Migrations/V002__create_api_schema.sql
+CREATE SCHEMA IF NOT EXISTS api;
+```
+
+### 4.4 Function Script Rules
+
+- Always use `CREATE OR REPLACE FUNCTION api.<name>`.
+- If a parameter signature changes incompatibly, the script must `DROP FUNCTION api.<name>(...) CASCADE` before recreating.
+- Function scripts are **not** idempotent by default — `CREATE OR REPLACE` handles re-runs unless a drop is required.
+
+### 4.5 DatabaseMigrator
+
+The `DatabaseMigrator` must run three separate scans — one per folder — each targeting its own journal table so sequences remain independent:
+
+```csharp
+// Migrations scan
+DeployChanges.To
+    .PostgresqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(
+        typeof(DatabaseMigrator).Assembly,
+        name => name.Contains(".Migrations."))
+    .JournalToPostgresqlTable("public", "__schema_versions")
+    .Build();
+
+// Functions scan
+DeployChanges.To
+    .PostgresqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(
+        typeof(DatabaseMigrator).Assembly,
+        name => name.Contains(".Functions."))
+    .JournalToPostgresqlTable("public", "__function_versions")
+    .Build();
+
+// Seeds scan
+DeployChanges.To
+    .PostgresqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(
+        typeof(DatabaseMigrator).Assembly,
+        name => name.Contains(".Seeds."))
+    .JournalToPostgresqlTable("public", "__seed_versions")
+    .Build();
+```
+
+Run scans in order: **Migrations → Functions → Seeds**.
+
+### 4.6 Embedding
 
 ```xml
 <ItemGroup>
   <EmbeddedResource Include="Persistence\Migrations\*.sql" />
+  <EmbeddedResource Include="Persistence\Functions\*.sql" />
   <EmbeddedResource Include="Persistence\Seeds\*.sql" />
 </ItemGroup>
 ```
-
-The `DatabaseMigrator` selects migration scripts by matching `.Contains(".Migrations.")` in the embedded resource name.
 
 ---
 
