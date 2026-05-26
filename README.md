@@ -67,12 +67,12 @@ On startup, DbUp runs any pending migrations automatically.
 |--------|------|-------------|
 | `GET` | `/api/health` | Health check — returns `200 OK` |
 
-### Swagger UI
+### OpenAPI
 
-Swagger UI is available in the **Development** environment at:
+The OpenAPI document is available in the **Development** environment at:
 
 ```
-https://localhost:7162/swagger
+https://localhost:7162/openapi/v1.json
 ```
 
 ## Docker Compose

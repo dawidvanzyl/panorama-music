@@ -4,8 +4,10 @@ using PanoramaMusic.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddOpenApi();
+}
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -32,12 +34,7 @@ DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelop
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Panorama Music API v1");
-        options.RoutePrefix = "swagger";
-    });
+    app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();

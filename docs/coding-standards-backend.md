@@ -128,7 +128,7 @@ src/PanoramaMusic.Domain/
   }
   ```
 - No business logic in route handlers — delegate to Application layer.
-- Return `Results.*` helpers; annotate with `.Produces(...)` for Swagger.
+- Return `Results.*` helpers; annotate with `.Produces(...)` for OpenAPI documentation.
 
 ---
 
