@@ -314,7 +314,7 @@ frontend/
 
 ### 6.2 Web Component Naming
 
-- Custom element tag names use `kebab-case` with an `pm-` prefix: `pm-song-card`, `pm-nav-bar`.
+- Custom element tag names use `kebab-case` with a `pm-` prefix: `pm-song-card`, `pm-nav-bar`.
 - The corresponding class uses `PascalCase`: `PmSongCard`, `PmNavBar`.
 - One component per file; file name matches the tag name: `pm-song-card.ts`.
 
