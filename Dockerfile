@@ -15,7 +15,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
 WORKDIR /app
 
 COPY src/ ./src/
-COPY global.json ./
 
 RUN dotnet publish src/PanoramaMusic.Api/PanoramaMusic.Api.csproj \
     -c Release \
