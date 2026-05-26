@@ -1,10 +1,19 @@
-# Node
+# C# / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.lock.json
+*.nupkg
+*.snupkg
+TestResults/
+
+# Node / Vite / Frontend
 node_modules/
 dist/
-build/
-
-# Generated
-**/src/generated/
+.cache/
+*.local
 
 # Environment
 .env
@@ -14,7 +23,3 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-
-# Editor
-.vscode/
-.idea/

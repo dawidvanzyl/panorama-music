@@ -1,28 +1,42 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - develop
   pull_request:
     branches:
-      - master
+      - develop
 
 jobs:
-  ci:
+  backend-ci:
+    name: Backend CI
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: panorama_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore src/PanoramaMusic.sln
+
+      - name: Build
+        run: dotnet build src/PanoramaMusic.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test src/PanoramaMusic.sln --no-build --configuration Release --verbosity normal
+
+      - name: Format check
+        run: dotnet format src/PanoramaMusic.sln --verify-no-changes
+
+  frontend-ci:
+    name: Frontend CI
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -31,36 +45,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "22.13.0"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+        working-directory: frontend
 
       - name: Lint
         run: npm run lint
+        working-directory: frontend
 
-      - name: Generate Prisma client
-        working-directory: packages/backend
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/panorama_ci
-        run: npx prisma generate
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: frontend
 
-      - name: Typecheck backend
-        working-directory: packages/backend
-        run: npx tsc --noEmit
-
-      - name: Typecheck frontend
-        working-directory: packages/frontend
-        run: npx tsc --noEmit
-
-      - name: Run Prisma migrations
-        working-directory: packages/backend
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/panorama_ci
-        run: npx prisma migrate deploy
-
-      - name: Run backend tests
-        working-directory: packages/backend
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/panorama_ci
-        run: npm run test
+      - name: Build
+        run: npx vite build
+        working-directory: frontend
