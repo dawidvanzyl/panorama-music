@@ -98,10 +98,12 @@ src/PanoramaMusic.Domain/
     Persistence/
       Migrations/
         V001__baseline.sql
+        V002__create_schemas.sql
+      Functions/
+        V001__get_songs.sql
       Seeds/
-        S001__baseline_seed.sql
+        V001__baseline_seed.sql
       DatabaseMigrator.cs
-      DatabaseSeeder.cs
     Repositories/
       SongRepository.cs
   ```
@@ -136,15 +138,15 @@ The project uses **Dapper** over `NpgsqlConnection`. There is no Entity Framewor
 
 ### 3.1 No Inline SQL
 
-Inline SQL is **prohibited** in repository classes. Every data access operation must go through a PL/pgSQL function in the `api` schema. Repository classes are responsible only for calling those functions and mapping results.
+Inline SQL is **prohibited** in repository classes. Every data access operation must go through a PL/pgSQL function in the `funcs` schema. Repository classes are responsible only for calling those functions and mapping results.
 
 ### 3.2 PL/pgSQL Function Conventions
 
-All functions live in the `api` schema, which is created via a baseline migration before any function scripts run.
+All functions live in the `funcs` schema, which is created via a baseline migration before any function scripts run.
 
 **Naming**
 - `snake_case`, verb-first: `get_songs`, `create_song`, `delete_song_by_id`.
-- Always qualify with the schema: `api.get_songs`.
+- Always qualify with the schema: `funcs.get_songs`.
 
 **Parameters**
 - Named, `snake_case`, prefixed with `p_` to avoid column name collisions:
@@ -157,14 +159,14 @@ All functions live in the `api` schema, which is created via a baseline migratio
 
 **Definition template**
 ```sql
-CREATE OR REPLACE FUNCTION api.get_songs()
+CREATE OR REPLACE FUNCTION funcs.get_songs()
 RETURNS TABLE(id uuid, title text, artist text)
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
     SELECT s.id, s.title, s.artist
-    FROM songs s
+    FROM tables.songs s
     ORDER BY s.title;
 END;
 $$;
@@ -172,11 +174,11 @@ $$;
 
 **Signature changes**
 - Use `CREATE OR REPLACE FUNCTION` for all function scripts.
-- If a parameter signature changes incompatibly (e.g. parameter type or count), the script must explicitly `DROP FUNCTION api.<name>(...) CASCADE` before recreating.
+- If a parameter signature changes incompatibly (e.g. parameter type or count), the script must explicitly `DROP FUNCTION funcs.<name>(...) CASCADE` before recreating.
 
 ### 3.3 Calling Functions via Dapper
 
-Always pass `commandType: CommandType.StoredProcedure`. The function name must include the schema: `api.function_name`. Parameters are passed as anonymous objects matching the `p_` parameter names.
+Always pass `commandType: CommandType.StoredProcedure`. The function name must include the schema: `funcs.function_name`. Parameters are passed as anonymous objects matching the `p_` parameter names.
 
 **Dependency injection** — connections are registered as transient and injected into repositories:
 
@@ -193,11 +195,11 @@ namespace PanoramaMusic.Infrastructure.Repositories;
 public class SongRepository(NpgsqlConnection connection) : ISongRepository
 {
     public async Task<IEnumerable<Song>> GetAllAsync(CancellationToken ct = default)
-    {
-        return await connection.QueryAsync<Song>(
-            "api.get_songs",
-            commandType: CommandType.StoredProcedure);
-    }
+        {
+            return await connection.QueryAsync<Song>(
+                "funcs.get_songs",
+                commandType: CommandType.StoredProcedure);
+        }
 }
 ```
 
@@ -206,7 +208,7 @@ public class SongRepository(NpgsqlConnection connection) : ISongRepository
 public async Task DeleteAsync(Guid id, CancellationToken ct = default)
 {
     await connection.ExecuteAsync(
-        "api.delete_song_by_id",
+        "funcs.delete_song_by_id",
         new { p_song_id = id },
         commandType: CommandType.StoredProcedure);
 }
@@ -214,7 +216,7 @@ public async Task DeleteAsync(Guid id, CancellationToken ct = default)
 
 Rules:
 - Use `QueryAsync` / `ExecuteAsync` — no synchronous Dapper methods.
-- Never pass raw SQL strings — always use the `api.<function_name>` identifier.
+- Never pass raw SQL strings — always use the `funcs.<function_name>` identifier.
 
 ### 3.4 Transactions
 
@@ -226,7 +228,7 @@ await using var tx = await connection.BeginTransactionAsync(ct);
 try
 {
     await connection.ExecuteAsync(
-        "api.create_song",
+        "funcs.create_song",
         new { p_title = title, p_artist = artist },
         transaction: tx,
         commandType: CommandType.StoredProcedure);
@@ -249,7 +251,7 @@ Scripts live under `src/PanoramaMusic.Infrastructure/Persistence/` and are embed
 ```
 src/PanoramaMusic.Infrastructure/Persistence/
   Migrations/    ← schema changes (tables, indexes, constraints)
-  Functions/     ← PL/pgSQL function definitions (api schema)
+  Functions/     ← PL/pgSQL function definitions (funcs schema)
   Seeds/         ← seed data
 ```
 
@@ -288,19 +290,20 @@ Seeds/
 - Each migration must be idempotent where possible (use `IF NOT EXISTS`, `IF EXISTS`).
 - The journal table is `public.__schema_versions`.
 
-### 4.3 api Schema Bootstrap
+### 4.3 Schema Bootstrap
 
-The `api` schema must exist before any function scripts run. Create it in a schema migration:
+The `tables` and `funcs` schemas must exist before any table or function scripts run. Create them in a schema migration:
 
 ```sql
--- Migrations/V002__create_api_schema.sql
-CREATE SCHEMA IF NOT EXISTS api;
+-- Migrations/V002__create_schemas.sql
+CREATE SCHEMA IF NOT EXISTS tables;
+CREATE SCHEMA IF NOT EXISTS funcs;
 ```
 
 ### 4.4 Function Script Rules
 
-- Always use `CREATE OR REPLACE FUNCTION api.<name>`.
-- If a parameter signature changes incompatibly, the script must `DROP FUNCTION api.<name>(...) CASCADE` before recreating.
+- Always use `CREATE OR REPLACE FUNCTION funcs.<name>`.
+- If a parameter signature changes incompatibly, the script must `DROP FUNCTION funcs.<name>(...) CASCADE` before recreating.
 - Function scripts are **not** idempotent by default — `CREATE OR REPLACE` handles re-runs unless a drop is required.
 
 ### 4.5 DatabaseMigrator
