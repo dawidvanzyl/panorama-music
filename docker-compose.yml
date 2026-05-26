@@ -1,0 +1,52 @@
+services:
+  db-dev:
+    image: postgres:16
+    profiles: [dev]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB_DEV:-panorama_music_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-dev-data:/var/lib/postgresql/data
+
+  db-qa:
+    image: postgres:16
+    profiles: [qa]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB_QA:-panorama_music_qa}
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-qa-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: [qa]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:3000
+      ConnectionStrings__DefaultConnection: >-
+        Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+      # Set RESET_DB=true to wipe the QA database, re-run all migrations, and
+      # re-apply seed data on the next container start.  Never set in production.
+      RESET_DB: ${RESET_DB:-false}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db-qa:
+        condition: service_healthy
+
+volumes:
+  db-dev-data:
+  db-qa-data:

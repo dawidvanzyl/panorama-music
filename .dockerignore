@@ -1,0 +1,20 @@
+# .NET build artifacts
+**/bin/
+**/obj/
+
+# Frontend artifacts (will be built inside Docker)
+frontend/node_modules/
+frontend/dist/
+
+# Environment files
+.env
+
+# IDE and OS files
+.vs/
+.vscode/
+*.user
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
