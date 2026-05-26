@@ -98,3 +98,24 @@ curl http://localhost:3000/api/health
 ```
 
 > The backend serves the Vite-built frontend as static files via `UseStaticFiles()`. No separate frontend container or nginx is required.
+
+### QA database reset and seed
+
+To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
+
+1. Drop and recreate the `public` schema (all tables and data are wiped)
+2. Re-run all DbUp migrations from scratch
+3. Execute all seed scripts from `Persistence/Seeds/` in filename order
+
+```bash
+# One-shot clean start
+RESET_DB=true docker compose --profile qa up --build
+
+# Or via .env — set RESET_DB=true, bring the stack up, then set it back to false
+```
+
+> `RESET_DB` defaults to `false`. It is safe to leave the variable present in `.env`; only the value `true` (case-insensitive) triggers a reset.
+
+#### Adding seed data
+
+Add numbered SQL files to `src/PanoramaMusic.Infrastructure/Persistence/Seeds/`, following the same `S001__description.sql` convention. They are embedded in the assembly at build time and executed in alphabetical order after every reset.

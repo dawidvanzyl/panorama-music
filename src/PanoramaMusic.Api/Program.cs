@@ -18,7 +18,22 @@ builder.Services.AddInfrastructure(connectionString);
 
 var app = builder.Build();
 
+var resetDatabase = string.Equals(
+    builder.Configuration["RESET_DB"],
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+
+if (resetDatabase)
+{
+    DatabaseMigrator.Reset(connectionString);
+}
+
 DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelopment());
+
+if (resetDatabase)
+{
+    DatabaseSeeder.Run(connectionString);
+}
 
 if (app.Environment.IsDevelopment())
 {

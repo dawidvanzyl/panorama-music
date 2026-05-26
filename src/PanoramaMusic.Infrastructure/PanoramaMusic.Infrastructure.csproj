@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Persistence\Migrations\*.sql" />
+    <EmbeddedResource Include="Persistence\Seeds\*.sql" />
   </ItemGroup>
 
 </Project>
