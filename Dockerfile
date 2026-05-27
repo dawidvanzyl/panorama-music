@@ -31,11 +31,12 @@ WORKDIR /app
 COPY --from=api-build /app/publish ./
 COPY --from=frontend-build /app/frontend/dist ./wwwroot
 
-# Bind to port 3000 by default so the image behaves consistently whether run
-# via Compose or standalone (docker run).  ASPNETCORE_URLS in Compose overrides
-# this but keeps the same value, so there is no conflict.
-ENV ASPNETCORE_HTTP_PORTS=3000
+# Render expects services to listen on port 10000 by default and uses the
+# EXPOSE directive to determine which port to health-check.  When running
+# locally via Docker Compose the api service overrides this at runtime with
+# ASPNETCORE_URLS: http://+:3000, so local QA is unaffected.
+ENV ASPNETCORE_HTTP_PORTS=10000
 
-EXPOSE 3000
+EXPOSE 10000
 
 ENTRYPOINT ["dotnet", "PanoramaMusic.Api.dll"]
