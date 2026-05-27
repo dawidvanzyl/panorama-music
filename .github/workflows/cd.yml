@@ -20,9 +20,8 @@ jobs:
             "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n-1)
-          echo "status=$http_code" >> "$GITHUB_OUTPUT"
-          echo "deploy_id=$(echo "$body" | jq -r '.deploy.id // empty')" >> "$GITHUB_OUTPUT"
-          echo "service_id=$(echo "$body" | jq -r '.deploy.serviceId // empty')" >> "$GITHUB_OUTPUT"
+          echo "deploy_id=$(echo "$body" | jq -re '.deploy.id // empty' 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+          echo "service_id=$(echo "$body" | jq -re '.deploy.serviceId // empty' 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
           echo "Deploy triggered — HTTP $http_code"
 
       - name: Wait for deployment to succeed
@@ -35,13 +34,18 @@ jobs:
             exit 0
           fi
 
+          if [ -z "${{ secrets.RENDER_API_KEY }}" ]; then
+            echo "::error::RENDER_API_KEY is not configured; cannot poll deployment status."
+            exit 1
+          fi
+
           echo "Polling Render deployment $deploy_id on service $service_id..."
 
           for i in $(seq 1 40); do
-            status=$(curl --silent --fail \
+            status=$(curl --silent \
               --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
               "https://api.render.com/v1/services/${service_id}/deploys/${deploy_id}" \
-              | jq -r '.status // "unknown"')
+              | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
 
             echo "Attempt $i/40 — status: $status"
 
