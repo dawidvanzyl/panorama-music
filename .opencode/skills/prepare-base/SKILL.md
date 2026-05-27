@@ -20,13 +20,13 @@ At the start of execution, always post a visible message to the user:
 ## Inputs
 
 - `base_branch`: prefer to infer from context if specified by the user.
-- If not provided, ask: "Which base branch would you like to prepare? (e.g. develop, master)"
+- If not provided, ask: "Which base branch would you like to prepare? (e.g. master)"
 
 ## Procedure
 
 ### 0) Gather inputs
 
-- If `base_branch` was not provided, ask: "Which base branch would you like to prepare? (e.g. develop, master)"
+- If `base_branch` was not provided, ask: "Which base branch would you like to prepare? (e.g. master)"
 - Do not proceed until `base_branch` is confirmed.
 
 ### 1) Prune remote tracking references
@@ -47,7 +47,7 @@ At the start of execution, always post a visible message to the user:
 ### 4) Identify feature branches to delete
 
 - List all local branches.
-- Exclude `develop`, `master`, `main`, and the current `base_branch`.
+- Exclude `master` and the current `base_branch`.
 - For each remaining branch, check if it has a remote tracking reference (`git branch -vv`).
 - Only include branches with **no remote tracking reference** as candidates for deletion.
 - If no candidates are found, notify the user: "No local-only feature branches found to delete." and stop.
@@ -74,7 +74,6 @@ At the start of execution, always post a visible message to the user:
 
 ## Guardrails
 
-- Never delete `develop`, `master`, or `main` branches.
-- Never delete the checked-out base branch.
+- Never delete `master` or the checked-out base branch.
 - Never delete branches without explicit user confirmation.
 - Do not push any deletions to remote unless explicitly requested.
