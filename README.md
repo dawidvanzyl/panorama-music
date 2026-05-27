@@ -1,6 +1,6 @@
 # Panorama Music
 
-[![CI](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml)
+[![CI](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml)
 
 A self-hosted music streaming application built with C# (ASP.NET Core Minimal API) and Vite + Web Components.
 
@@ -14,7 +14,7 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 
 ## CI
 
-The CI workflow runs on every push and pull request to `develop`.
+The CI workflow runs on every push and pull request to `master`.
 
 | Job | Steps |
 |-----|-------|
