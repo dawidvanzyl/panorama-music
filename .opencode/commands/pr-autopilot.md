@@ -1,5 +1,5 @@
 ---
-description: Watch a PR for comments in a loop; resolve any found using the resolve-comments skill; when the PR is merged or closed, run the close-issue skill to close the linked issue and update the parent epic
+description: Auto-resolve PR comments and close issue when merged
 subtask: true
 ---
 

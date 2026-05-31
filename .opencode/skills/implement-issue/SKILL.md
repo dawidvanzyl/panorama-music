@@ -70,7 +70,8 @@ Before doing anything else:
 - If requirements are ambiguous or conflicting, ask clarifying question(s) before coding.
 - Extract:
   - `issue_title`
-  - acceptance criteria checklist items
+  - IT codes from `## Epic Reference > Acceptance Criteria` (e.g. `M1IT1`)
+  - UC codes from `## Acceptance Criteria (G/W/T)` (e.g. `M1UC1`)
   - milestone number (`milestone_number`) from issue milestone (e.g. `M0` -> `0`).
 
 ### 2) Capture base branch and create feature branch
@@ -87,28 +88,33 @@ Before doing anything else:
 ### 3) Implement
 
 - Implement story requirements in codebase.
+- Write unit tests for each UC code — tag with `[Trait("AC", "M1UCx")]`.
+- Write integration tests for each IT code — tag with `[Trait("AC", "M1ITx")]`.
 - Update `README.md` if behavior/setup/usage/docs are affected.
 - Run relevant tests/checks/build for changed scope.
 - Fix issues until checks pass.
 
 ### 4) Update acceptance criteria in story issue
 
-- As each acceptance criterion is validated, update the checkbox in issue `#{issue_number}` immediately (do not wait until the end).
+- For each IT code, run `dotnet test --filter "AC=M1ITx"` — if it passes, check off the matching `## Epic Reference > Acceptance Criteria` checkbox.
+- For each UC code, run `dotnet test --filter "AC=M1UCx"` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
+- Update checkboxes immediately per criterion (do not wait until the end).
 - Keep issue text truthful and current.
 
 ### 5) Open PR
 
 - Commit using project conventions.
 - Push feature branch.
-- Create PR with:
-  - base: `base_branch` (captured in step 2)
-  - head: feature branch
-  - title: `{issue_title} (#{issue_number})`
-  - body includes:
+- Retrieve the milestone title from the issue milestone extracted in step 1.
+- Create PR using `gh pr create` with **all** of the following flags explicitly set:
+  - `--base base_branch`
+  - `--title "{issue_title} (#{issue_number})"`
+  - `--milestone "{milestone_title}"`
+  - `--body` including:
     - brief overview of what changed
-    - `Closes #{issue_number}` (or equivalent issue reference)
-    - milestone reference (explicit line naming the milestone)
-- Ensure PR references milestone and sub-issue.
+    - `Closes #{issue_number}` (this links the issue in the Development section)
+    - milestone name as a readable line
+- Do not rely on post-creation edits — set milestone and issue reference at creation time.
 
 ### 6) Run PR autopilot
 

@@ -15,8 +15,12 @@ One paragraph. What this issue implements and why it exists in the context of th
 ## Epic Reference
 
 - Milestone: [M? — Milestone Title](#issue-number)
-- Satisfies checklist item(s):
+- Anticipated Work Areas:
   - [ ] Exact checkbox text copied from epic issue
+  - [ ] Exact checkbox text copied from epic issue
+- Acceptance Criteria:
+  - [ ] `[IT_CODE]` Exact checkbox text copied from epic issue (e.g. `M1IT1`)
+  - [ ] `[IT_CODE]` Exact checkbox text copied from epic issue (e.g. `M1IT2`)
 
 ---
 
@@ -46,10 +50,10 @@ Step-by-step descriptive instructions. Layer by layer where applicable. Detailed
 
 ---
 
-## Acceptance Criteria
+## Acceptance Criteria (G/W/T)
 
-- [ ] Specific, testable outcome
-- [ ] Each item is verifiable before the PR is raised
+- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC1`)
+- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC2`)
 
 ---
 
