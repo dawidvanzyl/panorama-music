@@ -88,21 +88,50 @@ Consider:
   reasoning directly drives the `Acceptance Criteria (G/W/T)` section in step
   3a. If a sub-issue produces no testable code (config changes, dependency
   updates, pure structural work), flag it as having empty criteria.
-- **UI audit from acceptance criteria:** Before finalising the skeleton,
-  iterate over every acceptance criterion in the epic. For each AC, ask:
-  "Does a human interact with the system to satisfy this?" If yes, what
-  screen do they need? That AC's sub-issue must include a `Page
-  Architecture` section with `layer: frontend` label alongside its
-  backend labels. This step runs even if the epic's Anticipated Work
-  Areas contain zero frontend entries.
 - For feature milestones (M1+): schema design, query strategies, API contracts,
   UI layouts, and implementation strategies must be reflected in the detail of
   each sub-issue.
+
+### 2a) UI audit — identify required screens
+
+Before presenting the skeleton to the user, audit every acceptance criterion
+in the epic. For each AC, ask: "Does a human interact with the system to
+satisfy this?"
+
+Important distinctions the audit must apply:
+- **An admin is a human.** If an AC says "Admin can create a user", the admin
+  needs a screen to perform that action — even if the invite URL is delivered
+  out-of-band.
+- **A user is a human.** If an AC says "User can log in", the user needs a
+  login screen.
+- **"Out-of-band delivery"** refers to how a result reaches the human (email,
+  SMS, etc.), but the human still needs a UI to trigger the action.
+- **Do NOT create separate frontend-only sub-issues.** Each screen belongs in
+  the same sub-issue as its backend implementation.
+
+Document the audit as a table:
+
+| AC | Human Interaction? | Screen Required | Sub-Issue |
+|---|---|---|---|
+
+Then:
+- For each AC that requires a screen, ensure the sub-issue includes
+  `layer: frontend` alongside its backend labels and a `Page Architecture`
+  section in step 3a.
+- Sub-issues with no human interaction keep their existing labels.
 
 Produce an ordered list of sub-issues with:
 - Proposed title (without prefix yet)
 - Proposed labels
 - Blocking relationships
+
+Important: Do NOT create separate "test" sub-issues. Every feature sub-issue
+contains its own tests — UC codes in `## Acceptance Criteria (G/W/T)` and IT
+codes in `## Epic Reference > Acceptance Criteria`. Testing-related AWAs
+copied from the epic are informational only and do not generate sub-issues.
+
+Important: Do NOT create separate frontend-only sub-issues. Each screen must
+be bundled with its backend implementation in a single sub-issue.
 
 Present this skeleton plan to the user as an overview. State clearly:
 > "This is the proposed plan. No issues will be created yet. I will now draft
@@ -114,7 +143,9 @@ changes, then proceed to step 3.
 
 ### 3) Draft and approve — one sub-issue at a time
 
-For each sub-issue in the ordered list, repeat the following loop:
+For each sub-issue in the ordered list, repeat the following loop.
+Creation is deferred until all sub-issues are drafted and approved
+(see step 4).
 
 #### 3a) Draft the full issue body
 
@@ -128,8 +159,10 @@ Generate the complete issue body strictly following the
   - Milestone link referencing `#{epic_issue_number}`
   - Anticipated Work Areas — copy matching AWA checkbox text verbatim from the
     epic's `## Anticipated Work Areas` section
-  - Acceptance Criteria — copy matching AC checkbox text verbatim from the epic
-    (these use `[IT_CODE]` prefix, e.g. `M1IT1`)
+  - Acceptance Criteria — only list IT codes that this sub-issue's scope
+    directly contributes to. For example, a domain-entities sub-issue includes
+    ACs that touch those entities; it does NOT include ACs about unrelated
+    endpoints. Be selective, not exhaustive.
 - **Scope**: explicit in-scope and out-of-scope bullets.
 - **Implementation Plan**: step-by-step, layer-by-layer instructions detailed
   enough that no additional context is needed. Follow conventions from
@@ -164,8 +197,10 @@ Generate the complete issue body strictly following the
 - **Acceptance Criteria (G/W/T)**: translate the unit-test reasoning from step
   2 into GIVEN/WHEN/THEN format — derive one or more `[UC_CODE]` criteria (e.g.
   `M1UC1`, `M1UC2`) from each epic AC this sub-issue satisfies. Each criterion
-  maps to exactly one unit test. If the sub-issue was flagged as having no
-  testable code, this section is empty.
+  maps to exactly one unit test. When a sub-issue spans both backend and
+  frontend layers, group criteria under `### Backend` and `### Frontend`
+  subsections. If the sub-issue was flagged as having no testable code, this
+  section is empty.
 - **Dependencies**: blocked-by and must-merge-before relationships using issue
   numbers where known (use titles for issues not yet created in this run).
 - **Notes**: constraints, prior decisions, or context the implementer needs to
@@ -178,29 +213,45 @@ Generate the complete issue body strictly following the
 Present the full drafted body to the user exactly as it will appear on GitHub.
 
 Then ask:
-> "Does this look correct, or do you have changes before I create it?"
+> "Does this look correct, or do you have changes?"
 
 Wait for the user's response. Do not proceed until one of the following:
 - The user explicitly approves (e.g. "looks good", "yes", "approved", "create it").
 - The user requests changes — incorporate all feedback, re-present the updated
   draft, and repeat 3b until approved.
 
-#### 3c) Create the issue on GitHub
+#### 3c) Store the approved body
 
 Once approved:
-- Create the issue via `gh issue create` with:
-  - `--title` using the prefixed title
-  - `--milestone` matching the epic's milestone
-  - `--label` for all proposed labels
-  - `--body` containing the full approved body
-- Capture the created issue number.
-- Confirm to the user: "Created #{number}: {title}"
+- Store the drafted body in memory along with its title, labels, and
+  milestone number.
+- Confirm to the user: "Draft for #{title} approved and stored."
+- Do NOT create the issue on GitHub yet.
 
 Then immediately move to the next sub-issue in the list.
 
-### 4) Link sub-issues to epic via GraphQL
+### 4) Create all approved sub-issues
 
-After all sub-issues have been created and approved:
+After all sub-issues have been drafted and approved:
+
+- **Pre-flight: verify all labels exist on GitHub.**
+  - Scan all stored sub-issue bodies and collect every unique label.
+  - Run `gh label list --json name` and parse the existing labels.
+  - For any missing label, notify and create it:
+    `gh label create "<name>"`
+- **Create issues** - iterate over the stored bodies in order:
+  - Run `gh issue create` with `--title`, `--milestone`, `--label`,
+    `--body`.
+  - Verify the exit code. If creation fails, notify the user with the
+    error output and stop.
+  - On success, capture the created issue number.
+  - Confirm to the user: "Created #{number}: {title}"
+  - Maintain a running list of `{number, title, url}` for use in
+    subsequent steps.
+
+### 5) Link sub-issues to epic via GraphQL
+
+After all sub-issues have been created:
 
 1. Fetch the GraphQL node IDs for the epic and all created sub-issues in a
    single query:
@@ -222,7 +273,7 @@ After all sub-issues have been created and approved:
    Note: the REST API returns 404 for sub-issue linking — GraphQL is the only
    working approach.
 
-### 5) Update epic with Anticipated Work Areas
+### 6) Update epic with Anticipated Work Areas
 
 Fetch the current body of the epic issue. Add or update the
 `## Anticipated Work Areas` section with a checkbox for each created sub-issue:
@@ -241,7 +292,7 @@ Rules:
 
 Update the epic body via `gh issue edit #{epic_issue_number} --body "..."`.
 
-### 6) Summary
+### 7) Summary
 
 Post a summary to the user:
 

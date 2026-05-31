@@ -88,8 +88,11 @@ Before doing anything else:
 ### 3) Implement
 
 - Implement story requirements in codebase.
-- Write unit tests for each UC code — tag with `[Trait("AC", "M1UCx")]`.
-- Write integration tests for each IT code — tag with `[Trait("AC", "M1ITx")]`.
+- For backend UC codes: write xUnit tests tagged with `[Trait("AC", "M1UCx")]`.
+- For frontend UC codes: write vitest service tests (mock fetch, no DOM) in
+  `frontend/src/services/__tests__/`. Install vitest if not present
+  (`npm install -D vitest`).
+- For IT codes: write xUnit integration tests tagged with `[Trait("AC", "M1ITx")]`.
 - Update `README.md` if behavior/setup/usage/docs are affected.
 - Run relevant tests/checks/build for changed scope.
 - Fix issues until checks pass.
@@ -97,7 +100,8 @@ Before doing anything else:
 ### 4) Update acceptance criteria in story issue
 
 - For each IT code, run `dotnet test --filter "AC=M1ITx"` — if it passes, check off the matching `## Epic Reference > Acceptance Criteria` checkbox.
-- For each UC code, run `dotnet test --filter "AC=M1UCx"` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
+- For each backend UC code, run `dotnet test --filter "AC=M1UCx"` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
+- For each frontend UC code, run `npx vitest run --reporter=verbose` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
 - Update checkboxes immediately per criterion (do not wait until the end).
 - Keep issue text truthful and current.
 

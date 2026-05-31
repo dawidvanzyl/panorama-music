@@ -52,8 +52,17 @@ Step-by-step descriptive instructions. Layer by layer where applicable. Detailed
 
 ## Acceptance Criteria (G/W/T)
 
+When a sub-issue spans both backend and frontend layers, group criteria
+under `### Backend` and `### Frontend` subsections:
+
+### Backend
+
 - [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC1`)
 - [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC2`)
+
+### Frontend
+
+- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC22`)
 
 ---
 
