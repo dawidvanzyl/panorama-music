@@ -14,7 +14,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 public class JwtService : IJwtService
 {
     private const int TokenExpiryMinutes = 15;
-    private const int MinSecretLength    = 32;
+    private const int MinSecretLength = 32;
 
     public string GenerateToken(Guid userId, IList<Role> roles)
     {
@@ -24,10 +24,10 @@ public class JwtService : IJwtService
         if (secret.Length < MinSecretLength)
             throw new InvalidOperationException($"JWT_SECRET must be at least {MinSecretLength} characters.");
 
-        var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var now    = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
@@ -36,14 +36,14 @@ public class JwtService : IJwtService
 
         var descriptor = new SecurityTokenDescriptor
         {
-            Subject            = new ClaimsIdentity(claims),
-            IssuedAt           = now,
-            Expires            = now.AddMinutes(TokenExpiryMinutes),
-            SigningCredentials  = credentials,
+            Subject = new ClaimsIdentity(claims),
+            IssuedAt = now,
+            Expires = now.AddMinutes(TokenExpiryMinutes),
+            SigningCredentials = credentials,
         };
 
         var handler = new JwtSecurityTokenHandler();
-        var token   = handler.CreateToken(descriptor);
+        var token = handler.CreateToken(descriptor);
         return handler.WriteToken(token);
     }
 }

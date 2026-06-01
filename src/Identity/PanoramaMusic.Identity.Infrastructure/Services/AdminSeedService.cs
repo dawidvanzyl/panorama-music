@@ -17,7 +17,7 @@ public class AdminSeedService(IServiceProvider serviceProvider, ILogger<AdminSee
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var email    = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
+        var email = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
         var password = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
@@ -28,9 +28,9 @@ public class AdminSeedService(IServiceProvider serviceProvider, ILogger<AdminSee
 
         await using var scope = serviceProvider.CreateAsyncScope();
 
-        var userRepo     = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
-        var hasher       = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
         var existing = await userRepo.GetByEmailAsync(email);
         if (existing is not null)

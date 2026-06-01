@@ -63,10 +63,10 @@ public class Argon2PasswordHasher : IPasswordHasher
 
         using var argon2 = new Argon2id(passwordBytes)
         {
-            Salt                = salt,
+            Salt = salt,
             DegreeOfParallelism = DegreeOfParallelism,
-            MemorySize          = MemorySize,
-            Iterations          = Iterations,
+            MemorySize = MemorySize,
+            Iterations = Iterations,
         };
 
         return argon2.GetBytes(HashLength);

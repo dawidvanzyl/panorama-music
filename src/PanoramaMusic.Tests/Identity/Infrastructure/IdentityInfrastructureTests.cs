@@ -33,7 +33,7 @@ public class IdentityInfrastructureTests
     public void Verify_WhenCorrectPassword_ReturnsTrue()
     {
         var hasher = new Argon2PasswordHasher();
-        var hash   = hasher.Hash("correct-password");
+        var hash = hasher.Hash("correct-password");
 
         var result = hasher.Verify("correct-password", hash);
 
@@ -45,7 +45,7 @@ public class IdentityInfrastructureTests
     public void Verify_WhenWrongPassword_ReturnsFalse()
     {
         var hasher = new Argon2PasswordHasher();
-        var hash   = hasher.Hash("original-password");
+        var hash = hasher.Hash("original-password");
 
         var result = hasher.Verify("different-password", hash);
 
@@ -63,13 +63,13 @@ public class IdentityInfrastructureTests
         {
             Environment.SetEnvironmentVariable("JWT_SECRET", "test-secret-key-that-is-at-least-32-chars!!");
             var service = new JwtService();
-            var userId  = Guid.NewGuid();
-            var roles   = new List<Role> { Role.Admin };
+            var userId = Guid.NewGuid();
+            var roles = new List<Role> { Role.Admin };
 
-            var token   = service.GenerateToken(userId, roles);
+            var token = service.GenerateToken(userId, roles);
 
             var handler = new JwtSecurityTokenHandler();
-            var jwt     = handler.ReadJwtToken(token);
+            var jwt = handler.ReadJwtToken(token);
 
             jwt.Subject.ShouldBe(userId.ToString());
             jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin"));
@@ -84,24 +84,24 @@ public class IdentityInfrastructureTests
     [Trait("AC", "M1UC20")]
     public void GenerateToken_WhenValidatedWithSameSecret_ValidatesSuccessfully()
     {
-        const string secret    = "test-secret-key-that-is-at-least-32-chars!!";
-        var          prevSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+        const string secret = "test-secret-key-that-is-at-least-32-chars!!";
+        var prevSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
         try
         {
             Environment.SetEnvironmentVariable("JWT_SECRET", secret);
             var service = new JwtService();
-            var userId  = Guid.NewGuid();
+            var userId = Guid.NewGuid();
 
             var token = service.GenerateToken(userId, [Role.Admin]);
 
-            var handler    = new JwtSecurityTokenHandler();
+            var handler = new JwtSecurityTokenHandler();
             var parameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-                ValidateIssuer           = false,
-                ValidateAudience         = false,
-                ClockSkew                = TimeSpan.Zero,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero,
             };
 
             var principal = handler.ValidateToken(token, parameters, out _);
@@ -120,16 +120,16 @@ public class IdentityInfrastructureTests
     [Trait("AC", "M1UC21")]
     public async Task AdminSeedService_WhenEnvVarsNotSet_DoesNotCreateUser()
     {
-        var prevEmail    = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
+        var prevEmail = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
         var prevPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
         try
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    null);
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", null);
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", null);
 
-            var userRepo     = new FakeUserRepository();
+            var userRepo = new FakeUserRepository();
             var userRoleRepo = new FakeUserRoleRepository();
-            var hasher       = new Argon2PasswordHasher();
+            var hasher = new Argon2PasswordHasher();
 
             var services = new ServiceCollection();
             services.AddSingleton<IUserRepository>(userRepo);
@@ -144,7 +144,7 @@ public class IdentityInfrastructureTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    prevEmail);
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", prevEmail);
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", prevPassword);
         }
     }
@@ -153,16 +153,16 @@ public class IdentityInfrastructureTests
     [Trait("AC", "M1UC22")]
     public async Task AdminSeedService_WhenValidEnvVarsAndNoExistingAdmin_CreatesAdminUser()
     {
-        var prevEmail    = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
+        var prevEmail = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
         var prevPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
         try
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    "admin@test.com");
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", "admin@test.com");
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", "StrongPassword1!");
 
-            var userRepo     = new FakeUserRepository();
+            var userRepo = new FakeUserRepository();
             var userRoleRepo = new FakeUserRoleRepository();
-            var hasher       = new Argon2PasswordHasher();
+            var hasher = new Argon2PasswordHasher();
 
             var services = new ServiceCollection();
             services.AddSingleton<IUserRepository>(userRepo);
@@ -179,7 +179,7 @@ public class IdentityInfrastructureTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    prevEmail);
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", prevEmail);
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", prevPassword);
         }
     }
@@ -188,17 +188,17 @@ public class IdentityInfrastructureTests
     [Trait("AC", "M1UC23")]
     public async Task AdminSeedService_WhenValidEnvVarsAndAdminAlreadyExists_DoesNotCreateDuplicate()
     {
-        var prevEmail    = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
+        var prevEmail = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
         var prevPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
         try
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    "admin@test.com");
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", "admin@test.com");
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", "StrongPassword1!");
 
             var existingUser = new User(Guid.NewGuid(), Email.Create("admin@test.com"), DateTime.UtcNow);
-            var userRepo     = new FakeUserRepository(existingUser);
+            var userRepo = new FakeUserRepository(existingUser);
             var userRoleRepo = new FakeUserRoleRepository();
-            var hasher       = new Argon2PasswordHasher();
+            var hasher = new Argon2PasswordHasher();
 
             var services = new ServiceCollection();
             services.AddSingleton<IUserRepository>(userRepo);
@@ -213,7 +213,7 @@ public class IdentityInfrastructureTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL",    prevEmail);
+            Environment.SetEnvironmentVariable("SEED_ADMIN_EMAIL", prevEmail);
             Environment.SetEnvironmentVariable("SEED_ADMIN_PASSWORD", prevPassword);
         }
     }
@@ -225,7 +225,7 @@ file sealed class FakeUserRepository(User? existingUser = null) : IUserRepositor
 {
     public List<User> AddedUsers { get; } = [];
 
-    public Task<User?> GetByIdAsync(Guid userId)    => Task.FromResult<User?>(null);
+    public Task<User?> GetByIdAsync(Guid userId) => Task.FromResult<User?>(null);
     public Task<User?> GetByEmailAsync(string email) => Task.FromResult(existingUser);
 
     public Task AddAsync(User user)

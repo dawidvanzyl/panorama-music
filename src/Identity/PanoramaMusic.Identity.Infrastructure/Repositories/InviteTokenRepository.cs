@@ -25,8 +25,8 @@ public class InviteTokenRepository(NpgsqlConnection connection) : IInviteTokenRe
             "identity.create_invite_token",
             new
             {
-                p_token_id   = token.TokenId,
-                p_user_id    = token.UserId,
+                p_token_id = token.TokenId,
+                p_user_id = token.UserId,
                 p_token_hash = token.TokenHash,
                 p_expires_at = token.ExpiresAt,
             },
