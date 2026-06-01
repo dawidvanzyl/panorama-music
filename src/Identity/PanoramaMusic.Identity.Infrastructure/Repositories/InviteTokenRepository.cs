@@ -3,18 +3,12 @@ using Dapper;
 using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class InviteTokenRepository(NpgsqlConnection connection) : IInviteTokenRepository
 {
-    private sealed record InviteTokenRow(
-        Guid token_id,
-        Guid user_id,
-        string token_hash,
-        DateTime expires_at,
-        DateTime? used_at);
-
     public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash)
     {
         var row = await connection.QuerySingleOrDefaultAsync<InviteTokenRow>(
@@ -22,7 +16,7 @@ public class InviteTokenRepository(NpgsqlConnection connection) : IInviteTokenRe
             new { p_token_hash = tokenHash },
             commandType: CommandType.StoredProcedure);
 
-        return row is null ? null : MapToInviteToken(row);
+        return row is null ? null : new InviteToken(row.token_id, row.user_id, row.token_hash, row.expires_at);
     }
 
     public async Task AddAsync(InviteToken token)
@@ -45,12 +39,5 @@ public class InviteTokenRepository(NpgsqlConnection connection) : IInviteTokenRe
             "identity.use_invite_token",
             new { p_token_id = token.TokenId },
             commandType: CommandType.StoredProcedure);
-    }
-
-    private static InviteToken MapToInviteToken(InviteTokenRow row)
-    {
-        // Note: UsedAt state cannot be reconstructed via MarkUsed() without business-rule side effects;
-        // the raw row is sufficient for all current use cases (token lookup before use).
-        return new InviteToken(row.token_id, row.user_id, row.token_hash, row.expires_at);
     }
 }

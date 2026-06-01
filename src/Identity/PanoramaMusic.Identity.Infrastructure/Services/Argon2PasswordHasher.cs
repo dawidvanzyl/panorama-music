@@ -70,7 +70,9 @@ public class Argon2PasswordHasher : IPasswordHasher
 
         var diff = 0;
         for (var i = 0; i < a.Length; i++)
+        {
             diff |= a[i] ^ b[i];
+        }
 
         return diff == 0;
     }

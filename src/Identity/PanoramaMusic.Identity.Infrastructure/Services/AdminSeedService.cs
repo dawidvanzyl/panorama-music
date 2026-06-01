@@ -13,8 +13,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 /// Reads <c>SEED_ADMIN_EMAIL</c> and <c>SEED_ADMIN_PASSWORD</c> from environment variables.
 /// Idempotent — does nothing if the admin already exists.
 /// </summary>
-public class AdminSeedService(IServiceProvider serviceProvider, ILogger<AdminSeedService> logger)
-    : IHostedService
+public class AdminSeedService(IServiceProvider serviceProvider, ILogger<AdminSeedService> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {

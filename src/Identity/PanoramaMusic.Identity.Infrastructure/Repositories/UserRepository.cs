@@ -4,18 +4,12 @@ using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class UserRepository(NpgsqlConnection connection) : IUserRepository
 {
-    private sealed record UserRow(
-        Guid user_id,
-        string email,
-        string? password_hash,
-        bool is_active,
-        DateTime created_at);
-
     public async Task<User?> GetByIdAsync(Guid userId)
     {
         var row = await connection.QuerySingleOrDefaultAsync<UserRow>(
@@ -75,11 +69,8 @@ public class UserRepository(NpgsqlConnection connection) : IUserRepository
     {
         var user = new User(row.user_id, Email.Create(row.email), row.created_at);
 
-        if (row.password_hash is not null)
-            user.SetPassword(PasswordHash.Create(row.password_hash));
-
-        if (row.is_active)
-            user.Activate();
+        if (row.password_hash is not null) user.SetPassword(PasswordHash.Create(row.password_hash));
+        if (row.is_active) user.Activate();
 
         return user;
     }

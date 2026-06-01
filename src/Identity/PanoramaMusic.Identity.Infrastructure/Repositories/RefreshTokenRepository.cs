@@ -3,18 +3,12 @@ using Dapper;
 using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class RefreshTokenRepository(NpgsqlConnection connection) : IRefreshTokenRepository
 {
-    private sealed record RefreshTokenRow(
-        Guid token_id,
-        Guid user_id,
-        string token_hash,
-        DateTime expires_at,
-        DateTime? revoked_at);
-
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
     {
         var row = await connection.QuerySingleOrDefaultAsync<RefreshTokenRow>(
@@ -51,8 +45,7 @@ public class RefreshTokenRepository(NpgsqlConnection connection) : IRefreshToken
     {
         var token = new RefreshToken(row.token_id, row.user_id, row.token_hash, row.expires_at);
 
-        if (row.revoked_at.HasValue)
-            token.Revoke();
+        if (row.revoked_at.HasValue) token.Revoke();
 
         return token;
     }
