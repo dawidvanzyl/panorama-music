@@ -1,4 +1,5 @@
 using PanoramaMusic.Api.Routes;
+using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Persistence;
 
@@ -17,6 +18,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddIdentityInfrastructure(connectionString);
 
 var app = builder.Build();
 
