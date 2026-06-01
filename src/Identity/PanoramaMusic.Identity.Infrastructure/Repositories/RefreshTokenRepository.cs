@@ -45,13 +45,9 @@ public class RefreshTokenRepository(NpgsqlConnection connection) : IRefreshToken
     {
         var token = new RefreshToken(row.token_id, row.user_id, row.token_hash, row.expires_at);
 
-        // Restore the actual revocation timestamp from the DB rather than calling Revoke() which
-        // would overwrite it with DateTime.UtcNow.
         if (row.revoked_at.HasValue)
         {
-            typeof(RefreshToken)
-                .GetProperty(nameof(RefreshToken.RevokedAt))!
-                .SetValue(token, row.revoked_at.Value);
+            token.Revoke(row.revoked_at.Value);
         }
 
         return token;

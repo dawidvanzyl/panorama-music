@@ -7,5 +7,5 @@ public record RefreshToken(Guid TokenId, Guid UserId, string TokenHash, DateTime
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsRevoked => RevokedAt.HasValue;
 
-    public void Revoke() => RevokedAt = DateTime.UtcNow;
+    public void Revoke(DateTime? revokedAt = null) => RevokedAt = revokedAt ?? DateTime.UtcNow;
 }
