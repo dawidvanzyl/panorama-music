@@ -1,6 +1,6 @@
 using PanoramaMusic.Identity.Domain.Entities;
 
-namespace PanoramaMusic.Identity.Domain.Common;
+namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IUserRepository
 {

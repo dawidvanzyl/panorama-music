@@ -1,5 +1,5 @@
-using PanoramaMusic.Identity.Domain.Common;
 using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using Shouldly;
 using Xunit;

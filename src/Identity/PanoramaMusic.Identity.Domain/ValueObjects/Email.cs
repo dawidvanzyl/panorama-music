@@ -1,4 +1,4 @@
-using PanoramaMusic.Identity.Domain.Common;
+using PanoramaMusic.Identity.Domain.Exceptions;
 
 namespace PanoramaMusic.Identity.Domain.ValueObjects;
 
@@ -10,13 +10,11 @@ public record Email
 
     public static Email Create(string? email)
     {
-        if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("Email cannot be empty.");
+        if (string.IsNullOrWhiteSpace(email)) throw new DomainException("Email cannot be empty.");
 
         var trimmed = email.Trim();
 
-        if (!trimmed.Contains('@'))
-            throw new DomainException("Email must contain '@'.");
+        if (!trimmed.Contains('@')) throw new DomainException("Email must contain '@'.");
 
         return new Email(trimmed.ToLowerInvariant());
     }

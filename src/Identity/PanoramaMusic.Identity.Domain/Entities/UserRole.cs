@@ -1,4 +1,4 @@
-using PanoramaMusic.Identity.Domain.Common;
+using PanoramaMusic.Identity.Domain.Enums;
 
 namespace PanoramaMusic.Identity.Domain.Entities;
 

@@ -1,4 +1,4 @@
-using PanoramaMusic.Identity.Domain.Common;
+using PanoramaMusic.Identity.Domain.Exceptions;
 
 namespace PanoramaMusic.Identity.Domain.ValueObjects;
 
@@ -10,8 +10,7 @@ public record PasswordHash
 
     public static PasswordHash Create(string? hash)
     {
-        if (string.IsNullOrWhiteSpace(hash))
-            throw new DomainException("Password hash cannot be empty.");
+        if (string.IsNullOrWhiteSpace(hash)) throw new DomainException("Password hash cannot be empty.");
 
         return new PasswordHash(hash);
     }
