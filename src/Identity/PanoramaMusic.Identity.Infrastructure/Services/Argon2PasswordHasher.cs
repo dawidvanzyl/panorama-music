@@ -42,8 +42,17 @@ public class Argon2PasswordHasher : IPasswordHasher
             return false;
         }
 
+        byte[] storedHash;
+        try
+        {
+            storedHash = Convert.FromBase64String(parts[1]);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
         var computedHash = ComputeHash(password, salt);
-        var storedHash   = Convert.FromBase64String(parts[1]);
 
         return CryptographicEquals(computedHash, storedHash);
     }

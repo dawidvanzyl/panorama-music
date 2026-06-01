@@ -24,6 +24,6 @@ public class UserRoleRepository(NpgsqlConnection connection) : IUserRoleReposito
             new { p_user_id = userId },
             commandType: CommandType.StoredProcedure);
 
-        return rows.Select(r => Enum.Parse<Role>(r)).ToList();
+        return rows.Select(r => Enum.Parse<Role>(r, ignoreCase: true)).ToList();
     }
 }
