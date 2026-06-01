@@ -45,6 +45,40 @@ C#, ASP.NET Core, Dapper, DbUp, and xUnit conventions for the Panorama Music pro
 - Do not use `regions`.
 - Do not suppress warnings with `#pragma` unless accompanied by a justification comment.
 
+### `if`-Statement Formatting
+
+Two flavours — no other forms are used:
+
+Single-statement body (no braces, same line):
+```csharp
+if (condition) throw new DomainException("...");
+```
+
+Multi-statement body (braces, each on its own line):
+```csharp
+if (condition)
+{
+    line1;
+    line2;
+}
+```
+
+The two-line dangling form (no braces, body on next line) is **not used**.
+
+### Constructor Formatting
+
+When a constructor delegates to a base constructor, `: base(...)` goes on its own
+indented line. The body `{ }` sits on the line below:
+
+```csharp
+public sealed class DomainException : Exception
+{
+    public DomainException(string message)
+        : base(message)
+    { }
+}
+```
+
 ---
 
 ## 2. Layer Conventions
@@ -59,15 +93,81 @@ The solution is split into four projects. Each layer has a clearly defined respo
 - Must not reference any NuGet package except for primitive helpers (e.g. `CSharpFunctionalExtensions`).
 - No data-access code, no HTTP concepts.
 
-**Example:**
+**Folder layout — never use a `Common/` catch-all. Each type of artifact has its own named folder:**
+
 ```
-src/PanoramaMusic.Domain/
+PanoramaMusic.{Context}.Domain/
+  Entities/      → PanoramaMusic.{Context}.Domain.Entities
+  ValueObjects/  → PanoramaMusic.{Context}.Domain.ValueObjects
+  Enums/         → PanoramaMusic.{Context}.Domain.Enums
+  Interfaces/    → PanoramaMusic.{Context}.Domain.Interfaces
+  Exceptions/    → PanoramaMusic.{Context}.Domain.Exceptions
+```
+
+**Example (Identity bounded context):**
+```
+src/Identity/PanoramaMusic.Identity.Domain/
   Entities/
-    Song.cs
+    User.cs
+    UserRole.cs
+    RefreshToken.cs
+    InviteToken.cs
   ValueObjects/
-    SongTitle.cs
+    Email.cs
+    PasswordHash.cs
+  Enums/
+    Role.cs
+  Interfaces/
+    IUserRepository.cs
+    IPasswordHasher.cs
+    IJwtService.cs
   Exceptions/
     DomainException.cs
+```
+
+**Entity pattern — `record` with primary constructor:**
+
+Invariant fields belong in the primary constructor. Mutable state that is changed
+through domain methods uses `private set`. Mutation methods are expression-bodied
+for single-liners, or full-bodied with guard clauses for multi-step logic:
+
+```csharp
+public record User(Guid UserId, Email Email, DateTime CreatedAt)
+{
+    public PasswordHash? PasswordHash { get; private set; }
+    public bool IsActive { get; private set; }
+
+    public void SetPassword(PasswordHash hash) => PasswordHash = hash;
+    public void Activate() => IsActive = true;
+}
+```
+
+**Value object pattern — `record` with private constructor and static `Create()` factory:**
+
+Use a private constructor and a static `Create()` factory whenever the value
+object has non-trivial validation invariants. The factory throws `DomainException`
+for invalid input. The `Value` property is read-only:
+
+```csharp
+public record Email
+{
+    public string Value { get; }
+
+    private Email(string value) => Value = value;
+
+    public static Email Create(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) throw new DomainException("Email cannot be empty.");
+
+        var trimmed = email.Trim();
+
+        if (!trimmed.Contains('@')) throw new DomainException("Email must contain '@'.");
+
+        return new Email(trimmed.ToLowerInvariant());
+    }
+
+    public override string ToString() => Value;
+}
 ```
 
 ### 2.2 Application (`PanoramaMusic.Application`)
