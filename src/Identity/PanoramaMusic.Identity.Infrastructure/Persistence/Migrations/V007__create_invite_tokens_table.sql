@@ -8,6 +8,3 @@ CREATE TABLE IF NOT EXISTS identity.invite_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     used_at    TIMESTAMPTZ NULL
 );
-
-CREATE INDEX IF NOT EXISTS ix_invite_tokens_token_hash
-    ON identity.invite_tokens(token_hash);
