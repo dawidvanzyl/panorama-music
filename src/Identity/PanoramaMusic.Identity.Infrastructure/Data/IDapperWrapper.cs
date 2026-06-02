@@ -4,6 +4,8 @@ namespace PanoramaMusic.Identity.Infrastructure.Data;
 
 public interface IDapperWrapper
 {
+    IDbConnection CreateConnection();
+
     Task<T?> QuerySingleOrDefaultAsync<T>(
         IDbConnection connection,
         string sql,

@@ -3,8 +3,10 @@ using Dapper;
 
 namespace PanoramaMusic.Identity.Infrastructure.Data;
 
-public class DapperWrapper : IDapperWrapper
+public class DapperWrapper(IDbConnectionFactory connectionFactory) : IDapperWrapper
 {
+    public IDbConnection CreateConnection() => connectionFactory.CreateConnection();
+
     public Task<T?> QuerySingleOrDefaultAsync<T>(
         IDbConnection connection,
         string sql,

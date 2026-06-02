@@ -10,27 +10,26 @@ namespace PanoramaMusic.Tests.Identity.Infrastructure;
 
 public class InviteTokenRepositoryTests
 {
-    private static (Mock<IDbConnectionFactory> factory, Mock<IDapperWrapper> dapper, InviteTokenRepository repo) CreateSut()
+    private static (Mock<IDapperWrapper> dapper, InviteTokenRepository repo) CreateSut()
     {
-        var mockFactory = new Mock<IDbConnectionFactory>();
         var mockConnection = new Mock<IDbConnection>();
-        mockFactory.Setup(f => f.CreateConnection()).Returns(mockConnection.Object);
 
         var mockDapper = new Mock<IDapperWrapper>();
+        mockDapper.Setup(d => d.CreateConnection()).Returns(mockConnection.Object);
         mockDapper
             .Setup(d => d.ExecuteAsync(
                 It.IsAny<IDbConnection>(), It.IsAny<string>(),
                 It.IsAny<object?>(), It.IsAny<CommandType>(), It.IsAny<IDbTransaction?>()))
             .Returns(Task.CompletedTask);
 
-        return (mockFactory, mockDapper, new InviteTokenRepository(mockFactory.Object, mockDapper.Object));
+        return (mockDapper, new InviteTokenRepository(mockDapper.Object));
     }
 
     [Fact]
     [Trait("AC", "M1UC14")]
     public async Task GetByTokenHashAsync_UsesCorrectFunctionAndParameters()
     {
-        var (_, mockDapper, repo) = CreateSut();
+        var (mockDapper, repo) = CreateSut();
         const string tokenHash = "abc123hash";
 
         mockDapper
@@ -52,7 +51,7 @@ public class InviteTokenRepositoryTests
     [Fact]
     public async Task AddAsync_UsesCorrectFunctionAndParameters()
     {
-        var (_, mockDapper, repo) = CreateSut();
+        var (mockDapper, repo) = CreateSut();
         var token = new InviteToken(Guid.NewGuid(), Guid.NewGuid(), "somehash", DateTime.UtcNow.AddHours(1));
 
         await repo.AddAsync(token);
@@ -68,7 +67,7 @@ public class InviteTokenRepositoryTests
     [Fact]
     public async Task UpdateAsync_UsesCorrectFunctionAndParameters()
     {
-        var (_, mockDapper, repo) = CreateSut();
+        var (mockDapper, repo) = CreateSut();
         var token = new InviteToken(Guid.NewGuid(), Guid.NewGuid(), "somehash", DateTime.UtcNow.AddHours(1));
 
         await repo.UpdateAsync(token);

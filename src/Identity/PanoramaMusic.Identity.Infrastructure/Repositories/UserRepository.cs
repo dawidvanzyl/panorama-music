@@ -7,11 +7,11 @@ using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class UserRepository(IDbConnectionFactory connectionFactory, IDapperWrapper dapper) : IUserRepository
+public class UserRepository(IDapperWrapper dapper) : IUserRepository
 {
     public async Task<User?> GetByIdAsync(Guid userId)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         var row = await dapper.QuerySingleOrDefaultAsync<UserRow>(
             connection,
             "identity.get_user_by_id",
@@ -23,7 +23,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory, IDapperWrapp
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         var row = await dapper.QuerySingleOrDefaultAsync<UserRow>(
             connection,
             "identity.get_user_by_email",
@@ -35,7 +35,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory, IDapperWrapp
 
     public async Task AddAsync(User user)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
         try
@@ -68,7 +68,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory, IDapperWrapp
 
     public async Task UpdateAsync(User user)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
         try
@@ -106,9 +106,12 @@ public class UserRepository(IDbConnectionFactory connectionFactory, IDapperWrapp
     {
         var user = new User(row.user_id, Email.Create(row.email), row.created_at);
 
-        if (row.password_hash is not null) user.SetPassword(PasswordHash.Create(row.password_hash));
-        if (row.is_active) user.Activate();
+        if (row.password_hash is not null)
+			user.SetPassword(PasswordHash.Create(row.password_hash));
+
+        if (row.is_active)
+			user.Activate();
 
         return user;
-    }
+	}
 }

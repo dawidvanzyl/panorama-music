@@ -6,11 +6,11 @@ using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class RefreshTokenRepository(IDbConnectionFactory connectionFactory, IDapperWrapper dapper) : IRefreshTokenRepository
+public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenRepository
 {
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         var row = await dapper.QuerySingleOrDefaultAsync<RefreshTokenRow>(
             connection,
             "identity.get_refresh_token_by_hash",
@@ -22,7 +22,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory, IDap
 
     public async Task AddAsync(RefreshToken token)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         await dapper.ExecuteAsync(
             connection,
             "identity.create_refresh_token",
@@ -38,7 +38,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory, IDap
 
     public async Task UpdateAsync(RefreshToken token)
     {
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = dapper.CreateConnection();
         await dapper.ExecuteAsync(
             connection,
             "identity.revoke_refresh_token",
@@ -48,11 +48,11 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory, IDap
 
     private static RefreshToken MapToRefreshToken(RefreshTokenRow row)
     {
-        var token = new RefreshToken(row.token_id, row.user_id, row.token_hash, row.expires_at);
+        var token = new RefreshToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
 
-        if (row.revoked_at.HasValue)
-        {
-            token.Revoke(row.revoked_at.Value);
+        if (row.Revoked_at.HasValue)
+		{
+			token.Revoke(row.Revoked_at.Value);
         }
 
         return token;

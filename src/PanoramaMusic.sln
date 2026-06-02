@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11801.241 oobstable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Domain", "PanoramaMusic.Domain\PanoramaMusic.Domain.csproj", "{3840A7D4-35C5-4BA0-96EB-B1898B5B39B4}"
 EndProject
@@ -20,6 +20,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Application", "Identity\PanoramaMusic.Identity.Application\PanoramaMusic.Identity.Application.csproj", "{454E5E88-8560-4F9D-9B50-CD11C9FE13F0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Infrastructure", "Identity\PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj", "{99324E16-AE4D-45C1-B953-3264DD1FB614}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{096E6E0E-5455-4835-8760-1E6AD0875C45}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
