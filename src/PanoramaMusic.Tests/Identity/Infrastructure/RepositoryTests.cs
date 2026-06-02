@@ -43,7 +43,7 @@ public class RepositoryTests
         await repo.AddAsync(user);
 
         // First command: create_user
-        connection.ExecutedCommands.Count.ShouldBeGreaterThanOrEqualTo(1);
+        connection.ExecutedCommands.Count.ShouldBe(1);
         var createCmd = connection.ExecutedCommands[0];
         createCmd.CommandText.ShouldBe("identity.create_user");
         createCmd.CommandType.ShouldBe(CommandType.StoredProcedure);
@@ -51,6 +51,8 @@ public class RepositoryTests
         createCmd.CapturedParameters["p_user_id"].ShouldBe(userId);
         createCmd.CapturedParameters.ShouldContainKey("p_email");
         createCmd.CapturedParameters["p_email"].ShouldBe("test@example.com");
+        createCmd.CapturedParameters.ShouldContainKey("p_is_active");
+        createCmd.CapturedParameters["p_is_active"].ShouldBe(false);
     }
 
     [Fact]
@@ -66,13 +68,14 @@ public class RepositoryTests
 
         await repo.UpdateAsync(user);
 
-        connection.ExecutedCommands.Count.ShouldBeGreaterThanOrEqualTo(1);
+        connection.ExecutedCommands.Count.ShouldBe(1);
         var updateCmd = connection.ExecutedCommands[0];
         updateCmd.CommandText.ShouldBe("identity.update_user_password");
         updateCmd.CommandType.ShouldBe(CommandType.StoredProcedure);
         updateCmd.CapturedParameters.ShouldContainKey("p_user_id");
         updateCmd.CapturedParameters["p_user_id"].ShouldBe(userId);
         updateCmd.CapturedParameters.ShouldContainKey("p_password_hash");
+        updateCmd.CapturedParameters["p_password_hash"].ShouldBe("$argon2id$someHash");
     }
 
     // ─── InviteTokenRepository ───────────────────────────────────────────────
