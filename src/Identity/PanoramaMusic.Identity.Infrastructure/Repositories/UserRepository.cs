@@ -107,11 +107,11 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
         var user = new User(row.user_id, Email.Create(row.email), row.created_at);
 
         if (row.password_hash is not null)
-			user.SetPassword(PasswordHash.Create(row.password_hash));
+            user.SetPassword(PasswordHash.Create(row.password_hash));
 
         if (row.is_active)
-			user.Activate();
+            user.Activate();
 
         return user;
-	}
+    }
 }

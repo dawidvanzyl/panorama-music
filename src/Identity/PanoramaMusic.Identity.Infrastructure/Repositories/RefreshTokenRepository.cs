@@ -51,8 +51,8 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
         var token = new RefreshToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
 
         if (row.Revoked_at.HasValue)
-		{
-			token.Revoke(row.Revoked_at.Value);
+        {
+            token.Revoke(row.Revoked_at.Value);
         }
 
         return token;
