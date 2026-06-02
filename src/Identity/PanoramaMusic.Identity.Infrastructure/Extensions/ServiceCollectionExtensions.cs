@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Data;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -22,6 +23,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IInviteTokenRepository, InviteTokenRepository>();
         services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddSingleton<IHostedService, AdminSeedService>();
+        services.AddTransient<LoginHandler>();
+        services.AddTransient<RefreshTokenHandler>();
+        services.AddTransient<LogoutHandler>();
+        services.AddTransient<CompleteRegistrationHandler>();
         return services;
     }
 }
