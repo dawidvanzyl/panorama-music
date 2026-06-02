@@ -106,6 +106,49 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
         }
     }
 
+    public async Task CompleteActivationAsync(User user, Guid inviteTokenId)
+    {
+        using var connection = dapper.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            if (user.PasswordHash is not null)
+            {
+                await dapper.ExecuteAsync(
+                    connection,
+                    "identity.update_user_password",
+                    new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
+                    CommandType.StoredProcedure,
+                    transaction);
+            }
+
+            if (user.IsActive)
+            {
+                await dapper.ExecuteAsync(
+                    connection,
+                    "identity.activate_user",
+                    new { p_user_id = user.UserId },
+                    CommandType.StoredProcedure,
+                    transaction);
+            }
+
+            await dapper.ExecuteAsync(
+                connection,
+                "identity.use_invite_token",
+                new { p_token_id = inviteTokenId },
+                CommandType.StoredProcedure,
+                transaction);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
     private static User MapToUser(UserRow row)
     {
         var user = new User(row.User_id, Email.Create(row.Email), row.Created_at);

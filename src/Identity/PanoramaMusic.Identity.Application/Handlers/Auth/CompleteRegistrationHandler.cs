@@ -1,7 +1,6 @@
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using System.Diagnostics;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
@@ -26,7 +25,6 @@ public sealed class CompleteRegistrationHandler(
         user.SetPassword(passwordHash);
         user.Activate();
 
-        await userRepository.UpdateAsync(user);
-        await inviteTokenRepository.UpdateAsync(inviteToken);
+        await userRepository.CompleteActivationAsync(user, inviteToken.TokenId);
     }
 }

@@ -24,8 +24,7 @@ public class CompleteRegistrationHandlerTests
         var userRepo = new Mock<IUserRepository>();
         var hasher = new Mock<IPasswordHasher>();
 
-        inviteRepo.Setup(r => r.UpdateAsync(It.IsAny<InviteToken>())).Returns(Task.CompletedTask);
-        userRepo.Setup(r => r.UpdateAsync(It.IsAny<User>())).Returns(Task.CompletedTask);
+        userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), It.IsAny<Guid>())).Returns(Task.CompletedTask);
         hasher.Setup(h => h.Hash(It.IsAny<string>())).Returns(PasswordHash.Create("$argon2id$v=19$hashed"));
 
         return (inviteRepo, userRepo, hasher, new CompleteRegistrationHandler(inviteRepo.Object, userRepo.Object, hasher.Object));
@@ -51,8 +50,7 @@ public class CompleteRegistrationHandlerTests
         invite.IsUsed.ShouldBeTrue();
         user.IsActive.ShouldBeTrue();
         user.PasswordHash.ShouldNotBeNull();
-        userRepo.Verify(r => r.UpdateAsync(user), Times.Once);
-        inviteRepo.Verify(r => r.UpdateAsync(invite), Times.Once);
+        userRepo.Verify(r => r.CompleteActivationAsync(user, invite.TokenId), Times.Once);
     }
 
     [Fact]

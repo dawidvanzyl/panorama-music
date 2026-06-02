@@ -93,4 +93,41 @@ public class UserRepositoryTests
             CommandType.StoredProcedure,
             It.IsAny<IDbTransaction?>()), Times.Once);
     }
+
+    [Fact]
+    [Trait("AC", "M1UC36")]
+    public async Task CompleteActivationAsync_UpdatesPasswordActivatesUserAndUsesInviteTokenInSameTransaction()
+    {
+        var (mockDapper, repo) = CreateSut();
+        var userId = Guid.NewGuid();
+        var inviteTokenId = Guid.NewGuid();
+        var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
+        user.SetPassword(PasswordHash.Create("$argon2id$someHash"));
+        user.Activate();
+
+        await repo.CompleteActivationAsync(user, inviteTokenId);
+
+        mockDapper.Verify(d => d.ExecuteAsync(
+            It.IsAny<IDbConnection>(),
+            "identity.update_user_password",
+            It.Is<object>(p =>
+                (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
+                (string)p.GetType().GetProperty("p_password_hash")!.GetValue(p)! == "$argon2id$someHash"),
+            CommandType.StoredProcedure,
+            It.IsNotNull<IDbTransaction>()), Times.Once);
+
+        mockDapper.Verify(d => d.ExecuteAsync(
+            It.IsAny<IDbConnection>(),
+            "identity.activate_user",
+            It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),
+            CommandType.StoredProcedure,
+            It.IsNotNull<IDbTransaction>()), Times.Once);
+
+        mockDapper.Verify(d => d.ExecuteAsync(
+            It.IsAny<IDbConnection>(),
+            "identity.use_invite_token",
+            It.Is<object>(p => (Guid)p.GetType().GetProperty("p_token_id")!.GetValue(p)! == inviteTokenId),
+            CommandType.StoredProcedure,
+            It.IsNotNull<IDbTransaction>()), Times.Once);
+    }
 }

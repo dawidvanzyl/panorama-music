@@ -48,6 +48,42 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
             CommandType.StoredProcedure);
     }
 
+    public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken)
+    {
+        using var connection = dapper.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            await dapper.ExecuteAsync(
+                connection,
+                "identity.revoke_refresh_token",
+                new { p_token_id = oldTokenId },
+                CommandType.StoredProcedure,
+                transaction);
+
+            await dapper.ExecuteAsync(
+                connection,
+                "identity.create_refresh_token",
+                new
+                {
+                    p_token_id = newToken.TokenId,
+                    p_user_id = newToken.UserId,
+                    p_token_hash = newToken.TokenHash,
+                    p_expires_at = newToken.ExpiresAt,
+                },
+                CommandType.StoredProcedure,
+                transaction);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
     private static RefreshToken MapToRefreshToken(RefreshTokenRow row)
     {
         var token = new RefreshToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);

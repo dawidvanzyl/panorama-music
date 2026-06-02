@@ -1,8 +1,6 @@
 using Moq;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
-using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -31,7 +29,7 @@ public class LoginHandlerTests
         var refreshRepo = new Mock<IRefreshTokenRepository>();
 
         refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
-        jwt.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>())).Returns("access-token");
+        jwt.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>())).Returns(new JwtToken("access-token", DateTime.UtcNow));
 
         var handler = new LoginHandler(userRepo.Object, roleRepo.Object, hasher.Object, jwt.Object, refreshRepo.Object);
         return (userRepo, roleRepo, hasher, jwt, refreshRepo, handler);
@@ -53,7 +51,7 @@ public class LoginHandlerTests
         var user = CreateActiveUser();
 
         userRepo.Setup(r => r.GetByEmailAsync("user@test.com")).ReturnsAsync(user);
-        roleRepo.Setup(r => r.GetRolesAsync(user.UserId)).ReturnsAsync(new List<Role> { Role.Teacher });
+        roleRepo.Setup(r => r.GetRolesAsync(user.UserId)).ReturnsAsync([Role.Teacher]);
         hasher.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>())).Returns(true);
 
         var result = await handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), CancellationToken.None);

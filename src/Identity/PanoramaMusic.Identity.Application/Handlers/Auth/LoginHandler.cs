@@ -17,7 +17,7 @@ public sealed class LoginHandler(
 
     public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken = default)
     {
-        var user = await userRepository.GetByEmailAsync(command.Request.Email)
+        var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant())
             ?? throw new UnauthorizedException("Invalid credentials.");
 
         if (!user.IsActive)
@@ -27,15 +27,15 @@ public sealed class LoginHandler(
             throw new UnauthorizedException("Invalid credentials.");
 
         var roles = await userRoleRepository.GetRolesAsync(user.UserId);
-        var accessToken = jwtService.GenerateToken(user.UserId, roles);
+        var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
         var rawToken = Guid.NewGuid().ToString();
         var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
-        var expiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
+        var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-        var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, tokenHash, expiresAt);
+        var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, tokenHash, refreshTokenExpiresAt);
         await refreshTokenRepository.AddAsync(refreshToken);
 
-        return new AuthResult(accessToken, rawToken, expiresAt);
+        return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
     }
 }

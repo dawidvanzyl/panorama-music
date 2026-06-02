@@ -2,21 +2,18 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
-/// <summary>
-/// HMAC-SHA256 JWT implementation of <see cref="IJwtService"/>.
-/// Reads JWT_SECRET from the environment. Token TTL is 15 minutes.
-/// </summary>
 public class JwtService : IJwtService
 {
     private const int _tokenExpiryMinutes = 15;
     private const int _minSecretLength = 32;
 
-    public string GenerateToken(Guid userId, IList<Role> roles)
+    public JwtToken GenerateToken(Guid userId, IList<Role> roles)
     {
         var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
             ?? throw new InvalidOperationException("JWT_SECRET environment variable is not configured.");
@@ -28,6 +25,7 @@ public class JwtService : IJwtService
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var now = DateTime.UtcNow;
+        var expiresAt = now.AddMinutes(_tokenExpiryMinutes);
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
@@ -38,12 +36,12 @@ public class JwtService : IJwtService
         {
             Subject = new ClaimsIdentity(claims),
             IssuedAt = now,
-            Expires = now.AddMinutes(_tokenExpiryMinutes),
+            Expires = expiresAt,
             SigningCredentials = credentials,
         };
 
         var handler = new JwtSecurityTokenHandler();
         var token = handler.CreateToken(descriptor);
-        return handler.WriteToken(token);
+        return new JwtToken(handler.WriteToken(token), expiresAt);
     }
 }

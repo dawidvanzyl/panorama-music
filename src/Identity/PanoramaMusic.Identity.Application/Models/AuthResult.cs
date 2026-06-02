@@ -1,3 +1,7 @@
 namespace PanoramaMusic.Identity.Application.Models;
 
-public sealed record AuthResult(string AccessToken, string RefreshToken, DateTime ExpiresAt);
+public sealed record AuthResult(
+    string AccessToken,
+    string RefreshToken,
+    DateTime AccessTokenExpiresAt,
+    DateTime RefreshTokenExpiresAt);

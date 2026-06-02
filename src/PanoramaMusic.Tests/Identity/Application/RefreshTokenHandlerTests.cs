@@ -2,7 +2,6 @@ using Moq;
 using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
-using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -27,9 +26,8 @@ public class RefreshTokenHandlerTests
         var roleRepo = new Mock<IUserRoleRepository>();
         var jwt = new Mock<IJwtService>();
 
-        refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
-        refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
-        jwt.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>())).Returns("new-access-token");
+        refreshRepo.Setup(r => r.RotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
+        jwt.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>())).Returns(new JwtToken("new-access-token", DateTime.UtcNow));
 
         var handler = new RefreshTokenHandler(refreshRepo.Object, userRepo.Object, roleRepo.Object, jwt.Object);
         return (refreshRepo, userRepo, roleRepo, jwt, handler);
@@ -50,15 +48,13 @@ public class RefreshTokenHandlerTests
         var user = new User(userId, PanoramaMusic.Identity.Domain.ValueObjects.Email.Create("u@test.com"), DateTime.UtcNow);
         user.Activate();
         userRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
-        roleRepo.Setup(r => r.GetRolesAsync(userId)).ReturnsAsync(new List<Role>());
+        roleRepo.Setup(r => r.GetRolesAsync(userId)).ReturnsAsync([]);
 
         var result = await handler.HandleAsync(new RefreshTokenCommand(new RefreshTokenRequest(rawToken)), CancellationToken.None);
 
         result.ShouldNotBeNull();
         result.AccessToken.ShouldBe("new-access-token");
-        existing.IsRevoked.ShouldBeTrue();
-        refreshRepo.Verify(r => r.UpdateAsync(existing), Times.Once);
-        refreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>()), Times.Once);
+        refreshRepo.Verify(r => r.RotateAsync(existing.TokenId, It.IsAny<RefreshToken>()), Times.Once);
     }
 
     [Fact]

@@ -26,22 +26,19 @@ public sealed class RefreshTokenHandler(
         if (existing.IsRevoked)
             throw new UnauthorizedException("Refresh token has been revoked.");
 
-        existing.Revoke();
-        await refreshTokenRepository.UpdateAsync(existing);
-
         var user = await userRepository.GetByIdAsync(existing.UserId)
             ?? throw new UnauthorizedException("User not found.");
 
         var roles = await userRoleRepository.GetRolesAsync(user.UserId);
-        var accessToken = jwtService.GenerateToken(user.UserId, roles);
+        var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
         var rawToken = Guid.NewGuid().ToString();
         var newTokenHash = TokenHasher.ComputeSha256Hash(rawToken);
-        var expiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
+        var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-        var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newTokenHash, expiresAt);
-        await refreshTokenRepository.AddAsync(newRefreshToken);
+        var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newTokenHash, refreshTokenExpiresAt);
+        await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken);
 
-        return new AuthResult(accessToken, rawToken, expiresAt);
+        return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
     }
 }

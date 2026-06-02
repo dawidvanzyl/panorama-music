@@ -1,9 +1,9 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using Shouldly;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using Xunit;
 
 namespace PanoramaMusic.Tests.Identity.Infrastructure;
@@ -22,9 +22,10 @@ public class JwtServiceTests
             var userId = Guid.NewGuid();
             var roles = new List<Role> { Role.Admin };
 
-            var token = service.GenerateToken(userId, roles);
+            var result = service.GenerateToken(userId, roles);
 
             var handler = new JwtSecurityTokenHandler();
+            var token = result.Token;
             var jwt = handler.ReadJwtToken(token);
 
             jwt.Subject.ShouldBe(userId.ToString());
@@ -48,9 +49,10 @@ public class JwtServiceTests
             var service = new JwtService();
             var userId = Guid.NewGuid();
 
-            var token = service.GenerateToken(userId, [Role.Admin]);
+            var result = service.GenerateToken(userId, [Role.Admin]);
 
             var handler = new JwtSecurityTokenHandler();
+            var token = result.Token;
             var parameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
