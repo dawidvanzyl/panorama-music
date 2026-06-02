@@ -10,10 +10,10 @@ public record PasswordHash
 
     public static PasswordHash Create(string? hash)
     {
-        if (string.IsNullOrWhiteSpace(hash)) throw new DomainException("Password hash cannot be empty.");
+		return string.IsNullOrWhiteSpace(hash)
+            ? throw new DomainException("Password hash cannot be empty.")
+            : new PasswordHash(hash);
+	}
 
-        return new PasswordHash(hash);
-    }
-
-    public override string ToString() => Value;
+	public override string ToString() => Value;
 }

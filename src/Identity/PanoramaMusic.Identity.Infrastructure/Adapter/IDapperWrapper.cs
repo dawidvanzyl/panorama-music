@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace PanoramaMusic.Identity.Infrastructure.Data;
+namespace PanoramaMusic.Identity.Infrastructure.Adapter;
 
 public interface IDapperWrapper
 {

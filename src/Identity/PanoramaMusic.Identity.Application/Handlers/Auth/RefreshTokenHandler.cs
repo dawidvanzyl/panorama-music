@@ -12,9 +12,9 @@ public sealed class RefreshTokenHandler(
     IUserRoleRepository userRoleRepository,
     IJwtService jwtService)
 {
-    private const int RefreshTokenExpiryDays = 7;
+    private const int _refreshTokenExpiryDays = 7;
 
-    public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken ct = default)
+    public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.Token);
         var existing = await refreshTokenRepository.GetByTokenHashAsync(tokenHash)
@@ -37,7 +37,7 @@ public sealed class RefreshTokenHandler(
 
         var rawToken = Guid.NewGuid().ToString();
         var newTokenHash = TokenHasher.ComputeSha256Hash(rawToken);
-        var expiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays);
+        var expiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
         var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newTokenHash, expiresAt);
         await refreshTokenRepository.AddAsync(newRefreshToken);

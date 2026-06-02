@@ -10,14 +10,15 @@ public record Email
 
     public static Email Create(string? email)
     {
-        if (string.IsNullOrWhiteSpace(email)) throw new DomainException("Email cannot be empty.");
+        if (string.IsNullOrWhiteSpace(email))
+			throw new DomainException("Email cannot be empty.");
 
         var trimmed = email.Trim();
 
-        if (!trimmed.Contains('@')) throw new DomainException("Email must contain '@'.");
+		return !trimmed.Contains('@')
+            ? throw new DomainException("Email must contain '@'.")
+            : new Email(trimmed.ToLowerInvariant());
+	}
 
-        return new Email(trimmed.ToLowerInvariant());
-    }
-
-    public override string ToString() => Value;
+	public override string ToString() => Value;
 }

@@ -1,7 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.ValueObjects;
-using PanoramaMusic.Identity.Infrastructure.Data;
+using PanoramaMusic.Identity.Infrastructure.Adapter;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using System.Data;

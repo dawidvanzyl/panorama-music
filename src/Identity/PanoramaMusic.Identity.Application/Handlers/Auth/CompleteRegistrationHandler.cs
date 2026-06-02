@@ -1,6 +1,7 @@
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using System.Diagnostics;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
@@ -9,7 +10,7 @@ public sealed class CompleteRegistrationHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher)
 {
-    public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken)
+    public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken = default)
     {
         var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.InviteToken);
         var inviteToken = await inviteTokenRepository.GetByTokenHashAsync(tokenHash)

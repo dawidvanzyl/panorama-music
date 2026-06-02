@@ -1,7 +1,7 @@
 using System.Data;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Data;
+using PanoramaMusic.Identity.Infrastructure.Adapter;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -17,7 +17,9 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
             new { p_token_hash = tokenHash },
             CommandType.StoredProcedure);
 
-        return row is null ? null : MapToRefreshToken(row);
+        return row is null
+            ? null
+            : MapToRefreshToken(row);
     }
 
     public async Task AddAsync(RefreshToken token)
@@ -51,9 +53,7 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
         var token = new RefreshToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
 
         if (row.Revoked_at.HasValue)
-        {
             token.Revoke(row.Revoked_at.Value);
-        }
 
         return token;
     }

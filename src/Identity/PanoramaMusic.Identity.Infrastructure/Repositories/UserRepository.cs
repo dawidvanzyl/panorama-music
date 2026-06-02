@@ -2,7 +2,7 @@ using System.Data;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
-using PanoramaMusic.Identity.Infrastructure.Data;
+using PanoramaMusic.Identity.Infrastructure.Adapter;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -18,7 +18,9 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
             new { p_user_id = userId },
             CommandType.StoredProcedure);
 
-        return row is null ? null : MapToUser(row);
+        return row is null
+            ? null
+            : MapToUser(row);
     }
 
     public async Task<User?> GetByEmailAsync(string email)
@@ -30,7 +32,9 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
             new { p_email = email },
             CommandType.StoredProcedure);
 
-        return row is null ? null : MapToUser(row);
+        return row is null
+            ? null
+            : MapToUser(row);
     }
 
     public async Task AddAsync(User user)
@@ -104,12 +108,12 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
 
     private static User MapToUser(UserRow row)
     {
-        var user = new User(row.user_id, Email.Create(row.email), row.created_at);
+        var user = new User(row.User_id, Email.Create(row.Email), row.Created_at);
 
-        if (row.password_hash is not null)
-            user.SetPassword(PasswordHash.Create(row.password_hash));
+        if (row.Password_hash is not null)
+            user.SetPassword(PasswordHash.Create(row.Password_hash));
 
-        if (row.is_active)
+        if (row.Is_active)
             user.Activate();
 
         return user;

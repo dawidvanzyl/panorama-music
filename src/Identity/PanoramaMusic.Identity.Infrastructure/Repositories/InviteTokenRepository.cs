@@ -1,7 +1,7 @@
 using System.Data;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Data;
+using PanoramaMusic.Identity.Infrastructure.Adapter;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -17,7 +17,9 @@ public class InviteTokenRepository(IDapperWrapper dapper) : IInviteTokenReposito
             new { p_token_hash = tokenHash },
             CommandType.StoredProcedure);
 
-        return row is null ? null : new InviteToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
+        return row is null
+            ? null
+            : new InviteToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
     }
 
     public async Task AddAsync(InviteToken token)
