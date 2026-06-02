@@ -1,13 +1,12 @@
 using System.Data;
 using Dapper;
-using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class InviteTokenRepository(NpgsqlConnection connection) : IInviteTokenRepository
+public class InviteTokenRepository(IDbConnection connection) : IInviteTokenRepository
 {
     public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash)
     {

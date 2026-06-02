@@ -1,13 +1,12 @@
 using System.Data;
 using Dapper;
-using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class UserRoleRepository(NpgsqlConnection connection) : IUserRoleRepository
+public class UserRoleRepository(IDbConnection connection) : IUserRoleRepository
 {
     public async Task AddAsync(UserRole userRole)
     {

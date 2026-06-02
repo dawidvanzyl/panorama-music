@@ -1,13 +1,12 @@
 using System.Data;
 using Dapper;
-using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class RefreshTokenRepository(NpgsqlConnection connection) : IRefreshTokenRepository
+public class RefreshTokenRepository(IDbConnection connection) : IRefreshTokenRepository
 {
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
     {

@@ -1,6 +1,5 @@
 using System.Data;
 using Dapper;
-using Npgsql;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
@@ -8,7 +7,7 @@ using PanoramaMusic.Identity.Infrastructure.Entities;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class UserRepository(NpgsqlConnection connection) : IUserRepository
+public class UserRepository(IDbConnection connection) : IUserRepository
 {
     public async Task<User?> GetByIdAsync(Guid userId)
     {
