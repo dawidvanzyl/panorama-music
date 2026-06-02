@@ -1,3 +1,5 @@
+using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -11,9 +13,9 @@ public sealed class LoginHandler(
     IJwtService jwtService,
     IRefreshTokenRepository refreshTokenRepository)
 {
-    private const int RefreshTokenExpiryDays = 7;
+    private const int _refreshTokenExpiryDays = 7;
 
-    public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken ct = default)
+    public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
     {
         var user = await userRepository.GetByEmailAsync(command.Request.Email)
             ?? throw new UnauthorizedException("Invalid credentials.");
@@ -29,7 +31,7 @@ public sealed class LoginHandler(
 
         var rawToken = Guid.NewGuid().ToString();
         var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
-        var expiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays);
+        var expiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
         var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, tokenHash, expiresAt);
         await refreshTokenRepository.AddAsync(refreshToken);

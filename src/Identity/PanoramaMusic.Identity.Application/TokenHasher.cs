@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace PanoramaMusic.Identity.Application.Handlers.Auth;
+namespace PanoramaMusic.Identity.Application;
 
 public static class TokenHasher
 {
