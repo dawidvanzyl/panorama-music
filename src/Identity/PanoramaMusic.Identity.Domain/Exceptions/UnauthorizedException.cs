@@ -1,8 +1,6 @@
 namespace PanoramaMusic.Identity.Domain.Exceptions;
 
-public sealed class UnauthorizedException : Exception
+public sealed class UnauthorizedException(string message) 
+	: Exception(message)
 {
-	public UnauthorizedException(string message)
-		: base(message)
-	{ }
 }

@@ -1,7 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Domain.Entities;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using System.Data;
 using Xunit;
@@ -33,14 +33,14 @@ public class InviteTokenRepositoryTests
 		const string tokenHash = "abc123hash";
 
 		mockDapper
-			.Setup(d => d.QuerySingleOrDefaultAsync<InviteTokenRow>(
+			.Setup(d => d.QuerySingleOrDefaultAsync<InviteTokenDto>(
 				It.IsAny<IDbConnection>(), "identity.get_invite_token_by_hash",
 				It.IsAny<object?>(), CommandType.StoredProcedure, null))
-			.ReturnsAsync((InviteTokenRow?)null);
+			.ReturnsAsync((InviteTokenDto?)null);
 
 		await repo.GetByTokenHashAsync(tokenHash);
 
-		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<InviteTokenRow>(
+		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<InviteTokenDto>(
 			It.IsAny<IDbConnection>(),
 			"identity.get_invite_token_by_hash",
 			It.Is<object>(p => (string)p.GetType().GetProperty("p_token_hash")!.GetValue(p)! == tokenHash),

@@ -1,8 +1,8 @@
 using Moq;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.ValueObjects;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using System.Data;
 using Xunit;
@@ -37,14 +37,14 @@ public class UserRepositoryTests
 		var userId = Guid.NewGuid();
 
 		mockDapper
-			.Setup(d => d.QuerySingleOrDefaultAsync<UserRow>(
+			.Setup(d => d.QuerySingleOrDefaultAsync<UserDto>(
 				It.IsAny<IDbConnection>(), "identity.get_user_by_id",
 				It.IsAny<object?>(), CommandType.StoredProcedure, null))
-			.ReturnsAsync((UserRow?)null);
+			.ReturnsAsync((UserDto?)null);
 
 		await repo.GetByIdAsync(userId);
 
-		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<UserRow>(
+		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<UserDto>(
 			It.IsAny<IDbConnection>(),
 			"identity.get_user_by_id",
 			It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),

@@ -1,7 +1,8 @@
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
+using PanoramaMusic.Identity.Infrastructure.Extensions;
 using System.Data;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -11,15 +12,13 @@ public class InviteTokenRepository(IDapperWrapper dapper) : IInviteTokenReposito
 	public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash)
 	{
 		using var connection = dapper.CreateConnection();
-		var row = await dapper.QuerySingleOrDefaultAsync<InviteTokenRow>(
+		var dto = await dapper.QuerySingleOrDefaultAsync<InviteTokenDto>(
 			connection,
 			"identity.get_invite_token_by_hash",
 			new { p_token_hash = tokenHash },
 			CommandType.StoredProcedure);
 
-		return row is null
-			? null
-			: new InviteToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
+		return dto?.MapToInviteToken();
 	}
 
 	public async Task AddAsync(InviteToken token)

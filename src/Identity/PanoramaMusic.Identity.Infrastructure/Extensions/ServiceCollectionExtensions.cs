@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
 using PanoramaMusic.Identity.Infrastructure.Factory;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;

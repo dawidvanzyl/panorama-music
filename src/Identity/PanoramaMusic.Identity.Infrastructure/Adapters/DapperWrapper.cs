@@ -2,7 +2,7 @@ using Dapper;
 using PanoramaMusic.Identity.Infrastructure.Factory;
 using System.Data;
 
-namespace PanoramaMusic.Identity.Infrastructure.Adapter;
+namespace PanoramaMusic.Identity.Infrastructure.Adapters;
 
 public class DapperWrapper(IDbConnectionFactory connectionFactory) : IDapperWrapper
 {

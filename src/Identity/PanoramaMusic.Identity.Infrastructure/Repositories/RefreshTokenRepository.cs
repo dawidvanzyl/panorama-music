@@ -1,7 +1,8 @@
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
+using PanoramaMusic.Identity.Infrastructure.Extensions;
 using System.Data;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -11,15 +12,13 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
 	public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
 	{
 		using var connection = dapper.CreateConnection();
-		var row = await dapper.QuerySingleOrDefaultAsync<RefreshTokenRow>(
+		var dto = await dapper.QuerySingleOrDefaultAsync<RefreshTokenDto>(
 			connection,
 			"identity.get_refresh_token_by_hash",
 			new { p_token_hash = tokenHash },
 			CommandType.StoredProcedure);
 
-		return row is null
-			? null
-			: MapToRefreshToken(row);
+		return dto?.MapToRefreshToken();
 	}
 
 	public async Task AddAsync(RefreshToken token)
@@ -82,15 +81,5 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
 			transaction.Rollback();
 			throw;
 		}
-	}
-
-	private static RefreshToken MapToRefreshToken(RefreshTokenRow row)
-	{
-		var token = new RefreshToken(row.Token_id, row.User_id, row.Token_hash, row.Expires_at);
-
-		if (row.Revoked_at.HasValue)
-			token.Revoke(row.Revoked_at.Value);
-
-		return token;
 	}
 }

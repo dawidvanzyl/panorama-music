@@ -1,7 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Domain.Entities;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using System.Data;
 using Xunit;
@@ -36,14 +36,14 @@ public class RefreshTokenRepositoryTests
 		const string tokenHash = "refreshhash456";
 
 		mockDapper
-			.Setup(d => d.QuerySingleOrDefaultAsync<RefreshTokenRow>(
+			.Setup(d => d.QuerySingleOrDefaultAsync<RefreshTokenDto>(
 				It.IsAny<IDbConnection>(), "identity.get_refresh_token_by_hash",
 				It.IsAny<object?>(), CommandType.StoredProcedure, null))
-			.ReturnsAsync((RefreshTokenRow?)null);
+			.ReturnsAsync((RefreshTokenDto?)null);
 
 		await repo.GetByTokenHashAsync(tokenHash);
 
-		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<RefreshTokenRow>(
+		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<RefreshTokenDto>(
 			It.IsAny<IDbConnection>(),
 			"identity.get_refresh_token_by_hash",
 			It.Is<object>(p => (string)p.GetType().GetProperty("p_token_hash")!.GetValue(p)! == tokenHash),

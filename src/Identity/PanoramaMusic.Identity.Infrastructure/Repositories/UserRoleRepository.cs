@@ -1,7 +1,7 @@
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
 using System.Data;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;

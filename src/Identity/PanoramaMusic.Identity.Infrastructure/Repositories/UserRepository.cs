@@ -1,8 +1,8 @@
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Domain.ValueObjects;
-using PanoramaMusic.Identity.Infrastructure.Adapter;
-using PanoramaMusic.Identity.Infrastructure.Entities;
+using PanoramaMusic.Identity.Infrastructure.Adapters;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
+using PanoramaMusic.Identity.Infrastructure.Extensions;
 using System.Data;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -12,29 +12,25 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
 	public async Task<User?> GetByIdAsync(Guid userId)
 	{
 		using var connection = dapper.CreateConnection();
-		var row = await dapper.QuerySingleOrDefaultAsync<UserRow>(
+		var dto = await dapper.QuerySingleOrDefaultAsync<UserDto>(
 			connection,
 			"identity.get_user_by_id",
 			new { p_user_id = userId },
 			CommandType.StoredProcedure);
 
-		return row is null
-			? null
-			: MapToUser(row);
+		return dto?.MapToUser();
 	}
 
 	public async Task<User?> GetByEmailAsync(string email)
 	{
 		using var connection = dapper.CreateConnection();
-		var row = await dapper.QuerySingleOrDefaultAsync<UserRow>(
+		var dto = await dapper.QuerySingleOrDefaultAsync<UserDto>(
 			connection,
 			"identity.get_user_by_email",
 			new { p_email = email },
 			CommandType.StoredProcedure);
 
-		return row is null
-			? null
-			: MapToUser(row);
+		return dto?.MapToUser();
 	}
 
 	public async Task AddAsync(User user)
@@ -147,18 +143,5 @@ public class UserRepository(IDapperWrapper dapper) : IUserRepository
 			transaction.Rollback();
 			throw;
 		}
-	}
-
-	private static User MapToUser(UserRow row)
-	{
-		var user = new User(row.User_id, Email.Create(row.Email), row.Created_at);
-
-		if (row.Password_hash is not null)
-			user.SetPassword(PasswordHash.Create(row.Password_hash));
-
-		if (row.Is_active)
-			user.Activate();
-
-		return user;
 	}
 }
