@@ -94,8 +94,11 @@ Before doing anything else:
   (`npm install -D vitest`).
 - For IT codes: write xUnit integration tests tagged with `[Trait("AC", "M1ITx")]`.
 - Update `README.md` if behavior/setup/usage/docs are affected.
-- Run relevant tests/checks/build for changed scope.
-- Fix issues until checks pass.
+- Build: `dotnet build src/PanoramaMusic.sln`
+- Format check: `dotnet format src/PanoramaMusic.sln --verify-no-changes`
+- Test: `dotnet test src/PanoramaMusic.Tests`
+- Run any frontend checks (lint, typecheck, vitest) if frontend scope
+- Fix issues until all steps pass.
 
 ### 4) Update acceptance criteria in story issue
 

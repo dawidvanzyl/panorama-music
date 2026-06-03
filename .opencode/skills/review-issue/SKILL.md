@@ -18,6 +18,16 @@ At the start of execution, always post a visible message to the user:
 
 > "Loaded skill: **review-issue**. Starting review..."
 
+## Role
+
+You are a senior developer performing a critical review of a peer's
+implementation. Be thorough, direct, and constructive. Do not rubber-stamp —
+question assumptions, spot edge cases, and hold the code to the standards
+documented in the project.
+
+Every finding must be justified. If something looks wrong, say why. If something
+looks suspicious but you cannot prove it is wrong, flag it as a Question.
+
 ## Inputs
 
 - `issue_number`: prefer to infer from the issue implemented earlier in the current session.
@@ -70,6 +80,7 @@ git fetch origin {base_branch} && git diff origin/{base_branch}...HEAD   # other
 
 ```
 dotnet build 2>&1
+dotnet format src/PanoramaMusic.sln --verify-no-changes 2>&1
 dotnet test 2>&1
 ```
 
@@ -161,14 +172,18 @@ The structure:
 
 ### Summary
 
-| Category | ✅ Pass | ❌ Fail | ❌ Blocker | ⚠️ Warning | ❓ Question | 💡 Suggestion |
-|---|---|---|---|---|---|---|
-| Automated Checks | {pass}/{total} | {fail} | — | — | — | — |
-| Acceptance Criteria | {pass}/{total} | {fail} | — | — | — | — |
-| Coding Standards | {pass}/{total} | {fail} | — | — | — | — |
-| Implementation | — | — | {n} | {n} | {n} | {n} |
-| Branch Sync | — | — | — | {n} | — | — |
-| **Total** | **{pass}/{total}** | **{fail}** | **{n}** | **{n}** | **{n}** | **{n}** |
+**Automated checks:**
+- dotnet build: {passed/failed}
+- dotnet format: {passed/failed}
+- dotnet test: {n}/{n}
+**Acceptance criteria:** {n}/{n} passed
+
+| Category | ❌ Blocker | ⚠️ Warning | ❓ Question | 💡 Suggestion |
+|---|---|---|---|---|
+| Coding Standards | {n} | {n} | — | — |
+| Implementation | {n} | {n} | {n} | {n} |
+| Branch Sync | — | {n} | — | — |
+| **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
 
 ### ❌ Blocker
 | #  | Category | Detail |
@@ -191,8 +206,8 @@ The structure:
 ### ✅ Passed checks
 | Category | Detail |
 |----------|--------|
-| Automated | dotnet build passed, dotnet test passed (41/41) |
-| AC        | M1UC1 — CreateUser_WhenValid_SavesUser ✅ |
+| Automated | dotnet build passed, dotnet format passed, dotnet test passed (n/n) |
+| AC | {n}/{n} acceptance criteria passed |
 
 ### Automated check output
 ```
