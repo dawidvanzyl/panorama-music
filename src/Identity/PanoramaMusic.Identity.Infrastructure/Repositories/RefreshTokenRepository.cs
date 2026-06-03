@@ -1,31 +1,31 @@
+using Dapper;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapters;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
+using PanoramaMusic.Identity.Infrastructure.Factory;
 using System.Data;
+using System.Data.Common;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenRepository
+public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : IRefreshTokenRepository
 {
-	public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
+	public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		var dto = await dapper.QuerySingleOrDefaultAsync<RefreshTokenDto>(
-			connection,
+		using var connection = connectionFactory.CreateConnection();
+		var dto = await connection.QuerySingleOrDefaultAsync<RefreshTokenDto>(
 			"identity.get_refresh_token_by_hash",
 			new { p_token_hash = tokenHash },
-			CommandType.StoredProcedure);
+			commandType: CommandType.StoredProcedure);
 
 		return dto?.MapToRefreshToken();
 	}
 
-	public async Task AddAsync(RefreshToken token)
+	public async Task AddAsync(RefreshToken token, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		await dapper.ExecuteAsync(
-			connection,
+		using var connection = connectionFactory.CreateConnection();
+		await connection.ExecuteAsync(
 			"identity.create_refresh_token",
 			new
 			{
@@ -34,35 +34,32 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
 				p_token_hash = token.TokenHash,
 				p_expires_at = token.ExpiresAt,
 			},
-			CommandType.StoredProcedure);
+			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task UpdateAsync(RefreshToken token)
+	public async Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		await dapper.ExecuteAsync(
-			connection,
+		using var connection = connectionFactory.CreateConnection();
+		await connection.ExecuteAsync(
 			"identity.revoke_refresh_token",
 			new { p_token_id = token.TokenId },
-			CommandType.StoredProcedure);
+			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken)
+	public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		connection.Open();
-		using var transaction = connection.BeginTransaction();
+		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
-			await dapper.ExecuteAsync(
-				connection,
+			await dbConnection.ExecuteAsync(
 				"identity.revoke_refresh_token",
 				new { p_token_id = oldTokenId },
-				CommandType.StoredProcedure,
-				transaction);
+				transaction,
+				commandType: CommandType.StoredProcedure);
 
-			await dapper.ExecuteAsync(
-				connection,
+			await dbConnection.ExecuteAsync(
 				"identity.create_refresh_token",
 				new
 				{
@@ -71,14 +68,14 @@ public class RefreshTokenRepository(IDapperWrapper dapper) : IRefreshTokenReposi
 					p_token_hash = newToken.TokenHash,
 					p_expires_at = newToken.ExpiresAt,
 				},
-				CommandType.StoredProcedure,
-				transaction);
+				transaction,
+				commandType: CommandType.StoredProcedure);
 
-			transaction.Commit();
+			await transaction.CommitAsync(cancellationToken);
 		}
 		catch
 		{
-			transaction.Rollback();
+			await transaction.RollbackAsync(cancellationToken);
 			throw;
 		}
 	}

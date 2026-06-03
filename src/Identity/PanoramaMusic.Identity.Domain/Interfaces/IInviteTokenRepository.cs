@@ -4,7 +4,7 @@ namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IInviteTokenRepository
 {
-	Task<InviteToken?> GetByTokenHashAsync(string tokenHash);
-	Task AddAsync(InviteToken token);
-	Task UpdateAsync(InviteToken token);
+	Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default);
+	Task AddAsync(InviteToken token, CancellationToken cancellationToken = default);
+	Task UpdateAsync(InviteToken token, CancellationToken cancellationToken = default);
 }

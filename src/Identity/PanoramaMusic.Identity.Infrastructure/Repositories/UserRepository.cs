@@ -1,146 +1,139 @@
+using Dapper;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Adapters;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
+using PanoramaMusic.Identity.Infrastructure.Factory;
 using System.Data;
+using System.Data.Common;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class UserRepository(IDapperWrapper dapper) : IUserRepository
+public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
 {
-	public async Task<User?> GetByIdAsync(Guid userId)
+	public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		var dto = await dapper.QuerySingleOrDefaultAsync<UserDto>(
-			connection,
+		using var connection = connectionFactory.CreateConnection();
+		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
 			"identity.get_user_by_id",
 			new { p_user_id = userId },
-			CommandType.StoredProcedure);
+			commandType: CommandType.StoredProcedure);
 
 		return dto?.MapToUser();
 	}
 
-	public async Task<User?> GetByEmailAsync(string email)
+	public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		var dto = await dapper.QuerySingleOrDefaultAsync<UserDto>(
-			connection,
+		using var connection = connectionFactory.CreateConnection();
+		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
 			"identity.get_user_by_email",
 			new { p_email = email },
-			CommandType.StoredProcedure);
+			commandType: CommandType.StoredProcedure);
 
 		return dto?.MapToUser();
 	}
 
-	public async Task AddAsync(User user)
+	public async Task AddAsync(User user, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		connection.Open();
-		using var transaction = connection.BeginTransaction();
+		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
-			await dapper.ExecuteAsync(
-				connection,
+			await dbConnection.ExecuteAsync(
 				"identity.create_user",
 				new { p_user_id = user.UserId, p_email = user.Email.Value, p_is_active = user.IsActive },
-				CommandType.StoredProcedure,
-				transaction);
+				transaction,
+				commandType: CommandType.StoredProcedure);
 
 			if (user.PasswordHash is not null)
 			{
-				await dapper.ExecuteAsync(
-					connection,
+				await dbConnection.ExecuteAsync(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
-					CommandType.StoredProcedure,
-					transaction);
+					transaction,
+					commandType: CommandType.StoredProcedure);
 			}
 
-			transaction.Commit();
+			await transaction.CommitAsync(cancellationToken);
 		}
 		catch
 		{
-			transaction.Rollback();
+			await transaction.RollbackAsync(cancellationToken);
 			throw;
 		}
 	}
 
-	public async Task UpdateAsync(User user)
+	public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		connection.Open();
-		using var transaction = connection.BeginTransaction();
+		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
 			if (user.PasswordHash is not null)
 			{
-				await dapper.ExecuteAsync(
-					connection,
+				await dbConnection.ExecuteAsync(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
-					CommandType.StoredProcedure,
-					transaction);
+					transaction,
+					commandType: CommandType.StoredProcedure);
 			}
 
 			if (user.IsActive)
 			{
-				await dapper.ExecuteAsync(
-					connection,
+				await dbConnection.ExecuteAsync(
 					"identity.activate_user",
 					new { p_user_id = user.UserId },
-					CommandType.StoredProcedure,
-					transaction);
+					transaction,
+					commandType: CommandType.StoredProcedure);
 			}
 
-			transaction.Commit();
+			await transaction.CommitAsync(cancellationToken);
 		}
 		catch
 		{
-			transaction.Rollback();
+			await transaction.RollbackAsync(cancellationToken);
 			throw;
 		}
 	}
 
-	public async Task CompleteActivationAsync(User user, Guid inviteTokenId)
+	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken = default)
 	{
-		using var connection = dapper.CreateConnection();
-		connection.Open();
-		using var transaction = connection.BeginTransaction();
+		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
 			if (user.PasswordHash is not null)
 			{
-				await dapper.ExecuteAsync(
-					connection,
+				await dbConnection.ExecuteAsync(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
-					CommandType.StoredProcedure,
-					transaction);
+					transaction,
+					commandType: CommandType.StoredProcedure);
 			}
 
 			if (user.IsActive)
 			{
-				await dapper.ExecuteAsync(
-					connection,
+				await dbConnection.ExecuteAsync(
 					"identity.activate_user",
 					new { p_user_id = user.UserId },
-					CommandType.StoredProcedure,
-					transaction);
+					transaction,
+					commandType: CommandType.StoredProcedure);
 			}
 
-			await dapper.ExecuteAsync(
-				connection,
+			await dbConnection.ExecuteAsync(
 				"identity.use_invite_token",
 				new { p_token_id = inviteTokenId },
-				CommandType.StoredProcedure,
-				transaction);
+				transaction,
+				commandType: CommandType.StoredProcedure);
 
-			transaction.Commit();
+			await transaction.CommitAsync(cancellationToken);
 		}
 		catch
 		{
-			transaction.Rollback();
+			await transaction.RollbackAsync(cancellationToken);
 			throw;
 		}
 	}
