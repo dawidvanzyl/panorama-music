@@ -1,0 +1,41 @@
+using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Models;
+using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Exceptions;
+using PanoramaMusic.Identity.Domain.Interfaces;
+
+namespace PanoramaMusic.Identity.Application.Handlers.Auth;
+
+public sealed class LoginHandler(
+	IUserRepository userRepository,
+	IUserRoleRepository userRoleRepository,
+	IPasswordHasher passwordHasher,
+	IJwtService jwtService,
+	IRefreshTokenRepository refreshTokenRepository)
+{
+	private const int _refreshTokenExpiryDays = 7;
+
+	public async Task<AuthResult> HandleAsync(LoginCommand command)
+	{
+		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant())
+			?? throw new UnauthorizedException("Invalid credentials.");
+
+		if (!user.IsActive)
+			throw new UnauthorizedException("User account is not active.");
+
+		if (user.PasswordHash is null || !passwordHasher.Verify(command.Request.Password, user.PasswordHash))
+			throw new UnauthorizedException("Invalid credentials.");
+
+		var roles = await userRoleRepository.GetRolesAsync(user.UserId);
+		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
+
+		var rawToken = Guid.NewGuid().ToString();
+		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
+
+		var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, tokenHash, refreshTokenExpiresAt);
+		await refreshTokenRepository.AddAsync(refreshToken);
+
+		return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
+	}
+}

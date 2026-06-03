@@ -4,7 +4,8 @@ namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IRefreshTokenRepository
 {
-    Task<RefreshToken?> GetByTokenHashAsync(string tokenHash);
-    Task AddAsync(RefreshToken token);
-    Task UpdateAsync(RefreshToken token);
+	Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default);
+	Task AddAsync(RefreshToken token, CancellationToken cancellationToken = default);
+	Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken = default);
+	Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken = default);
 }

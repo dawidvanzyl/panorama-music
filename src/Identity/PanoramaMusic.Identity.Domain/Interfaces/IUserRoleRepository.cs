@@ -5,6 +5,6 @@ namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IUserRoleRepository
 {
-    Task AddAsync(UserRole userRole);
-    Task<IList<Role>> GetRolesAsync(Guid userId);
+	Task AddAsync(UserRole userRole, CancellationToken cancellationToken = default);
+	Task<IList<Role>> GetRolesAsync(Guid userId, CancellationToken cancellationToken = default);
 }

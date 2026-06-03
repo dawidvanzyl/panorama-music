@@ -22,48 +22,39 @@ C#, ASP.NET Core, Dapper, DbUp, and xUnit conventions for the Panorama Music pro
 ### File and Namespace Naming
 
 - One top-level type per file; file name matches the type name exactly.
-- Namespaces mirror the folder structure relative to the project root.
-  ```
-  src/PanoramaMusic.Api/Routes/HealthRoutes.cs
-  → namespace PanoramaMusic.Api.Routes
-  ```
 - Use `PascalCase` for namespaces, classes, methods, properties, and public fields.
 - Use `camelCase` for local variables and method parameters.
-- Prefix private instance fields with an underscore: `_connectionString`.
-- Use file-scoped namespace declarations (no extra indentation level):
-  ```csharp
-  namespace PanoramaMusic.Api.Routes;
 
-  public static class HealthRoutes { ... }
-  ```
+### Folder Conventions
+
+Source files are organised into folders named after their role or type suffix:
+
+```
+Handlers/     — handler classes
+Commands/     — command records
+Requests/     — request/input DTOs
+Models/       — output/result DTOs
+Factories/    — factory classes
+Repositories/ — repository classes
+Services/     — service implementations
+Adapters/     — adapter/wrapper classes
+Entities/     — entity records (Domain) or dto classes (Infrastructure)
+Dtos/         — dto classes (Infrastructure)
+ValueObjects/ — value object records
+Enums/        — enum types
+Exceptions/   — exception classes
+Interfaces/   — interface types
+```
+
+- Do not use a `Common/` catch-all folder. Every type of artifact has its own named folder.
+- **Interface special case:** When interfaces are defined in a separate layer from their implementations (e.g. Domain defines `IUserRepository`, Infrastructure implements it), they live in an `Interfaces/` folder in each layer. When an interface and its implementation reside in the same layer, keep the interface in the same folder as the implementation rather than separating them.
 
 ### General Rules
 
 - Enable nullable reference types (`<Nullable>enable</Nullable>`) in every project.
-- Prefer `var` when the type is obvious from the right-hand side.
 - Use expression-bodied members for trivial one-liners.
 - Do not use `regions`.
 - Do not suppress warnings with `#pragma` unless accompanied by a justification comment.
-
-### `if`-Statement Formatting
-
-Two flavours — no other forms are used:
-
-Single-statement body (no braces, same line):
-```csharp
-if (condition) throw new DomainException("...");
-```
-
-Multi-statement body (braces, each on its own line):
-```csharp
-if (condition)
-{
-    line1;
-    line2;
-}
-```
-
-The two-line dangling form (no braces, body on next line) is **not used**.
 
 ### Constructor Formatting
 
@@ -184,6 +175,15 @@ public record Email
       GetSongsQuery.cs
       SongDto.cs
   ```
+
+**Handler input convention:** Each handler accepts a `sealed record` Command that wraps a Request. The Request holds the raw input data; the Command is the handler's parameter type. Commands with no input beyond what the Request provides are simple wrappers:
+
+```csharp
+public sealed record LoginRequest(string Email, string Password);
+public sealed record LoginCommand(LoginRequest Request);
+```
+
+Handlers with simple input that does not warrant a separate Request may embed the data directly in the Command.
 
 ### 2.3 Infrastructure (`PanoramaMusic.Infrastructure`)
 
@@ -341,6 +341,77 @@ catch
     throw;
 }
 ```
+
+### 3.5 Repository Mapping Conventions
+
+#### 3.5.1 Dto Classes
+
+Dapper maps query results to simple `record` types in `Infrastructure/Dtos/`, not to domain entities directly. These dto classes mirror the table columns and stay in the Infrastructure layer. Repositories map from dtos to domain entities in a private `MapTo{Entity}` method:
+
+```csharp
+// Infrastructure/Dtos/UserDto.cs
+public sealed record UserDto(
+    Guid User_id,
+    string Email,
+    string Password_hash,
+    bool Is_active,
+    DateTime Created_at);
+```
+
+**Mapping convention — extension methods over private repository methods:** To keep repositories focused on data access and allow mapping logic to be reused and tested independently, extract mapping to `internal static` extension methods in `Infrastructure/Extensions/{Entity}DtoExtensions.cs`:
+
+```csharp
+// Infrastructure/Extensions/InviteTokenDtoExtensions.cs
+internal static class InviteTokenDtoExtensions
+{
+    internal static InviteToken MapToInviteToken(this InviteTokenDto dto)
+    {
+        return new InviteToken(dto.Token_Id, dto.User_Id, dto.Token_Hash, dto.Expires_At);
+    }
+}
+```
+
+Repositories then call `dto.MapToInviteToken()` directly:
+```csharp
+var token = dto.MapToInviteToken();
+```
+
+#### 3.5.2 Compound Transaction Methods
+
+When an operation must atomically update multiple entities (e.g. revoke a refresh token and create a new one), expose a dedicated repository method that owns the transaction rather than orchestrating connections and transactions in the handler layer:
+
+```csharp
+public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken ct = default)
+{
+    using var connection = _connectionFactory.CreateConnection();
+    var dbConnection = (DbConnection)connection;
+    await dbConnection.OpenAsync(ct);
+    await using var tx = await dbConnection.BeginTransactionAsync(ct);
+    try
+    {
+        await connection.ExecuteAsync(
+            "identity.revoke_refresh_token",
+            new { p_token_id = oldTokenId },
+            transaction: tx,
+            commandType: CommandType.StoredProcedure);
+
+        await connection.ExecuteAsync(
+            "identity.create_refresh_token",
+            new { p_token_id = newToken.TokenId, p_user_id = newToken.UserId, p_token_hash = newToken.TokenHash },
+            transaction: tx,
+            commandType: CommandType.StoredProcedure);
+
+        await tx.CommitAsync(ct);
+    }
+    catch
+    {
+        await tx.RollbackAsync(ct);
+        throw;
+    }
+}
+```
+
+The handler calls this single method instead of managing the transaction itself.
 
 ---
 
