@@ -11,123 +11,123 @@ namespace PanoramaMusic.Tests.Identity.Infrastructure;
 
 public class UserRepositoryTests
 {
-    private static (Mock<IDapperWrapper> dapper, UserRepository repo) CreateSut()
-    {
-        var mockConnection = new Mock<IDbConnection>();
-        var mockTransaction = new Mock<IDbTransaction>();
-        mockConnection.Setup(c => c.BeginTransaction()).Returns(mockTransaction.Object);
-        mockConnection.Setup(c => c.BeginTransaction(It.IsAny<IsolationLevel>())).Returns(mockTransaction.Object);
+	private static (Mock<IDapperWrapper> dapper, UserRepository repo) CreateSut()
+	{
+		var mockConnection = new Mock<IDbConnection>();
+		var mockTransaction = new Mock<IDbTransaction>();
+		mockConnection.Setup(c => c.BeginTransaction()).Returns(mockTransaction.Object);
+		mockConnection.Setup(c => c.BeginTransaction(It.IsAny<IsolationLevel>())).Returns(mockTransaction.Object);
 
-        var mockDapper = new Mock<IDapperWrapper>();
-        mockDapper.Setup(d => d.CreateConnection()).Returns(mockConnection.Object);
-        mockDapper
-            .Setup(d => d.ExecuteAsync(
-                It.IsAny<IDbConnection>(), It.IsAny<string>(),
-                It.IsAny<object?>(), It.IsAny<CommandType>(), It.IsAny<IDbTransaction?>()))
-            .Returns(Task.CompletedTask);
+		var mockDapper = new Mock<IDapperWrapper>();
+		mockDapper.Setup(d => d.CreateConnection()).Returns(mockConnection.Object);
+		mockDapper
+			.Setup(d => d.ExecuteAsync(
+				It.IsAny<IDbConnection>(), It.IsAny<string>(),
+				It.IsAny<object?>(), It.IsAny<CommandType>(), It.IsAny<IDbTransaction?>()))
+			.Returns(Task.CompletedTask);
 
-        return (mockDapper, new UserRepository(mockDapper.Object));
-    }
+		return (mockDapper, new UserRepository(mockDapper.Object));
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC11")]
-    public async Task GetByIdAsync_UsesCorrectFunctionAndParameters()
-    {
-        var (mockDapper, repo) = CreateSut();
-        var userId = Guid.NewGuid();
+	[Fact]
+	[Trait("AC", "M1UC11")]
+	public async Task GetByIdAsync_UsesCorrectFunctionAndParameters()
+	{
+		var (mockDapper, repo) = CreateSut();
+		var userId = Guid.NewGuid();
 
-        mockDapper
-            .Setup(d => d.QuerySingleOrDefaultAsync<UserRow>(
-                It.IsAny<IDbConnection>(), "identity.get_user_by_id",
-                It.IsAny<object?>(), CommandType.StoredProcedure, null))
-            .ReturnsAsync((UserRow?)null);
+		mockDapper
+			.Setup(d => d.QuerySingleOrDefaultAsync<UserRow>(
+				It.IsAny<IDbConnection>(), "identity.get_user_by_id",
+				It.IsAny<object?>(), CommandType.StoredProcedure, null))
+			.ReturnsAsync((UserRow?)null);
 
-        await repo.GetByIdAsync(userId);
+		await repo.GetByIdAsync(userId);
 
-        mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<UserRow>(
-            It.IsAny<IDbConnection>(),
-            "identity.get_user_by_id",
-            It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),
-            CommandType.StoredProcedure,
-            null), Times.Once);
-    }
+		mockDapper.Verify(d => d.QuerySingleOrDefaultAsync<UserRow>(
+			It.IsAny<IDbConnection>(),
+			"identity.get_user_by_id",
+			It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),
+			CommandType.StoredProcedure,
+			null), Times.Once);
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC12")]
-    public async Task AddAsync_UsesCorrectFunctionAndParameters()
-    {
-        var (mockDapper, repo) = CreateSut();
-        var userId = Guid.NewGuid();
-        var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
+	[Fact]
+	[Trait("AC", "M1UC12")]
+	public async Task AddAsync_UsesCorrectFunctionAndParameters()
+	{
+		var (mockDapper, repo) = CreateSut();
+		var userId = Guid.NewGuid();
+		var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
 
-        await repo.AddAsync(user);
+		await repo.AddAsync(user);
 
-        mockDapper.Verify(d => d.ExecuteAsync(
-            It.IsAny<IDbConnection>(),
-            "identity.create_user",
-            It.Is<object>(p =>
-                (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
-                (string)p.GetType().GetProperty("p_email")!.GetValue(p)! == "test@example.com" &&
-                (bool)p.GetType().GetProperty("p_is_active")!.GetValue(p)! == false),
-            CommandType.StoredProcedure,
-            It.IsAny<IDbTransaction?>()), Times.Once);
-    }
+		mockDapper.Verify(d => d.ExecuteAsync(
+			It.IsAny<IDbConnection>(),
+			"identity.create_user",
+			It.Is<object>(p =>
+				(Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
+				(string)p.GetType().GetProperty("p_email")!.GetValue(p)! == "test@example.com" &&
+				(bool)p.GetType().GetProperty("p_is_active")!.GetValue(p)! == false),
+			CommandType.StoredProcedure,
+			It.IsAny<IDbTransaction?>()), Times.Once);
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC13")]
-    public async Task UpdateAsync_UsesCorrectFunctionAndParameters()
-    {
-        var (mockDapper, repo) = CreateSut();
-        var userId = Guid.NewGuid();
-        var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
-        user.SetPassword(PasswordHash.Create("$argon2id$someHash"));
+	[Fact]
+	[Trait("AC", "M1UC13")]
+	public async Task UpdateAsync_UsesCorrectFunctionAndParameters()
+	{
+		var (mockDapper, repo) = CreateSut();
+		var userId = Guid.NewGuid();
+		var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$someHash"));
 
-        await repo.UpdateAsync(user);
+		await repo.UpdateAsync(user);
 
-        mockDapper.Verify(d => d.ExecuteAsync(
-            It.IsAny<IDbConnection>(),
-            "identity.update_user_password",
-            It.Is<object>(p =>
-                (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
-                (string)p.GetType().GetProperty("p_password_hash")!.GetValue(p)! == "$argon2id$someHash"),
-            CommandType.StoredProcedure,
-            It.IsAny<IDbTransaction?>()), Times.Once);
-    }
+		mockDapper.Verify(d => d.ExecuteAsync(
+			It.IsAny<IDbConnection>(),
+			"identity.update_user_password",
+			It.Is<object>(p =>
+				(Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
+				(string)p.GetType().GetProperty("p_password_hash")!.GetValue(p)! == "$argon2id$someHash"),
+			CommandType.StoredProcedure,
+			It.IsAny<IDbTransaction?>()), Times.Once);
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC36")]
-    public async Task CompleteActivationAsync_UpdatesPasswordActivatesUserAndUsesInviteTokenInSameTransaction()
-    {
-        var (mockDapper, repo) = CreateSut();
-        var userId = Guid.NewGuid();
-        var inviteTokenId = Guid.NewGuid();
-        var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
-        user.SetPassword(PasswordHash.Create("$argon2id$someHash"));
-        user.Activate();
+	[Fact]
+	[Trait("AC", "M1UC36")]
+	public async Task CompleteActivationAsync_UpdatesPasswordActivatesUserAndUsesInviteTokenInSameTransaction()
+	{
+		var (mockDapper, repo) = CreateSut();
+		var userId = Guid.NewGuid();
+		var inviteTokenId = Guid.NewGuid();
+		var user = new User(userId, Email.Create("test@example.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$someHash"));
+		user.Activate();
 
-        await repo.CompleteActivationAsync(user, inviteTokenId);
+		await repo.CompleteActivationAsync(user, inviteTokenId);
 
-        mockDapper.Verify(d => d.ExecuteAsync(
-            It.IsAny<IDbConnection>(),
-            "identity.update_user_password",
-            It.Is<object>(p =>
-                (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
-                (string)p.GetType().GetProperty("p_password_hash")!.GetValue(p)! == "$argon2id$someHash"),
-            CommandType.StoredProcedure,
-            It.IsNotNull<IDbTransaction>()), Times.Once);
+		mockDapper.Verify(d => d.ExecuteAsync(
+			It.IsAny<IDbConnection>(),
+			"identity.update_user_password",
+			It.Is<object>(p =>
+				(Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId &&
+				(string)p.GetType().GetProperty("p_password_hash")!.GetValue(p)! == "$argon2id$someHash"),
+			CommandType.StoredProcedure,
+			It.IsNotNull<IDbTransaction>()), Times.Once);
 
-        mockDapper.Verify(d => d.ExecuteAsync(
-            It.IsAny<IDbConnection>(),
-            "identity.activate_user",
-            It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),
-            CommandType.StoredProcedure,
-            It.IsNotNull<IDbTransaction>()), Times.Once);
+		mockDapper.Verify(d => d.ExecuteAsync(
+			It.IsAny<IDbConnection>(),
+			"identity.activate_user",
+			It.Is<object>(p => (Guid)p.GetType().GetProperty("p_user_id")!.GetValue(p)! == userId),
+			CommandType.StoredProcedure,
+			It.IsNotNull<IDbTransaction>()), Times.Once);
 
-        mockDapper.Verify(d => d.ExecuteAsync(
-            It.IsAny<IDbConnection>(),
-            "identity.use_invite_token",
-            It.Is<object>(p => (Guid)p.GetType().GetProperty("p_token_id")!.GetValue(p)! == inviteTokenId),
-            CommandType.StoredProcedure,
-            It.IsNotNull<IDbTransaction>()), Times.Once);
-    }
+		mockDapper.Verify(d => d.ExecuteAsync(
+			It.IsAny<IDbConnection>(),
+			"identity.use_invite_token",
+			It.Is<object>(p => (Guid)p.GetType().GetProperty("p_token_id")!.GetValue(p)! == inviteTokenId),
+			CommandType.StoredProcedure,
+			It.IsNotNull<IDbTransaction>()), Times.Once);
+	}
 }

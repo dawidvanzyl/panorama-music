@@ -6,13 +6,13 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
 public sealed class LogoutHandler(IRefreshTokenRepository refreshTokenRepository)
 {
-    public async Task HandleAsync(LogoutCommand command, CancellationToken cancellationToken = default)
-    {
-        var tokenHash = TokenHasher.ComputeSha256Hash(command.Token);
-        var token = await refreshTokenRepository.GetByTokenHashAsync(tokenHash)
-            ?? throw new UnauthorizedException("Invalid refresh token.");
+	public async Task HandleAsync(LogoutCommand command)
+	{
+		var tokenHash = TokenHasher.ComputeSha256Hash(command.Token);
+		var token = await refreshTokenRepository.GetByTokenHashAsync(tokenHash)
+			?? throw new UnauthorizedException("Invalid refresh token.");
 
-        token.Revoke();
-        await refreshTokenRepository.UpdateAsync(token);
-    }
+		token.Revoke();
+		await refreshTokenRepository.UpdateAsync(token);
+	}
 }

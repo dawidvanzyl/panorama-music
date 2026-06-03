@@ -15,39 +15,39 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 /// </summary>
 public class AdminSeedService(IServiceProvider serviceProvider, ILogger<AdminSeedService> logger) : IHostedService
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        var email = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
-        var password = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
+	public async Task StartAsync(CancellationToken cancellationToken)
+	{
+		var email = Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL");
+		var password = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-        {
-            logger.LogInformation("SEED_ADMIN_EMAIL or SEED_ADMIN_PASSWORD not set — skipping admin seed.");
-            return;
-        }
+		if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+		{
+			logger.LogInformation("SEED_ADMIN_EMAIL or SEED_ADMIN_PASSWORD not set — skipping admin seed.");
+			return;
+		}
 
-        await using var scope = serviceProvider.CreateAsyncScope();
+		await using var scope = serviceProvider.CreateAsyncScope();
 
-        var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
-        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+		var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+		var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
+		var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
-        var existing = await userRepo.GetByEmailAsync(email);
-        if (existing is not null)
-        {
-            logger.LogInformation("Admin user with email {Email} already exists — skipping seed.", email);
-            return;
-        }
+		var existing = await userRepo.GetByEmailAsync(email);
+		if (existing is not null)
+		{
+			logger.LogInformation("Admin user with email {Email} already exists — skipping seed.", email);
+			return;
+		}
 
-        var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
-        user.SetPassword(hasher.Hash(password));
-        user.Activate();
+		var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
+		user.SetPassword(hasher.Hash(password));
+		user.Activate();
 
-        await userRepo.AddAsync(user);
-        await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin));
+		await userRepo.AddAsync(user);
+		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin));
 
-        logger.LogInformation("Admin user {Email} created successfully.", email);
-    }
+		logger.LogInformation("Admin user {Email} created successfully.", email);
+	}
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

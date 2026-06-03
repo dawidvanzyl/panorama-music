@@ -4,6 +4,6 @@ namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IPasswordHasher
 {
-    PasswordHash Hash(string password);
-    bool Verify(string password, PasswordHash hash);
+	PasswordHash Hash(string password);
+	bool Verify(string password, PasswordHash hash);
 }

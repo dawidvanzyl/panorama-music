@@ -6,38 +6,38 @@ namespace PanoramaMusic.Tests.Identity.Infrastructure;
 
 public class Argon2PasswordHasherTests
 {
-    [Fact]
-    [Trait("AC", "M1UC16")]
-    public void Hash_WhenPasswordProvided_ReturnsNonEmptyHash()
-    {
-        var hasher = new Argon2PasswordHasher();
+	[Fact]
+	[Trait("AC", "M1UC16")]
+	public void Hash_WhenPasswordProvided_ReturnsNonEmptyHash()
+	{
+		var hasher = new Argon2PasswordHasher();
 
-        var result = hasher.Hash("secret");
+		var result = hasher.Hash("secret");
 
-        result.Value.ShouldNotBeNullOrWhiteSpace();
-    }
+		result.Value.ShouldNotBeNullOrWhiteSpace();
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC17")]
-    public void Verify_WhenCorrectPassword_ReturnsTrue()
-    {
-        var hasher = new Argon2PasswordHasher();
-        var hash = hasher.Hash("correct-password");
+	[Fact]
+	[Trait("AC", "M1UC17")]
+	public void Verify_WhenCorrectPassword_ReturnsTrue()
+	{
+		var hasher = new Argon2PasswordHasher();
+		var hash = hasher.Hash("correct-password");
 
-        var result = hasher.Verify("correct-password", hash);
+		var result = hasher.Verify("correct-password", hash);
 
-        result.ShouldBeTrue();
-    }
+		result.ShouldBeTrue();
+	}
 
-    [Fact]
-    [Trait("AC", "M1UC18")]
-    public void Verify_WhenWrongPassword_ReturnsFalse()
-    {
-        var hasher = new Argon2PasswordHasher();
-        var hash = hasher.Hash("original-password");
+	[Fact]
+	[Trait("AC", "M1UC18")]
+	public void Verify_WhenWrongPassword_ReturnsFalse()
+	{
+		var hasher = new Argon2PasswordHasher();
+		var hash = hasher.Hash("original-password");
 
-        var result = hasher.Verify("different-password", hash);
+		var result = hasher.Verify("different-password", hash);
 
-        result.ShouldBeFalse();
-    }
+		result.ShouldBeFalse();
+	}
 }

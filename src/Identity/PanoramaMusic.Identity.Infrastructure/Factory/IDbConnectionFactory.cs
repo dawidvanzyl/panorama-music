@@ -4,5 +4,5 @@ namespace PanoramaMusic.Identity.Infrastructure.Factory;
 
 public interface IDbConnectionFactory
 {
-    IDbConnection CreateConnection();
+	IDbConnection CreateConnection();
 }
