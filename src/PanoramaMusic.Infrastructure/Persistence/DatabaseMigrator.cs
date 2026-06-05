@@ -1,28 +1,27 @@
 using DbUp;
-using DbUp.Engine;
 using Npgsql;
+using System.Reflection;
 
 namespace PanoramaMusic.Infrastructure.Persistence;
 
 public static class DatabaseMigrator
 {
-	public static void Run(string connectionString, bool ensureDatabase = false)
+	public static void Run(string connectionString, bool ensureDatabase = false, params Assembly[] additionalAssemblies)
 	{
 		if (ensureDatabase)
 		{
 			EnsureDatabase.For.PostgresqlDatabase(connectionString);
 		}
 
-		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration");
-		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment");
-		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed");
+		var assemblies = new[] { typeof(DatabaseMigrator).Assembly }
+			.Concat(additionalAssemblies)
+			.ToArray();
+
+		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assemblies);
+		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assemblies);
+		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assemblies);
 	}
 
-	/// <summary>
-	/// Drops and recreates the public schema, wiping all tables, functions,
-	/// seeds, and migration journals. Intended for QA reset only — never call
-	/// in production.
-	/// </summary>
 	public static void Reset(string connectionString)
 	{
 		using NpgsqlConnection connection = new(connectionString);
@@ -41,17 +40,22 @@ public static class DatabaseMigrator
 		string connectionString,
 		string folderMarker,
 		string journalTable,
-		string label)
+		string label,
+		Assembly[] assemblies)
 	{
-		var upgrader = DeployChanges.To
+		var upgraderBuilder = DeployChanges.To
 			.PostgresqlDatabase(connectionString)
-			.WithScriptsEmbeddedInAssembly(
-				typeof(DatabaseMigrator).Assembly,
-				name => name.Contains(folderMarker))
 			.JournalToPostgresqlTable("public", journalTable)
-			.LogToConsole()
-			.Build();
+			.LogToConsole();
 
+		foreach (var assembly in assemblies)
+		{
+			upgraderBuilder = upgraderBuilder.WithScriptsEmbeddedInAssembly(
+				assembly,
+				name => name.Contains(folderMarker));
+		}
+
+		var upgrader = upgraderBuilder.Build();
 		var result = upgrader.PerformUpgrade();
 
 		if (!result.Successful)

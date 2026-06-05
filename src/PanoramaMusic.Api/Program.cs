@@ -5,6 +5,8 @@ using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Extensions;
 
+AppContext.SetSwitch("Npgsql.EnableStoredProcedureCompatMode", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsDevelopment())
