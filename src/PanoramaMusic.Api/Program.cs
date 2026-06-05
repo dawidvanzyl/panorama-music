@@ -1,4 +1,6 @@
+using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
+using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Persistence;
@@ -19,6 +21,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString);
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -41,8 +45,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseExceptionHandler();
 
 app.MapHealthRoutes();
+app.MapAuthRoutes();
 
 // Return 404 for unmatched /api/* routes so typos don't silently return the SPA
 app.MapFallback("/api/{**path}", () => Results.NotFound());
@@ -51,3 +57,5 @@ app.MapFallback("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+public partial class Program { }
