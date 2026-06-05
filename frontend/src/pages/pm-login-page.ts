@@ -43,7 +43,7 @@ template.innerHTML = `
       opacity: 0.6;
       cursor: not-allowed;
     }
-    .error {
+    .login-form__error {
       color: #d32f2f;
       font-size: 0.875rem;
     }
@@ -59,7 +59,7 @@ template.innerHTML = `
       <input type="password" id="password" required autocomplete="current-password" />
     </label>
     <button type="submit" id="submitBtn">Sign In</button>
-    <p id="errorMsg" class="error" hidden></p>
+    <p id="errorMsg" class="login-form__error" hidden></p>
   </form>
 `;
 

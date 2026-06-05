@@ -11,11 +11,11 @@ template.innerHTML = `
       background: #f5f5f5;
       border-bottom: 1px solid #ccc;
     }
-    .brand {
+    .nav-bar__brand {
       font-weight: bold;
       font-size: 1.125rem;
     }
-    button {
+    .nav-bar__btn {
       padding: 0.375rem 0.75rem;
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -23,13 +23,13 @@ template.innerHTML = `
       cursor: pointer;
       font-size: 0.875rem;
     }
-    button:hover {
+    .nav-bar__btn:hover {
       background: #eee;
     }
   </style>
   <nav>
-    <span class="brand">Panorama Music</span>
-    <button id="logoutBtn" hidden>Sign Out</button>
+    <span class="nav-bar__brand">Panorama Music</span>
+    <button id="logoutBtn" class="nav-bar__btn" hidden>Sign Out</button>
   </nav>
 `;
 

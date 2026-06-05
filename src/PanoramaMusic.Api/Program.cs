@@ -1,9 +1,9 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Extensions;
-using PanoramaMusic.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,17 +26,7 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-var resetDatabase = string.Equals(
-	builder.Configuration["RESET_DB"],
-	"true",
-	StringComparison.OrdinalIgnoreCase);
-
-if (resetDatabase)
-{
-	DatabaseMigrator.Reset(connectionString);
-}
-
-DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelopment());
+app.InitializeDatabase();
 
 if (app.Environment.IsDevelopment())
 {

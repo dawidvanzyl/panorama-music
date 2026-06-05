@@ -43,7 +43,25 @@ public sealed class AuthEndpointsTests
 		return new InviteToken(Guid.NewGuid(), userId, _testRefreshTokenHash, _fixedNow.AddDays(7));
 	}
 
-	private static HttpClient CreateClient(
+	private sealed class TestApp : IDisposable
+	{
+		private readonly WebApplication _app;
+		public HttpClient Client { get; }
+
+		public TestApp(WebApplication app)
+		{
+			_app = app;
+			Client = app.GetTestClient();
+		}
+
+		public void Dispose()
+		{
+			Client.Dispose();
+			_app.DisposeAsync().GetAwaiter().GetResult();
+		}
+	}
+
+	private static TestApp CreateTestApp(
 		Mock<IUserRepository>? userRepo = null,
 		Mock<IUserRoleRepository>? roleRepo = null,
 		Mock<IPasswordHasher>? hasher = null,
@@ -51,9 +69,6 @@ public sealed class AuthEndpointsTests
 		Mock<IRefreshTokenRepository>? refreshRepo = null,
 		Mock<IInviteTokenRepository>? inviteRepo = null)
 	{
-		Environment.SetEnvironmentVariable("JWT_SECRET",
-			"test-secret-key-that-is-at-least-thirty-two-characters!");
-
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
 		builder.Environment.EnvironmentName = "Testing";
@@ -78,10 +93,8 @@ public sealed class AuthEndpointsTests
 		app.MapAuthRoutes();
 
 		app.StartAsync().GetAwaiter().GetResult();
-		return app.GetTestClient();
+		return new TestApp(app);
 	}
-
-	#region UC — Backend endpoint behaviour
 
 	[Fact]
 	[Trait("AC", "M1UC35")]
@@ -94,19 +107,19 @@ public sealed class AuthEndpointsTests
 		var jwt = new Mock<IJwtService>();
 		var refreshRepo = new Mock<IRefreshTokenRepository>();
 
-		userRepo.Setup(r => r.GetByEmailAsync("valid@test.com", default))
+		userRepo.Setup(r => r.GetByEmailAsync("valid@test.com", It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
-		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, default))
+		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([Role.Admin]);
 		hasher.Setup(h => h.Verify("correct-password", It.IsAny<PasswordHash>()))
 			.Returns(true);
 		jwt.Setup(j => j.GenerateToken(user.UserId, It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("jwt-access-token", _fixedNow.AddMinutes(15)));
-		refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), default))
+		refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(userRepo, roleRepo, hasher, jwt, refreshRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/login",
+		using var app = CreateTestApp(userRepo, roleRepo, hasher, jwt, refreshRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/login",
 			new LoginRequest("valid@test.com", "correct-password"));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -122,11 +135,11 @@ public sealed class AuthEndpointsTests
 	public async Task PostLogin_InvalidCredentials_Returns401()
 	{
 		var userRepo = new Mock<IUserRepository>();
-		userRepo.Setup(r => r.GetByEmailAsync("unknown@test.com", default))
+		userRepo.Setup(r => r.GetByEmailAsync("unknown@test.com", It.IsAny<CancellationToken>()))
 			.ReturnsAsync((User?)null);
 
-		using var client = CreateClient(userRepo: userRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/login",
+		using var app = CreateTestApp(userRepo: userRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/login",
 			new LoginRequest("unknown@test.com", "wrong-password"));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
@@ -143,19 +156,19 @@ public sealed class AuthEndpointsTests
 		var roleRepo = new Mock<IUserRoleRepository>();
 		var jwt = new Mock<IJwtService>();
 
-		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
-		userRepo.Setup(r => r.GetByIdAsync(user.UserId, default))
+		userRepo.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
-		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, default))
+		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([Role.Teacher]);
 		jwt.Setup(j => j.GenerateToken(user.UserId, It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("new-jwt-token", _fixedNow.AddMinutes(15)));
-		refreshRepo.Setup(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), default))
+		refreshRepo.Setup(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(userRepo, roleRepo, jwt: jwt, refreshRepo: refreshRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/refresh",
+		using var app = CreateTestApp(userRepo, roleRepo, jwt: jwt, refreshRepo: refreshRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/refresh",
 			new RefreshTokenRequest(_testRefreshToken));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -175,17 +188,17 @@ public sealed class AuthEndpointsTests
 		var userRepo = new Mock<IUserRepository>();
 		var hasher = new Mock<IPasswordHasher>();
 
-		inviteRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		inviteRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(inviteToken);
-		userRepo.Setup(r => r.GetByIdAsync(user.UserId, default))
+		userRepo.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
 		hasher.Setup(h => h.Hash("StrongPass1!"))
 			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
-		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), inviteToken.TokenId, default))
+		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), inviteToken.TokenId, It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(userRepo: userRepo, hasher: hasher, inviteRepo: inviteRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/complete-registration",
+		using var app = CreateTestApp(userRepo: userRepo, hasher: hasher, inviteRepo: inviteRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/complete-registration",
 			new CompleteRegistrationRequest(_testRefreshToken, "StrongPass1!"));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -199,21 +212,17 @@ public sealed class AuthEndpointsTests
 		var token = CreateValidRefreshToken(userId);
 		var refreshRepo = new Mock<IRefreshTokenRepository>();
 
-		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
-		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), default))
+		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(refreshRepo: refreshRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/logout",
+		using var app = CreateTestApp(refreshRepo: refreshRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/logout",
 			new RefreshTokenRequest(_testRefreshToken));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 	}
-
-	#endregion
-
-	#region IT — Integration tests
 
 	[Fact]
 	[Trait("AC", "M1IT1")]
@@ -225,17 +234,17 @@ public sealed class AuthEndpointsTests
 		var hasher = new Mock<IPasswordHasher>();
 		var jwt = new Mock<IJwtService>();
 
-		userRepo.Setup(r => r.GetByEmailAsync("flow@test.com", default))
+		userRepo.Setup(r => r.GetByEmailAsync("flow@test.com", It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
-		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, default))
+		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([Role.Teacher]);
 		hasher.Setup(h => h.Verify("mypassword", It.IsAny<PasswordHash>()))
 			.Returns(true);
 		jwt.Setup(j => j.GenerateToken(user.UserId, It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("jwt-flow-token", _fixedNow.AddMinutes(15)));
 
-		using var client = CreateClient(userRepo, roleRepo, hasher, jwt);
-		var response = await client.PostAsJsonAsync("/api/auth/login",
+		using var app = CreateTestApp(userRepo, roleRepo, hasher, jwt);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/login",
 			new LoginRequest("flow@test.com", "mypassword"));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -258,23 +267,23 @@ public sealed class AuthEndpointsTests
 		var roleRepo = new Mock<IUserRoleRepository>();
 		var jwt = new Mock<IJwtService>();
 
-		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
-		userRepo.Setup(r => r.GetByIdAsync(user.UserId, default))
+		userRepo.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
-		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, default))
+		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([Role.Admin]);
 		jwt.Setup(j => j.GenerateToken(user.UserId, It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("rotated-jwt", _fixedNow.AddMinutes(15)));
-		refreshRepo.Setup(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), default))
+		refreshRepo.Setup(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(userRepo, roleRepo, jwt: jwt, refreshRepo: refreshRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/refresh",
+		using var app = CreateTestApp(userRepo, roleRepo, jwt: jwt, refreshRepo: refreshRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/refresh",
 			new RefreshTokenRequest(_testRefreshToken));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
-		refreshRepo.Verify(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), default), Times.Once);
+		refreshRepo.Verify(r => r.RotateAsync(token.TokenId, It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
@@ -285,13 +294,13 @@ public sealed class AuthEndpointsTests
 		var token = CreateValidRefreshToken(userId);
 		var refreshRepo = new Mock<IRefreshTokenRepository>();
 
-		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		refreshRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
-		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), default))
+		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(refreshRepo: refreshRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/logout",
+		using var app = CreateTestApp(refreshRepo: refreshRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/logout",
 			new RefreshTokenRequest(_testRefreshToken));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -308,23 +317,21 @@ public sealed class AuthEndpointsTests
 		var userRepo = new Mock<IUserRepository>();
 		var hasher = new Mock<IPasswordHasher>();
 
-		inviteRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, default))
+		inviteRepo.Setup(r => r.GetByTokenHashAsync(_testRefreshTokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(inviteToken);
-		userRepo.Setup(r => r.GetByIdAsync(user.UserId, default))
+		userRepo.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(user);
 		hasher.Setup(h => h.Hash("NewPass123!"))
 			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
-		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), inviteToken.TokenId, default))
+		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), inviteToken.TokenId, It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var client = CreateClient(userRepo: userRepo, hasher: hasher, inviteRepo: inviteRepo);
-		var response = await client.PostAsJsonAsync("/api/auth/complete-registration",
+		using var app = CreateTestApp(userRepo: userRepo, hasher: hasher, inviteRepo: inviteRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/complete-registration",
 			new CompleteRegistrationRequest(_testRefreshToken, "NewPass123!"));
 
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 		user.IsActive.ShouldBeTrue();
 		user.PasswordHash.ShouldNotBeNull();
 	}
-
-	#endregion
 }

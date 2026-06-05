@@ -43,11 +43,11 @@ template.innerHTML = `
       opacity: 0.6;
       cursor: not-allowed;
     }
-    .error {
+    .registration-form__error {
       color: #d32f2f;
       font-size: 0.875rem;
     }
-    .success {
+    .registration-form__success {
       color: #2e7d32;
       font-size: 0.875rem;
     }
@@ -64,8 +64,8 @@ template.innerHTML = `
       <input type="password" id="confirmPassword" required autocomplete="new-password" />
     </label>
     <button type="submit" id="submitBtn">Set Password & Activate</button>
-    <p id="errorMsg" class="error" hidden></p>
-    <p id="successMsg" class="success" hidden></p>
+    <p id="errorMsg" class="registration-form__error" hidden></p>
+    <p id="successMsg" class="registration-form__success" hidden></p>
   </form>
 `;
 
@@ -90,6 +90,13 @@ export class PmRegistrationPage extends HTMLElement {
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
     this.errorMsg = this.shadowRoot!.getElementById('errorMsg') as HTMLElement;
     this.successMsg = this.shadowRoot!.getElementById('successMsg') as HTMLElement;
+
+    if (!this.inviteToken) {
+      this.errorMsg!.textContent = 'No invite token found in URL';
+      this.errorMsg!.hidden = false;
+      this.submitBtn!.disabled = true;
+      return;
+    }
 
     this.form!.addEventListener('submit', this.handleSubmit);
   }
@@ -117,14 +124,7 @@ export class PmRegistrationPage extends HTMLElement {
     this.submitBtn!.disabled = true;
 
     try {
-      const token = this.inviteToken;
-      if (!token) {
-        this.errorMsg!.textContent = 'No invite token found in URL';
-        this.errorMsg!.hidden = false;
-        return;
-      }
-
-      await completeRegistration(token, this.passwordInput!.value);
+      await completeRegistration(this.inviteToken!, this.passwordInput!.value);
       this.successMsg!.textContent = 'Account activated! Redirecting to login...';
       this.successMsg!.hidden = false;
       this.form!.reset();
