@@ -20,7 +20,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddInfrastructure(connectionString);
-builder.Services.AddIdentityInfrastructure(connectionString);
+builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddProblemDetails();
 
