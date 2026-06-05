@@ -3,7 +3,8 @@ name: implement-issue
 description: >
   Load this skill when the user says "implement issue", "implement-issue", or
   "/implement-issue". Implements a GitHub story issue end-to-end: prepares base
-  branch, creates feature branch, implements the plan, and opens a PR.
+  branch, creates feature branch, implements the plan, verifies via the
+  verify-implementation skill, and opens a PR.
 license: MIT
 compatibility: opencode
 metadata:
@@ -34,7 +35,7 @@ Execute the full story workflow for a GitHub issue:
 1) prepare the base branch via the prepare-base skill,
 2) read and implement the issue,
 3) create a correctly named feature branch from the base branch,
-4) update acceptance criteria checkboxes as items pass,
+4) verify implementation via the verify-implementation skill,
 5) open a PR targeting the base branch.
 
 ## Required Conventions
@@ -100,16 +101,20 @@ Before doing anything else:
 - Run any frontend checks (lint, typecheck, vitest) if frontend scope
 - Fix issues until all steps pass.
 
-### 4) Update acceptance criteria in story issue
+### 4) Verify implementation
 
-- For each IT code, run `dotnet test --filter "AC=M1ITx"` — if it passes, check off the matching `## Epic Reference > Acceptance Criteria` checkbox.
-- For each backend UC code, run `dotnet test --filter "AC=M1UCx"` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
-- For each frontend UC code, run `npx vitest run --reporter=verbose` — if it passes, check off the matching `## Acceptance Criteria (G/W/T)` checkbox.
-- Update checkboxes immediately per criterion (do not wait until the end).
-- Keep issue text truthful and current.
+- Invoke the `verify-implementation` skill.
+- Allow `verify-implementation` to capture the working tree diff, read standards, run automated checks, review code, and present its report independently.
+- After `verify-implementation` completes, the user will have chosen one of:
+  - dismiss report and proceed — move to step 5
+  - fix specific items — verify re-runs until resolved
+- Do not proceed to step 5 until the verify step is resolved.
 
 ### 5) Open PR
 
+- Ask: "Are you ready to post a pull request?"
+- If yes: proceed with commit, push, and PR creation.
+- If no: stop and wait.
 - Commit using project conventions.
 - Push feature branch.
 - Retrieve the milestone title from the issue milestone extracted in step 1.

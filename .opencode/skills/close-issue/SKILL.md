@@ -2,8 +2,9 @@
 name: close-issue
 description: >
   Load this skill when the user says "close issue", "close-issue", or
-  "/close-issue". Checks if the implemented story issue is closed, closes it if
-  not, then updates the Epic Reference checkbox in the parent issue.
+  "/close-issue". Verifies acceptance criteria, ticks off passing AC checkboxes,
+  closes the story issue, then updates the Epic Reference checkbox in the parent
+  issue.
 license: MIT
 compatibility: opencode
 metadata:
@@ -15,7 +16,7 @@ metadata:
 
 At the start of execution, always post a visible message to the user:
 
-> "Loaded skill: **close-issue**. Checking issue status and updating epic..."
+> "Loaded skill: **close-issue**. Verifying acceptance criteria, closing issue, and updating epic..."
 
 ## Inputs
 
@@ -33,7 +34,17 @@ At the start of execution, always post a visible message to the user:
 - If `parent_issue_number` is missing, ask: "What is the parent epic issue number?"
 - Do not proceed until both values are confirmed.
 
-### 1) Check and close story issue
+### 1) Verify acceptance criteria
+
+- Fetch the body of issue `#{issue_number}`.
+- Extract IT codes from `## Epic Reference > Acceptance Criteria` (e.g. `M1IT1`) and UC codes from `## Acceptance Criteria (G/W/T)` (e.g. `M1UC1`).
+- For each IT code: run `dotnet test --filter "AC=<CODE>"` — if it passes, tick the matching `## Epic Reference > Acceptance Criteria` checkbox in the issue body.
+- For each backend UC code: run `dotnet test --filter "AC=<CODE>"` — if it passes, tick the matching `## Acceptance Criteria (G/W/T)` checkbox.
+- For each frontend UC code: run `npx vitest run --reporter=verbose` — if the specific test passes, tick the matching `## Acceptance Criteria (G/W/T)` checkbox.
+- Update the issue body via `gh issue edit` with all ticked checkboxes.
+- Notify the user: "Acceptance criteria verified for #{issue_number}. {n}/{m} passing."
+
+### 2) Check and close story issue
 
 - Fetch the current state of issue `#{issue_number}`.
 - If the issue is already closed:
@@ -42,7 +53,7 @@ At the start of execution, always post a visible message to the user:
   - close issue `#{issue_number}`.
   - notify the user: "Issue #{issue_number} has been closed."
 
-### 2) Update Epic Reference checkbox in parent issue
+### 3) Update Epic Reference checkbox in parent issue
 
 - Fetch the body of parent issue `#{parent_issue_number}`.
 - In the "Anticipated Work Areas" section, locate the checklist item that references `#{issue_number}`.
@@ -50,14 +61,16 @@ At the start of execution, always post a visible message to the user:
 - Update the parent issue body with the change.
 - Notify the user: "Epic Reference checkbox for #{issue_number} updated in issue #{parent_issue_number}."
 
-### 3) Summary
+### 4) Summary
 
 - Post a brief summary to the user confirming:
+  - acceptance criteria: {n}/{m} passing,
   - final state of issue `#{issue_number}` (closed),
   - Epic Reference checkbox updated in parent issue `#{parent_issue_number}`.
 
 ## Guardrails
 
 - Do not close any issue other than `#{issue_number}`.
-- Do not modify any content in the parent issue other than the relevant "Anticipated Work Areas" section checkbox.
+- Do not modify any content in the issue or parent issue other than the AC checkboxes and the "Anticipated Work Areas" section checkbox.
+- Only tick AC checkboxes for tests that actually pass. Do not mark failing or untested criteria as passed.
 - Keep all communication concise and professional.
