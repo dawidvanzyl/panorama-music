@@ -21,7 +21,8 @@ function render(): void {
   const basePath = hash.split('?')[0];
   const route = ROUTES[basePath] ?? (() => '<pm-login-page></pm-login-page>');
 
-  app.innerHTML = '<pm-nav-bar></pm-nav-bar><main>' + route() + '</main>';
+  const isPublicPage = basePath === '/login' || basePath === '/register';
+  app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
 }
 
 window.addEventListener('hashchange', render);
