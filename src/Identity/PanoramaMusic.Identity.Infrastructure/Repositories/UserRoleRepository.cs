@@ -9,7 +9,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class UserRoleRepository(IDbConnectionFactory connectionFactory) : IUserRoleRepository
 {
-	public async Task AddAsync(UserRole userRole, CancellationToken cancellationToken = default)
+	public async Task AddAsync(UserRole userRole, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		await connection.ExecuteAsync(
@@ -18,7 +18,7 @@ public class UserRoleRepository(IDbConnectionFactory connectionFactory) : IUserR
 			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task<IList<Role>> GetRolesAsync(Guid userId, CancellationToken cancellationToken = default)
+	public async Task<IList<Role>> GetRolesAsync(Guid userId, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		var rows = await connection.QueryAsync<string>(

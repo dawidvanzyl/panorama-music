@@ -9,7 +9,7 @@ public sealed class CompleteRegistrationHandler(
 	IUserRepository userRepository,
 	IPasswordHasher passwordHasher)
 {
-	public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken)
 	{
 		var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.InviteToken);
 		var inviteToken = await inviteTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)

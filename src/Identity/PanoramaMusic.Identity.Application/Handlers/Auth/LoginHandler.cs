@@ -15,7 +15,7 @@ public sealed class LoginHandler(
 {
 	private const int _refreshTokenExpiryDays = 7;
 
-	public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken = default)
+	public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
 	{
 		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken)
 			?? throw new UnauthorizedException("Invalid credentials.");

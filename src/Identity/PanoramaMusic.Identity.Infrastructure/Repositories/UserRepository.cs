@@ -11,7 +11,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
 {
-	public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+	public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
@@ -22,7 +22,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 		return dto?.MapToUser();
 	}
 
-	public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+	public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
@@ -33,7 +33,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 		return dto?.MapToUser();
 	}
 
-	public async Task AddAsync(User user, CancellationToken cancellationToken = default)
+	public async Task AddAsync(User user, CancellationToken cancellationToken)
 	{
 		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
@@ -64,7 +64,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 		}
 	}
 
-	public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+	public async Task UpdateAsync(User user, CancellationToken cancellationToken)
 	{
 		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
@@ -98,7 +98,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 		}
 	}
 
-	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken = default)
+	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken)
 	{
 		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);

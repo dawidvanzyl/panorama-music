@@ -39,7 +39,7 @@ public class AdminSeedServiceTests
 
 		await sut.StartAsync(CancellationToken.None);
 
-		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
+		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -47,7 +47,7 @@ public class AdminSeedServiceTests
 	public async Task StartAsync_WhenValidOptionsAndNoExistingAdmin_CreatesAdminUser()
 	{
 		var mockUserRepo = new Mock<IUserRepository>();
-		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com")).ReturnsAsync((User?)null);
+		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
 
 		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
 		var sut = CreateSut(
@@ -58,10 +58,10 @@ public class AdminSeedServiceTests
 		await sut.StartAsync(CancellationToken.None);
 
 		mockUserRepo.Verify(
-			r => r.AddAsync(It.Is<User>(u => u.Email.Value == "admin@test.com")),
+			r => r.AddAsync(It.Is<User>(u => u.Email.Value == "admin@test.com"), It.IsAny<CancellationToken>()),
 			Times.Once);
 		mockUserRoleRepo.Verify(
-			r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin)),
+			r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), It.IsAny<CancellationToken>()),
 			Times.Once);
 	}
 
@@ -71,7 +71,7 @@ public class AdminSeedServiceTests
 	{
 		var existingUser = new User(Guid.NewGuid(), Email.Create("admin@test.com"), DateTime.UtcNow);
 		var mockUserRepo = new Mock<IUserRepository>();
-		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com")).ReturnsAsync(existingUser);
+		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(existingUser);
 
 		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
 		var sut = CreateSut(
@@ -81,6 +81,6 @@ public class AdminSeedServiceTests
 
 		await sut.StartAsync(CancellationToken.None);
 
-		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
+		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

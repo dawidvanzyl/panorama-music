@@ -14,7 +14,7 @@ public sealed class RefreshTokenHandler(
 {
 	private const int _refreshTokenExpiryDays = 7;
 
-	public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken cancellationToken = default)
+	public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken cancellationToken)
 	{
 		var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.Token);
 		var existing = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)

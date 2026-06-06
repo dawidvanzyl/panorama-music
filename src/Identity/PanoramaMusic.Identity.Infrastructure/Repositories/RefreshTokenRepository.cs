@@ -11,7 +11,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : IRefreshTokenRepository
 {
-	public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+	public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		var dto = await connection.QuerySingleOrDefaultAsync<RefreshTokenDto>(
@@ -22,7 +22,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : IR
 		return dto?.MapToRefreshToken();
 	}
 
-	public async Task AddAsync(RefreshToken token, CancellationToken cancellationToken = default)
+	public async Task AddAsync(RefreshToken token, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		await connection.ExecuteAsync(
@@ -37,7 +37,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : IR
 			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken = default)
+	public async Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		await connection.ExecuteAsync(
@@ -46,7 +46,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : IR
 			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken = default)
+	public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken)
 	{
 		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);

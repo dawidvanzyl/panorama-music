@@ -28,7 +28,7 @@ public class LoginHandlerTests
 		var jwt = new Mock<IJwtService>();
 		var refreshRepo = new Mock<IRefreshTokenRepository>();
 
-		refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
+		refreshRepo.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 		jwt.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>())).Returns(new JwtToken("access-token", DateTime.UtcNow));
 
 		var handler = new LoginHandler(userRepo.Object, roleRepo.Object, hasher.Object, jwt.Object, refreshRepo.Object);
@@ -50,16 +50,16 @@ public class LoginHandlerTests
 		var (userRepo, roleRepo, hasher, _, refreshRepo, handler) = CreateSut();
 		var user = CreateActiveUser();
 
-		userRepo.Setup(r => r.GetByEmailAsync("user@test.com")).ReturnsAsync(user);
-		roleRepo.Setup(r => r.GetRolesAsync(user.UserId)).ReturnsAsync([Role.Teacher]);
+		userRepo.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+		roleRepo.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>())).ReturnsAsync([Role.Teacher]);
 		hasher.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>())).Returns(true);
 
-		var result = await handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")));
+		var result = await handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), CancellationToken.None);
 
 		result.ShouldNotBeNull();
 		result.AccessToken.ShouldBe("access-token");
 		result.RefreshToken.ShouldNotBeNullOrEmpty();
-		refreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>()), Times.Once);
+		refreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
@@ -67,10 +67,10 @@ public class LoginHandlerTests
 	public async Task HandleAsync_InvalidEmail_ThrowsUnauthorizedException()
 	{
 		var (userRepo, _, _, _, _, handler) = CreateSut();
-		userRepo.Setup(r => r.GetByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+		userRepo.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
 
 		await Should.ThrowAsync<UnauthorizedException>(
-			() => handler.HandleAsync(new LoginCommand(new LoginRequest("unknown@test.com", "password"))));
+			() => handler.HandleAsync(new LoginCommand(new LoginRequest("unknown@test.com", "password")), CancellationToken.None));
 	}
 
 	[Fact]
@@ -80,11 +80,11 @@ public class LoginHandlerTests
 		var (userRepo, _, hasher, _, _, handler) = CreateSut();
 		var user = CreateActiveUser();
 
-		userRepo.Setup(r => r.GetByEmailAsync("user@test.com")).ReturnsAsync(user);
+		userRepo.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
 		hasher.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>())).Returns(false);
 
 		await Should.ThrowAsync<UnauthorizedException>(
-			() => handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "wrongpass"))));
+			() => handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "wrongpass")), CancellationToken.None));
 	}
 
 	[Fact]
@@ -95,10 +95,10 @@ public class LoginHandlerTests
 		var user = new User(Guid.NewGuid(), Email.Create("user@test.com"), DateTime.UtcNow);
 		user.SetPassword(PasswordHash.Create("$argon2id$v=19$valid"));
 
-		userRepo.Setup(r => r.GetByEmailAsync("user@test.com")).ReturnsAsync(user);
+		userRepo.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
 		hasher.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>())).Returns(true);
 
 		await Should.ThrowAsync<UnauthorizedException>(
-			() => handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password"))));
+			() => handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), CancellationToken.None));
 	}
 }

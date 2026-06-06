@@ -37,7 +37,7 @@ public class AdminSeedService(
 		var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
 		var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
-		var existing = await userRepo.GetByEmailAsync(email);
+		var existing = await userRepo.GetByEmailAsync(email, cancellationToken);
 		if (existing is not null)
 		{
 			logger.LogInformation("Admin user with email {Email} already exists — skipping seed.", email);
@@ -48,8 +48,8 @@ public class AdminSeedService(
 		user.SetPassword(hasher.Hash(password));
 		user.Activate();
 
-		await userRepo.AddAsync(user);
-		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin));
+		await userRepo.AddAsync(user, cancellationToken);
+		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);
 
 		logger.LogInformation("Admin user {Email} created successfully.", email);
 	}

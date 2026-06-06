@@ -24,7 +24,7 @@ public class CompleteRegistrationHandlerTests
 		var userRepo = new Mock<IUserRepository>();
 		var hasher = new Mock<IPasswordHasher>();
 
-		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), It.IsAny<Guid>())).Returns(Task.CompletedTask);
+		userRepo.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 		hasher.Setup(h => h.Hash(It.IsAny<string>())).Returns(PasswordHash.Create("$argon2id$v=19$hashed"));
 
 		return (inviteRepo, userRepo, hasher, new CompleteRegistrationHandler(inviteRepo.Object, userRepo.Object, hasher.Object));
@@ -40,17 +40,17 @@ public class CompleteRegistrationHandlerTests
 		var userId = Guid.NewGuid();
 
 		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
-		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash)).ReturnsAsync(invite);
+		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>())).ReturnsAsync(invite);
 
 		var user = new User(userId, Email.Create("u@test.com"), DateTime.UtcNow);
-		userRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+		userRepo.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-		await handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")));
+		await handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), CancellationToken.None);
 
 		invite.IsUsed.ShouldBeTrue();
 		user.IsActive.ShouldBeTrue();
 		user.PasswordHash.ShouldNotBeNull();
-		userRepo.Verify(r => r.CompleteActivationAsync(user, invite.TokenId), Times.Once);
+		userRepo.Verify(r => r.CompleteActivationAsync(user, invite.TokenId, It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
@@ -63,10 +63,10 @@ public class CompleteRegistrationHandlerTests
 		var userId = Guid.NewGuid();
 
 		var expired = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(-1));
-		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash)).ReturnsAsync(expired);
+		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>())).ReturnsAsync(expired);
 
 		await Should.ThrowAsync<DomainException>(
-			() => handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!"))));
+			() => handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), CancellationToken.None));
 	}
 
 	[Fact]
@@ -80,9 +80,9 @@ public class CompleteRegistrationHandlerTests
 
 		var used = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
 		used.MarkUsed();
-		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash)).ReturnsAsync(used);
+		inviteRepo.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>())).ReturnsAsync(used);
 
 		await Should.ThrowAsync<DomainException>(
-			() => handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!"))));
+			() => handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), CancellationToken.None));
 	}
 }

@@ -14,7 +14,7 @@ public class LogoutHandlerTests
 	private static (Mock<IRefreshTokenRepository> refreshRepo, LogoutHandler handler) CreateSut()
 	{
 		var refreshRepo = new Mock<IRefreshTokenRepository>();
-		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
+		refreshRepo.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 		return (refreshRepo, new LogoutHandler(refreshRepo.Object));
 	}
 
@@ -28,11 +28,11 @@ public class LogoutHandlerTests
 		var userId = Guid.NewGuid();
 
 		var token = new RefreshToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
-		refreshRepo.Setup(r => r.GetByTokenHashAsync(tokenHash)).ReturnsAsync(token);
+		refreshRepo.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>())).ReturnsAsync(token);
 
-		await handler.HandleAsync(new LogoutCommand(rawToken));
+		await handler.HandleAsync(new LogoutCommand(rawToken), CancellationToken.None);
 
 		token.IsRevoked.ShouldBeTrue();
-		refreshRepo.Verify(r => r.UpdateAsync(token), Times.Once);
+		refreshRepo.Verify(r => r.UpdateAsync(token, It.IsAny<CancellationToken>()), Times.Once);
 	}
 }

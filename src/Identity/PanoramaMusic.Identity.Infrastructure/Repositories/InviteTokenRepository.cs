@@ -10,7 +10,7 @@ namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : IInviteTokenRepository
 {
-	public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+	public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		var dto = await connection.QuerySingleOrDefaultAsync<InviteTokenDto>(
@@ -21,7 +21,7 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : IIn
 		return dto?.MapToInviteToken();
 	}
 
-	public async Task AddAsync(InviteToken token, CancellationToken cancellationToken = default)
+	public async Task AddAsync(InviteToken token, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		await connection.ExecuteAsync(
@@ -36,7 +36,7 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : IIn
 			commandType: CommandType.StoredProcedure);
 	}
 
-	public async Task UpdateAsync(InviteToken token, CancellationToken cancellationToken = default)
+	public async Task UpdateAsync(InviteToken token, CancellationToken cancellationToken)
 	{
 		using var connection = connectionFactory.CreateConnection();
 		await connection.ExecuteAsync(
