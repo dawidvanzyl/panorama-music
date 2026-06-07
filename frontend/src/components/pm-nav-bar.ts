@@ -1,5 +1,4 @@
 import { isAuthenticated, logout } from '../services/auth';
-import { hasRole } from '../services/token-storage';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -37,33 +36,15 @@ template.innerHTML = `
     .nav-bar__btn:hover {
       background: var(--pm-border);
     }
-    .nav-bar__links {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .nav-bar__link {
-      color: var(--pm-text-muted);
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .nav-bar__link:hover {
-      color: var(--pm-text);
-    }
   </style>
   <nav>
     <span class="nav-bar__brand">Panorama Music</span>
-    <div class="nav-bar__links">
-      <a href="#/admin/users" class="nav-bar__link" id="adminLink" hidden>Admin</a>
-      <button id="logoutBtn" class="nav-bar__btn" hidden>Sign Out</button>
-    </div>
+    <button id="logoutBtn" class="nav-bar__btn" hidden>Sign Out</button>
   </nav>
 `;
 
 export class PmNavBar extends HTMLElement {
   private logoutBtn: HTMLButtonElement | null = null;
-  private adminLink: HTMLAnchorElement | null = null;
 
   constructor() {
     super();
@@ -73,7 +54,6 @@ export class PmNavBar extends HTMLElement {
 
   connectedCallback(): void {
     this.logoutBtn = this.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
-    this.adminLink = this.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
     this.logoutBtn!.addEventListener('click', this.handleLogout);
     this.updateVisibility();
     window.addEventListener('hashchange', this.updateVisibility);
@@ -86,7 +66,6 @@ export class PmNavBar extends HTMLElement {
 
   private updateVisibility = (): void => {
     this.logoutBtn!.hidden = !isAuthenticated();
-    this.adminLink!.hidden = !isAuthenticated() || !hasRole('Admin');
   };
 
   private handleLogout = async (): Promise<void> => {

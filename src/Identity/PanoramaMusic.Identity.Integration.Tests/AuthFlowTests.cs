@@ -18,7 +18,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace PanoramaMusic.Identity.Integration.Tests;
+namespace PanoramaMusic.Identity.Tests;
 
 public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthFlowFixture>
 {
