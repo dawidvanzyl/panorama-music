@@ -14,10 +14,10 @@ public sealed class RefreshTokenHandler(
 {
 	private const int _refreshTokenExpiryDays = 7;
 
-	public async Task<AuthResult> HandleAsync(RefreshTokenCommand command)
+	public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken cancellationToken)
 	{
 		var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.Token);
-		var existing = await refreshTokenRepository.GetByTokenHashAsync(tokenHash)
+		var existing = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
 			?? throw new UnauthorizedException("Invalid refresh token.");
 
 		if (existing.IsExpired)
@@ -26,10 +26,10 @@ public sealed class RefreshTokenHandler(
 		if (existing.IsRevoked)
 			throw new UnauthorizedException("Refresh token has been revoked.");
 
-		var user = await userRepository.GetByIdAsync(existing.UserId)
+		var user = await userRepository.GetByIdAsync(existing.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
-		var roles = await userRoleRepository.GetRolesAsync(user.UserId);
+		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
 		var rawToken = Guid.NewGuid().ToString();
@@ -37,7 +37,7 @@ public sealed class RefreshTokenHandler(
 		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
 		var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newTokenHash, refreshTokenExpiresAt);
-		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken);
+		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken, cancellationToken);
 
 		return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
 	}

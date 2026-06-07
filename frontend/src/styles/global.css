@@ -7,11 +7,50 @@
 }
 
 :root {
-  font-family: system-ui, sans-serif;
+  --pm-bg: #0f1117;
+  --pm-surface: #1a1d27;
+  --pm-surface-2: #22263a;
+  --pm-border: #2e3250;
+  --pm-accent: #4f7cff;
+  --pm-accent-hover: #3a63e8;
+  --pm-danger: #e05252;
+  --pm-text: #e4e6f0;
+  --pm-text-muted: #8a8fa8;
+  --pm-radius: 10px;
+  --pm-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+
+  font-family: 'Inter', system-ui, sans-serif;
   line-height: 1.5;
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 body {
+  background: var(--pm-bg);
+  color: var(--pm-text);
   min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pm-border);
+  border-radius: 3px;
 }

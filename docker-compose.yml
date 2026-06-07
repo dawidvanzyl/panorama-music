@@ -41,6 +41,9 @@ services:
       # Set RESET_DB=true to wipe the QA database, re-run all migrations, and
       # re-apply seed data on the next container start.  Never set in production.
       RESET_DB: ${RESET_DB:-false}
+      JWT__Secret: ${JWT__Secret}
+      Admin__Email: ${Admin__Email}
+      Admin__Password: ${Admin__Password}
     ports:
       - "3000:3000"
     depends_on:

@@ -9,22 +9,21 @@ public sealed class CompleteRegistrationHandler(
 	IUserRepository userRepository,
 	IPasswordHasher passwordHasher)
 {
-	public async Task HandleAsync(CompleteRegistrationCommand command)
+	public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken)
 	{
 		var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.InviteToken);
-		var inviteToken = await inviteTokenRepository.GetByTokenHashAsync(tokenHash)
+		var inviteToken = await inviteTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
 			?? throw new UnauthorizedException("Invalid invite token.");
 
-		// MarkUsed throws DomainException if expired or already used
 		inviteToken.MarkUsed();
 
-		var user = await userRepository.GetByIdAsync(inviteToken.UserId)
+		var user = await userRepository.GetByIdAsync(inviteToken.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
 		var passwordHash = passwordHasher.Hash(command.Request.NewPassword);
 		user.SetPassword(passwordHash);
 		user.Activate();
 
-		await userRepository.CompleteActivationAsync(user, inviteToken.TokenId);
+		await userRepository.CompleteActivationAsync(user, inviteToken.TokenId, cancellationToken);
 	}
 }

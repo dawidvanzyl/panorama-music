@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Factory;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
+using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
 
@@ -12,8 +14,11 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddIdentityInfrastructure(
 		this IServiceCollection services,
-		string connectionString)
+		string connectionString,
+		IConfiguration configuration)
 	{
+		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 		services.AddDataAccess(connectionString);
 		services.AddRepositories();
 		services.AddServices();

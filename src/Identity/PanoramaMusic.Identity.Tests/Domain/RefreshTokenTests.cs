@@ -2,7 +2,7 @@ using PanoramaMusic.Identity.Domain.Entities;
 using Shouldly;
 using Xunit;
 
-namespace PanoramaMusic.Tests.Identity.Domain;
+namespace PanoramaMusic.Identity.Tests.Domain;
 
 public class RefreshTokenTests
 {

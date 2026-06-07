@@ -3,7 +3,7 @@ using PanoramaMusic.Identity.Domain.ValueObjects;
 using Shouldly;
 using Xunit;
 
-namespace PanoramaMusic.Tests.Identity.Domain;
+namespace PanoramaMusic.Identity.Tests.Domain;
 
 public class UserTests
 {

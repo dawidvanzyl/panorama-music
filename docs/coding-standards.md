@@ -52,5 +52,5 @@ fix(api): return 404 for unmatched /api/* routes
   - Brief overview of changes
   - `Closes #{issue_number}`
   - Milestone reference
-- Target `master` for all feature work.
+- Target `master` or a `milestone/*` branch for all feature work.
 - Squash-merge or rebase-merge; no merge commits on `master`.

@@ -66,3 +66,7 @@ jobs:
       - name: Build
         run: npx vite build
         working-directory: frontend
+
+      - name: Test
+        run: npm run test
+        working-directory: frontend

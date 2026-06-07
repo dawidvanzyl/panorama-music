@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -11,5 +12,8 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5102',
     },
+  },
+  test: {
+    environment: 'jsdom',
   },
 });
