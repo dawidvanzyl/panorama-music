@@ -244,10 +244,10 @@ gh pr comment {pr_number} --body "## Review feedback for #{issue_number}
 ### ⚠️ Warnings
 - ...
 
-### ❓ Questions
+### 💡 Suggestions
 - ...
 
-### 💡 Suggestions
+### ❓ Questions
 - ...
 
 ---

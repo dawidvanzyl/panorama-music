@@ -4,27 +4,28 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Factory;
-using System.Data;
+using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : IInviteTokenRepository
+public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : RepositoryBase(connectionFactory), IInviteTokenRepository
 {
 	public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
 	{
-		using var connection = connectionFactory.CreateConnection();
-		var dto = await connection.QuerySingleOrDefaultAsync<InviteTokenDto>(
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
 			"identity.get_invite_token_by_hash",
 			new { p_token_hash = tokenHash },
-			commandType: CommandType.StoredProcedure);
+			cancellationToken);
+		var dto = await connection.QuerySingleOrDefaultAsync<InviteTokenDto>(command);
 
 		return dto?.MapToInviteToken();
 	}
 
 	public async Task AddAsync(InviteToken token, CancellationToken cancellationToken)
 	{
-		using var connection = connectionFactory.CreateConnection();
-		await connection.ExecuteAsync(
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
 			"identity.create_invite_token",
 			new
 			{
@@ -33,15 +34,17 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : IIn
 				p_token_hash = token.TokenHash,
 				p_expires_at = token.ExpiresAt,
 			},
-			commandType: CommandType.StoredProcedure);
+			cancellationToken);
+		await connection.ExecuteAsync(command);
 	}
 
 	public async Task UpdateAsync(InviteToken token, CancellationToken cancellationToken)
 	{
-		using var connection = connectionFactory.CreateConnection();
-		await connection.ExecuteAsync(
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
 			"identity.use_invite_token",
 			new { p_token_id = token.TokenId },
-			commandType: CommandType.StoredProcedure);
+			cancellationToken);
+		await connection.ExecuteAsync(command);
 	}
 }

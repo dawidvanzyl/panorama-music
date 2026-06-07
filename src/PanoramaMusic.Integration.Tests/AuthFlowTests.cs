@@ -17,7 +17,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace PanoramaMusic.IntegrationTests;
+namespace PanoramaMusic.Identity.Tests;
 
 public sealed class AuthFlowTests
 {

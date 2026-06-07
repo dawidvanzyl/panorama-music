@@ -4,55 +4,58 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Factory;
-using System.Data;
-using System.Data.Common;
+using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
+public class UserRepository(IDbConnectionFactory connectionFactory) : RepositoryBase(connectionFactory), IUserRepository
 {
 	public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
 	{
-		using var connection = connectionFactory.CreateConnection();
-		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
 			"identity.get_user_by_id",
 			new { p_user_id = userId },
-			commandType: CommandType.StoredProcedure);
+			cancellationToken);
+		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(command);
 
 		return dto?.MapToUser();
 	}
 
 	public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
 	{
-		using var connection = connectionFactory.CreateConnection();
-		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
 			"identity.get_user_by_email",
 			new { p_email = email },
-			commandType: CommandType.StoredProcedure);
+			cancellationToken);
+		var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(command);
 
 		return dto?.MapToUser();
 	}
 
 	public async Task AddAsync(User user, CancellationToken cancellationToken)
 	{
-		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
-			await dbConnection.ExecuteAsync(
+			var createUserCommand = CreateCommandDefinition(
 				"identity.create_user",
 				new { p_user_id = user.UserId, p_email = user.Email.Value, p_is_active = user.IsActive },
 				transaction,
-				commandType: CommandType.StoredProcedure);
+				cancellationToken);
+			await dbConnection.ExecuteAsync(createUserCommand);
 
 			if (user.PasswordHash is not null)
 			{
-				await dbConnection.ExecuteAsync(
+				var updatePasswordCommand = CreateCommandDefinition(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
 					transaction,
-					commandType: CommandType.StoredProcedure);
+					cancellationToken);
+				await dbConnection.ExecuteAsync(updatePasswordCommand);
 			}
 
 			await transaction.CommitAsync(cancellationToken);
@@ -66,27 +69,29 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
 	public async Task UpdateAsync(User user, CancellationToken cancellationToken)
 	{
-		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
 			if (user.PasswordHash is not null)
 			{
-				await dbConnection.ExecuteAsync(
+				var updatePasswordCommand = CreateCommandDefinition(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
 					transaction,
-					commandType: CommandType.StoredProcedure);
+					cancellationToken);
+				await dbConnection.ExecuteAsync(updatePasswordCommand);
 			}
 
 			if (user.IsActive)
 			{
-				await dbConnection.ExecuteAsync(
+				var activateUserCommand = CreateCommandDefinition(
 					"identity.activate_user",
 					new { p_user_id = user.UserId },
 					transaction,
-					commandType: CommandType.StoredProcedure);
+					cancellationToken);
+				await dbConnection.ExecuteAsync(activateUserCommand);
 			}
 
 			await transaction.CommitAsync(cancellationToken);
@@ -100,34 +105,37 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
 	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken)
 	{
-		var dbConnection = (DbConnection)connectionFactory.CreateConnection();
+		var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
 		{
 			if (user.PasswordHash is not null)
 			{
-				await dbConnection.ExecuteAsync(
+				var updatePasswordCommand = CreateCommandDefinition(
 					"identity.update_user_password",
 					new { p_user_id = user.UserId, p_password_hash = user.PasswordHash.Value },
 					transaction,
-					commandType: CommandType.StoredProcedure);
+					cancellationToken);
+				await dbConnection.ExecuteAsync(updatePasswordCommand);
 			}
 
 			if (user.IsActive)
 			{
-				await dbConnection.ExecuteAsync(
+				var activateUserCommand = CreateCommandDefinition(
 					"identity.activate_user",
 					new { p_user_id = user.UserId },
 					transaction,
-					commandType: CommandType.StoredProcedure);
+					cancellationToken);
+				await dbConnection.ExecuteAsync(activateUserCommand);
 			}
 
-			await dbConnection.ExecuteAsync(
+			var useInviteTokenCommand = CreateCommandDefinition(
 				"identity.use_invite_token",
 				new { p_token_id = inviteTokenId },
 				transaction,
-				commandType: CommandType.StoredProcedure);
+				cancellationToken);
+			await dbConnection.ExecuteAsync(useInviteTokenCommand);
 
 			await transaction.CommitAsync(cancellationToken);
 		}

@@ -345,6 +345,8 @@ export class PmRegistrationPage extends HTMLElement {
   private passwordIcon: HTMLElement | null = null;
   private toggleConfirmBtn: HTMLButtonElement | null = null;
   private confirmPasswordIcon: HTMLElement | null = null;
+  private boundTogglePassword: (() => void) | null = null;
+  private boundToggleConfirm: (() => void) | null = null;
 
   constructor() {
     super();
@@ -376,8 +378,10 @@ export class PmRegistrationPage extends HTMLElement {
     }
 
     this.form!.addEventListener('submit', this.handleSubmit);
-    this.toggleBtn!.addEventListener('click', () => this.togglePasswordVisibility(this.passwordInput!, this.passwordIcon!));
-    this.toggleConfirmBtn!.addEventListener('click', () => this.togglePasswordVisibility(this.confirmInput!, this.confirmPasswordIcon!));
+    this.boundTogglePassword = () => this.togglePasswordVisibility(this.passwordInput!, this.passwordIcon!);
+    this.boundToggleConfirm = () => this.togglePasswordVisibility(this.confirmInput!, this.confirmPasswordIcon!);
+    this.toggleBtn!.addEventListener('click', this.boundTogglePassword);
+    this.toggleConfirmBtn!.addEventListener('click', this.boundToggleConfirm);
 
     for (const input of [this.passwordInput!, this.confirmInput!]) {
       input.addEventListener('input', this.handleInputChange);
@@ -386,15 +390,15 @@ export class PmRegistrationPage extends HTMLElement {
 
   disconnectedCallback(): void {
     this.form?.removeEventListener('submit', this.handleSubmit);
-    this.toggleBtn?.removeEventListener('click', () => {});
-    this.toggleConfirmBtn?.removeEventListener('click', () => {});
+    if (this.boundTogglePassword) this.toggleBtn?.removeEventListener('click', this.boundTogglePassword);
+    if (this.boundToggleConfirm) this.toggleConfirmBtn?.removeEventListener('click', this.boundToggleConfirm);
     for (const input of [this.passwordInput, this.confirmInput]) {
       input?.removeEventListener('input', this.handleInputChange);
     }
   }
 
   private get inviteToken(): string | null {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
     return params.get('token');
   }
 
