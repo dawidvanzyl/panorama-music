@@ -44,7 +44,7 @@ describe('login', { tags: ['M1UC40'] }, () => {
   });
 });
 
-describe('refreshToken', () => {
+describe('refreshToken', { tags: ['M1UC42'] }, () => {
   it('stores new tokens on success', async () => {
     localStorage.setItem('pm_refresh_token', 'old-refresh-token');
 
@@ -72,7 +72,7 @@ describe('refreshToken', () => {
   });
 });
 
-describe('logout', () => {
+describe('logout', { tags: ['M1UC43'] }, () => {
   it('calls logout endpoint and clears tokens', async () => {
     localStorage.setItem('pm_refresh_token', 'some-token');
     localStorage.setItem('pm_access_token', 'some-access');
@@ -141,7 +141,7 @@ describe('completeRegistration', { tags: ['M1UC41'] }, () => {
   });
 });
 
-describe('isAuthenticated', () => {
+describe('isAuthenticated', { tags: ['M1UC44'] }, () => {
   it('returns true when valid token exists', () => {
     localStorage.setItem('pm_access_token', 'token');
     localStorage.setItem('pm_expires_at', new Date(Date.now() + 3600000).toISOString());
