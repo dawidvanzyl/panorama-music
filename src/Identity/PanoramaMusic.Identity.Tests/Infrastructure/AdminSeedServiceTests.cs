@@ -8,14 +8,13 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Services;
-using Shouldly;
 using Xunit;
 
 namespace PanoramaMusic.Tests.Identity.Infrastructure;
 
 public class AdminSeedServiceTests
 {
-	private static AdminSeedService CreateSut(
+	private static AdminSeedService CreateService(
 		AdminOptions adminOptions,
 		Mock<IUserRepository> mockUserRepo,
 		Mock<IUserRoleRepository> mockUserRoleRepo)
@@ -35,11 +34,11 @@ public class AdminSeedServiceTests
 	{
 		var mockUserRepo = new Mock<IUserRepository>();
 		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
-		var sut = CreateSut(new AdminOptions(), mockUserRepo, mockUserRoleRepo);
+		var service = CreateService(new AdminOptions(), mockUserRepo, mockUserRoleRepo);
 
-		await sut.StartAsync(CancellationToken.None);
+		await service.StartAsync(TestContext.Current.CancellationToken);
 
-		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), TestContext.Current.CancellationToken), Times.Never);
 	}
 
 	[Fact]
@@ -47,22 +46,20 @@ public class AdminSeedServiceTests
 	public async Task StartAsync_WhenValidOptionsAndNoExistingAdmin_CreatesAdminUser()
 	{
 		var mockUserRepo = new Mock<IUserRepository>();
-		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
+		mockUserRepo
+			.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
 
 		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
-		var sut = CreateSut(
+		var service = CreateService(
 			new AdminOptions { Email = "admin@test.com", Password = "StrongPassword1!" },
 			mockUserRepo,
 			mockUserRoleRepo);
 
-		await sut.StartAsync(CancellationToken.None);
+		await service.StartAsync(TestContext.Current.CancellationToken);
 
-		mockUserRepo.Verify(
-			r => r.AddAsync(It.Is<User>(u => u.Email.Value == "admin@test.com"), It.IsAny<CancellationToken>()),
-			Times.Once);
-		mockUserRoleRepo.Verify(
-			r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), It.IsAny<CancellationToken>()),
-			Times.Once);
+		mockUserRepo.Verify(r => r.AddAsync(It.Is<User>(u => u.Email.Value == "admin@test.com"), TestContext.Current.CancellationToken), Times.Once);
+		mockUserRoleRepo.Verify(r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -71,16 +68,18 @@ public class AdminSeedServiceTests
 	{
 		var existingUser = new User(Guid.NewGuid(), Email.Create("admin@test.com"), DateTime.UtcNow);
 		var mockUserRepo = new Mock<IUserRepository>();
-		mockUserRepo.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(existingUser);
+		mockUserRepo
+			.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(existingUser);
 
 		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
-		var sut = CreateSut(
+		var service = CreateService(
 			new AdminOptions { Email = "admin@test.com", Password = "StrongPassword1!" },
 			mockUserRepo,
 			mockUserRoleRepo);
 
-		await sut.StartAsync(CancellationToken.None);
+		await service.StartAsync(TestContext.Current.CancellationToken);
 
-		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+		mockUserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), TestContext.Current.CancellationToken), Times.Never);
 	}
 }

@@ -10,20 +10,14 @@ using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
-public class JwtService : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 {
 	private const int _tokenExpiryMinutes = 15;
 	private const int _minSecretLength = 32;
-	private readonly JwtOptions _options;
-
-	public JwtService(IOptions<JwtOptions> options)
-	{
-		_options = options.Value;
-	}
 
 	public JwtToken GenerateToken(Guid userId, IList<Role> roles)
 	{
-		var secret = _options.Secret
+		var secret = jwtOptions.Value.Secret
 			?? throw new InvalidOperationException($"'{JwtOptions.SectionName}:{nameof(JwtOptions.Secret)}' is not configured.");
 
 		if (secret.Length < _minSecretLength)

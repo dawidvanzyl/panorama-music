@@ -3,7 +3,7 @@ using PanoramaMusic.Identity.Domain.Exceptions;
 using Shouldly;
 using Xunit;
 
-namespace PanoramaMusic.Tests.Identity.Domain;
+namespace PanoramaMusic.Identity.Tests.Domain;
 
 public class InviteTokenTests
 {

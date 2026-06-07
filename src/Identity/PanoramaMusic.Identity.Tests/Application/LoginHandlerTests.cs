@@ -1,0 +1,125 @@
+using Moq;
+using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Requests.Auth;
+using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Enums;
+using PanoramaMusic.Identity.Domain.Exceptions;
+using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
+using Shouldly;
+using Xunit;
+
+namespace PanoramaMusic.Identity.Tests.Application;
+
+public class LoginHandlerTests
+{
+	public LoginHandlerTests()
+	{
+		UserRepo = new Mock<IUserRepository>();
+		RoleRepo = new Mock<IUserRoleRepository>();
+		Hasher = new Mock<IPasswordHasher>();
+		Jwt = new Mock<IJwtService>();
+		RefreshRepo = new Mock<IRefreshTokenRepository>();
+
+		RefreshRepo
+			.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		Jwt
+			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>()))
+			.Returns(new JwtToken("access-token", DateTime.UtcNow));
+
+		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object);
+	}
+
+	public Mock<IUserRepository> UserRepo { get; }
+	public Mock<IUserRoleRepository> RoleRepo { get; }
+	public Mock<IPasswordHasher> Hasher { get; }
+	public Mock<IJwtService> Jwt { get; }
+	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
+	public LoginHandler Handler { get; }
+
+	private static User CreateActiveUser(string email = "user@test.com", string passwordHashValue = "$argon2id$v=19$valid")
+	{
+		var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create(passwordHashValue));
+		user.Activate();
+		return user;
+	}
+
+	[Fact]
+	[Trait("AC", "M1UC24")]
+	public async Task HandleAsync_ValidCredentials_ReturnsAuthResult()
+	{
+		var user = CreateActiveUser();
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		RoleRepo
+			.Setup(r => r.GetRolesAsync(user.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([Role.Teacher]);
+
+		Hasher
+			.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>()))
+			.Returns(true);
+
+		var result = await Handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), TestContext.Current.CancellationToken);
+
+		result.ShouldNotBeNull();
+		result.AccessToken.ShouldBe("access-token");
+		result.RefreshToken.ShouldNotBeNullOrEmpty();
+		RefreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), TestContext.Current.CancellationToken), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1UC25")]
+	public async Task HandleAsync_InvalidEmail_ThrowsUnauthorizedException()
+	{
+		UserRepo
+			.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("unknown@test.com", "password")), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "M1UC26")]
+	public async Task HandleAsync_WrongPassword_ThrowsUnauthorizedException()
+	{
+		var user = CreateActiveUser();
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		Hasher
+			.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>()))
+			.Returns(false);
+
+		await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "wrongpass")), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "M1UC27")]
+	public async Task HandleAsync_InactiveUser_ThrowsUnauthorizedException()
+	{
+		var user = new User(Guid.NewGuid(), Email.Create("user@test.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$v=19$valid"));
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", TestContext.Current.CancellationToken))
+			.ReturnsAsync(user);
+
+		Hasher
+			.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>()))
+			.Returns(true);
+
+		await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), TestContext.Current.CancellationToken));
+	}
+}

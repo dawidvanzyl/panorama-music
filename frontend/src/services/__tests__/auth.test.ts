@@ -16,7 +16,7 @@ const validAuthResult = {
   refreshTokenExpiresAt: new Date(Date.now() + 604800000).toISOString(),
 };
 
-describe('login', { tags: ['M1UC40'] }, () => {
+describe('login', { tags: ['M1UC35'] }, () => {
   it('stores tokens in localStorage on success', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -44,7 +44,7 @@ describe('login', { tags: ['M1UC40'] }, () => {
   });
 });
 
-describe('refreshToken', { tags: ['M1UC42'] }, () => {
+describe('refreshToken', { tags: ['M1UC37'] }, () => {
   it('stores new tokens on success', async () => {
     localStorage.setItem('pm_refresh_token', 'old-refresh-token');
 
@@ -72,7 +72,7 @@ describe('refreshToken', { tags: ['M1UC42'] }, () => {
   });
 });
 
-describe('logout', { tags: ['M1UC43'] }, () => {
+describe('logout', { tags: ['M1UC38'] }, () => {
   it('calls logout endpoint and clears tokens', async () => {
     localStorage.setItem('pm_refresh_token', 'some-token');
     localStorage.setItem('pm_access_token', 'some-access');
@@ -114,7 +114,7 @@ describe('logout', { tags: ['M1UC43'] }, () => {
   });
 });
 
-describe('completeRegistration', { tags: ['M1UC41'] }, () => {
+describe('completeRegistration', { tags: ['M1UC36'] }, () => {
   it('calls endpoint and does not store tokens', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -141,7 +141,7 @@ describe('completeRegistration', { tags: ['M1UC41'] }, () => {
   });
 });
 
-describe('isAuthenticated', { tags: ['M1UC44'] }, () => {
+describe('isAuthenticated', { tags: ['M1UC39'] }, () => {
   it('returns true when valid token exists', () => {
     localStorage.setItem('pm_access_token', 'token');
     localStorage.setItem('pm_expires_at', new Date(Date.now() + 3600000).toISOString());

@@ -32,8 +32,10 @@ public class JwtServiceTests
 		var token = result.Token;
 		var jwt = handler.ReadJwtToken(token);
 
-		jwt.Subject.ShouldBe(userId.ToString());
-		jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin"));
+		jwt.ShouldSatisfyAllConditions(
+			() => jwt.Subject.ShouldBe(userId.ToString()),
+			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin"))
+		);
 	}
 
 	[Fact]
