@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Identity.Infrastructure.Configuration;
+namespace PanoramaMusic.Identity.Infrastructure.Configurations;
 
 public class JwtOptions
 {

@@ -27,24 +27,7 @@ C#, ASP.NET Core, Dapper, DbUp, and xUnit conventions for the Panorama Music pro
 
 ### Folder Conventions
 
-Source files are organised into folders named after their role or type suffix:
-
-```
-Handlers/     — handler classes
-Commands/     — command records
-Requests/     — request/input DTOs
-Models/       — output/result DTOs
-Factories/    — factory classes
-Repositories/ — repository classes
-Services/     — service implementations
-Adapters/     — adapter/wrapper classes
-Entities/     — entity records (Domain) or dto classes (Infrastructure)
-Dtos/         — dto classes (Infrastructure)
-ValueObjects/ — value object records
-Enums/        — enum types
-Exceptions/   — exception classes
-Interfaces/   — interface types
-```
+Source files are organised into folders named after their role or type suffix. Always use plural form for the folder name.
 
 - Do not use a `Common/` catch-all folder. Every type of artifact has its own named folder.
 - **Interface special case:** When interfaces are defined in a separate layer from their implementations (e.g. Domain defines `IUserRepository`, Infrastructure implements it), they live in an `Interfaces/` folder in each layer. When an interface and its implementation reside in the same layer, keep the interface in the same folder as the implementation rather than separating them.
@@ -84,37 +67,9 @@ The solution is split into four projects. Each layer has a clearly defined respo
 - Must not reference any NuGet package except for primitive helpers (e.g. `CSharpFunctionalExtensions`).
 - No data-access code, no HTTP concepts.
 
-**Folder layout — never use a `Common/` catch-all. Each type of artifact has its own named folder:**
+**Folder layout — never use a `Common/` catch-all.
 
-```
-PanoramaMusic.{Context}.Domain/
-  Entities/      → PanoramaMusic.{Context}.Domain.Entities
-  ValueObjects/  → PanoramaMusic.{Context}.Domain.ValueObjects
-  Enums/         → PanoramaMusic.{Context}.Domain.Enums
-  Interfaces/    → PanoramaMusic.{Context}.Domain.Interfaces
-  Exceptions/    → PanoramaMusic.{Context}.Domain.Exceptions
-```
-
-**Example (Identity bounded context):**
-```
-src/Identity/PanoramaMusic.Identity.Domain/
-  Entities/
-    User.cs
-    UserRole.cs
-    RefreshToken.cs
-    InviteToken.cs
-  ValueObjects/
-    Email.cs
-    PasswordHash.cs
-  Enums/
-    Role.cs
-  Interfaces/
-    IUserRepository.cs
-    IPasswordHasher.cs
-    IJwtService.cs
-  Exceptions/
-    DomainException.cs
-```
+- See `### Folder Conventions` for the folder conventions.
 
 **Entity pattern — `record` with primary constructor:**
 
@@ -190,23 +145,7 @@ Handlers with simple input that does not warrant a separate Request may embed th
 **Purpose:** Implements application interfaces; owns all external I/O (database, file system, third-party APIs).
 
 - Contains: Dapper repositories, DbUp migrations, seed scripts, DI extension methods.
-- Folder layout:
-  ```
-  src/PanoramaMusic.Infrastructure/
-    Extensions/
-      ServiceCollectionExtensions.cs   ← AddInfrastructure(...)
-    Persistence/
-      Migrations/
-        V001__baseline.sql
-        V002__create_schemas.sql
-      Functions/
-        V001__get_songs.sql
-      Seeds/
-        V001__baseline_seed.sql
-      DatabaseMigrator.cs
-    Repositories/
-      SongRepository.cs
-  ```
+- Folder layout: See `### Folder Conventions` for the folder conventions.
 - Register all services through `ServiceCollectionExtensions.AddInfrastructure(...)`.
 
 ### 2.4 Api (`PanoramaMusic.Api`)

@@ -2,7 +2,7 @@ using Dapper;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Factory;
+using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;

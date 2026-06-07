@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Domain.Enums;
-using PanoramaMusic.Identity.Infrastructure.Configuration;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using Shouldly;
 using System.IdentityModel.Tokens.Jwt;

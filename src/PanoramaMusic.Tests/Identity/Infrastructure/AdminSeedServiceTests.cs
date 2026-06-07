@@ -6,7 +6,7 @@ using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
-using PanoramaMusic.Identity.Infrastructure.Configuration;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using Shouldly;
 using Xunit;
