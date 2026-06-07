@@ -16,7 +16,7 @@ const validAuthResult = {
   refreshTokenExpiresAt: new Date(Date.now() + 604800000).toISOString(),
 };
 
-describe('login', () => {
+describe('login', { tags: ['M1UC40'] }, () => {
   it('stores tokens in localStorage on success', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -114,7 +114,7 @@ describe('logout', () => {
   });
 });
 
-describe('completeRegistration', () => {
+describe('completeRegistration', { tags: ['M1UC41'] }, () => {
   it('calls endpoint and does not store tokens', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
