@@ -36,15 +36,16 @@ One paragraph. What this issue implements and why it exists in the context of th
 
 ---
 
-## Implementation Plan
+## Initial Implementation Plan
 
-Step-by-step descriptive instructions. Layer by layer where applicable. Detailed enough that no additional context is needed beyond this issue.
+The following represents the anticipated implementation at planning time. Step-by-step descriptive instructions. Layer by layer where applicable. Detailed enough that no additional context is needed beyond this issue.
+The actual implementation may differ based on discoveries made during development.
 
-### Files to Create
+### Anticipated Files to Create
 
 - `path/to/file.ts` — purpose
 
-### Files to Modify
+### Anticipated Files to Modify
 
 - `path/to/file.ts` — what changes and why
 
@@ -76,3 +77,20 @@ under `### Backend` and `### Frontend` subsections:
 ## Notes
 
 Any constraints, prior decisions, or context the AI needs to avoid going off-script during implementation.
+
+---
+
+## Post-Implementation Summary
+
+Complete this section when the issue is closed. Record what was actually implemented, including files created or modified and any significant deviations from the initial plan. This section serves as the historical record of the completed work.
+
+### Files Created
+
+### Files Modified
+
+### Deviations From Plan
+
+Document any significant differences between the anticipated implementation
+and the actual implementation, including the reason for the change.
+
+---

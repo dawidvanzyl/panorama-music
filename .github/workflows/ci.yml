@@ -28,7 +28,7 @@ jobs:
         run: dotnet restore src/PanoramaMusic.sln
 
       - name: Build
-        run: dotnet build src/PanoramaMusic.sln --no-restore --configuration Release
+        run: dotnet build src/PanoramaMusic.sln --no-restore --configuration Release /warnaserror
 
       - name: Test
         run: dotnet test src/PanoramaMusic.sln --no-build --configuration Release --verbosity normal
@@ -57,6 +57,10 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        working-directory: frontend
+      
+      - name: Architecture Lint
+        run: npm run lint:architecture
         working-directory: frontend
 
       - name: Typecheck

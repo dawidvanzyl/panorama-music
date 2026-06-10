@@ -1,10 +1,9 @@
 ---
 name: close-issue
 description: >
-  Load this skill when the user says "close issue", "close-issue", or
-  "/close-issue". Verifies acceptance criteria, ticks off passing AC checkboxes,
-  closes the story issue, then updates the Epic Reference checkbox in the parent
-  issue.
+  Load this skill when the user says "close issue", "close-issue", or "/close-issue".
+  Verifies acceptance criteria, updates checkboxes, closes the story issue, and updates
+  the Epic Reference checkbox in the parent issue.
 license: MIT
 compatibility: opencode
 metadata:
@@ -14,63 +13,179 @@ metadata:
 
 ## Announcement
 
-At the start of execution, always post a visible message to the user:
+At the start of execution, always post:
 
 > "Loaded skill: **close-issue**. Verifying acceptance criteria, closing issue, and updating epic..."
 
+---
+
 ## Inputs
 
-- `issue_number`: prefer to infer from the issue implemented earlier in the current session.
-- `parent_issue_number`: prefer to infer from the parent epic referenced earlier in the current session.
-- If either value is not available from the session, ask for the missing value(s) before proceeding.
+- `issue_number` (inferred if possible)
+- `parent_issue_number` (inferred if possible)
+
+If either is missing:
+- request missing values
+- do not proceed until both are provided
+
+---
+
+## REQUIRED ISSUE FORMAT (STRICT)
+
+This skill only works if the issue follows this exact AC structure:
+
+### Epic Reference → Acceptance Criteria (IT)
+- [ ] AC: M1IT1 description
+- [ ] AC: M1IT2 description
+
+### Acceptance Criteria (G/W/T) (UC)
+- [ ] AC: M1UC1 description
+- [ ] AC: M1UC2 description
+
+Rules:
+- Each checkbox line MUST start with: `- [ ] AC:`
+- The code MUST immediately follow `AC: `
+- No inference from free text is allowed
+- If format does not match → STOP immediately
+
+---
 
 ## Procedure
 
-### 0) Gather inputs
+---
 
-- Check if `issue_number` is available from the current session.
-- Check if `parent_issue_number` is available from the current session.
-- If `issue_number` is missing, ask: "What is the story issue number?"
-- If `parent_issue_number` is missing, ask: "What is the parent epic issue number?"
-- Do not proceed until both values are confirmed.
+### 1) Gather inputs
 
-### 1) Verify acceptance criteria
+- confirm `issue_number`
+- confirm `parent_issue_number`
+- validate AC format compliance
 
-- Fetch the body of issue `#{issue_number}`.
-- Extract IT codes from `## Epic Reference > Acceptance Criteria` (e.g. `M1IT1`) and UC codes from `## Acceptance Criteria (G/W/T)` (e.g. `M1UC1`).
-- For each IT code: run `dotnet test --filter "AC=<CODE>"` — if it passes, tick the matching `## Epic Reference > Acceptance Criteria` checkbox in the issue body.
-- For each backend UC code: run `dotnet test --filter "AC=<CODE>"` — if it passes, tick the matching `## Acceptance Criteria (G/W/T)` checkbox.
-- For each frontend UC code: run `npx vitest run --reporter=verbose` — if the specific test passes, tick the matching `## Acceptance Criteria (G/W/T)` checkbox.
-- Update the issue body via `gh issue edit` with all ticked checkboxes.
-- Notify the user: "Acceptance criteria verified for #{issue_number}. {n}/{m} passing."
+If invalid:
+- stop execution
+- report format violation
 
-### 2) Check and close story issue
+---
 
-- Fetch the current state of issue `#{issue_number}`.
-- If the issue is already closed:
-  - notify the user: "Issue #{issue_number} is already closed."
-- If the issue is still open:
-  - close issue `#{issue_number}`.
-  - notify the user: "Issue #{issue_number} has been closed."
+### 2) Extract acceptance criteria
 
-### 3) Update Epic Reference checkbox in parent issue
+From issue `#{issue_number}`:
 
-- Fetch the body of parent issue `#{parent_issue_number}`.
-- In the "Anticipated Work Areas" section, locate the checklist item that references `#{issue_number}`.
-- Mark that checkbox as checked.
-- Update the parent issue body with the change.
-- Notify the user: "Epic Reference checkbox for #{issue_number} updated in issue #{parent_issue_number}."
+- IT codes: from Epic Reference section
+- UC codes: from G/W/T section
 
-### 4) Summary
+Extraction rule:
+- only parse lines matching:
+  `- [ ] AC: <CODE>`
 
-- Post a brief summary to the user confirming:
-  - acceptance criteria: {n}/{m} passing,
-  - final state of issue `#{issue_number}` (closed),
-  - Epic Reference checkbox updated in parent issue `#{parent_issue_number}`.
+Example:
+- `- [ ] AC: M1IT1 description → M1IT1`
 
-## Guardrails
+---
 
-- Do not close any issue other than `#{issue_number}`.
-- Do not modify any content in the issue or parent issue other than the AC checkboxes and the "Anticipated Work Areas" section checkbox.
-- Only tick AC checkboxes for tests that actually pass. Do not mark failing or untested criteria as passed.
-- Keep all communication concise and professional.
+### 3) Run tests (BATCHED ONLY)
+
+#### Backend / IT / UC backend
+```bash
+dotnet test --logger trx
+````
+
+#### Frontend
+
+```bash
+npx vitest run
+```
+
+Rules:
+
+* run each suite once only
+* map results to AC codes post-execution
+* no per-AC test execution
+
+---
+
+### 4) Evaluate results
+
+For each AC:
+
+* PASS → eligible for checkbox tick
+* FAIL → leave unchanged
+
+Compute:
+
+* n = passed
+* m = total
+
+---
+
+### 4a) Failure handling (STOP CONDITION)
+
+If any AC fails:
+
+* optionally tick only passing ones
+* DO NOT close issue
+* output:
+
+"Acceptance criteria partially verified for #{issue_number}: {n}/{m} passing. Issue remains open."
+
+STOP.
+
+---
+
+### 5) Update issue (idempotent)
+
+Rules:
+
+* re-fetch issue before editing
+* only update if checkbox state changes
+* never re-write unchanged body
+
+Use:
+
+```bash
+gh issue edit #{issue_number}
+```
+
+---
+
+### 6) Close issue
+
+If already closed:
+
+* notify and continue
+
+If open:
+
+* close via:
+
+```bash
+gh issue close #{issue_number}
+```
+
+---
+
+### 7) Update parent epic
+
+Parent checklist formats supported:
+
+* `- [ ] ISSUE:123 description`
+* `- [ ] #123 description`
+
+Rules:
+
+* match issue number exactly
+* only toggle checkbox state
+* do not edit text
+
+If not found:
+
+* report missing parent linkage
+
+---
+
+### 8) Summary
+
+Return:
+
+* AC result: n/m passing
+* issue state: closed/open
+* parent update: success/failure

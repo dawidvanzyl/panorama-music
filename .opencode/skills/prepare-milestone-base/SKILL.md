@@ -18,78 +18,154 @@ At the start of execution, always post a visible message to the user:
 
 > "Loaded skill: **prepare-milestone-base**. Creating milestone branch..."
 
+---
+
 ## Inputs
 
-- `epic_issue_number`: the GitHub issue number of the milestone epic (e.g. `3`).
+- `epic_issue_number`: GitHub issue number of the milestone epic (e.g. `3`).
+
+---
 
 ## Goal
 
-Create a `milestone/m{number}` branch from the latest `master` and push it to
-remote, ready for feature branches to be branched from it during the milestone
-implementation cycle.
+Create a `milestone/m{number}` branch from the latest `origin/master` and push
+it to remote, ensuring a clean, deterministic starting point for milestone work.
+
+---
 
 ## Guardrails
 
 - **No file edits, no commits.**
-- **Refuse to proceed if the working tree is dirty** (uncommitted changes
-  present).
-- If `milestone/m{number}` already exists on remote, warn and ask the user for
-  confirmation before continuing (they may want to sync an existing branch
-  rather than creating a duplicate).
+- **No tagging of any kind (lightweight or annotated).**
+- **No merge, rebase, or history rewriting operations.**
+- This skill is strictly for branch creation and verification only.
+- **Refuse to proceed if the working tree is dirty** (`git status --porcelain` not empty).
+- If milestone branch exists remotely, require explicit user confirmation before proceeding.
 - Keep all communication concise and professional. No emojis.
+
+---
 
 ## Procedure
 
 ### 0) Gather inputs
 
-- If `epic_issue_number` was not provided, ask: "What is the epic issue number?"
-- Do not proceed until the value is confirmed.
+- If `epic_issue_number` is missing, ask:
+  > "What is the epic issue number?"
+- Pause execution until provided.
 
-### 1) Derive milestone number
+---
 
-- Fetch the epic issue `#{epic_issue_number}` from GitHub.
-- Extract the milestone number from the issue title using the pattern
-  `[Backlog] M{number} —`.
-  For example, `[Backlog] M1 — Identity & Auth` yields milestone number `1`.
-- If the pattern does not match, notify the user and ask them to provide the
-  milestone number manually.
+### 1) Fetch epic issue and derive milestone number
 
-### 2) Check working tree
+- Fetch issue using GitHub CLI:
+  ```bash
+  gh issue view {epic_issue_number} --json title
+````
 
-- Run `git status --porcelain`.
-- If output is not empty, notify the user:
-  > "Working tree has uncommitted changes. Please commit or stash them before
-  > running this skill."
-  and stop. Do not proceed.
+* Extract milestone number using regex:
 
-### 3) Check if milestone branch already exists
+  * Primary match: `M(\d+)`
+* If multiple matches exist or no match is found:
 
-- Check if `milestone/m{number}` exists on remote:
-  `git ls-remote --heads origin milestone/m{number}`
-- If it exists, notify the user:
-  > "Branch milestone/m{number} already exists on remote. Do you want to check
-  > it out and pull latest instead of creating from scratch?"
-- If the user says yes, skip to step 5 (checkout and pull instead of create).
-- If the user says no, stop. Do not proceed.
+  * Ask user to provide milestone number manually
+  * Stop execution
+
+---
+
+### 2) Check working tree cleanliness
+
+* Run:
+
+  ```bash
+  git status --porcelain
+  ```
+* If output is not empty:
+
+  * Inform user:
+
+    > "Working tree has uncommitted changes. Please commit or stash before continuing."
+  * Stop execution
+
+---
+
+### 3) Determine branch existence
+
+* Check remote:
+
+  ```bash
+  git ls-remote --heads origin milestone/m{number}
+  ```
+* Check local:
+
+  ```bash
+  git branch --list milestone/m{number}
+  ```
+
+### Branch decision logic
+
+#### If branch exists (remote or local)
+
+* Ask user:
+
+  > "Branch milestone/m{number} already exists. Do you want to check it out and update it from origin/master?"
+* Accept: `yes | y | confirm`
+* Anything else: stop execution
+
+If confirmed:
+
+* `git fetch origin`
+* `git checkout milestone/m{number}`
+* `git reset --hard origin/milestone/m{number}`
+* Continue to Step 5
+
+---
+
+#### If branch does NOT exist
+
+Proceed to Step 4.
+
+---
 
 ### 4) Create milestone branch
 
-- `git checkout master`
-- `git pull origin master`
-- `git checkout -b milestone/m{number}`
-- `git push -u origin milestone/m{number}`
+Always base from remote master (not local):
 
-### 5) Confirm
+```bash
+git fetch origin
+git checkout -B milestone/m{number} origin/master
+git push -u origin milestone/m{number}
+```
 
-- Run `git branch --show-current` to confirm the active branch.
-- Run `git ls-remote --heads origin milestone/m{number}` to confirm the branch
-  exists remotely.
-- Notify the user:
-  > "Branch milestone/m{number} is active locally and present on remote. Ready
-  > for milestone feature branches."
+---
 
-### 6) Summary
+### 5) Verify state
 
-Post a brief summary:
-> "Milestone branch **milestone/m{number}** created from **master** and pushed
-> to origin. Ready for sub-issue implementation."
+* Confirm active branch:
+
+  ```bash
+  git branch --show-current
+  ```
+* Confirm remote existence:
+
+  ```bash
+  git ls-remote --heads origin milestone/m{number}
+  ```
+
+If either check fails:
+
+* Inform user of failure
+* Stop execution
+
+---
+
+### 6) Final confirmation
+
+> "Branch milestone/m{number} is active locally and present on origin. Ready for milestone feature branches."
+
+---
+
+## Summary
+
+Post:
+
+> "Milestone branch **milestone/m{number}** created from **origin/master** and pushed to origin. Ready for sub-issue implementation."

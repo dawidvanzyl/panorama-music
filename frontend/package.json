@@ -10,7 +10,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+
     "lint": "eslint src",
+    "lint:architecture": "eslint src --rule 'pm-architecture/*: error'",
+
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
