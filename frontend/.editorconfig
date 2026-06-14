@@ -1,0 +1,40 @@
+root = true
+
+# Default fallback for all files
+[*]
+insert_final_newline = true
+charset = utf-8
+end_of_line = lf
+
+############################
+# JavaScript / TypeScript
+############################
+
+[*.{js,ts,jsx,tsx}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+############################
+# JSON / YAML / HTML
+############################
+
+[*.{json,yml,yaml,html,css,scss}]
+indent_style = space
+indent_size = 2
+
+############################
+# Markdown
+############################
+
+[*.md]
+trim_trailing_whitespace = false
+insert_final_newline = true
+
+############################
+# Configuration overrides
+############################
+
+[*.config.*]
+indent_style = space
+indent_size = 2
