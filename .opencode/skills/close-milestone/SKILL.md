@@ -25,9 +25,11 @@ At the start of execution, always post a visible message to the user:
 
 Close out a completed milestone by:
 1) verifying all sub-issues are closed,
-2) creating a PR from `milestone/m{number}` to `master`,
-3) launching the `close-milestone-watch` command that waits for the merge,
-4) which then closes the GitHub milestone, runs prepare-base on master, and tags.
+2) verifying milestone IT acceptance criteria (backend and frontend) pass,
+3) creating a PR from `milestone/m{number}` to `master`,
+4) launching the `close-milestone-watch` command that waits for the merge,
+5) which then closes the GitHub milestone, deletes the milestone branch, runs
+   prepare-base on master, and tags.
 
 ## Guardrails
 
@@ -47,14 +49,16 @@ Close out a completed milestone by:
 ### 1) Read context
 
 - Fetch the epic issue `#{epic_issue_number}`.
-- Extract `milestone_number` from the title using pattern
-  `[Backlog] M{number} —`. For example, `[Backlog] M1 — Identity & Auth` yields
-  milestone number `1`.
-- If the pattern does not match, notify and ask for the milestone number manually.
+- Extract `milestone_number` using pattern `M(\d+)` against the epic title
+  (consistent with `plan-milestone.md`'s extraction rule). For example,
+  `[Backlog] M1 — Identity & Auth` yields milestone number `1`.
+- If multiple matches exist or no match is found, notify and ask for the
+  milestone number manually. Do not proceed until confirmed.
 - Derive `milestone_branch` = `milestone/m{milestone_number}`.
 - Derive `milestone_title` from the epic's milestone field.
 - Parse the epic's `## Acceptance Criteria` section for all `[IT_CODE]` markers
   and their checkbox text. Save as a list of `{code, checkbox_line}`.
+- Determine `OWNER`/`REPO` from `git remote get-url origin`.
 
 ### 2) Validate prerequisites
 
@@ -62,23 +66,69 @@ Close out a completed milestone by:
   - If not `milestone_branch`, notify and stop.
 - Run `git status --porcelain`.
   - If not empty, notify and stop.
-- Use GraphQL to fetch sub-issues of the epic:
+- Fetch sub-issues of the epic via GraphQL (single call, reused in this step
+  and step 3):
   ```
   gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") {
     issue(number: EPIC_NUM) { subIssues(first: 50) {
-      nodes { number title state }
+      nodes { number title state labels(first: 10) { nodes { name } } }
     } } } }'
   ```
   - If any sub-issue has state not equal to `CLOSED`, list them and stop.
-- Run all integration tests for this milestone:
-  `dotnet test --filter "AC~M{milestone_number}IT" --no-restore`
-  - If any tests fail, collect all failure names, list them, and stop.
-  - If all tests pass, fetch the epic body and mark each `[IT_CODE]` checkbox
-    in `## Acceptance Criteria` as `[x]`. Update the epic body via
-    `gh issue edit #{epic_issue_number} --body "..."`.
 
-### 3) Push and create PR
+### 3) Verify IT codes
 
+- Using the sub-issue data fetched in step 2, determine scope per IT code:
+  if the corresponding sub-issue has a `layer: frontend` label, the IT code
+  is `frontend` scope; otherwise `backend`. If scope cannot be determined,
+  default to `backend`.
+
+#### Backend IT codes
+
+- Run: `dotnet test --filter "AC~M{milestone_number}IT" --no-restore`
+- Map each backend-scoped `[IT_CODE]` to its result:
+  - ✅ PASS — test ran and passed
+  - ❌ FAIL — test ran and failed, or no test found matching this AC code
+
+#### Frontend IT codes
+
+- If any IT codes are frontend-scoped:
+  - Read `frontend/package.json` to confirm a test runner is configured.
+  - For each frontend-scoped `[IT_CODE]`, run:
+    `npx vitest run --reporter=verbose --tags-filter="AC=M{milestone_number}IT{n}"`
+  - Map each code to its result:
+    - ✅ PASS — tests matched and passed
+    - ❌ FAIL — tests matched and failed, or no test found matching this AC code
+  - If Vitest is not configured or unavailable, mark all frontend-scoped IT
+    codes as ❌ FAIL and note "Frontend test runner not available" in the
+    failure list.
+- If no IT codes are frontend-scoped, skip this subsection.
+
+#### Combine results
+
+- Re-fetch the epic body immediately before editing. For each ✅ PASS code
+  (backend or frontend), change `- [ ] \`[IT_CODE]\`` to `- [x] \`[IT_CODE]\``
+  in `## Acceptance Criteria`. Leave ❌ FAIL codes as `- [ ]`. Only write the
+  body if at least one checkbox state actually changes.
+- Compute `n` = total codes ✅ PASS (backend + frontend), `m` = total IT codes.
+- If `n < m`:
+  - Output: "Milestone M{milestone_number} integration tests partially
+    passing: {n}/{m}. Failing codes: {list} (grouped Backend/Frontend)."
+  - Stop execution. Do not proceed to step 4.
+- If `n == m`, proceed to step 4.
+
+### 4) Push and create PR
+
+- Run `git fetch origin master`.
+- Run `git rev-list --count HEAD..origin/master`.
+  - If the count is greater than 0, master has moved ahead of this milestone
+    branch. Notify the user:
+    "milestone/m{milestone_number} is {n} commit(s) behind origin/master.
+    Merge or rebase master into this branch before creating the PR, or
+    confirm you want to proceed anyway (the PR will be created and conflicts,
+    if any, will surface on GitHub)."
+  - Accept only `yes | y | confirm` to proceed without resolving. Anything
+    else: stop execution.
 - Run `git push origin milestone/m{milestone_number}`.
 - Create PR to master:
   ```
@@ -91,14 +141,12 @@ Close out a completed milestone by:
   ```
 - Capture the PR number from the output.
 
-### 4) Launch close-milestone-watch command
+### 5) Launch close-milestone-watch command
 
 - Run the `/close-milestone-watch` command with:
-  - `$1` = PR number from step 3
+  - `$1` = PR number from step 4
   - `$2` = milestone number from step 1
-
-### 5) Summary
-
-Post a brief summary once the command completes:
-
-> "Milestone M{milestone_number} complete. PR #${pr_number} merged to master, milestone closed, tag created, master checked out and up to date."
+- This command produces its own final summary on completion (PR merge,
+  milestone closure, branch deletion, prepare-base, and tagging). Relay that
+  summary to the user as the conclusion of this workflow — do not produce a
+  separate summary here.

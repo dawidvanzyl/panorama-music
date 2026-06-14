@@ -3,8 +3,9 @@ name: verify-implementation
 description: >
   Load this skill when the user says "verify-implementation", "verify
   implementation", or "/verify-implementation". Reviews uncommitted working-tree
-  changes against project coding standards, runs automated checks, and produces
-  a simplified report before acceptance criteria are ticked off.
+  changes against the issue requirements and project coding standards, runs
+  automated checks, and produces a simplified report before acceptance criteria
+  are ticked off.
 license: MIT
 compatibility: opencode
 metadata:
@@ -23,26 +24,25 @@ At the start of execution, always post a visible message to the user:
 You are a senior developer performing a critical review of an in-progress
 implementation before acceptance criteria are verified. Be thorough, direct, and
 constructive. Do not rubber-stamp — question assumptions, spot edge cases, and
-hold the code to the standards documented in the project.
+hold the code to the requirements in the issue and the standards documented in
+the project.
 
 Every finding must be justified. If something looks wrong, say why. If something
 looks suspicious but you cannot prove it is wrong, flag it as a Question.
 
 ## Inputs
 
-- `issue_number`: prefer to infer from the issue implemented earlier in the current session.
+- `issue_number`: prefer to infer from the issue implemented earlier in the
+  current session.
 
 If `issue_number` is not available, ask: "What is the issue number to verify?"
 
 ## Goal
 
 Review the **uncommitted working-tree changes** made during an implementation
-session. Run automated checks, review against coding standards, verify the
-implementation against the issue requirements, and inspect for correctness and
-design issues.
-
-Produce a **simplified report** grouped by severity, with every finding citing
-its source.
+session. Run automated checks, review against the issue requirements and coding
+standards, and inspect for correctness and design issues. Produce a
+**simplified report** grouped by severity, with every finding citing its source.
 
 ## Procedure
 
@@ -54,7 +54,7 @@ its source.
 
 ### 1) Capture changes and determine scope
 
-```bash
+```
 git diff HEAD --stat
 git diff HEAD
 git branch --show-current
@@ -64,12 +64,27 @@ git branch --show-current
 - Determine scopes:
   - Any path in `src/` → backend
   - Any path in `frontend/` → frontend
-- Review only files changed in the current working-tree diff.
-- Do not report pre-existing issues outside the diff unless:
-  - the implementation directly interacts with them, or
-  - they prevent correct operation of the implemented feature.
 
-### 2) Read relevant standards
+### 2) Read the issue
+
+Fetch issue `#{issue_number}` and extract the following sections. These are
+the primary reference for whether the implementation is correct — not just
+whether it is clean.
+
+- **`## Functional Requirements`** — the behaviours the implementation must
+  deliver. Used in step 5 to verify coverage.
+- **`## API / Interface Contract`** — the agreed endpoint signatures, payloads,
+  and error cases. Any deviation is a blocker.
+- **`## Domain & Data`** — the entities, fields, and business rules in scope.
+  Used to verify domain logic correctness.
+- **`## Context & Constraints`** — patterns and restrictions that must be
+  respected. Any violation is a blocker.
+- **`## Acceptance Criteria (G/W/T)`** — the UC and IT codes. Used to verify
+  that every criterion has a corresponding test.
+- **`## Notes`** — edge cases, security considerations, and deliberate
+  deferrals. Review the diff for evidence that Notes were read and acted on.
+
+### 3) Read relevant standards
 
 Read the standards doc(s) for the affected scopes plus `.editorconfig`:
 
@@ -81,23 +96,22 @@ Read the standards doc(s) for the affected scopes plus `.editorconfig`:
 
 If a standards doc does not exist for the relevant scope, note it and skip.
 
-### 3) Run automated checks
+### 4) Run automated checks
 
-Run **all** checks applicable to the detected scopes.
-
-For every command executed, record:
-
-- pass/fail status
-- exit code
-- last ~50 lines of output
+Run **all** checks applicable to the detected scopes. Record pass/fail and
+capture the raw output (last ~50 lines per command) for the report.
 
 Backend checks (always run when `src/` is changed):
 
 ```bash
 dotnet build src/PanoramaMusic.sln 2>&1
 dotnet format src/PanoramaMusic.sln --verify-no-changes 2>&1
-dotnet test src/PanoramaMusic.Tests 2>&1
+find src -iname "*Tests*.csproj" -o -iname "*Test*.csproj" | sort -u | while read -r proj; do
+  echo "--- Testing: $proj ---"
+  dotnet test "$proj" 2>&1
+done
 ```
+>If no test projects are found under src/, note "No backend test projects found" in the report instead of a pass/fail line.
 
 Frontend checks (run when `frontend/` is changed):
 
@@ -129,96 +143,45 @@ defined), note:
 
 in the report.
 
-### 3.5) Read issue requirements
+### 5) Requirements and correctness review
+Using the issue content extracted in step 2, review the diff against each requirement. For each section — ## Functional Requirements, ## API / Interface Contract, ## Domain & Data, ## Context & Constraints, ## Acceptance Criteria (G/W/T), and ## Notes — ask: does the diff satisfy this? Is there anything missing, wrong, or inconsistent?
+Apply these severity levels to every finding:
 
-Read the GitHub issue identified by `issue_number` and extract ONLY the GitHub issue body.
+❌ Blocker — the implementation is incorrect, incomplete, or violates an explicit requirement or constraint. Must be resolved before proceeding.
+⚠️ Warning — a soft concern: a missing safeguard, a questionable pattern, or something that works now but is likely to cause problems.
+❓ Question — something ambiguous, underspecified, or inconsistent that cannot be judged without clarification. Do not guess; raise it.
+💡 Suggestion — an out-of-scope observation worth noting for a future issue.
 
-Parse the following sections exactly:
+>If a section (## Functional Requirements, ## API / Interface Contract, ## Domain & Data, ## Context & Constraints, ## Acceptance Criteria (G/W/T), or ## Notes) is absent or empty in the issue, note this explicitly in the report rather than skipping silently — use a 💡 Suggestion or ❓ Question depending on whether its absence is expected (e.g. a backend-only issue with no ## Domain & Data frontend content) or unexpected.
 
-* `## Overview`
-* `## Epic Reference`
-* `## Scope`
-* `## Initial Implementation Plan`
-* `## Acceptance Criteria (G/W/T)`
-* `## Notes`
-
-Ignore completely:
-
-* `## Post-Implementation Summary`
-
-Treat these sections as the sole requirements source for implementation verification.
-
-Verify that:
-
-- Acceptance Criteria (G/W/T) are implemented by the changes.
-- Behaviour described in Epic Reference is reflected in the implementation.
-- No Acceptance Criterion appears omitted.
-- No implementation behaviour contradicts the documented requirements.
-- No implemented behaviour appears outside the documented scope unless clearly required to satisfy an Acceptance Criterion.
-
-If verification is not possible from the diff and available evidence, raise a Question rather than guessing.
-
-Use the issue title in the final report heading.
-
-### 4) Standards review
+### 6) Standards review
 
 For each file in the diff, systematically check every applicable rule in the
-relevant doc. Treat each rule at face value — if the doc says "always do X" and
-the code does Y, that is a violation regardless of intent.
+relevant standards doc. Treat each rule at face value — if the doc says
+"always do X" and the code does Y, that is a violation regardless of intent.
 
 - ❌ **Blocker** = clear violation of a documented rule.
 - ⚠️ **Warning** = soft convention or subjective preference.
 - Cite the doc and section for every finding.
 
-Severity precedence:
+### 7) Build the report
 
-- Correctness always overrides Standards.
-- A documented standards violation that can cause incorrect behaviour must be
-  reported as a Blocker.
-- Cosmetic or stylistic standards violations remain Warnings.
-
-### 5) Correctness and design review
-
-Read the full diff critically. Flag issues no standards doc would cover:
-
-**❌ Blockers:** logic errors, parameter mismatches between SQL functions and
-C# code, missing null/error handling that will crash, hardcoded values that
-must be configurable, route/method mismatches with the issue, missing
-migrations for schema changes, breaking API contract changes, missing
-CancellationToken propagation.
-
-**⚠️ Warnings:** missing guard clauses, empty catch blocks, overly broad
-catches, missing input validation, magic numbers/strings, large methods
-that should be split, duplicate code, missing resource disposal.
-
-**❓ Questions:** ambiguous or underspecified behaviour in the issue, design
-decisions inconsistent with existing patterns, API contract changes that may
-affect consumers, undocumented assumptions, unaddressed edge cases.
-
-**💡 Suggestions:** out-of-scope follow-ups, refactoring opportunities,
-performance considerations for future milestones.
-
-### 6) Build the report
-
-Construct the report from findings collected in steps 1–5. Do not output a
+Construct the report from findings collected in steps 1–6. Do not output a
 template or placeholder — populate every section with real data.
 
-Use flat markdown headings and tables. Omit any section that has 0 items —
-empty sections are not rendered.
-
-The structure:
+Use flat markdown headings and tables. Omit any section that has 0 items.
 
 ````markdown
 ## Verify Report — #{issue_number} — {issue_title}
 
 **Automated checks:**
-- dotnet build: {passed/failed} (exit {code})
-- dotnet format: {passed/failed} (exit {code})
-- dotnet test: {passed/failed} (exit {code})
-- npm run lint: {passed/failed} (exit {code})
-- npm run typecheck: {passed/failed} (exit {code})
-- npm run build: {passed/failed} (exit {code})
-- npm run test / vitest: {passed/failed} (exit {code})
+- dotnet build: {passed/failed}
+- dotnet format: {passed/failed}
+- dotnet test: {per-project pass/fail, e.g. "PanoramaMusic.Domain.Tests: 12/12 passed", or "No backend test projects found"}
+- npm run lint: {passed/failed}
+- npm run typecheck: {passed/failed}
+- npm run build: {passed/failed}
+- npm run test / vitest: {passed/failed}
 
 ### Requirements Verification
 
@@ -232,13 +195,14 @@ The structure:
 ### ❌ Blocker
 | # | file:line | Category | Detail |
 |---|-----------|----------|--------|
-| 1 | Song.cs:42 | Standards | coding-standards-backend.md §2.1 — Song.cs uses `class` instead of `record` |
+| 1 | Song.cs:42 | Standards | coding-standards-backend.md §2.1 — uses `class` instead of `record` |
+| 2 | —          | Requirements | Functional requirement not addressed: "When X occurs, Y must happen" |
 
 ### ⚠️ Warning
-(same structure: | # | file:line | Category | Detail |)
+(same structure)
 
 ### 💡 Suggestions
-(same structure: | # | file:line | Category | Detail |)
+(same structure)
 
 ### ❓ Questions
 | # | file:line | Question | Context |
@@ -250,17 +214,22 @@ The structure:
 dotnet build output (last ~50 lines)
 dotnet format output (last ~50 lines)
 dotnet test output (last ~50 lines)
+npm lint output (last ~50 lines)
+npm typecheck output (last ~50 lines)
+npm build output (last ~50 lines)
+npm test output (last ~50 lines)
 ```
 ````
 
 Column rules:
-- **file:line** — filename and line number where the issue was found, e.g. `Song.cs:42`.
-- **Category** in Blocker/Warning/Suggestions tables: one word describing the domain (Standards, Design, Correctness, etc.)
-- **Detail** in Blocker/Warning/Suggestions tables: cite the doc + section, and explain concisely.
-- **Question** column in Questions table: the open question.
-- **Context** column in Questions table: why it matters / what triggered it.
+- **file:line** — filename and line number, e.g. `Song.cs:42`. Use `—` for
+  requirement-level findings with no single source line.
+- **Category** — one word: Standards, Requirements, Correctness, Design, etc.
+- **Detail** — cite the source (doc + section, or requirement text) and explain
+  concisely.
+- **Question / Context** — as before.
 
-### 7) Present the report
+### 8) Present the report
 
 Output the full report. Then ask:
 
@@ -272,20 +241,20 @@ Output the full report. Then ask:
 
 If the user fixes items, re-run steps 1–6 and present an updated report.
 
-### 8) Summary
+### 9) Summary
 
-> "Verify complete for #{issue_number}. {n} blocker(s), {n} warning(s), {n} question(s), {n} suggestion(s)."
+> "Verify complete for #{issue_number}. {n} blocker(s), {n} warning(s),
+> {n} question(s), {n} suggestion(s)."
 
 ## Guardrails
 
-- Acceptance Criteria and Test Cases are the primary source of truth for
-  implementation completeness.
-- A clean build or passing tests do not prove that Acceptance Criteria are
-  satisfied.
 - **Read-only.** Never modify files, GitHub issues, PRs, or any state.
 - **Do not push, commit, or check out branches.** Only use `git diff`.
-- **Every finding must cite a source** — doc + section, or file:line. If you
-  cannot point to a specific rule, it goes in Questions or Suggestions.
+- **Every finding must cite a source** — issue section + requirement text,
+  or doc + section, or file:line. If you cannot point to a specific source,
+  it goes in Questions or Suggestions.
 - **"I'm not sure" goes in Questions.** Do not guess.
-- **If a standards doc does not exist** for the relevant scope, note it and skip.
-- **Keep communication concise and direct.** No emojis except severity indicators.
+- **If a standards doc does not exist** for the relevant scope, note it and
+  skip.
+- **Keep communication concise and direct.** No emojis except severity
+  indicators.

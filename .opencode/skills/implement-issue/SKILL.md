@@ -3,7 +3,7 @@ name: implement-issue
 description: >
   Load this skill when the user says "implement issue", "implement-issue", or
   "/implement-issue". Implements a GitHub story issue end-to-end: prepares base
-  branch, creates feature branch, implements the plan, verifies via the
+  branch, creates feature branch, implements the requirements, verifies via the
   verify-implementation skill, and opens a PR.
 license: MIT
 compatibility: opencode
@@ -18,597 +18,184 @@ At the start of execution, always post a visible message to the user:
 
 > "Loaded skill: **implement-issue**. Starting workflow..."
 
----
-
 ## Inputs
 
-Required:
+Use this skill when the user provides:
 
-- `issue_number`
-- `parent_issue_number`
+- `issue_number` (story/sub-issue), e.g. `48`
+- `parent_issue_number` (epic/parent), e.g. `45`
 
-Optional:
+Optional but recommended:
 
-- repository owner/name if not inferable from git remote
-
----
+- Repository owner/name if not inferable from git remote.
 
 ## Goal
 
-Execute the full story implementation workflow:
-
-1. prepare base branch
-2. read and validate issue
-3. validate dependencies
-4. load standards
-5. create feature branch
-6. implement
-7. verify implementation
-8. create pull request
-
----
-
-## Source of Truth (ABSOLUTE RULE)
-
-Implementation decisions may only be based on:
-
-- GitHub issue body
-- `docs/coding-standards.md`
-- `docs/coding-standards-backend.md`
-- `docs/coding-standards-frontend.md`
-- `src/.editorconfig`
-- `frontend/.editorconfig` (if present)
-
-Do not use:
-
-- labels
-- comments
-- external discussion
-- assumptions
-
-If information is missing or ambiguous:
-
-> Stop and ask.
-
----
+Execute the full story workflow for a GitHub issue:
+1) prepare the base branch via the prepare-base skill,
+2) read and orient from the issue,
+3) check dependencies are unblocked,
+4) create a correctly named feature branch from the base branch,
+5) implement the requirements,
+6) verify implementation via the verify-implementation skill,
+7) open a PR targeting the base branch.
 
 ## Procedure
 
 ### 0) Gather inputs
 
-If `issue_number` is missing:
+Before doing anything else:
 
-> "What is the issue number to implement?"
+- If `issue_number` was not provided, ask: "What is the issue number to implement?"
+- If `parent_issue_number` was not provided, ask: "What is the parent epic issue number?"
+- Do not proceed until both values are confirmed.
 
-If `parent_issue_number` is missing:
+### 0.5) Prepare base branch
 
-> "What is the parent epic issue number?"
+- Invoke the `prepare-base` skill.
+- Allow `prepare-base` to ask for and checkout the base branch independently.
+- Do not pass or assume a base branch — let the user confirm it within `prepare-base`.
+- After `prepare-base` completes, the current branch is the base branch.
 
-Do not proceed until both are known.
+### 1) Read and orient
 
----
-
-### 1) Prepare base branch
-
-Invoke:
-
-- `prepare-base`
-
-Allow `prepare-base` to operate independently.
-
-After completion:
-
-```bash
-git branch --show-current
-````
-
-Capture result as:
-
-* `base_branch`
-
-This branch becomes the PR target branch.
-
----
-
-### 2) Read issue (STRICT SOURCE RULE + STRUCTURED PARSING)
-
-Read ONLY the GitHub issue body.
-
-Parse the following sections exactly:
-
-* `## Overview`
-* `## Epic Reference`
-* `## Scope`
-* `## Initial Implementation Plan`
-* `## Acceptance Criteria (G/W/T)`
-* `## Notes`
+Read issue `#{issue_number}` fully. The issue follows the structure defined
+in `.github/ISSUE_TEMPLATE/sub-issue.md`.
 
 Ignore completely:
 
-* `## Post-Implementation Summary`
+- `## Post-Implementation Summary`
 
----
+Extract and internalize the following before writing any code:
 
-### Overview
+- `issue_title`
+- `milestone_number` — from the issue milestone (e.g. `M1` → `1`)
+- IT codes — from `## Epic Reference > Acceptance Criteria Covered` (e.g. `M1IT1`)
+- UC codes — from `## Acceptance Criteria (G/W/T)` (e.g. `M1UC1`)
+- **Constraints** — read `## Context & Constraints` in full. Note every
+  pattern, convention, and restriction listed. These are non-negotiable during
+  implementation; do not deviate without raising it with the user first.
+- **Functional requirements** — read `## Functional Requirements`. These are
+  the observable behaviours the implementation must deliver. Use them as the
+  primary implementation checklist.
+- **Domain & Data** — read `## Domain & Data`. Understand the entities, their
+  relevant fields, and the business rules before touching any domain code.
+- **API / Interface Contract** — read `## API / Interface Contract`. The
+  endpoint signatures, payloads, and error cases described here are the agreed
+  contract. Do not alter them during implementation.
+- **Out of Scope** — read `## Out of Scope`. This is a hard implementation
+  boundary alongside Functional Requirements; do not implement anything listed
+  here.
+- **Notes** — read `## Notes` last, if present. This section contains edge
+  cases, security considerations, and deliberate deferrals that must not be
+  missed or overridden.
+- `docs/coding-standards.md` — git, commit, and PR conventions.
+- `docs/coding-standards-backend.md` — if any backend scope is detected in
+  the issue labels or content.
+- `docs/coding-standards-frontend.md` — if any frontend scope is detected in
+  the issue labels or content.
+- `src/.editorconfig` — if backend scope.
+- `frontend/.editorconfig` — if frontend scope.
 
-Extract:
+If any requirement is ambiguous or two sections appear to conflict, ask a
+clarifying question before coding. Do not resolve ambiguity by assumption.
 
-* issue title
-* implementation intent
+### 1.5) Dependency gate (HARD STOP)
 
-Overview is context only and must not override acceptance criteria.
+Check `## Context & Constraints` for any `Related issues: Depends on #X` (or similarly phrased blocking references).
 
----
-
-### Epic Reference
-
-Extract:
-
-* milestone reference
-* anticipated work areas
-* Epic Acceptance Criteria
-* IT codes
-
-Expected format:
-
-```text
-- [ ] [M1IT1] ...
-- [ ] [M1IT2] ...
-```
-
-Acceptance Criteria in this section define:
-
-* integration-test requirements only
-
----
-
-### Scope
-
-Extract:
-
-* in-scope items
-* out-of-scope items
-
-Scope is a hard implementation boundary.
-
-Do not implement outside scope.
-
----
-
-### Initial Implementation Plan
-
-Treat as:
-
-* advisory guidance
-
-The implementation may differ if required.
-
-The plan must never override:
-
-* Scope
-* Acceptance Criteria
-* Coding Standards
-
----
-
-### Acceptance Criteria (G/W/T)
-
-Extract:
-
-* backend UC codes
-* frontend UC codes
-
-Expected format:
-
-```text
-- [ ] [M1UC1] ...
-- [ ] [M1UC2] ...
-```
-
-These criteria define:
-
-* behavioural requirements
-* unit-test requirements
-* frontend-test requirements
-
-This section is the primary definition of done.
-
----
-
-### Notes
-
-Treat as:
-
-* implementation context
-* constraints
-* prior decisions
-
-Notes must not override acceptance criteria or scope.
-
----
-
-### Acceptance Criteria Coverage Rule
-
-Every extracted acceptance-criteria code must map to test coverage.
-
-Required coverage:
-
-* Every IT code → integration test(s)
-* Every backend UC code → backend unit test(s)
-* Every frontend UC code → frontend test(s)
-
-If a code cannot be mapped to a test:
-
-> Stop and ask for clarification.
-
----
-
-### 3) Dependency Gate (HARD STOP)
-
-Locate:
-
-```text
-## Dependencies
-```
-
-Parse:
-
-```text
-Blocked by: #X
-```
-
-For every blocked dependency:
-
-* check issue status
+For every such dependency, check the issue's status.
 
 If ANY blocked issue is not closed:
 
-Stop immediately.
-
-Output:
-
-> "Blocked dependency detected: #X is not closed. Implementation cannot proceed."
-
-Do not:
-
-* load standards
-* create branch
-* write code
-* run verification
-
----
-
-### 4) Load standards (MANDATORY)
-
-Read:
-
-* `docs/coding-standards.md`
-
-Backend scope:
-
-* `docs/coding-standards-backend.md`
-* `src/.editorconfig`
-
-Frontend scope:
-
-* `docs/coding-standards-frontend.md`
-* `frontend/.editorconfig` (if present)
-
-Determine implementation scope:
-
-* backend → `src/`
-* frontend → `frontend/`
-
-Apply all standards throughout implementation.
-
----
-
-### 5) Create feature branch
-
-Create:
-
-```text
-feature/M{milestone_number}-{issue_number}-{slug}
-```
-
-Slug rules:
-
-* lowercase
-* alphanumeric and hyphens only
-* collapse duplicate separators
-* maximum 80 characters
-
-Create from current HEAD.
-
----
-
-### 6) Implement
-
-Implement strictly according to:
-
-* issue body
-* scope constraints
-* coding standards
-* editorconfig rules
-
-Never implement outside scope.
-
----
-
-### Testing Rules (MANDATORY)
-
-#### Integration Tests
-
-Source:
-
-* Epic Reference → Acceptance Criteria
-
-Codes:
-
-* IT codes only
-
-Requirements:
-
-* backend integration test project
-* every IT code must be covered
-
-Required attribute:
-
-```csharp
-[Trait("AC", "M1ITx")]
-```
-
----
-
-#### Backend Unit Tests
-
-Source:
-
-* Acceptance Criteria (G/W/T)
-
-Codes:
-
-* backend UC codes only
-
-Requirements:
-
-* backend unit test project
-* every backend UC code must be covered
-
-Required attribute:
-
-```csharp
-[Trait("AC", "M1UCx")]
-```
-
----
-
-#### Frontend Tests
-
-Source:
-
-* Acceptance Criteria (G/W/T)
-
-Codes:
-
-* frontend UC codes only
-
-Requirements:
-
-* Vitest tests
-* every frontend UC code must be covered
-
-Required structure:
-
-```ts
-describe('...', () => {
-  ...
-}, { tags: ['M1UCx'] });
-```
-
-Frontend test tags must be registered in:
-
-```text
-vitest.config.ts
-```
-
----
-
-### Test Layer Ownership Rule
-
-Acceptance criteria belong to exactly one test layer.
-
-* IT codes → integration tests only
-* UC codes → unit/frontend tests only
-
-Do not duplicate acceptance-criteria coverage across multiple test layers unless explicitly required.
-
----
-
-### Uncertainty Rule
-
-If the correct test project or test layer cannot be determined:
-
-> Stop and ask before implementing tests.
-
----
-
-### Documentation Rule
-
-If behaviour, setup, usage, configuration, or developer workflow changes:
-
-* update `README.md`
-
-Examples:
-
-* new endpoints
-* new commands
-* new configuration
-* new setup steps
-* changed workflows
-
----
-
-### Quality Gates (MANDATORY)
-
-Backend checks:
-
-```bash
-dotnet build src/PanoramaMusic.sln
-dotnet format src/PanoramaMusic.sln --verify-no-changes
-dotnet test src/PanoramaMusic.Tests
-```
-
-Frontend checks:
-
-```bash
-npm run lint
-npm run typecheck
-npx vitest run
-```
-
-Run only applicable frontend commands.
-
----
-
-### Failure Rule
-
-If any quality gate fails:
-
-* fix the issue
-* re-run checks
-* repeat until all checks pass
-
-Do not proceed while checks are failing.
-
----
-
-### 7) Verify implementation
-
-Invoke:
-
-* `verify-implementation`
-
-Allow the skill to operate independently.
-
-Do not proceed until verification is resolved.
-
-Possible outcomes:
-
-* fix specific findings and re-run
-* dismiss specific findings
-* dismiss entire report and proceed
-
----
-
-### 8) Commit
-
-Commit according to:
-
-```text
-docs/coding-standards.md → Commit Messages
-```
-
-Do not redefine commit rules here.
-
----
-
-### 9) Open Pull Request
-
-Ask:
-
-> "Are you ready to post a pull request?"
-
-If no:
-
-- stop and wait
-
-If yes:
-
-- commit changes
-- push feature branch
-
-Create PR:
-
-```bash
-gh pr create \
-  --base base_branch \
-  --title "{issue_title} (#{issue_number})" \
-  --milestone "{milestone_title}" \
-  --body "
-Summary of changes:
-- ...
-
-Closes #{issue_number}
-Milestone: {milestone_title}
-"
-```
-
----
-
-### Post-Creation Metadata Validation
-
-After PR creation:
-
-1. Capture the PR number.
-2. Verify:
-   - target branch is `base_branch`
-   - milestone is assigned correctly
-   - issue `#{issue_number}` is linked to the PR
-
----
-
-### Milestone Repair
-
-If milestone assignment is missing:
-
-```bash
-gh pr edit {pr_number} --milestone "{milestone_title}"
-```
-
-Re-check and confirm milestone assignment.
-
----
-
-### Issue Link Repair
-
-If issue `#{issue_number}` is not linked to the PR:
-
-- Use the appropriate GitHub CLI command supported by the installed version to associate the issue with the PR.
-
-Re-check and confirm issue linkage.
-
----
-
-### Completion Criteria
-
-PR creation is only considered complete when all of the following are true:
-
-- PR exists successfully
-- target branch is `base_branch`
-- milestone is assigned
-- issue `#{issue_number}` is linked to the PR
-- PR title matches:
-
-```text
-{issue_title} (#{issue_number})
-```
-
-If any validation fails:
-
-- repair the metadata
-- re-validate
-- repeat until all criteria are satisfied or a blocking error is encountered
-
----
+- Stop immediately.
+- Output: "Blocked dependency detected: #X is not closed. Implementation cannot proceed."
+- Do not load standards, create a branch, write code, or run verification.
+
+### 2) Orient in the codebase
+
+Before writing any code, explore the existing codebase to understand how to
+map the issue's requirements to actual files and structure:
+
+- Locate the layer boundaries described in `## Context & Constraints` — find
+  the existing directories and files that correspond to each layer.
+- Identify the patterns to follow (service classes, middleware, naming
+  conventions) by reading 2–3 representative existing files in the relevant
+  areas.
+- For stories with `layer: frontend`: read `## Page Architecture` and identify
+  existing component patterns the new screens should follow.
+- If the codebase structure is unclear or no analogous code exists, state your
+  understanding to the user and ask for confirmation before proceeding.
+
+The goal of this step is to arrive at a clear mental map of where each
+requirement will land, without having written a single line yet.
+
+### 3) Create feature branch
+
+- Create feature branch from current HEAD following branch naming conventions
+  in `docs/coding-standards.md`.
+
+### 4) Implement
+
+- Implement all functional requirements from `## Functional Requirements`,
+  honouring the constraints from `## Context & Constraints`, the boundaries
+  from `## Out of Scope`, and the contracts from `## API / Interface Contract`.
+- For each UC code: write the corresponding test — one test per UC, named to
+  reflect the G/W/T behaviour it verifies.
+  - Backend UC codes: xUnit tests tagged `[Trait("AC", "M1UCx")]`
+  - Frontend UC codes: vitest service tests (mock fetch, no DOM) in
+    `frontend/src/services/__tests__/`. Install vitest if not present
+    (`npm install -D vitest`).
+- For each IT code: write an xUnit integration test tagged
+  `[Trait("AC", "M1ITx")]`.
+- If `## Acceptance Criteria (G/W/T)` has no entries, no unit/frontend tests are required for this story. IT code coverage from `## Epic Reference > Acceptance Criteria Covered` is independent of this and still applies if present.
+- Update `README.md` if behaviour, setup, usage, or documentation are affected.
+- Build: `dotnet build src/PanoramaMusic.sln`
+- Format check: `dotnet format src/PanoramaMusic.sln --verify-no-changes`
+- Test: `dotnet test src/PanoramaMusic.Tests`
+- Run frontend checks (lint, typecheck, vitest) if story has frontend scope.
+- Fix all failures before proceeding.
+
+### 5) Verify implementation
+
+- Invoke the `verify-implementation` skill.
+- Allow `verify-implementation` to capture the working tree diff, read
+  standards, run automated checks, review code, and present its report
+  independently.
+- After `verify-implementation` completes, the user will have chosen one of:
+  - Dismiss report and proceed — move to step 6.
+  - Fix specific items — verify re-runs until resolved.
+- Do not proceed to step 6 until the verify step is resolved.
+
+### 6) Open PR
+
+- Ask: "Are you ready to post a pull request?"
+- If yes: proceed with commit, push, and PR creation.
+- If no: stop and wait.
+- Commit and format the PR following conventions in `docs/coding-standards.md`.
+- Push feature branch.
+- Retrieve the milestone title from the issue milestone extracted in step 1.
+- Create PR using `gh pr create` with **all** of the following flags explicitly
+  set:
+  - `--base base_branch`
+  - `--title "{issue_title} (#{issue_number})"`
+  - `--milestone "{milestone_title}"`
+  - `--body` including:
+    - brief overview of what changed
+    - `Closes #{issue_number}`
+    - milestone name as a readable line
+- Do not rely on post-creation edits — set milestone and issue reference at
+  creation time.
 
 ## Guardrails
 
-* Never proceed if dependencies are blocked.
-* Never implement outside scope.
-* Never assume missing information.
-* Never create a PR before verification is complete.
-* Never force push.
-* Never rewrite history unless explicitly requested.
-* Preserve unrelated local changes.
-* Keep communication concise and actionable.
+- Never proceed if dependencies are blocked.
+- Do not use force push or destructive git history commands unless explicitly
+  requested.
+- Do not amend commits unless explicitly requested.
+- Preserve unrelated local changes in working tree.
+- Do not deviate from patterns or constraints listed in `## Context &
+  Constraints` without raising it with the user first.
+- Never implement outside `## Functional Requirements` / `## Out of Scope`.
+- Never assume missing information.
+- Keep communication concise and actionable.

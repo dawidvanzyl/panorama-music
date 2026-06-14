@@ -30,6 +30,8 @@ At the start of execution, always post a visible message to the user:
 
 Create a `milestone/m{number}` branch from the latest `origin/master` and push
 it to remote, ensuring a clean, deterministic starting point for milestone work.
+This branch serves as the integration branch for Mode A (milestone-driven
+development) as defined in `coding-standards.md`.
 
 ---
 
@@ -42,6 +44,7 @@ it to remote, ensuring a clean, deterministic starting point for milestone work.
 - **Refuse to proceed if the working tree is dirty** (`git status --porcelain` not empty).
 - If milestone branch exists remotely, require explicit user confirmation before proceeding.
 - Keep all communication concise and professional. No emojis.
+- `milestone/*` branches created by this skill are protected from deletion by `prepare-base.md`.
 
 ---
 
@@ -65,6 +68,9 @@ it to remote, ensuring a clean, deterministic starting point for milestone work.
 * Extract milestone number using regex:
 
   * Primary match: `M(\d+)`
+  * Normalize the extracted number to lowercase form for all branch names
+  (e.g. `M3` → use `3`, branch is `milestone/m3`).
+  
 * If multiple matches exist or no match is found:
 
   * Ask user to provide milestone number manually
@@ -115,7 +121,11 @@ If confirmed:
 
 * `git fetch origin`
 * `git checkout milestone/m{number}`
-* `git reset --hard origin/milestone/m{number}`
+* If `origin/milestone/m{number}` exists:
+  * `git reset --hard origin/milestone/m{number}`
+* If branch exists locally only (no remote counterpart):
+  * Inform user: "Branch exists locally only; resetting to origin/master instead."
+  * `git reset --hard origin/master`
 * Continue to Step 5
 
 ---

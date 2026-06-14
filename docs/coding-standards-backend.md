@@ -110,7 +110,7 @@ Responsibilities:
 
 * coordinate domain behaviour
 * coordinate infrastructure contracts
-* implements use-case workflows
+* implement use-case workflows
 
 The Application layer contains orchestration logic, not business rules.
 
@@ -131,11 +131,12 @@ Typical contents include:
 
 Responsibilities:
 
-* implements application and domain contracts
+* implement application and domain contracts
 * perform external I/O
 * map persistence structures to domain concepts
 
-Business rules must not be implemented in Infrastructure.
+> Business rules must not be implemented in Infrastructure.
+> Infrastructure implements contracts defined in Application and Domain but does not depend on either.
 
 ---
 
@@ -179,7 +180,6 @@ Examples include:
 * Handlers/
 * Repositories/
 * Services/
-* Dtos/
 * Factories/
 * Extensions/
 
@@ -467,7 +467,10 @@ Integration tests should verify collaboration between components rather than ind
 
 Tests should follow Arrange / Act / Assert structure.
 
-Use xUnit as the test framework and Shouldly for assertions.
+Use 
+* xUnit as the test framework 
+* Shouldly for assertions
+* Moq for mocking framework
 
 Prefer behaviour-oriented test names that describe:
 

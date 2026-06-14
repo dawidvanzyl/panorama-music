@@ -1,4 +1,4 @@
-# Coding Standards — Shared Workflow Spec (v1.3)
+# Coding Standards — Shared Workflow Spec (v1.4)
 
 This document defines the **global workflow rules** for the Panorama Music project.
 It applies across backend and frontend unless explicitly constrained by stack-specific standards.
@@ -29,6 +29,7 @@ Rules:
 * Must originate from the correct base branch (see workflow modes)
 * Must always be merged via PR
 * Must be short-lived
+* Slug must be kebab-case, derived from the issue title, max 5 words
 
 ---
 
@@ -179,10 +180,6 @@ feat!: redesign authentication flow
 * No trailing period
 * Subject ≤ 72 characters
 * Use body for non-trivial changes
-* Reference issues:
-
-  * `Closes #N`
-  * `Refs #N`
 
 ---
 
@@ -239,16 +236,15 @@ A PR is not ready to be merged unless:
 * CI passes
 * tests pass
 * issue is linked
-* no unresolved TODOs blocking functionality
 
 ---
 
 ### 3.5 Merge Rules
 
-* Squash merge or rebase merge only
-* No merge commits on `master`
-* milestone → master merges should preserve clean history (prefer squash unless debugging requires otherwise)
-
+* No direct commits on `master`
+* feature/* and fix/* branches are always squash-merged into their target
+* milestone/* branches are always merge-committed into master (no squash — history must be preserved)
+* No other merge strategies are permitted
 ---
 
 ## 4. Structural Guarantees

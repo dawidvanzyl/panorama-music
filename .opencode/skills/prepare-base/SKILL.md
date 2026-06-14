@@ -128,6 +128,8 @@ git branch -vv
 
 * Final candidate list = local-only ∩ merged ∩ not protected
 
+>Note: --merged detects branches whose commits are direct ancestors of base_branch. Branches integrated via squash-merge (per project standards, all feature/bug branches are squash-merged) will typically NOT appear as merged, even though their work has landed. This step will under-report candidates for squash-merged branches — this is expected and safe, since step 8 uses -d, which would refuse to delete them anyway.
+
 ---
 
 ### 6) Handle no-op case
@@ -164,16 +166,18 @@ Anything else:
 ---
 
 ### 8) Delete branches
-
 For each confirmed branch:
-
 ```bash
 git branch -d <branch>
 ```
+* If deletion succeeds:
+  * Notify: "Deleted branch: {branch}"
+* If deletion fails (branch not detected as merged — e.g. squash-merged):
+  * Notify: "{branch} could not be deleted with -d (not detected as merged — possibly squash-merged). Skipping."
+  * Do NOT retry with -D
+  * Continue to next candidate
 
-* Notify after each deletion
-
-(Do NOT use `-D`)
+(Do NOT use -D)
 
 ---
 
@@ -190,10 +194,16 @@ Provide final structured summary:
 
   * branch-a
   * branch-b
+* Branches skipped (not safely deletable):
+  * branch-c
 
 If none deleted:
 
 * explicitly state: "No branches were deleted"
+
+If none skipped:
+
+* explicitly state: "No branches were skipped"
 
 ---
 

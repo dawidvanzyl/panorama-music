@@ -94,6 +94,8 @@ Not every folder is required for every feature.
 
 Only include folders that are needed.
 
+If a feature grows beyond this structure, introduce additional folders by responsibility. Follow the same principles as the shared layer — no catch-all folders, no ambiguous names.
+
 ---
 
 ## Feature Isolation Rules
@@ -200,7 +202,7 @@ Caching must be:
 
 * consistent within a feature
 * transparent to components
-* invalidated explicitly when required
+* Cache invalidation is the responsibility of the service that owns the data. Invalidation must occur in response to mutations, not be left to callers.
 
 ---
 
@@ -284,7 +286,7 @@ If code contains domain meaning, it does not belong in `shared/`.
 
 * Prefer interfaces for object shapes
 * Models must be feature-owned unless truly shared
-* Avoid duplication of backend contracts unless necessary for decoupling
+* Frontend models are always distinct from backend contracts. Mapping is mandatory; duplication of backend shapes into feature models is expected and correct.
 
 ---
 
@@ -332,6 +334,11 @@ Frontend testing is divided into three layers:
 * Unit Tests
 * Component Tests
 * Integration Tests
+
+The following tools are used:
+
+* Vitest for unit and component tests
+* Playwright for integration and end-to-end tests
 
 ---
 
