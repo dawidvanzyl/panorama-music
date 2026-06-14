@@ -20,7 +20,7 @@ public class AuthFlowFixture
 
 	public AuthFlowFixture()
 	{
-		FixedNow = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+		FixedNow = DateTime.UtcNow;
 		TestToken = "test-refresh-token-raw";
 		TestTokenHash = TokenHasher.ComputeSha256Hash(TestToken);
 	}
