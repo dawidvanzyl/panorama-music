@@ -10,7 +10,7 @@ export default {
   create(context) {
     return {
       MemberExpression(node) {
-        const filename = context.getFilename();
+        const filename = context.filename;
 
         const isService = filename.includes('/services/');
         if (!isService) return;

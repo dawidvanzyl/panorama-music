@@ -15,7 +15,7 @@ export default {
   create(context) {
     return {
       ImportDeclaration(node) {
-        const fromFile = context.getFilename();
+        const fromFile = context.filename;
         const imported = node.source.value;
 
         const fromFeature = getFeatureFromPath(fromFile);

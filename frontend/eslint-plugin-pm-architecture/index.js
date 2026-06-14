@@ -7,3 +7,5 @@ export const rules = {
   'no-dom-in-services': noDomInServices,
   'enforce-feature-boundaries': enforceFeatureBoundaries,
 };
+
+export default { rules };

@@ -10,7 +10,7 @@ export default {
   create(context) {
     return {
       CallExpression(node) {
-        const filename = context.getFilename();
+        const filename = context.filename;
 
         const isComponent =
           filename.includes('/components/') ||
