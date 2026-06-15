@@ -28,6 +28,10 @@ template.innerHTML = `
       flex: 1;
       min-width: 200px;
     }
+    .create-user__field--role {
+      flex: 0 0 160px;
+      min-width: 0;
+    }
     .create-user__label {
       display: block;
       font-size: 13px;
@@ -119,7 +123,7 @@ template.innerHTML = `
           <label class="create-user__label" for="email">Email</label>
           <input class="create-user__input" type="email" id="email" required placeholder="user@example.com" />
         </div>
-        <div class="create-user__field">
+        <div class="create-user__field create-user__field--role">
           <label class="create-user__label" for="role">Role</label>
           <select class="create-user__select" id="role">
             <option value="Admin">Admin</option>
