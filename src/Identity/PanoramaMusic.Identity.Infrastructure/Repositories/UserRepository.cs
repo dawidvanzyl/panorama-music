@@ -34,6 +34,18 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		return dto?.MapToUser();
 	}
 
+	public async Task<IList<User>> GetAllAsync(CancellationToken cancellationToken)
+	{
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
+			"identity.get_users",
+			null,
+			cancellationToken);
+		var dtos = await connection.QueryAsync<UserDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToUser())];
+	}
+
 	public async Task AddAsync(User user, CancellationToken cancellationToken)
 	{
 		var dbConnection = CreateConnection();

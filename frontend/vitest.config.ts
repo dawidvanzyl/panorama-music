@@ -9,6 +9,9 @@ export default defineConfig({
       { name: 'M1UC37', description: 'Refresh token stores new tokens' },
       { name: 'M1UC38', description: 'Logout clears tokens from localStorage' },
       { name: 'M1UC39', description: 'isAuthenticated checks token validity' },
+      { name: 'M1UC48', description: 'Admin creates a user and receives an invite URL' },
+      { name: 'M1UC49', description: 'Admin regenerates an invite and receives a new invite URL' },
+      { name: 'M1UC50', description: 'Unauthenticated user is redirected to login on protected routes' },
     ],
   },
 })

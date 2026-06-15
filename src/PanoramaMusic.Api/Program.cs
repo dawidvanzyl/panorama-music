@@ -4,6 +4,7 @@ using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Infrastructure.Extensions;
+using System.Text.Json.Serialization;
 
 AppContext.SetSwitch("Npgsql.EnableStoredProcedureCompatMode", true);
 
@@ -23,8 +24,10 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
+builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var app = builder.Build();
 
@@ -39,8 +42,12 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseExceptionHandler();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthRoutes();
 app.MapAuthRoutes();
+app.MapAdminRoutes();
 
 // Return 404 for unmatched /api/* routes so typos don't silently return the SPA
 app.MapFallback("/api/{**path}", () => Results.NotFound());

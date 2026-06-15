@@ -7,4 +7,5 @@ public interface IInviteTokenRepository
 	Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken);
 	Task AddAsync(InviteToken token, CancellationToken cancellationToken);
 	Task UpdateAsync(InviteToken token, CancellationToken cancellationToken);
+	Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken);
 }

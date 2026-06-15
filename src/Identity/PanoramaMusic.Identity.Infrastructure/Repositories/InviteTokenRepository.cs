@@ -47,4 +47,14 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : Rep
 			cancellationToken);
 		await connection.ExecuteAsync(command);
 	}
+
+	public async Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
+			"identity.revoke_invite_tokens_for_user",
+			new { p_user_id = userId },
+			cancellationToken);
+		await connection.ExecuteAsync(command);
+	}
 }
