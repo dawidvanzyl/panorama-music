@@ -49,6 +49,7 @@ public static class AuthRoutes
 		})
 		.WithName("CompleteRegistration")
 		.Produces(StatusCodes.Status204NoContent)
-		.Produces(StatusCodes.Status400BadRequest);
+		.Produces(StatusCodes.Status400BadRequest)
+		.Produces(StatusCodes.Status422UnprocessableEntity);
 	}
 }

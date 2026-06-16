@@ -1,5 +1,6 @@
 import './styles/global.css';
 import './components/pm-nav-bar';
+import './components/pm-password-strength-indicator';
 import './pages/pm-login-page';
 import './pages/pm-registration-page';
 import './pages/pm-admin-users-page';

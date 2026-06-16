@@ -13,6 +13,8 @@ export default defineConfig({
       { name: 'M1UC47', description: 'Admin regenerates invite and new URL is displayed' },
       { name: 'M1UC48', description: 'User without valid token is redirected to login' },
       { name: 'M1UC49', description: 'Admin page load fetches and returns all users' },
+      { name: 'M1.1UC3', description: 'Password strength checklist updates in real time as user types' },
+      { name: 'M1.1UC4', description: 'Form submits without client-side blocking when all rules satisfied' },
     ],
   },
 })

@@ -1,4 +1,6 @@
 import { completeRegistration, AuthError } from '../services/auth';
+import { evaluatePasswordPolicy } from '../services/password-policy';
+import { PmPasswordStrengthIndicator } from '../components/pm-password-strength-indicator';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -98,12 +100,6 @@ template.innerHTML = `
       letter-spacing: -0.02em;
       color: var(--pm-text);
     }
-    .registration__desc {
-      font-size: 14px;
-      color: var(--pm-text-muted);
-      text-align: center;
-      margin-top: 8px;
-    }
 
     .registration__card {
       background: var(--pm-surface);
@@ -111,6 +107,24 @@ template.innerHTML = `
       border-radius: 12px;
       padding: 32px;
       transition: all 0.3s;
+    }
+
+    .registration__card-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .registration__card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      color: var(--pm-text);
+      margin: 0 0 6px;
+    }
+    .registration__card-desc {
+      font-size: 14px;
+      color: var(--pm-text-muted);
+      margin: 0;
     }
 
     .registration__field {
@@ -139,8 +153,8 @@ template.innerHTML = `
     }
     .registration__input {
       display: block;
-      margin: 0 auto;
-      width: calc(100% - 32px);
+      box-sizing: border-box;
+      width: 100%;
       height: 48px;
       padding: 0 16px 0 44px;
       background: var(--pm-surface-2);
@@ -251,8 +265,8 @@ template.innerHTML = `
       border: none;
       border-radius: 9999px;
       background: var(--pm-accent);
-      color: #fff;
-      font-size: 1.125rem;
+      color: #00297b;
+      font-size: 14px;
       font-weight: 600;
       line-height: 1.4;
       letter-spacing: -0.01em;
@@ -272,6 +286,18 @@ template.innerHTML = `
       transform: none;
       filter: none;
     }
+
+    .registration__footer {
+      text-align: center;
+      margin-top: 32px;
+    }
+    .registration__footer p {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pm-text-muted);
+      opacity: 0.6;
+      line-height: 1.6;
+    }
   </style>
 
   <div class="registration__glow" aria-hidden="true">
@@ -282,13 +308,16 @@ template.innerHTML = `
   <div class="registration__container">
     <div class="registration__branding">
       <div class="registration__icon-box">
-        <span class="material-symbols-outlined">assignment</span>
+        <span class="material-symbols-outlined">music_note</span>
       </div>
-      <h1 class="registration__title">Complete Registration</h1>
-      <p class="registration__desc">Set your password to activate your account.</p>
+      <h1 class="registration__title">Panorama Music</h1>
     </div>
 
     <div class="registration__card">
+      <div class="registration__card-header">
+        <h2 class="registration__card-title">Complete Your Registration</h2>
+        <p class="registration__card-desc">Set your password to activate your account.</p>
+      </div>
       <form id="registrationForm">
         <div class="registration__field">
           <label class="registration__label" for="password">Password</label>
@@ -311,6 +340,8 @@ template.innerHTML = `
           </div>
         </div>
 
+        <pm-password-strength-indicator id="strengthIndicator"></pm-password-strength-indicator>
+
         <div class="registration__error-banner" id="errorMsg">
           <span class="material-symbols-outlined registration__error-icon">error</span>
           <span class="registration__error-text" id="errorText">Passwords do not match</span>
@@ -322,11 +353,15 @@ template.innerHTML = `
         </div>
 
         <button type="submit" class="registration__submit" id="submitBtn">
-          <span id="submitLabel">Set Password &amp; Activate</span>
-          <span class="material-symbols-outlined registration__submit-icon">login</span>
+          <span id="submitLabel">Complete Setup</span>
+          <span class="material-symbols-outlined registration__submit-icon">arrow_forward</span>
         </button>
       </form>
     </div>
+
+    <footer class="registration__footer">
+      <p>&copy; 2026 Panorama Primary School.<br />All rights reserved.</p>
+    </footer>
   </div>
 `;
 
@@ -347,6 +382,7 @@ export class PmRegistrationPage extends HTMLElement {
   private confirmPasswordIcon: HTMLElement | null = null;
   private boundTogglePassword: (() => void) | null = null;
   private boundToggleConfirm: (() => void) | null = null;
+  private strengthIndicator: PmPasswordStrengthIndicator | null = null;
 
   constructor() {
     super();
@@ -369,6 +405,7 @@ export class PmRegistrationPage extends HTMLElement {
     this.passwordIcon = this.shadowRoot!.getElementById('passwordIcon') as HTMLElement;
     this.toggleConfirmBtn = this.shadowRoot!.getElementById('toggleConfirmPassword') as HTMLButtonElement;
     this.confirmPasswordIcon = this.shadowRoot!.getElementById('confirmPasswordIcon') as HTMLElement;
+    this.strengthIndicator = this.shadowRoot!.getElementById('strengthIndicator') as PmPasswordStrengthIndicator;
 
     if (!this.inviteToken) {
       this.errorText!.textContent = 'No invite token found in URL';
@@ -383,18 +420,16 @@ export class PmRegistrationPage extends HTMLElement {
     this.toggleBtn!.addEventListener('click', this.boundTogglePassword);
     this.toggleConfirmBtn!.addEventListener('click', this.boundToggleConfirm);
 
-    for (const input of [this.passwordInput!, this.confirmInput!]) {
-      input.addEventListener('input', this.handleInputChange);
-    }
+    this.passwordInput!.addEventListener('input', this.handlePasswordInput);
+    this.confirmInput!.addEventListener('input', this.handleInputChange);
   }
 
   disconnectedCallback(): void {
     this.form?.removeEventListener('submit', this.handleSubmit);
     if (this.boundTogglePassword) this.toggleBtn?.removeEventListener('click', this.boundTogglePassword);
     if (this.boundToggleConfirm) this.toggleConfirmBtn?.removeEventListener('click', this.boundToggleConfirm);
-    for (const input of [this.passwordInput, this.confirmInput]) {
-      input?.removeEventListener('input', this.handleInputChange);
-    }
+    this.passwordInput?.removeEventListener('input', this.handlePasswordInput);
+    this.confirmInput?.removeEventListener('input', this.handleInputChange);
   }
 
   private get inviteToken(): string | null {
@@ -407,6 +442,13 @@ export class PmRegistrationPage extends HTMLElement {
     input.type = isPassword ? 'text' : 'password';
     icon.textContent = isPassword ? 'visibility_off' : 'visibility';
   }
+
+  private handlePasswordInput = (): void => {
+    this.errorBanner!.classList.remove('registration__error-banner--visible');
+    if (this.strengthIndicator) {
+      this.strengthIndicator.result = evaluatePasswordPolicy(this.passwordInput!.value);
+    }
+  };
 
   private handleInputChange = (): void => {
     this.errorBanner!.classList.remove('registration__error-banner--visible');
@@ -441,7 +483,9 @@ export class PmRegistrationPage extends HTMLElement {
       }, 1500);
     } catch (err) {
       if (err instanceof AuthError) {
-        this.errorText!.textContent = 'Invite link is invalid or expired';
+        this.errorText!.textContent = err.status === 422
+          ? err.message
+          : 'Invite link is invalid or expired';
       } else {
         this.errorText!.textContent = 'An unexpected error occurred';
       }
