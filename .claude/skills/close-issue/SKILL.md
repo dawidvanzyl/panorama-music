@@ -143,9 +143,13 @@ If `n < m`:
   the corresponding section.
 - Leave ❌ FAIL codes as `- [ ]`.
 - Only write the body if at least one checkbox state actually changes.
+- Do not write any temporary files. Pass the updated body directly via `--body`.
 
 ```bash
-gh issue edit #{issue_number} --body-file <updated-body>
+gh issue edit #{issue_number} --body "$(cat <<'EOF'
+{updated body content}
+EOF
+)"
 ```
 
 ---
@@ -185,3 +189,5 @@ Return:
 - Do not modify epic/parent issue state — that is handled by `close-milestone`.
 - Keep communication concise and direct. No emojis except status indicators
   (✅/❌).
+- Never commit or push to the working tree
+- Never make modification to any files on the working tree
