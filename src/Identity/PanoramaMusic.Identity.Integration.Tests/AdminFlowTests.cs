@@ -23,7 +23,6 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 
 	[Fact]
 	[Trait("AC", "M1IT6")]
-	[Trait("AC", "M1UC46")]
 	public async Task CreateUserFlow_AdminCreatesUser_ReturnsInviteUrl()
 	{
 		UserRepo
@@ -88,7 +87,6 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 
 	[Fact]
 	[Trait("AC", "M1IT8")]
-	[Trait("AC", "M1UC45")]
 	public async Task CreateUserFlow_TeacherRole_Forbidden()
 	{
 		using var app = TestApp.CreateTestApp();
@@ -102,7 +100,6 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 
 	[Fact]
 	[Trait("AC", "M1IT8")]
-	[Trait("AC", "M1UC47")]
 	public async Task RegenerateInviteFlow_TeacherRole_Forbidden()
 	{
 		using var app = TestApp.CreateTestApp();

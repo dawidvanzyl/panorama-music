@@ -52,6 +52,7 @@ public class RegenerateInviteTokenHandlerTests
 	}
 
 	[Fact]
+	[Trait("AC", "M1UC45")]
 	public async Task HandleAsync_UnknownUser_ThrowsDomainException()
 	{
 		UserRepo

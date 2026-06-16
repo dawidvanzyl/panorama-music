@@ -15,7 +15,7 @@ function buildJwt(roles: string): string {
   return `${header}.${payload}.signature`;
 }
 
-describe('isAuthenticated', { tags: ['M1UC50'] }, () => {
+describe('isAuthenticated', { tags: ['M1UC48'] }, () => {
   it('returns false when no token is stored, indicating a redirect to login is required', () => {
     expect(isAuthenticated()).toBe(false);
   });
@@ -31,7 +31,7 @@ describe('isAuthenticated', { tags: ['M1UC50'] }, () => {
   });
 });
 
-describe('getRoles / hasRole', { tags: ['M1UC50'] }, () => {
+describe('getRoles / hasRole', { tags: ['M1UC48'] }, () => {
   it('returns an empty list when no token is stored', () => {
     expect(getRoles()).toEqual([]);
     expect(hasRole('Admin')).toBe(false);

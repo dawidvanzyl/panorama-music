@@ -9,7 +9,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('getUsers', () => {
+describe('getUsers', { tags: ['M1UC49'] }, () => {
   it('returns the list of users', async () => {
     const users = [
       { userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true },
@@ -41,7 +41,7 @@ describe('getUsers', () => {
   });
 });
 
-describe('createUser', { tags: ['M1UC48'] }, () => {
+describe('createUser', { tags: ['M1UC46'] }, () => {
   it('creates a user and returns the invite URL', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');
 
@@ -72,7 +72,7 @@ describe('createUser', { tags: ['M1UC48'] }, () => {
   });
 });
 
-describe('regenerateInvite', { tags: ['M1UC49'] }, () => {
+describe('regenerateInvite', { tags: ['M1UC47'] }, () => {
   it('regenerates an invite and returns the new invite URL', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');
 
