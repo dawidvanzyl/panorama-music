@@ -20,17 +20,13 @@ template.innerHTML = `
     }
     .create-user__row {
       display: flex;
-      gap: 12px;
+      gap: 24px;
       flex-wrap: wrap;
       align-items: flex-end;
     }
     .create-user__field {
       flex: 1;
       min-width: 200px;
-    }
-    .create-user__field--role {
-      flex: 0 0 160px;
-      min-width: 0;
     }
     .create-user__label {
       display: block;
@@ -41,6 +37,7 @@ template.innerHTML = `
     }
     .create-user__input,
     .create-user__select {
+      box-sizing: border-box;
       width: 100%;
       height: 44px;
       padding: 0 12px;
@@ -123,7 +120,7 @@ template.innerHTML = `
           <label class="create-user__label" for="email">Email</label>
           <input class="create-user__input" type="email" id="email" required placeholder="user@example.com" />
         </div>
-        <div class="create-user__field create-user__field--role">
+        <div class="create-user__field">
           <label class="create-user__label" for="role">Role</label>
           <select class="create-user__select" id="role">
             <option value="Admin">Admin</option>

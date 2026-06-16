@@ -140,7 +140,8 @@ template.innerHTML = `
     .registration__input {
       display: block;
       margin: 0 auto;
-      width: calc(100% - 32px);
+      width: 100%;
+      box-sizing: border-box;
       height: 48px;
       padding: 0 16px 0 44px;
       background: var(--pm-surface-2);
