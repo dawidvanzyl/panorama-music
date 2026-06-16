@@ -1,4 +1,4 @@
-import { regenerateInvite, AdminError, type AdminUserSummary } from '../services/admin';
+import { regenerateInvite, AdminError, type GetUserResult } from '../services/admin';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -106,7 +106,7 @@ template.innerHTML = `
 export class PmUsersTable extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
-  private _users: AdminUserSummary[] = [];
+  private _users: GetUserResult[] = [];
 
   constructor() {
     super();
@@ -120,12 +120,12 @@ export class PmUsersTable extends HTMLElement {
     this.render();
   }
 
-  set users(value: AdminUserSummary[]) {
+  set users(value: GetUserResult[]) {
     this._users = value;
     this.render();
   }
 
-  get users(): AdminUserSummary[] {
+  get users(): GetUserResult[] {
     return this._users;
   }
 

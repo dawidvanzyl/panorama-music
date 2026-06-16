@@ -21,7 +21,8 @@ public static class AdminRoutes
 				return Results.Ok(result);
 			})
 			.WithName("GetUsers")
-			.Produces<IList<AdminUserSummary>>(StatusCodes.Status200OK)
+			.Produces<IList<GetUserResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
 		group
@@ -34,6 +35,7 @@ public static class AdminRoutes
 			.WithName("CreateUser")
 			.Produces<CreateUserResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
 		group
@@ -46,6 +48,7 @@ public static class AdminRoutes
 			.WithName("RegenerateInviteToken")
 			.Produces<RegenerateInviteTokenResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 	}
 }

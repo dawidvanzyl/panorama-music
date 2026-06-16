@@ -13,7 +13,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace PanoramaMusic.Identity.Tests;
+namespace PanoramaMusic.Identity.Integration.Tests;
 
 public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthFlowFixture>
 {
@@ -65,11 +65,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 			.ReturnsAsync(user);
 
 		InviteRepo
-			.Setup(r => r.RevokeAllForUserAsync(user.UserId, It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
-
-		InviteRepo
-			.Setup(r => r.AddAsync(It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAndIssueAsync(user.UserId, It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		using var app = TestApp.CreateTestApp(userRepo: UserRepo, inviteRepo: InviteRepo);
@@ -82,7 +78,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 		var result = await response.Content.ReadFromJsonAsync<RegenerateInviteTokenResult>(TestContext.Current.CancellationToken);
 		result.ShouldNotBeNull();
 		result.InviteUrl.ShouldNotBeNullOrEmpty();
-		InviteRepo.Verify(r => r.RevokeAllForUserAsync(user.UserId, It.IsAny<CancellationToken>()), Times.Once);
+		InviteRepo.Verify(r => r.RevokeAndIssueAsync(user.UserId, It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]

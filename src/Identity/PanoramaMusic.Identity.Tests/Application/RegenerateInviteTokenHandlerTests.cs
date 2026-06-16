@@ -18,11 +18,7 @@ public class RegenerateInviteTokenHandlerTests
 		InviteRepo = new Mock<IInviteTokenRepository>();
 
 		InviteRepo
-			.Setup(r => r.RevokeAllForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
-
-		InviteRepo
-			.Setup(r => r.AddAsync(It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAndIssueAsync(It.IsAny<Guid>(), It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		Handler = new RegenerateInviteTokenHandler(UserRepo.Object, InviteRepo.Object);
@@ -47,8 +43,7 @@ public class RegenerateInviteTokenHandlerTests
 
 		result.ShouldNotBeNull();
 		result.InviteUrl.ShouldNotBeNullOrEmpty();
-		InviteRepo.Verify(r => r.RevokeAllForUserAsync(user.UserId, TestContext.Current.CancellationToken), Times.Once);
-		InviteRepo.Verify(r => r.AddAsync(It.IsAny<InviteToken>(), TestContext.Current.CancellationToken), Times.Once);
+		InviteRepo.Verify(r => r.RevokeAndIssueAsync(user.UserId, It.IsAny<InviteToken>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -64,6 +59,6 @@ public class RegenerateInviteTokenHandlerTests
 				new RegenerateInviteTokenCommand(Guid.NewGuid()),
 				TestContext.Current.CancellationToken));
 
-		InviteRepo.Verify(r => r.RevokeAllForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		InviteRepo.Verify(r => r.RevokeAndIssueAsync(It.IsAny<Guid>(), It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

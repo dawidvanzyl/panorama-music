@@ -12,8 +12,6 @@ public sealed class CreateUserHandler(
 	IUserRoleRepository userRoleRepository,
 	IInviteTokenRepository inviteTokenRepository)
 {
-	private const int _inviteTokenExpiryDays = 7;
-
 	public async Task<CreateUserResult> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
 	{
 		var email = Email.Create(command.Request.Email);
@@ -26,11 +24,10 @@ public sealed class CreateUserHandler(
 		await userRepository.AddAsync(user, cancellationToken);
 		await userRoleRepository.AddAsync(new UserRole(user.UserId, command.Request.Role), cancellationToken);
 
-		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
-		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, tokenHash, DateTime.UtcNow.AddDays(_inviteTokenExpiryDays));
+		var token = RawInviteToken.Generate();
+		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(InviteTokenConstants.ExpiryDays));
 		await inviteTokenRepository.AddAsync(inviteToken, cancellationToken);
 
-		return new CreateUserResult(user.UserId, InviteUrlBuilder.Build(rawToken));
+		return new CreateUserResult(user.UserId, token.Url);
 	}
 }

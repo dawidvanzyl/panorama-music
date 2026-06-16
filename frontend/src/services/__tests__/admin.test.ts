@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getUsers, createUser, regenerateInvite, AdminError } from '../admin';
+import { getUsers, createUser, regenerateInvite, clearUsersCache, AdminError } from '../admin';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -7,6 +7,7 @@ globalThis.fetch = mockFetch;
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
+  clearUsersCache();
 });
 
 describe('getUsers', { tags: ['M1UC49'] }, () => {
@@ -39,6 +40,21 @@ describe('getUsers', { tags: ['M1UC49'] }, () => {
 
     await expect(getUsers()).rejects.toThrow('Forbidden');
   });
+
+  it('returns cached result and does not fetch again on second call', async () => {
+    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true }];
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => users,
+    });
+
+    const first = await getUsers();
+    const second = await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+  });
 });
 
 describe('createUser', { tags: ['M1UC46'] }, () => {
@@ -69,6 +85,20 @@ describe('createUser', { tags: ['M1UC46'] }, () => {
     });
 
     await expect(createUser('existing@test.com', 'Admin')).rejects.toThrow(AdminError);
+  });
+
+  it('invalidates the users cache', async () => {
+    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ userId: 'u2', inviteUrl: '/#/register?token=x' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
+
+    await getUsers();
+    await createUser('new@test.com', 'Teacher');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
 

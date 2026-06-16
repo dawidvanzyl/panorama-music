@@ -2,7 +2,7 @@ import { getAccessToken } from './token-storage';
 
 const API_BASE = '/api/users';
 
-export interface AdminUserSummary {
+export interface GetUserResult {
   userId: string;
   email: string;
   roles: string[];
@@ -47,12 +47,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getUsers(): Promise<AdminUserSummary[]> {
+let _usersCache: GetUserResult[] | null = null;
+
+export function clearUsersCache(): void {
+  _usersCache = null;
+}
+
+export async function getUsers(): Promise<GetUserResult[]> {
+  if (_usersCache) return _usersCache;
   const response = await fetch(API_BASE, {
     headers: authHeaders(),
   });
-
-  return handleResponse<AdminUserSummary[]>(response);
+  _usersCache = await handleResponse<GetUserResult[]>(response);
+  return _usersCache;
 }
 
 export async function createUser(email: string, role: string): Promise<CreateUserResult> {
@@ -61,8 +68,9 @@ export async function createUser(email: string, role: string): Promise<CreateUse
     headers: authHeaders(),
     body: JSON.stringify({ email, role }),
   });
-
-  return handleResponse<CreateUserResult>(response);
+  const result = await handleResponse<CreateUserResult>(response);
+  _usersCache = null;
+  return result;
 }
 
 export async function regenerateInvite(userId: string): Promise<RegenerateInviteTokenResult> {
