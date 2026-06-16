@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PmPasswordStrengthIndicator } from '../pm-password-strength-indicator';
 
-describe('pm-password-strength-indicator', () => {
+describe('pm-password-strength-indicator', { tags: ['M1.1UC3'] }, () => {
   let el: PmPasswordStrengthIndicator;
 
   beforeEach(() => {
