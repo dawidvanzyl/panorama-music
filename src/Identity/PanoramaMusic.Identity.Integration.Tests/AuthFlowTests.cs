@@ -135,12 +135,17 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 
 	[Fact]
 	[Trait("AC", "M1.1IT1")]
-	public async Task CompleteRegistrationFlow_WeakPassword_Returns422()
+	public async Task CompleteRegistrationFlow_WeakPassword_Returns422WithRules()
 	{
 		using var app = TestApp.CreateTestApp();
 		var response = await app.Client.PostAsJsonAsync("/api/auth/complete-registration", new CompleteRegistrationRequest("any-token", "weak"), TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+		var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(TestContext.Current.CancellationToken);
+		var rules = body.GetProperty("rules");
+		rules.GetArrayLength().ShouldBeGreaterThan(0);
+		rules.EnumerateArray().ShouldContain(r => r.GetString()!.Contains("8 characters"));
 	}
 
 	[Fact]
