@@ -34,3 +34,19 @@ export function isAuthenticated(): boolean {
   if (!token || !expiresAt) return false;
   return new Date(expiresAt).getTime() > Date.now();
 }
+
+export function getRoles(): string[] {
+  const token = getAccessToken();
+  if (!token) return [];
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const roles = payload.roles as string | undefined;
+    return roles ? roles.split(',') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function hasRole(role: string): boolean {
+  return getRoles().includes(role);
+}
