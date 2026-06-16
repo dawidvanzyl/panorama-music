@@ -38,13 +38,39 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : Rep
 		await connection.ExecuteAsync(command);
 	}
 
-	public async Task UpdateAsync(InviteToken token, CancellationToken cancellationToken)
+	public async Task RevokeAndIssueAsync(Guid userId, InviteToken newToken, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
-		var command = CreateCommandDefinition(
-			"identity.use_invite_token",
-			new { p_token_id = token.TokenId },
-			cancellationToken);
-		await connection.ExecuteAsync(command);
+		var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			var revokeCommand = CreateCommandDefinition(
+				"identity.revoke_invite_tokens_for_user",
+				new { p_user_id = userId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(revokeCommand);
+
+			var createCommand = CreateCommandDefinition(
+				"identity.create_invite_token",
+				new
+				{
+					p_token_id = newToken.TokenId,
+					p_user_id = newToken.UserId,
+					p_token_hash = newToken.TokenHash,
+					p_expires_at = newToken.ExpiresAt,
+				},
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(createCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
 	}
 }

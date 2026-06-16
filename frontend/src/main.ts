@@ -2,15 +2,17 @@ import './styles/global.css';
 import './components/pm-nav-bar';
 import './pages/pm-login-page';
 import './pages/pm-registration-page';
+import './pages/pm-admin-users-page';
 import { isAuthenticated } from './services/auth';
+import { hasRole } from './services/token-storage';
+
+const PUBLIC_PATHS = new Set(['/login', '/register']);
 
 const ROUTES: Record<string, () => string> = {
   '/login': () => '<pm-login-page></pm-login-page>',
   '/register': () => '<pm-registration-page></pm-registration-page>',
-  '/': () => {
-    if (!isAuthenticated()) return '<pm-login-page></pm-login-page>';
-    return '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>';
-  },
+  '/admin/users': () => '<pm-admin-users-page></pm-admin-users-page>',
+  '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
 function render(): void {
@@ -19,9 +21,19 @@ function render(): void {
 
   const hash = window.location.hash.slice(1) || '/';
   const basePath = hash.split('?')[0];
-  const route = ROUTES[basePath] ?? (() => '<pm-login-page></pm-login-page>');
+  const isPublicPage = PUBLIC_PATHS.has(basePath);
 
-  const isPublicPage = basePath === '/login' || basePath === '/register';
+  if (!isPublicPage && !isAuthenticated()) {
+    window.location.hash = '#/login';
+    return;
+  }
+
+  if (basePath === '/admin/users' && !hasRole('Admin')) {
+    window.location.hash = '#/';
+    return;
+  }
+
+  const route = ROUTES[basePath] ?? (() => '<pm-login-page></pm-login-page>');
   app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
 }
 
