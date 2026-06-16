@@ -20,6 +20,15 @@ public sealed class DomainExceptionHandler : IExceptionHandler
 			return true;
 		}
 
+		if (exception is PasswordPolicyException passwordPolicy)
+		{
+			httpContext.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+			httpContext.Response.ContentType = "application/json";
+			var body = JsonSerializer.Serialize(new { error = passwordPolicy.Message, rules = passwordPolicy.FailedRules });
+			await httpContext.Response.WriteAsync(body, cancellationToken);
+			return true;
+		}
+
 		if (exception is DomainException domain)
 		{
 			httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;

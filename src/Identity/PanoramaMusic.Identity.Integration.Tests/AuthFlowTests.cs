@@ -134,6 +134,16 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 	}
 
 	[Fact]
+	[Trait("AC", "M1.1IT1")]
+	public async Task CompleteRegistrationFlow_WeakPassword_Returns422()
+	{
+		using var app = TestApp.CreateTestApp();
+		var response = await app.Client.PostAsJsonAsync("/api/auth/complete-registration", new CompleteRegistrationRequest("any-token", "weak"), TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+	}
+
+	[Fact]
 	[Trait("AC", "M1IT5")]
 	public async Task CompleteRegistrationFlow_ActivatesUser()
 	{

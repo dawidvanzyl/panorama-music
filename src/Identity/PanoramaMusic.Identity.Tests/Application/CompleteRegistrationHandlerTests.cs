@@ -37,6 +37,38 @@ public class CompleteRegistrationHandlerTests
 	public CompleteRegistrationHandler Handler { get; }
 
 	[Fact]
+	[Trait("AC", "M1.1UC1")]
+	public async Task HandleAsync_WeakPassword_ThrowsPasswordPolicyException()
+	{
+		await Should.ThrowAsync<PasswordPolicyException>(
+			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest("any-token", "weak")), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1UC2")]
+	public async Task HandleAsync_PolicyCompliantPassword_ActivatesUser()
+	{
+		var rawToken = Guid.NewGuid().ToString();
+		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var userId = Guid.NewGuid();
+
+		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
+		InviteRepo
+			.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(invite);
+
+		var user = new User(userId, Email.Create("u@test.com"), DateTime.UtcNow);
+		UserRepo
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		await Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "ValidPass1")), TestContext.Current.CancellationToken);
+
+		user.IsActive.ShouldBeTrue();
+		user.PasswordHash.ShouldNotBeNull();
+	}
+
+	[Fact]
 	[Trait("AC", "M1UC32")]
 	public async Task HandleAsync_ValidInviteToken_ActivatesUserAndMarksTokenUsed()
 	{

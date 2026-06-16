@@ -11,15 +11,12 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
-using System.Security.Claims;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-	private const string _rolesClaimType = "roles";
-
 	public static IServiceCollection AddIdentityInfrastructure(
 		this IServiceCollection services,
 		string connectionString,
@@ -61,19 +58,10 @@ public static class ServiceCollectionExtensions
 
 		services
 			.AddAuthorizationBuilder()
-			.AddPolicy("AdminPolicy", policy => policy.RequireAssertion(context => HasRole(context.User, Role.Admin)))
-			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => HasRole(context.User, Role.Teacher)));
+			.AddPolicy("AdminPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Admin)))
+			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Teacher)));
 
 		return services;
-	}
-
-	private static bool HasRole(ClaimsPrincipal user, Role role)
-	{
-		var rolesClaim = user.FindFirst(_rolesClaimType)?.Value;
-		return !string.IsNullOrWhiteSpace(rolesClaim)
-			&& rolesClaim
-				.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-				.Any(r => Enum.TryParse<Role>(r, ignoreCase: true, out var parsed) && parsed == role);
 	}
 
 	private static IServiceCollection AddDataAccess(
