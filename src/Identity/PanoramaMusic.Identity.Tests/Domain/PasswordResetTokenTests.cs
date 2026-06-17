@@ -4,13 +4,13 @@ using Xunit;
 
 namespace PanoramaMusic.Identity.Tests.Domain;
 
-public class InviteTokenTests
+public class PasswordResetTokenTests
 {
 	[Fact]
-	[Trait("AC", "M1UC9")]
+	[Trait("AC", "M1.1UC6")]
 	public void MarkUsed_WhenValid_SetsUsedAt()
 	{
-		var token = new InviteToken(Guid.NewGuid(), Guid.NewGuid(), "hash", DateTime.UtcNow.AddHours(1));
+		var token = new PasswordResetToken(Guid.NewGuid(), Guid.NewGuid(), "hash", DateTime.UtcNow.AddHours(1));
 
 		token.MarkUsed();
 

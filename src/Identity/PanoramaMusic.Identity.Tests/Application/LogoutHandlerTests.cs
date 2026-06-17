@@ -4,6 +4,7 @@ using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
 using Shouldly;
 using Xunit;
 
@@ -29,7 +30,7 @@ public class LogoutHandlerTests
 	public async Task HandleAsync_ValidToken_RevokesToken()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var token = new RefreshToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));

@@ -3,6 +3,7 @@ using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
@@ -29,13 +30,12 @@ public sealed class LoginHandler(
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
-		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var rawRefreshToken = RawToken.Generate();
 		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-		var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, tokenHash, refreshTokenExpiresAt);
+		var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt);
 		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
-		return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
+		return new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);
 	}
 }

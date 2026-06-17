@@ -25,6 +25,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
+builder.Services.AddValidation();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

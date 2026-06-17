@@ -1,6 +1,6 @@
 namespace PanoramaMusic.Identity.Domain.Entities;
 
-public record InviteToken(Guid TokenId, Guid UserId, string TokenHash, DateTime ExpiresAt)
+public record PasswordResetToken(Guid TokenId, Guid UserId, string TokenHash, DateTime ExpiresAt)
 {
 	public DateTime? UsedAt { get; private set; }
 

@@ -49,7 +49,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_PolicyCompliantPassword_ActivatesUser()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -73,7 +73,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_ValidInviteToken_ActivatesUserAndMarksTokenUsed()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -96,10 +96,10 @@ public class CompleteRegistrationHandlerTests
 
 	[Fact]
 	[Trait("AC", "M1UC33")]
-	public async Task HandleAsync_ExpiredInviteToken_ThrowsDomainException()
+	public async Task HandleAsync_ExpiredInviteToken_ThrowsUnauthorizedException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var expired = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(-1));
@@ -107,16 +107,16 @@ public class CompleteRegistrationHandlerTests
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(expired);
 
-		await Should.ThrowAsync<DomainException>(
+		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
 	}
 
 	[Fact]
 	[Trait("AC", "M1UC34")]
-	public async Task HandleAsync_AlreadyUsedInviteToken_ThrowsDomainException()
+	public async Task HandleAsync_AlreadyUsedInviteToken_ThrowsUnauthorizedException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var used = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -125,7 +125,7 @@ public class CompleteRegistrationHandlerTests
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(used);
 
-		await Should.ThrowAsync<DomainException>(
+		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
 	}
 }

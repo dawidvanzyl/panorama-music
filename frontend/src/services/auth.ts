@@ -18,6 +18,7 @@ export class AuthError extends Error {
   constructor(
     message: string,
     public status: number,
+    public hasPolicyRules: boolean = false,
   ) {
     super(message);
     this.name = 'AuthError';
@@ -30,9 +31,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new AuthError(
       body.error ?? `HTTP ${response.status}`,
       response.status,
+      Array.isArray(body.rules) && body.rules.length > 0,
     );
   }
-  if (response.status === 204) {
+  if (response.status === 202 || response.status === 204) {
     return undefined as T;
   }
   return response.json() as Promise<T>;
@@ -99,6 +101,26 @@ export async function completeRegistration(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ inviteToken, newPassword }),
+  });
+
+  await handleResponse<void>(response);
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  await handleResponse<void>(response);
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
   });
 
   await handleResponse<void>(response);

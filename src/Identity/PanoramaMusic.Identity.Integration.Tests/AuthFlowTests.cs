@@ -16,6 +16,7 @@ using PanoramaMusic.Identity.Integration.Tests.Fixtures;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Xunit;
 
 namespace PanoramaMusic.Identity.Tests;
@@ -26,6 +27,8 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 	public Mock<IUserRoleRepository> RoleRepo { get; } = new Mock<IUserRoleRepository>();
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; } = new Mock<IRefreshTokenRepository>();
 	public Mock<IInviteTokenRepository> InviteRepo { get; } = new Mock<IInviteTokenRepository>();
+	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; } = new Mock<IPasswordResetTokenRepository>();
+	public Mock<IEmailSender> EmailSender { get; } = new Mock<IEmailSender>();
 	public Mock<IPasswordHasher> Hasher { get; } = new Mock<IPasswordHasher>();
 	public Mock<IJwtService> Jwt { get; } = new Mock<IJwtService>();
 
@@ -176,5 +179,100 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 		user.IsActive.ShouldBeTrue();
 		user.PasswordHash.ShouldNotBeNull();
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT2")]
+	public async Task ForgotPasswordFlow_AnyEmail_Returns202()
+	{
+		UserRepo
+			.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailSender: EmailSender);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "anyone@test.com" }, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT2")]
+	public async Task ForgotPasswordFlow_RegisteredEmail_SendsEmailAndCreatesToken()
+	{
+		var user = fixture.CreateActiveUser("reset@test.com");
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("reset@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		ResetTokenRepo
+			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		EmailSender
+			.Setup(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailSender: EmailSender);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "reset@test.com" }, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Once);
+		EmailSender.Verify(e => e.SendPasswordResetAsync("reset@test.com", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT3")]
+	public async Task ResetPasswordFlow_ValidTokenAndPassword_Returns204()
+	{
+		var user = fixture.CreateActiveUser();
+		var resetToken = fixture.CreateValidPasswordResetToken(user.UserId);
+
+		ResetTokenRepo
+			.Setup(r => r.GetByTokenHashAsync(fixture.TestTokenHash, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(resetToken);
+
+		Hasher
+			.Setup(h => h.Hash("NewPass123!"))
+			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
+
+		ResetTokenRepo
+			.Setup(r => r.CompleteResetAsync(user.UserId, It.IsAny<PasswordHash>(), resetToken.TokenId, It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		using var app = TestApp.CreateTestApp(hasher: Hasher, resetTokenRepo: ResetTokenRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/reset-password", new { token = fixture.TestToken, newPassword = "NewPass123!" }, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+		ResetTokenRepo.Verify(r => r.CompleteResetAsync(user.UserId, It.IsAny<PasswordHash>(), resetToken.TokenId, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT3")]
+	public async Task ResetPasswordFlow_InvalidToken_Returns422()
+	{
+		ResetTokenRepo
+			.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((PasswordResetToken?)null);
+
+		using var app = TestApp.CreateTestApp(resetTokenRepo: ResetTokenRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/reset-password", new { token = "bad-token", newPassword = "NewPass123!" }, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+		var body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+		body.GetProperty("error").GetString().ShouldNotBeNullOrEmpty();
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT3")]
+	public async Task ResetPasswordFlow_WeakPassword_Returns422WithRulesAndTokenNotConsumed()
+	{
+		using var app = TestApp.CreateTestApp(resetTokenRepo: ResetTokenRepo);
+		var response = await app.Client.PostAsJsonAsync("/api/auth/reset-password", new { token = "any-token", newPassword = "weak" }, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+		var body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+		body.GetProperty("rules").GetArrayLength().ShouldBeGreaterThan(0);
+		ResetTokenRepo.Verify(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

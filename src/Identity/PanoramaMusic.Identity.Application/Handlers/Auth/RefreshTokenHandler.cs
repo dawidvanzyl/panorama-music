@@ -3,6 +3,7 @@ using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
@@ -16,7 +17,7 @@ public sealed class RefreshTokenHandler(
 
 	public async Task<AuthResult> HandleAsync(RefreshTokenCommand command, CancellationToken cancellationToken)
 	{
-		var tokenHash = TokenHasher.ComputeSha256Hash(command.Request.Token);
+		var tokenHash = RawToken.From(command.Request.Token).Hash;
 		var existing = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
 			?? throw new UnauthorizedException("Invalid refresh token.");
 
@@ -32,13 +33,12 @@ public sealed class RefreshTokenHandler(
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
-		var rawToken = Guid.NewGuid().ToString();
-		var newTokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var newRawToken = RawToken.Generate();
 		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-		var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newTokenHash, refreshTokenExpiresAt);
+		var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newRawToken.Hash, refreshTokenExpiresAt);
 		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken, cancellationToken);
 
-		return new AuthResult(generatedToken.Token, rawToken, generatedToken.ExpiresAt, refreshTokenExpiresAt);
+		return new AuthResult(generatedToken.Token, newRawToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);
 	}
 }

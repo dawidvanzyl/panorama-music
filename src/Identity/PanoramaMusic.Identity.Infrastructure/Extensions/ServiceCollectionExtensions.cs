@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
 	{
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
+		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
 		services.AddDataAccess(connectionString);
 		services.AddRepositories();
 		services.AddServices();
@@ -78,6 +80,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IUserRoleRepository, UserRoleRepository>();
 		services.AddTransient<IInviteTokenRepository, InviteTokenRepository>();
 		services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
+		services.AddTransient<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 		return services;
 	}
 
@@ -86,6 +89,7 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();
+		services.AddTransient<IEmailSender, SmtpEmailSender>();
 		return services;
 	}
 
@@ -98,6 +102,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<CreateUserHandler>();
 		services.AddTransient<RegenerateInviteTokenHandler>();
 		services.AddTransient<GetUsersHandler>();
+		services.AddTransient<RequestPasswordResetHandler>();
+		services.AddTransient<ResetPasswordHandler>();
 		return services;
 	}
 }

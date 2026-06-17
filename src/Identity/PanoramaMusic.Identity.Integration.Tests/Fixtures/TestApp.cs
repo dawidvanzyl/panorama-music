@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Moq;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes.Identity;
+using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -58,7 +59,9 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		Mock<IPasswordHasher>? hasher = null,
 		Mock<IJwtService>? jwt = null,
 		Mock<IRefreshTokenRepository>? refreshRepo = null,
-		Mock<IInviteTokenRepository>? inviteRepo = null)
+		Mock<IInviteTokenRepository>? inviteRepo = null,
+		Mock<IPasswordResetTokenRepository>? resetTokenRepo = null,
+		Mock<IEmailSender>? emailSender = null)
 	{
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
@@ -70,6 +73,8 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.AddTransient(_ => (jwt ?? new Mock<IJwtService>()).Object);
 		builder.Services.AddTransient(_ => (refreshRepo ?? new Mock<IRefreshTokenRepository>()).Object);
 		builder.Services.AddTransient(_ => (inviteRepo ?? new Mock<IInviteTokenRepository>()).Object);
+		builder.Services.AddTransient(_ => (resetTokenRepo ?? new Mock<IPasswordResetTokenRepository>()).Object);
+		builder.Services.AddTransient(_ => (emailSender ?? new Mock<IEmailSender>()).Object);
 
 		builder.Services.AddTransient<LoginHandler>();
 		builder.Services.AddTransient<RefreshTokenHandler>();
@@ -78,6 +83,8 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.AddTransient<CreateUserHandler>();
 		builder.Services.AddTransient<RegenerateInviteTokenHandler>();
 		builder.Services.AddTransient<GetUsersHandler>();
+		builder.Services.AddTransient<RequestPasswordResetHandler>();
+		builder.Services.AddTransient<ResetPasswordHandler>();
 
 		builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 		builder.Services.AddProblemDetails();

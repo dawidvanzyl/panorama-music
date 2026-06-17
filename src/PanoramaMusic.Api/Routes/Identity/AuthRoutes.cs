@@ -51,5 +51,24 @@ public static class AuthRoutes
 		.Produces(StatusCodes.Status204NoContent)
 		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status422UnprocessableEntity);
+
+		group.MapPost("/forgot-password", async (RequestPasswordResetRequest request, RequestPasswordResetHandler handler, CancellationToken ct) =>
+		{
+			var command = new RequestPasswordResetCommand(request);
+			await handler.HandleAsync(command, ct);
+			return Results.Accepted();
+		})
+		.WithName("ForgotPassword")
+		.Produces(StatusCodes.Status202Accepted);
+
+		group.MapPost("/reset-password", async (ResetPasswordRequest request, ResetPasswordHandler handler, CancellationToken ct) =>
+		{
+			var command = new ResetPasswordCommand(request);
+			await handler.HandleAsync(command, ct);
+			return Results.NoContent();
+		})
+		.WithName("ResetPassword")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status422UnprocessableEntity);
 	}
 }

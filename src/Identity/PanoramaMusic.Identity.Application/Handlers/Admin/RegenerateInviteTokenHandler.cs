@@ -16,10 +16,10 @@ public sealed class RegenerateInviteTokenHandler(
 		var user = await userRepository.GetByIdAsync(command.UserId, cancellationToken)
 			?? throw new DomainException("User not found.");
 
-		var token = RawInviteToken.Generate();
-		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(InviteTokenConstants.ExpiryDays));
+		var token = RawToken.Generate();
+		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
 		await inviteTokenRepository.RevokeAndIssueAsync(user.UserId, inviteToken, cancellationToken);
 
-		return new RegenerateInviteTokenResult(token.Url);
+		return new RegenerateInviteTokenResult($"/#/register?token={token.Value}");
 	}
 }

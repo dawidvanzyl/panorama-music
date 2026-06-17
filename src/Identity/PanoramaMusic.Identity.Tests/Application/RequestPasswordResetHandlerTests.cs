@@ -1,0 +1,100 @@
+using Moq;
+using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Requests.Auth;
+using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
+using Shouldly;
+using Xunit;
+
+namespace PanoramaMusic.Identity.Tests.Application;
+
+public class RequestPasswordResetHandlerTests
+{
+	public RequestPasswordResetHandlerTests()
+	{
+		UserRepo = new Mock<IUserRepository>();
+		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
+		EmailSender = new Mock<IEmailSender>();
+
+		ResetTokenRepo
+			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		EmailSender
+			.Setup(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		Handler = new RequestPasswordResetHandler(UserRepo.Object, ResetTokenRepo.Object, EmailSender.Object);
+	}
+
+	public Mock<IUserRepository> UserRepo { get; }
+	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
+	public Mock<IEmailSender> EmailSender { get; }
+	public RequestPasswordResetHandler Handler { get; }
+
+	[Fact]
+	[Trait("AC", "M1.1UC5")]
+	public async Task HandleAsync_RegisteredEmail_CreatesTokenAndSendsEmail()
+	{
+		var user = new User(Guid.NewGuid(), Email.Create("user@test.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$v=19$existing-hash"));
+		user.Activate();
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		await Handler.HandleAsync(
+			new RequestPasswordResetCommand(new RequestPasswordResetRequest("user@test.com")),
+			TestContext.Current.CancellationToken);
+
+		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
+		EmailSender.Verify(e => e.SendPasswordResetAsync("user@test.com", It.IsAny<string>(), TestContext.Current.CancellationToken), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1UC5")]
+	public async Task HandleAsync_UnregisteredEmail_DoesNotSendEmailOrCreateToken()
+	{
+		UserRepo
+			.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		await Handler.HandleAsync(
+			new RequestPasswordResetCommand(new RequestPasswordResetRequest("unknown@test.com")),
+			TestContext.Current.CancellationToken);
+
+		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
+		EmailSender.Verify(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1UC5")]
+	public async Task HandleAsync_RegisteredEmail_TokenExpiresInConfiguredHours()
+	{
+		var user = new User(Guid.NewGuid(), Email.Create("user@test.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$v=19$existing-hash"));
+		user.Activate();
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		PasswordResetToken? captured = null;
+		ResetTokenRepo
+			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Callback<PasswordResetToken, CancellationToken>((t, _) => captured = t)
+			.Returns(Task.CompletedTask);
+
+		await Handler.HandleAsync(
+			new RequestPasswordResetCommand(new RequestPasswordResetRequest("user@test.com")),
+			TestContext.Current.CancellationToken);
+
+		captured.ShouldNotBeNull();
+		captured.ExpiresAt.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(59));
+		captured.ExpiresAt.ShouldBeLessThan(DateTime.UtcNow.AddHours(2));
+	}
+}

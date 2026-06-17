@@ -28,6 +28,19 @@ services:
       timeout: 5s
       retries: 10
 
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    profiles: [dev, qa]
+    restart: always
+    ports:
+      - "127.0.0.1:1025:25"
+      - "127.0.0.1:5000:80"
+    volumes:
+      - smtp4dev-data:/smtp4dev
+    environment:
+      - ServerOptions__Urls=http://*:80
+      - ServerOptions__HostName=smtp4dev
+
   api:
     build:
       context: .
@@ -44,12 +57,22 @@ services:
       JWT__Secret: ${JWT__Secret}
       Admin__Email: ${Admin__Email}
       Admin__Password: ${Admin__Password}
+      Smtp__Host: smtp4dev
+      Smtp__Port: 25
+      Smtp__Username: ""
+      Smtp__Password: ""
+      Smtp__From: ${Smtp__From:-noreply@panorama-music.qa}
+      Smtp__FromDisplayName: ${Smtp__FromDisplayName:-Panorama Music (QA)}
+      Smtp__AppBaseUrl: ${Smtp__AppBaseUrl:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
       db-qa:
         condition: service_healthy
+      smtp4dev:
+        condition: service_started
 
 volumes:
   db-dev-data:
   db-qa-data:
+  smtp4dev-data:

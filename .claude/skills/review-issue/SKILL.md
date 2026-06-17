@@ -171,6 +171,7 @@ Apply these severity levels to every finding:
 Read the relevant standards doc(s) for the affected scopes plus `.editorconfig`:
 
 - Always read: `docs/coding-standards.md` (shared conventions)
+- Always read: `docs/security-standards.md` (security requirements — apply only rules relevant to the changed code; use the severity mapping in its Appendix)
 - Backend scope: `docs/coding-standards-backend.md`
 - Frontend scope: `docs/coding-standards-frontend.md`
 - Backend Formatting rules: `src/.editorconfig`
