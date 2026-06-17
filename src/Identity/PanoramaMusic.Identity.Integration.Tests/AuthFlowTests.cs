@@ -223,7 +223,7 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 
 	[Fact]
 	[Trait("AC", "M1.1IT3")]
-	public async Task ResetPasswordFlow_ValidTokenAndPassword_Returns200()
+	public async Task ResetPasswordFlow_ValidTokenAndPassword_Returns204()
 	{
 		var user = fixture.CreateActiveUser();
 		var resetToken = fixture.CreateValidPasswordResetToken(user.UserId);
@@ -243,7 +243,7 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 		using var app = TestApp.CreateTestApp(hasher: Hasher, resetTokenRepo: ResetTokenRepo);
 		var response = await app.Client.PostAsJsonAsync("/api/auth/reset-password", new { token = fixture.TestToken, newPassword = "NewPass123!" }, TestContext.Current.CancellationToken);
 
-		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 		ResetTokenRepo.Verify(r => r.CompleteResetAsync(user.UserId, It.IsAny<PasswordHash>(), resetToken.TokenId, It.IsAny<CancellationToken>()), Times.Once);
 	}
 

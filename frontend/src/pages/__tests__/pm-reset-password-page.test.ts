@@ -5,7 +5,7 @@ const mockResetPassword = vi.fn();
 vi.mock('../../services/auth', () => ({
   resetPassword: (...args: unknown[]) => mockResetPassword(...args),
   AuthError: class AuthError extends Error {
-    constructor(message: string, public status: number) {
+    constructor(message: string, public status: number, public hasPolicyRules: boolean = false) {
       super(message);
       this.name = 'AuthError';
     }
@@ -55,6 +55,27 @@ describe('pm-reset-password-page', () => {
 
       await vi.waitFor(() => {
         expect(mockResetPassword).toHaveBeenCalledWith('valid-token-abc', 'NewPass123!');
+      });
+    });
+
+    it('shows inline error when API returns 422 policy error', async () => {
+      const { AuthError } = await import('../../services/auth');
+      mockResetPassword.mockRejectedValueOnce(new AuthError('Password must be at least 8 characters.', 422, true));
+
+      const shadow = el.shadowRoot!;
+      const form = shadow.getElementById('resetForm') as HTMLFormElement;
+      const passwordInput = shadow.getElementById('password') as HTMLInputElement;
+      const confirmInput = shadow.getElementById('confirmPassword') as HTMLInputElement;
+
+      passwordInput.value = 'weak';
+      confirmInput.value = 'weak';
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => {
+        const errorBanner = shadow.getElementById('errorMsg')!;
+        expect(errorBanner.classList.contains('reset__error-banner--visible')).toBe(true);
+        const invalidBanner = shadow.getElementById('invalidBanner')!;
+        expect(invalidBanner.classList.contains('reset__invalid-banner--visible')).toBe(false);
       });
     });
 

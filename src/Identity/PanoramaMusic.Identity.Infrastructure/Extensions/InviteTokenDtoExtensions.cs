@@ -11,6 +11,7 @@ internal static class InviteTokenDtoExtensions
 			dto.Token_Id,
 			dto.User_Id,
 			dto.Token_Hash,
-			dto.Expires_At);
+			dto.Expires_At,
+			dto.Used_At);
 	}
 }

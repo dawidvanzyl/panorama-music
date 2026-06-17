@@ -18,6 +18,7 @@ export class AuthError extends Error {
   constructor(
     message: string,
     public status: number,
+    public hasPolicyRules: boolean = false,
   ) {
     super(message);
     this.name = 'AuthError';
@@ -30,6 +31,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new AuthError(
       body.error ?? `HTTP ${response.status}`,
       response.status,
+      Array.isArray(body.rules) && body.rules.length > 0,
     );
   }
   if (response.status === 202 || response.status === 204) {

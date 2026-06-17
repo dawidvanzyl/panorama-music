@@ -454,10 +454,7 @@ export class PmResetPasswordPage extends HTMLElement {
       window.location.hash = '#/login';
     } catch (err) {
       if (err instanceof AuthError && err.status === 422) {
-        const isTokenError = err.message.toLowerCase().includes('token') ||
-          err.message.toLowerCase().includes('invalid') ||
-          err.message.toLowerCase().includes('expired');
-        if (isTokenError) {
+        if (!err.hasPolicyRules) {
           this.showInvalidState();
           return;
         }

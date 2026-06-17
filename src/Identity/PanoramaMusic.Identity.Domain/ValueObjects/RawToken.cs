@@ -14,7 +14,11 @@ public sealed class RawToken
 		Hash = ComputeHash(value);
 	}
 
-	public static RawToken Generate() => new(Guid.NewGuid().ToString());
+	public static RawToken Generate()
+	{
+		var bytes = RandomNumberGenerator.GetBytes(32);
+		return new(Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'));
+	}
 
 	public static RawToken From(string value) => new(value);
 

@@ -41,7 +41,7 @@ public class PasswordResetTokenRepository(IDbConnectionFactory connectionFactory
 
 	public async Task CompleteResetAsync(Guid userId, PasswordHash passwordHash, Guid tokenId, CancellationToken cancellationToken)
 	{
-		var dbConnection = CreateConnection();
+		await using var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
