@@ -65,10 +65,10 @@ public static class AuthRoutes
 		{
 			var command = new ResetPasswordCommand(request);
 			await handler.HandleAsync(command, ct);
-			return Results.Ok();
+			return Results.NoContent();
 		})
 		.WithName("ResetPassword")
-		.Produces(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status204NoContent)
 		.Produces(StatusCodes.Status422UnprocessableEntity);
 	}
 }
