@@ -24,10 +24,10 @@ public sealed class CreateUserHandler(
 		await userRepository.AddAsync(user, cancellationToken);
 		await userRoleRepository.AddAsync(new UserRole(user.UserId, command.Request.Role), cancellationToken);
 
-		var token = RawInviteToken.Generate();
-		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(InviteTokenConstants.ExpiryDays));
+		var token = RawToken.Generate();
+		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
 		await inviteTokenRepository.AddAsync(inviteToken, cancellationToken);
 
-		return new CreateUserResult(user.UserId, token.Url);
+		return new CreateUserResult(user.UserId, $"/#/register?token={token.Value}");
 	}
 }

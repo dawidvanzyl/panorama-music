@@ -3,20 +3,20 @@ using System.Text;
 
 namespace PanoramaMusic.Identity.Domain.ValueObjects;
 
-public sealed class RawInviteToken
+public sealed class RawToken
 {
 	public string Value { get; }
 	public string Hash { get; }
-	public string Url { get; }
 
-	private RawInviteToken(string value)
+	private RawToken(string value)
 	{
 		Value = value;
 		Hash = ComputeHash(value);
-		Url = $"/#/register?token={value}";
 	}
 
-	public static RawInviteToken Generate() => new(Guid.NewGuid().ToString());
+	public static RawToken Generate() => new(Guid.NewGuid().ToString());
+
+	public static RawToken From(string value) => new(value);
 
 	private static string ComputeHash(string value)
 	{

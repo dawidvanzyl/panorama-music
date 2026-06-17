@@ -4,14 +4,18 @@ import './components/pm-password-strength-indicator';
 import './pages/pm-login-page';
 import './pages/pm-registration-page';
 import './pages/pm-admin-users-page';
+import './pages/pm-forgot-password-page';
+import './pages/pm-reset-password-page';
 import { isAuthenticated } from './services/auth';
 import { hasRole } from './services/token-storage';
 
-const PUBLIC_PATHS = new Set(['/login', '/register']);
+const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 
 const ROUTES: Record<string, () => string> = {
   '/login': () => '<pm-login-page></pm-login-page>',
   '/register': () => '<pm-registration-page></pm-registration-page>',
+  '/forgot-password': () => '<pm-forgot-password-page></pm-forgot-password-page>',
+  '/reset-password': () => '<pm-reset-password-page></pm-reset-password-page>',
   '/admin/users': () => '<pm-admin-users-page></pm-admin-users-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };

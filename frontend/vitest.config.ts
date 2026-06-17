@@ -15,6 +15,9 @@ export default defineConfig({
       { name: 'M1UC49', description: 'Admin page load fetches and returns all users' },
       { name: 'M1.1UC3', description: 'Password strength checklist updates in real time as user types' },
       { name: 'M1.1UC4', description: 'Form submits without client-side blocking when all rules satisfied' },
+      { name: 'M1.1UC9', description: 'Forgot-password page transitions to success state after submission' },
+      { name: 'M1.1UC10', description: 'Reset-password page resets password and redirects to login on success' },
+      { name: 'M1.1UC11', description: 'Reset-password page shows invalid/expired state for bad token' },
     ],
   },
 })

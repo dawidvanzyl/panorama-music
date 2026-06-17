@@ -309,7 +309,7 @@ template.innerHTML = `
         <div class="login__field">
           <div class="login__label-row">
             <label class="login__label" for="password">Password</label>
-            <a class="login__forgot" href="#">Forgot password?</a>
+            <a class="login__forgot" href="#/forgot-password">Forgot password?</a>
           </div>
           <div class="login__input-wrap">
             <span class="material-symbols-outlined login__input-icon">lock</span>

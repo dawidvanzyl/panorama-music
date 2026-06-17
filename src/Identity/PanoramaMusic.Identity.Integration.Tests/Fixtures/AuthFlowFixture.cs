@@ -22,7 +22,7 @@ public class AuthFlowFixture
 	{
 		FixedNow = DateTime.UtcNow;
 		TestToken = "test-refresh-token-raw";
-		TestTokenHash = TokenHasher.ComputeSha256Hash(TestToken);
+		TestTokenHash = RawToken.From(TestToken).Hash;
 	}
 
 	public User CreateActiveUser(string email = "user@test.com")
@@ -41,5 +41,10 @@ public class AuthFlowFixture
 	public InviteToken CreateValidInviteToken(Guid userId)
 	{
 		return new InviteToken(Guid.NewGuid(), userId, TestTokenHash, FixedNow.AddDays(7));
+	}
+
+	public PasswordResetToken CreateValidPasswordResetToken(Guid userId)
+	{
+		return new PasswordResetToken(Guid.NewGuid(), userId, TestTokenHash, FixedNow.AddHours(1));
 	}
 }

@@ -49,7 +49,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_PolicyCompliantPassword_ActivatesUser()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -73,7 +73,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_ValidInviteToken_ActivatesUserAndMarksTokenUsed()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var invite = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -99,7 +99,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_ExpiredInviteToken_ThrowsDomainException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var expired = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(-1));
@@ -116,7 +116,7 @@ public class CompleteRegistrationHandlerTests
 	public async Task HandleAsync_AlreadyUsedInviteToken_ThrowsDomainException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
-		var tokenHash = TokenHasher.ComputeSha256Hash(rawToken);
+		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = Guid.NewGuid();
 
 		var used = new InviteToken(Guid.NewGuid(), userId, tokenHash, DateTime.UtcNow.AddDays(7));
