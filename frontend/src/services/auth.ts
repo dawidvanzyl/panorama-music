@@ -32,7 +32,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       response.status,
     );
   }
-  if (response.status === 204) {
+  if (response.status === 202 || response.status === 204) {
     return undefined as T;
   }
   return response.json() as Promise<T>;
