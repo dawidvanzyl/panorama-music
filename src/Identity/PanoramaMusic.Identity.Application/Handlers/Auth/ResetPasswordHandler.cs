@@ -18,6 +18,9 @@ public sealed class ResetPasswordHandler(
 		var token = await passwordResetTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
 			?? throw new InvalidResetTokenException("Password reset token is invalid or expired.");
 
+		if (token.IsExpired || token.IsUsed)
+			throw new InvalidResetTokenException("Password reset token is invalid or expired.");
+
 		token.MarkUsed();
 
 		var passwordHash = passwordHasher.Hash(command.Request.NewPassword);

@@ -96,7 +96,7 @@ public class CompleteRegistrationHandlerTests
 
 	[Fact]
 	[Trait("AC", "M1UC33")]
-	public async Task HandleAsync_ExpiredInviteToken_ThrowsDomainException()
+	public async Task HandleAsync_ExpiredInviteToken_ThrowsUnauthorizedException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
@@ -107,13 +107,13 @@ public class CompleteRegistrationHandlerTests
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(expired);
 
-		await Should.ThrowAsync<DomainException>(
+		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
 	}
 
 	[Fact]
 	[Trait("AC", "M1UC34")]
-	public async Task HandleAsync_AlreadyUsedInviteToken_ThrowsDomainException()
+	public async Task HandleAsync_AlreadyUsedInviteToken_ThrowsUnauthorizedException()
 	{
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
@@ -125,7 +125,7 @@ public class CompleteRegistrationHandlerTests
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(used);
 
-		await Should.ThrowAsync<DomainException>(
+		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
 	}
 }

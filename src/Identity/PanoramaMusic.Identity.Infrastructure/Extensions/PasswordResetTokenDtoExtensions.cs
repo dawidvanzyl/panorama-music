@@ -7,11 +7,9 @@ internal static class PasswordResetTokenDtoExtensions
 {
 	internal static PasswordResetToken MapToPasswordResetToken(this PasswordResetTokenDto dto)
 	{
-		return new PasswordResetToken(
-			dto.Token_Id,
-			dto.User_Id,
-			dto.Token_Hash,
-			dto.Expires_At,
-			dto.Used_At);
+		var token = new PasswordResetToken(dto.Token_Id, dto.User_Id, dto.Token_Hash, dto.Expires_At);
+		if (dto.Used_At.HasValue)
+			token.MarkUsed(dto.Used_At.Value);
+		return token;
 	}
 }

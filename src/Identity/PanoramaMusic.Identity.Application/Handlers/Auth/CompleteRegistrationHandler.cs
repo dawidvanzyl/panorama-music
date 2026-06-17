@@ -19,6 +19,9 @@ public sealed class CompleteRegistrationHandler(
 		var inviteToken = await inviteTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
 			?? throw new UnauthorizedException("Invalid invite token.");
 
+		if (inviteToken.IsExpired || inviteToken.IsUsed)
+			throw new UnauthorizedException("Invalid invite token.");
+
 		inviteToken.MarkUsed();
 
 		var user = await userRepository.GetByIdAsync(inviteToken.UserId, cancellationToken)
