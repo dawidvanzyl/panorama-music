@@ -110,6 +110,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetUsersHandler>();
 		services.AddTransient<UpdateUserRolesHandler>();
 		services.AddTransient<DeactivateUserHandler>();
+		services.AddTransient<DeleteUserHandler>();
 		services.AddTransient<RequestPasswordResetHandler>();
 		services.AddTransient<ResetPasswordHandler>();
 		return services;
