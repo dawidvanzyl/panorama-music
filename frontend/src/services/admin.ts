@@ -8,6 +8,7 @@ export interface GetUserResult {
   roles: string[];
   isActive: boolean;
   isProtected: boolean;
+  hasCompletedRegistration: boolean;
 }
 
 export interface CreateUserResult {

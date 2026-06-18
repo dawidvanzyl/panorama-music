@@ -22,6 +22,7 @@ const activeUser: GetUserResult = {
   roles: ['Teacher'],
   isActive: true,
   isProtected: false,
+  hasCompletedRegistration: true,
 };
 
 describe('pm-users-table — remove button', { tags: ['M1.1UC18'] }, () => {

@@ -8,6 +8,7 @@ const activeUser: GetUserResult = {
   roles: ['Teacher'],
   isActive: true,
   isProtected: false,
+  hasCompletedRegistration: true,
 };
 
 describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
@@ -53,7 +54,7 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
   });
 
   it('pending user row shows Regenerate Invite instead of Edit', () => {
-    el.users = [{ ...activeUser, userId: 'user-pending', isActive: false }];
+    el.users = [{ ...activeUser, userId: 'user-pending', isActive: false, hasCompletedRegistration: false }];
     expect(el.shadowRoot!.querySelector('.users-table__btn--edit')).toBeNull();
     expect(el.shadowRoot!.querySelector('.users-table__regenerate')).not.toBeNull();
   });

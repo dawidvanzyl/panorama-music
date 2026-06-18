@@ -52,6 +52,10 @@ template.innerHTML = `
       background: rgba(79, 124, 255, 0.1);
       color: var(--pm-accent);
     }
+    .users-table__status--deactivated {
+      background: rgba(224, 82, 82, 0.1);
+      color: var(--pm-danger, #e05252);
+    }
     .users-table__btn {
       border-radius: var(--pm-radius);
       font-size: 12px;
@@ -230,8 +234,14 @@ export class PmUsersTable extends HTMLElement {
 
     const statusCell = document.createElement('td');
     const statusBadge = document.createElement('span');
-    statusBadge.classList.add('users-table__status', user.isActive ? 'users-table__status--active' : 'users-table__status--pending');
-    statusBadge.textContent = user.isActive ? 'Active' : 'Pending';
+    const statusClass = user.isActive
+      ? 'users-table__status--active'
+      : user.hasCompletedRegistration
+        ? 'users-table__status--deactivated'
+        : 'users-table__status--pending';
+    const statusText = user.isActive ? 'Active' : user.hasCompletedRegistration ? 'Deactivated' : 'Pending';
+    statusBadge.classList.add('users-table__status', statusClass);
+    statusBadge.textContent = statusText;
     statusCell.appendChild(statusBadge);
 
     const actionsCell = document.createElement('td');
@@ -279,7 +289,7 @@ export class PmUsersTable extends HTMLElement {
       removePlaceholder.textContent = 'Remove';
       removePlaceholder.style.visibility = 'hidden';
       actionsCell.appendChild(removePlaceholder);
-    } else if (!user.isActive) {
+    } else if (!user.isActive && !user.hasCompletedRegistration) {
       const regenerateBtn = document.createElement('button');
       regenerateBtn.type = 'button';
       regenerateBtn.classList.add('users-table__regenerate');
