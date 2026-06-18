@@ -281,6 +281,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 	}
 
 	[Fact]
+	[Trait("AC", "M1.1IT9")]
 	public async Task DeactivateUserFlow_SelfDeactivation_Returns400()
 	{
 		var adminId = Guid.NewGuid();
@@ -295,6 +296,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 	}
 
 	[Fact]
+	[Trait("AC", "M1.1IT10")]
 	public async Task DeactivateUserFlow_SeedAdmin_Returns400()
 	{
 		var seedAdminId = Guid.NewGuid();
