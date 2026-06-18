@@ -90,9 +90,8 @@ export class PmAdminUsersPage extends HTMLElement {
     this.deactivateModal!.show(userId, email);
   };
 
-  private handleUserDeactivated = (event: Event): void => {
-    const { userId } = (event as CustomEvent<{ userId: string }>).detail;
-    this.usersTable!.removeUser(userId);
+  private handleUserDeactivated = (): void => {
+    void this.loadUsers();
   };
 
   private handleDeleteRequested = (event: Event): void => {
