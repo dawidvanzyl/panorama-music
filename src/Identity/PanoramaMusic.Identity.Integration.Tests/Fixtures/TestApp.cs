@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
 using PanoramaMusic.Api.Middleware;
@@ -11,6 +13,7 @@ using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
@@ -61,12 +64,17 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		Mock<IRefreshTokenRepository>? refreshRepo = null,
 		Mock<IInviteTokenRepository>? inviteRepo = null,
 		Mock<IPasswordResetTokenRepository>? resetTokenRepo = null,
-		Mock<IEmailSender>? emailSender = null)
+		Mock<IEmailSender>? emailSender = null,
+		string seedAdminEmail = "")
 	{
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
 		builder.Environment.EnvironmentName = "Testing";
 
+		builder.Services.Configure<AdminOptions>(opts => opts.Email = seedAdminEmail);
+		builder.Services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
+		builder.Services.AddHttpContextAccessor();
+		builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal(new ClaimsIdentity()));
 		builder.Services.AddTransient(_ => (userRepo ?? new Mock<IUserRepository>()).Object);
 		builder.Services.AddTransient(_ => (roleRepo ?? new Mock<IUserRoleRepository>()).Object);
 		builder.Services.AddTransient(_ => (hasher ?? new Mock<IPasswordHasher>()).Object);
@@ -83,6 +91,7 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.AddTransient<CreateUserHandler>();
 		builder.Services.AddTransient<RegenerateInviteTokenHandler>();
 		builder.Services.AddTransient<GetUsersHandler>();
+		builder.Services.AddTransient<UpdateUserRolesHandler>();
 		builder.Services.AddTransient<RequestPasswordResetHandler>();
 		builder.Services.AddTransient<ResetPasswordHandler>();
 

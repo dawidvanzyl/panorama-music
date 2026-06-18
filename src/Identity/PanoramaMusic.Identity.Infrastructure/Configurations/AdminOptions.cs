@@ -1,10 +1,14 @@
+using PanoramaMusic.Identity.Application;
+
 namespace PanoramaMusic.Identity.Infrastructure.Configurations;
 
-public class AdminOptions
+public class AdminOptions : IAdminOptions
 {
 	public const string SectionName = "Admin";
 
 	public string Email { get; set; } = string.Empty;
 
 	public string Password { get; set; } = string.Empty;
+
+	public string SeedAdminEmail => Email;
 }

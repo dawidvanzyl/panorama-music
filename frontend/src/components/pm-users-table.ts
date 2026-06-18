@@ -1,4 +1,5 @@
-import { regenerateInvite, AdminError, type GetUserResult } from '../services/admin';
+import { regenerateInvite, updateUserRoles, AdminError, type GetUserResult } from '../services/admin';
+import { getUserId } from '../services/token-storage';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -51,6 +52,40 @@ template.innerHTML = `
       background: rgba(79, 124, 255, 0.1);
       color: var(--pm-accent);
     }
+    .users-table__btn {
+      border-radius: var(--pm-radius);
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .users-table__btn--edit {
+      background: transparent;
+      border: 1px solid var(--pm-accent);
+      color: var(--pm-accent);
+    }
+    .users-table__btn--edit:hover {
+      background: rgba(79, 124, 255, 0.1);
+    }
+    .users-table__btn--save {
+      background: var(--pm-accent);
+      border: 1px solid var(--pm-accent);
+      color: #fff;
+    }
+    .users-table__btn--save:hover {
+      filter: brightness(1.1);
+    }
+    .users-table__btn--cancel {
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text);
+    }
+    .users-table__btn--cancel:hover {
+      background: var(--pm-border);
+    }
+    .users-table__btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
     .users-table__regenerate {
       border: 1px solid var(--pm-border);
       border-radius: var(--pm-radius);
@@ -84,6 +119,33 @@ template.innerHTML = `
       color: var(--pm-text-muted);
       font-size: 14px;
     }
+    .users-table__role-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text-muted);
+      margin-right: 4px;
+    }
+    .users-table__role-checkboxes {
+      display: flex;
+      gap: 12px;
+    }
+    .users-table__role-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--pm-text);
+      cursor: pointer;
+    }
+    .users-table__actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
   </style>
 
   <div class="users-table__card">
@@ -94,7 +156,7 @@ template.innerHTML = `
           <th>Email</th>
           <th>Roles</th>
           <th>Status</th>
-          <th>Invite</th>
+          <th style="text-align:right">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -107,6 +169,7 @@ export class PmUsersTable extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
   private _users: GetUserResult[] = [];
+  private _editingUserId: string | null = null;
 
   constructor() {
     super();
@@ -122,6 +185,7 @@ export class PmUsersTable extends HTMLElement {
 
   set users(value: GetUserResult[]) {
     this._users = value;
+    this._editingUserId = null;
     this.render();
   }
 
@@ -136,49 +200,168 @@ export class PmUsersTable extends HTMLElement {
     this.emptyMessage.hidden = this._users.length > 0;
 
     for (const user of this._users) {
-      const row = document.createElement('tr');
-
-      const emailCell = document.createElement('td');
-      emailCell.textContent = user.email;
-
-      const rolesCell = document.createElement('td');
-      rolesCell.textContent = user.roles.join(', ');
-
-      const statusCell = document.createElement('td');
-      const statusBadge = document.createElement('span');
-      statusBadge.classList.add('users-table__status', user.isActive ? 'users-table__status--active' : 'users-table__status--pending');
-      statusBadge.textContent = user.isActive ? 'Active' : 'Pending';
-      statusCell.appendChild(statusBadge);
-
-      const inviteCell = document.createElement('td');
-      const regenerateBtn = document.createElement('button');
-      regenerateBtn.type = 'button';
-      regenerateBtn.classList.add('users-table__regenerate');
-      regenerateBtn.textContent = 'Regenerate Invite';
-      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, inviteCell, regenerateBtn));
-      inviteCell.appendChild(regenerateBtn);
-
-      row.append(emailCell, rolesCell, statusCell, inviteCell);
+      const isEditing = this._editingUserId === user.userId;
+      const row = this.buildRow(user, isEditing);
       this.rowsBody.appendChild(row);
     }
   }
 
-  private handleRegenerate = async (userId: string, inviteCell: HTMLElement, button: HTMLButtonElement): Promise<void> => {
+  private buildRow(user: GetUserResult, isEditing: boolean): HTMLTableRowElement {
+    const row = document.createElement('tr');
+
+    const emailCell = document.createElement('td');
+    emailCell.textContent = user.email;
+
+    const rolesCell = document.createElement('td');
+    if (isEditing) {
+      rolesCell.appendChild(this.buildRoleCheckboxes(user.roles));
+    } else {
+      rolesCell.appendChild(this.buildRoleBadges(user.roles));
+    }
+
+    const statusCell = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.classList.add('users-table__status', user.isActive ? 'users-table__status--active' : 'users-table__status--pending');
+    statusBadge.textContent = user.isActive ? 'Active' : 'Pending';
+    statusCell.appendChild(statusBadge);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.classList.add('users-table__actions');
+
+    if (isEditing) {
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.classList.add('users-table__btn', 'users-table__btn--save');
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => this.handleSave(user.userId, rolesCell, saveBtn, cancelBtn));
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.classList.add('users-table__btn', 'users-table__btn--cancel');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => this.handleCancel());
+
+      actionsCell.append(saveBtn, cancelBtn);
+    } else if (user.isActive && !user.isProtected && user.userId !== getUserId()) {
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.classList.add('users-table__btn', 'users-table__btn--edit');
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => this.handleEdit(user.userId));
+      actionsCell.appendChild(editBtn);
+    } else if (!user.isActive) {
+      const regenerateBtn = document.createElement('button');
+      regenerateBtn.type = 'button';
+      regenerateBtn.classList.add('users-table__regenerate');
+      regenerateBtn.textContent = 'Regenerate Invite';
+      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
+      actionsCell.appendChild(regenerateBtn);
+    }
+
+    row.append(emailCell, rolesCell, statusCell, actionsCell);
+    return row;
+  }
+
+  private buildRoleBadges(roles: string[]): HTMLElement {
+    const wrap = document.createElement('span');
+    for (const role of roles) {
+      const badge = document.createElement('span');
+      badge.classList.add('users-table__role-badge');
+      badge.textContent = role;
+      wrap.appendChild(badge);
+    }
+    return wrap;
+  }
+
+  private buildRoleCheckboxes(currentRoles: string[]): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.classList.add('users-table__role-checkboxes');
+
+    for (const role of ['Teacher', 'Admin']) {
+      const label = document.createElement('label');
+      label.classList.add('users-table__role-option');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = role;
+      checkbox.checked = currentRoles.includes(role);
+
+      label.append(checkbox, document.createTextNode(role));
+      wrap.appendChild(label);
+    }
+
+    return wrap;
+  }
+
+  private getCheckedRoles(rolesCell: HTMLElement): string[] {
+    return Array.from(rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
+      .map(cb => cb.value);
+  }
+
+  private handleEdit(userId: string): void {
+    this._editingUserId = userId;
+    this.render();
+  }
+
+  private handleCancel(): void {
+    this._editingUserId = null;
+    this.render();
+  }
+
+  private handleSave = async (
+    userId: string,
+    rolesCell: HTMLElement,
+    saveBtn: HTMLButtonElement,
+    cancelBtn: HTMLButtonElement,
+  ): Promise<void> => {
+    const roles = this.getCheckedRoles(rolesCell);
+    rolesCell.querySelector('.users-table__error')?.remove();
+
+    if (roles.length === 0) {
+      const error = document.createElement('span');
+      error.classList.add('users-table__error');
+      error.textContent = 'At least one role must be selected.';
+      rolesCell.appendChild(error);
+      return;
+    }
+
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+
+    try {
+      const updated = await updateUserRoles(userId, roles);
+      const userIndex = this._users.findIndex(u => u.userId === userId);
+      if (userIndex !== -1) {
+        this._users[userIndex] = { ...this._users[userIndex], roles: updated.roles };
+      }
+      this._editingUserId = null;
+      this.render();
+    } catch (err) {
+      const error = document.createElement('span');
+      error.classList.add('users-table__error');
+      error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
+      rolesCell.appendChild(error);
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
+  };
+
+  private handleRegenerate = async (userId: string, actionsCell: HTMLElement, button: HTMLButtonElement): Promise<void> => {
     button.disabled = true;
-    inviteCell.querySelector('.users-table__invite-url')?.remove();
-    inviteCell.querySelector('.users-table__error')?.remove();
+    actionsCell.querySelector('.users-table__invite-url')?.remove();
+    actionsCell.querySelector('.users-table__error')?.remove();
 
     try {
       const result = await regenerateInvite(userId);
       const inviteUrl = document.createElement('span');
       inviteUrl.classList.add('users-table__invite-url');
       inviteUrl.textContent = result.inviteUrl;
-      inviteCell.appendChild(inviteUrl);
+      actionsCell.appendChild(inviteUrl);
     } catch (err) {
       const error = document.createElement('span');
       error.classList.add('users-table__error');
       error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      inviteCell.appendChild(error);
+      actionsCell.appendChild(error);
     } finally {
       button.disabled = false;
     }

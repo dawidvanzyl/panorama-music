@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
@@ -12,6 +14,7 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
+using System.Security.Claims;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -90,6 +93,9 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();
 		services.AddTransient<IEmailSender, SmtpEmailSender>();
+		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
+		services.AddHttpContextAccessor();
+		services.AddScoped(sp => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal(new ClaimsIdentity()));
 		return services;
 	}
 
@@ -102,6 +108,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<CreateUserHandler>();
 		services.AddTransient<RegenerateInviteTokenHandler>();
 		services.AddTransient<GetUsersHandler>();
+		services.AddTransient<UpdateUserRolesHandler>();
 		services.AddTransient<RequestPasswordResetHandler>();
 		services.AddTransient<ResetPasswordHandler>();
 		return services;

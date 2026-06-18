@@ -20,9 +20,13 @@ public sealed class CreateUserHandler(
 		if (existing is not null)
 			throw new DomainException("A user with this email already exists.");
 
+		if (command.Request.Roles.Count == 0)
+			throw new ValidationException("At least one role must be assigned.");
+
 		var user = new User(Guid.NewGuid(), email, DateTime.UtcNow);
 		await userRepository.AddAsync(user, cancellationToken);
-		await userRoleRepository.AddAsync(new UserRole(user.UserId, command.Request.Role), cancellationToken);
+		foreach (var role in command.Request.Roles)
+			await userRoleRepository.AddAsync(new UserRole(user.UserId, role), cancellationToken);
 
 		var token = RawToken.Generate();
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));

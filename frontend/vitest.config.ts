@@ -18,6 +18,12 @@ export default defineConfig({
       { name: 'M1.1UC9', description: 'Forgot-password page transitions to success state after submission' },
       { name: 'M1.1UC10', description: 'Reset-password page resets password and redirects to login on success' },
       { name: 'M1.1UC11', description: 'Reset-password page shows invalid/expired state for bad token' },
+      { name: 'M1.1UC12', description: 'Admin updates user roles via PATCH and receives 200 with updated user' },
+      { name: 'M1.1UC13', description: 'Non-admin receives 403 on PATCH /api/users/{userId}' },
+      { name: 'M1.1UC14', description: 'Edit button transitions active user row to inline role-checkbox edit mode' },
+      { name: 'M1.1UC15', description: 'Saving inline edit sends PATCH and returns row to display mode with updated badges' },
+      { name: 'M1.1UC23', description: 'Admin creates user with multiple roles; all roles are persisted' },
+      { name: 'M1.1UC24', description: 'Admin selects multiple roles in create-user form; all role badges appear for new user' },
     ],
   },
 })

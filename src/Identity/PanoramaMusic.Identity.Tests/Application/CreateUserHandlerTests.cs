@@ -49,7 +49,7 @@ public class CreateUserHandlerTests
 			.ReturnsAsync((User?)null);
 
 		var result = await Handler.HandleAsync(
-			new CreateUserCommand(new CreateUserRequest("new@test.com", Role.Teacher)),
+			new CreateUserCommand(new CreateUserRequest("new@test.com", [Role.Teacher])),
 			TestContext.Current.CancellationToken);
 
 		result.ShouldNotBeNull();
@@ -71,9 +71,25 @@ public class CreateUserHandlerTests
 
 		await Should.ThrowAsync<DomainException>(
 			() => Handler.HandleAsync(
-				new CreateUserCommand(new CreateUserRequest("existing@test.com", Role.Admin)),
+				new CreateUserCommand(new CreateUserRequest("existing@test.com", [Role.Admin])),
 				TestContext.Current.CancellationToken));
 
 		UserRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1UC23")]
+	public async Task HandleAsync_MultipleRoles_AssignsAllRoles()
+	{
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("multi@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		await Handler.HandleAsync(
+			new CreateUserCommand(new CreateUserRequest("multi@test.com", [Role.Teacher, Role.Admin])),
+			TestContext.Current.CancellationToken);
+
+		UserRoleRepo.Verify(r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Teacher), TestContext.Current.CancellationToken), Times.Once);
+		UserRoleRepo.Verify(r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), TestContext.Current.CancellationToken), Times.Once);
 	}
 }

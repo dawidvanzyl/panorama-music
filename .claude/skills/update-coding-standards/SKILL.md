@@ -94,7 +94,8 @@ git diff ${sha}~1 ${sha}
 - For each relevant scope, check that the corresponding doc exists:
   - `docs/coding-standards-backend.md` for backend scope
   - `docs/coding-standards-frontend.md` for frontend scope
-  - If a doc does not exist, note that it is not yet set up — skip that scope.
+  - `docs/coding-standards.md` always — shared workflow patterns apply regardless of scope
+  - If a scope-specific doc does not exist, note that it is not yet set up — skip that scope. If `docs/coding-standards.md` does not exist, skip the shared-workflow analysis.
 - Read the existing doc(s) in full for the relevant scope(s).
 
 ### 4) Analyze for valuable additions
@@ -119,6 +120,7 @@ documented in the corresponding standards doc. Look specifically for:
 - **Any non-obvious pattern** that a future implementer, working without
   knowledge of this specific implementation, would benefit from knowing
   upfront.
+- **Shared workflow patterns** — any conventions relating to branching, commit message style, PR structure, or cross-cutting decisions that apply to both stacks and belong in `docs/coding-standards.md` rather than a stack-specific doc.
 
 For each candidate, ask: "If someone implements the next task without seeing
 this code, would they produce different (and worse) code because this pattern
@@ -136,8 +138,7 @@ is not documented?" If the answer is no, discard it.
   scope (backend / frontend). For each:
   - What the pattern is
   - Why it matters for future consistency
-  - Which doc and section it would go in (e.g. "`coding-standards-backend.md` >
-    Naming Conventions")
+  - Which doc and section it would go in (e.g. "`coding-standards-backend.md` > Naming Conventions", or "`coding-standards.md` > Branching Model")
 - Then ask:
   > "Add these to the coding standards? (yes/no/select items)"
 - If the user says **no** — do nothing. Report: "Skipped. Coding standards
@@ -151,6 +152,6 @@ is not documented?" If the answer is no, discard it.
 
 Post a brief summary:
 - PR analyzed: `#${pr_number}` merged into `{target_branch}`
-- Scope: backend / frontend / both
+- Scope: backend / frontend / both / shared
 - Outcome: nothing added / X items added
 - If items were added: which docs and sections were updated

@@ -1,4 +1,5 @@
 using Moq;
+using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -15,11 +16,16 @@ public class GetUsersHandlerTests
 	{
 		UserRepo = new Mock<IUserRepository>();
 		RoleRepo = new Mock<IUserRoleRepository>();
-		Handler = new GetUsersHandler(UserRepo.Object, RoleRepo.Object);
+		AdminOptions = new Mock<IAdminOptions>();
+
+		AdminOptions.Setup(a => a.SeedAdminEmail).Returns(string.Empty);
+
+		Handler = new GetUsersHandler(UserRepo.Object, RoleRepo.Object, AdminOptions.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IUserRoleRepository> RoleRepo { get; }
+	public Mock<IAdminOptions> AdminOptions { get; }
 	public GetUsersHandler Handler { get; }
 
 	[Fact]
@@ -46,8 +52,10 @@ public class GetUsersHandlerTests
 		result.Count.ShouldBe(2);
 		result[0].Email.ShouldBe("admin@test.com");
 		result[0].Roles.ShouldContain(Role.Admin);
+		result[0].IsProtected.ShouldBeFalse();
 		result[1].Email.ShouldBe("teacher@test.com");
 		result[1].Roles.ShouldContain(Role.Teacher);
+		result[1].IsProtected.ShouldBeFalse();
 	}
 
 	[Fact]
