@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
@@ -8,7 +9,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class RequestPasswordResetHandler(
 	IUserRepository userRepository,
 	IPasswordResetTokenRepository passwordResetTokenRepository,
-	IEmailSender emailSender)
+	IEmailService emailService)
 {
 	public async Task HandleAsync(RequestPasswordResetCommand command, CancellationToken cancellationToken)
 	{
@@ -24,6 +25,6 @@ public sealed class RequestPasswordResetHandler(
 			DateTime.UtcNow.AddHours(TokenConstants.PasswordResetTokenExpiryHours));
 
 		await passwordResetTokenRepository.AddAsync(token, cancellationToken);
-		await emailSender.SendPasswordResetAsync(user.Email.Value, rawToken.Value, cancellationToken);
+		await emailService.SendPasswordResetAsync(user.Email.Value, rawToken.Value, cancellationToken);
 	}
 }

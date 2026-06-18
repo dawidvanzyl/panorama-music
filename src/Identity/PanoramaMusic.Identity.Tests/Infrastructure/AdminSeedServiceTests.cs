@@ -23,7 +23,7 @@ public class AdminSeedServiceTests
 		var services = new ServiceCollection();
 		services.AddSingleton(mockUserRepo.Object);
 		services.AddSingleton(mockUserRoleRepo.Object);
-		services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		var sp = services.BuildServiceProvider();
 		return new AdminSeedService(options, sp, NullLogger<AdminSeedService>.Instance);
 	}

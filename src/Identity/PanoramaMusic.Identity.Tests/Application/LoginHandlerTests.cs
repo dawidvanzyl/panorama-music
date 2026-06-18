@@ -18,7 +18,7 @@ public class LoginHandlerTests
 	{
 		UserRepo = new Mock<IUserRepository>();
 		RoleRepo = new Mock<IUserRoleRepository>();
-		Hasher = new Mock<IPasswordHasher>();
+		Hasher = new Mock<IPasswordHashService>();
 		Jwt = new Mock<IJwtService>();
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 
@@ -35,7 +35,7 @@ public class LoginHandlerTests
 
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IUserRoleRepository> RoleRepo { get; }
-	public Mock<IPasswordHasher> Hasher { get; }
+	public Mock<IPasswordHashService> Hasher { get; }
 	public Mock<IJwtService> Jwt { get; }
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public LoginHandler Handler { get; }

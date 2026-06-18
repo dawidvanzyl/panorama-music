@@ -30,4 +30,14 @@ public class UserRoleRepository(IDbConnectionFactory connectionFactory) : Reposi
 
 		return [.. rows.Select(r => Enum.Parse<Role>(r, ignoreCase: true))];
 	}
+
+	public async Task SetRolesAsync(Guid userId, IList<Role> roles, CancellationToken cancellationToken)
+	{
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
+			"identity.set_user_roles",
+			new { p_user_id = userId, p_roles = roles.Select(r => r.ToString()).ToArray() },
+			cancellationToken);
+		await connection.ExecuteAsync(command);
+	}
 }

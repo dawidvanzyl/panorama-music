@@ -36,7 +36,8 @@ public static class AdminRoutes
 			.Produces<CreateUserResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
-			.Produces(StatusCodes.Status403Forbidden);
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status422UnprocessableEntity);
 
 		group
 			.MapPost("/{userId:guid}/invite", async (Guid userId, RegenerateInviteTokenHandler handler, CancellationToken ct) =>
@@ -50,5 +51,20 @@ public static class AdminRoutes
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
+
+		group
+			.MapPatch("/{userId:guid}", async (Guid userId, UpdateUserRolesRequest request, UpdateUserRolesHandler handler, CancellationToken ct) =>
+			{
+				var command = new UpdateUserRolesCommand(userId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.WithName("UpdateUserRoles")
+			.Produces<UpdateUserRolesResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound)
+			.Produces(StatusCodes.Status422UnprocessableEntity);
 	}
 }

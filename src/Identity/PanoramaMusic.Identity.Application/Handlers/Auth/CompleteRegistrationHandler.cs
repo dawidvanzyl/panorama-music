@@ -9,7 +9,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class CompleteRegistrationHandler(
 	IInviteTokenRepository inviteTokenRepository,
 	IUserRepository userRepository,
-	IPasswordHasher passwordHasher)
+	IPasswordHashService passwordHashService)
 {
 	public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken)
 	{
@@ -27,7 +27,7 @@ public sealed class CompleteRegistrationHandler(
 		var user = await userRepository.GetByIdAsync(inviteToken.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
-		var passwordHash = passwordHasher.Hash(command.Request.NewPassword);
+		var passwordHash = passwordHashService.Hash(command.Request.NewPassword);
 		user.SetPassword(passwordHash);
 		user.Activate();
 

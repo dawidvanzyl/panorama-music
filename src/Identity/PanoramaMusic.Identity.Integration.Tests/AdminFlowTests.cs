@@ -1,11 +1,9 @@
 using Moq;
-using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Admin;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Integration.Tests.Fixtures;
 using Shouldly;
 using System.Net;
@@ -45,7 +43,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
 		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-		var response = await app.Client.PostAsJsonAsync("/api/users", new CreateUserRequest("invitee@test.com", Role.Teacher), TestContext.Current.CancellationToken);
+		var response = await app.Client.PostAsJsonAsync("/api/users", new CreateUserRequest("invitee@test.com", [Role.Teacher]), TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Created);
 		var result = await response.Content.ReadFromJsonAsync<CreateUserResult>(TestContext.Current.CancellationToken);
@@ -89,7 +87,7 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Teacher]);
 		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-		var response = await app.Client.PostAsJsonAsync("/api/users", new CreateUserRequest("blocked@test.com", Role.Teacher), TestContext.Current.CancellationToken);
+		var response = await app.Client.PostAsJsonAsync("/api/users", new CreateUserRequest("blocked@test.com", [Role.Teacher]), TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 	}
@@ -129,5 +127,100 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 		var response = await app.Client.GetAsync("/api/users", TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT4")]
+	public async Task UpdateUserRolesFlow_AdminUpdatesRoles_Returns200WithUpdatedUser()
+	{
+		var user = fixture.CreateActiveUser("edit-roles@test.com");
+		var newRoles = new List<Role> { Role.Teacher, Role.Admin };
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		RoleRepo
+			.Setup(r => r.SetRolesAsync(user.UserId, It.IsAny<IList<Role>>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, roleRepo: RoleRepo);
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsJsonAsync(
+			$"/api/users/{user.UserId}",
+			new UpdateUserRolesRequest(newRoles),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var result = await response.Content.ReadFromJsonAsync<UpdateUserRolesResult>(TestContext.Current.CancellationToken);
+		result.ShouldNotBeNull();
+		result.UserId.ShouldBe(user.UserId);
+		RoleRepo.Verify(r => r.SetRolesAsync(user.UserId, It.IsAny<IList<Role>>(), It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT6")]
+	public async Task UpdateUserRolesFlow_NonAdminRole_Forbidden()
+	{
+		using var app = TestApp.CreateTestApp();
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Teacher]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsJsonAsync(
+			$"/api/users/{Guid.NewGuid()}",
+			new UpdateUserRolesRequest([Role.Teacher]),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+	}
+
+	[Fact]
+	[Trait("AC", "M1IT9")]
+	[Trait("AC", "M1.1IT7")]
+	public async Task UpdateUserRolesFlow_SelfEdit_Returns400()
+	{
+		var adminId = Guid.NewGuid();
+		var admin = fixture.CreateActiveUser("self@test.com");
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(adminId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(admin);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, roleRepo: RoleRepo);
+		var token = TestApp.GenerateAccessToken(adminId, [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsJsonAsync(
+			$"/api/users/{adminId}",
+			new UpdateUserRolesRequest([Role.Admin]),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "M1IT10")]
+	[Trait("AC", "M1.1IT8")]
+	public async Task UpdateUserRolesFlow_SeedAdmin_Returns400()
+	{
+		var seedAdminId = Guid.NewGuid();
+		var seedAdmin = fixture.CreateActiveUser("seedadmin@test.com");
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(seedAdminId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(seedAdmin);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, roleRepo: RoleRepo, seedAdminEmail: "seedadmin@test.com");
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsJsonAsync(
+			$"/api/users/{seedAdminId}",
+			new UpdateUserRolesRequest([Role.Teacher]),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 	}
 }

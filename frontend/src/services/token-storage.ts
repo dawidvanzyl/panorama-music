@@ -50,3 +50,14 @@ export function getRoles(): string[] {
 export function hasRole(role: string): boolean {
   return getRoles().includes(role);
 }
+
+export function getUserId(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return (payload.sub as string) ?? null;
+  } catch {
+    return null;
+  }
+}

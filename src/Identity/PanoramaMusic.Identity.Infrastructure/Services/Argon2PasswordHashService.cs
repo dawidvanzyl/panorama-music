@@ -5,10 +5,10 @@ using PanoramaMusic.Identity.Domain.ValueObjects;
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
 /// <summary>
-/// Argon2id implementation of <see cref="IPasswordHasher"/>.
+/// Argon2id implementation of <see cref="IPasswordHashService"/>.
 /// Stored format: Base64(16-byte salt) + "." + Base64(32-byte hash).
 /// </summary>
-public class Argon2PasswordHasher : IPasswordHasher
+public class Argon2PasswordHashService : IPasswordHashService
 {
 	private const int _saltLength = 16;
 	private const int _hashLength = 32;

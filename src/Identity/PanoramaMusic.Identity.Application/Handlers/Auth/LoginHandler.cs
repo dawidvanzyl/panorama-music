@@ -10,7 +10,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class LoginHandler(
 	IUserRepository userRepository,
 	IUserRoleRepository userRoleRepository,
-	IPasswordHasher passwordHasher,
+	IPasswordHashService passwordHashService,
 	IJwtService jwtService,
 	IRefreshTokenRepository refreshTokenRepository)
 {
@@ -24,7 +24,7 @@ public sealed class LoginHandler(
 		if (!user.IsActive)
 			throw new UnauthorizedException("User account is not active.");
 
-		if (user.PasswordHash is null || !passwordHasher.Verify(command.Request.Password, user.PasswordHash))
+		if (user.PasswordHash is null || !passwordHashService.Verify(command.Request.Password, user.PasswordHash))
 			throw new UnauthorizedException("Invalid credentials.");
 
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);

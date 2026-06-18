@@ -8,7 +8,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
 public sealed class ResetPasswordHandler(
 	IPasswordResetTokenRepository passwordResetTokenRepository,
-	IPasswordHasher passwordHasher)
+	IPasswordHashService passwordHashService)
 {
 	public async Task HandleAsync(ResetPasswordCommand command, CancellationToken cancellationToken)
 	{
@@ -23,7 +23,7 @@ public sealed class ResetPasswordHandler(
 
 		token.MarkUsed();
 
-		var passwordHash = passwordHasher.Hash(command.Request.NewPassword);
+		var passwordHash = passwordHashService.Hash(command.Request.NewPassword);
 		await passwordResetTokenRepository.CompleteResetAsync(token.UserId, passwordHash, token.TokenId, cancellationToken);
 	}
 }

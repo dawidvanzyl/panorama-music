@@ -35,8 +35,7 @@ template.innerHTML = `
       color: var(--pm-text);
       margin-bottom: 6px;
     }
-    .create-user__input,
-    .create-user__select {
+    .create-user__input {
       box-sizing: border-box;
       width: 100%;
       height: 44px;
@@ -48,10 +47,26 @@ template.innerHTML = `
       font-size: 14px;
       outline: none;
     }
-    .create-user__input:focus,
-    .create-user__select:focus {
+    .create-user__input:focus {
       border-color: transparent;
       box-shadow: 0 0 0 2px var(--pm-accent);
+    }
+    .create-user__roles {
+      box-sizing: border-box;
+      display: flex;
+      gap: 16px;
+      padding: 12px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+    }
+    .create-user__role-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--pm-text);
+      cursor: pointer;
     }
     .create-user__submit {
       height: 44px;
@@ -121,11 +136,17 @@ template.innerHTML = `
           <input class="create-user__input" type="email" id="email" required placeholder="user@example.com" />
         </div>
         <div class="create-user__field">
-          <label class="create-user__label" for="role">Role</label>
-          <select class="create-user__select" id="role">
-            <option value="Admin">Admin</option>
-            <option value="Teacher" selected>Teacher</option>
-          </select>
+          <label class="create-user__label">Roles</label>
+          <div class="create-user__roles">
+            <label class="create-user__role-option">
+              <input type="checkbox" id="roleTeacher" value="Teacher" checked />
+              Teacher
+            </label>
+            <label class="create-user__role-option">
+              <input type="checkbox" id="roleAdmin" value="Admin" />
+              Admin
+            </label>
+          </div>
         </div>
         <button type="submit" class="create-user__submit" id="submitBtn">Create User</button>
       </div>
@@ -143,7 +164,8 @@ template.innerHTML = `
 export class PmCreateUserForm extends HTMLElement {
   private form: HTMLFormElement | null = null;
   private emailInput: HTMLInputElement | null = null;
-  private roleSelect: HTMLSelectElement | null = null;
+  private roleTeacher: HTMLInputElement | null = null;
+  private roleAdmin: HTMLInputElement | null = null;
   private submitBtn: HTMLButtonElement | null = null;
   private message: HTMLElement | null = null;
   private messageText: HTMLElement | null = null;
@@ -160,7 +182,8 @@ export class PmCreateUserForm extends HTMLElement {
   connectedCallback(): void {
     this.form = this.shadowRoot!.getElementById('createUserForm') as HTMLFormElement;
     this.emailInput = this.shadowRoot!.getElementById('email') as HTMLInputElement;
-    this.roleSelect = this.shadowRoot!.getElementById('role') as HTMLSelectElement;
+    this.roleTeacher = this.shadowRoot!.getElementById('roleTeacher') as HTMLInputElement;
+    this.roleAdmin = this.shadowRoot!.getElementById('roleAdmin') as HTMLInputElement;
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
     this.messageText = this.shadowRoot!.getElementById('messageText') as HTMLElement;
@@ -177,6 +200,13 @@ export class PmCreateUserForm extends HTMLElement {
     this.copyBtn?.removeEventListener('click', this.handleCopy);
   }
 
+  private getSelectedRoles(): string[] {
+    const roles: string[] = [];
+    if (this.roleTeacher?.checked) roles.push('Teacher');
+    if (this.roleAdmin?.checked) roles.push('Admin');
+    return roles;
+  }
+
   private handleCopy = async (): Promise<void> => {
     await navigator.clipboard.writeText(this.inviteUrlText!.textContent ?? '');
   };
@@ -187,13 +217,22 @@ export class PmCreateUserForm extends HTMLElement {
     this.inviteUrlWrap!.hidden = true;
     this.submitBtn!.disabled = true;
 
+    const roles = this.getSelectedRoles();
+    if (roles.length === 0) {
+      this.messageText!.textContent = 'At least one role must be selected.';
+      this.message!.classList.add('create-user__message--error');
+      this.submitBtn!.disabled = false;
+      return;
+    }
+
     try {
-      const result = await createUser(this.emailInput!.value, this.roleSelect!.value);
+      const result = await createUser(this.emailInput!.value, roles);
       this.messageText!.textContent = 'User created successfully. Invite URL:';
       this.message!.classList.add('create-user__message--success');
       this.inviteUrlText!.textContent = result.inviteUrl;
       this.inviteUrlWrap!.hidden = false;
       this.form!.reset();
+      this.roleTeacher!.checked = true;
       this.dispatchEvent(new CustomEvent('user-created', { bubbles: true, composed: true }));
     } catch (err) {
       this.messageText!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';

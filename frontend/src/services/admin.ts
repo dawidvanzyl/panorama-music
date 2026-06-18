@@ -7,11 +7,19 @@ export interface GetUserResult {
   email: string;
   roles: string[];
   isActive: boolean;
+  isProtected: boolean;
 }
 
 export interface CreateUserResult {
   userId: string;
   inviteUrl: string;
+}
+
+export interface UpdateUserRolesResult {
+  userId: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
 }
 
 export interface RegenerateInviteTokenResult {
@@ -62,13 +70,24 @@ export async function getUsers(): Promise<GetUserResult[]> {
   return _usersCache;
 }
 
-export async function createUser(email: string, role: string): Promise<CreateUserResult> {
+export async function createUser(email: string, roles: string[]): Promise<CreateUserResult> {
   const response = await fetch(API_BASE, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ email, role }),
+    body: JSON.stringify({ email, roles }),
   });
   const result = await handleResponse<CreateUserResult>(response);
+  _usersCache = null;
+  return result;
+}
+
+export async function updateUserRoles(userId: string, roles: string[]): Promise<UpdateUserRolesResult> {
+  const response = await fetch(`${API_BASE}/${userId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ roles }),
+  });
+  const result = await handleResponse<UpdateUserRolesResult>(response);
   _usersCache = null;
   return result;
 }
