@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getUsers, createUser, updateUserRoles, regenerateInvite, clearUsersCache, AdminError } from '../admin';
+import { getUsers, createUser, updateUserRoles, regenerateInvite, deleteUser, clearUsersCache, AdminError } from '../admin';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -215,5 +215,37 @@ describe('regenerateInvite', { tags: ['M1UC47'] }, () => {
     });
 
     await expect(regenerateInvite('unknown-id')).rejects.toThrow('User not found.');
+  });
+});
+
+describe('deleteUser', { tags: ['M1.1UC19'] }, () => {
+  it('calls DELETE endpoint and invalidates cache on success', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
+
+    await getUsers();
+    await deleteUser('u1');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledWith('/api/users/u1', expect.objectContaining({
+      method: 'DELETE',
+      headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+    }));
+  });
+
+  it('throws AdminError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Forbidden' }),
+    });
+
+    await expect(deleteUser('u1')).rejects.toThrow('Forbidden');
   });
 });

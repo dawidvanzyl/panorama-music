@@ -19,6 +19,7 @@ public class ClaimsPrincipalExtensionsTests
 
 	[Fact]
 	[Trait("AC", "M1.1UC13")]
+	[Trait("AC", "M1.1UC17")]
 	public void HasRole_WhenPrincipalDoesNotHaveAdminRole_ReturnsFalse()
 	{
 		var user = BuildPrincipal(Role.Teacher);

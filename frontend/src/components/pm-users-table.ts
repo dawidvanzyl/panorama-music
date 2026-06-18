@@ -66,6 +66,14 @@ template.innerHTML = `
     .users-table__btn--edit:hover {
       background: rgba(79, 124, 255, 0.1);
     }
+    .users-table__btn--remove {
+      background: transparent;
+      border: 1px solid var(--pm-danger, #e05252);
+      color: var(--pm-danger, #e05252);
+    }
+    .users-table__btn--remove:hover {
+      background: rgba(224, 82, 82, 0.1);
+    }
     .users-table__btn--save {
       background: var(--pm-accent);
       border: 1px solid var(--pm-accent);
@@ -250,6 +258,13 @@ export class PmUsersTable extends HTMLElement {
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => this.handleEdit(user.userId));
       actionsCell.appendChild(editBtn);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.classList.add('users-table__btn', 'users-table__btn--remove');
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => this.handleRemove(user.userId, user.email));
+      actionsCell.appendChild(removeBtn);
     } else if (user.isActive) {
       const placeholder = document.createElement('button');
       placeholder.type = 'button';
@@ -257,6 +272,13 @@ export class PmUsersTable extends HTMLElement {
       placeholder.textContent = 'Edit';
       placeholder.style.visibility = 'hidden';
       actionsCell.appendChild(placeholder);
+
+      const removePlaceholder = document.createElement('button');
+      removePlaceholder.type = 'button';
+      removePlaceholder.classList.add('users-table__btn', 'users-table__btn--remove');
+      removePlaceholder.textContent = 'Remove';
+      removePlaceholder.style.visibility = 'hidden';
+      actionsCell.appendChild(removePlaceholder);
     } else if (!user.isActive) {
       const regenerateBtn = document.createElement('button');
       regenerateBtn.type = 'button';
@@ -306,9 +328,22 @@ export class PmUsersTable extends HTMLElement {
       .map(cb => cb.value);
   }
 
+  removeUser(userId: string): void {
+    this._users = this._users.filter(u => u.userId !== userId);
+    this.render();
+  }
+
   private handleEdit(userId: string): void {
     this._editingUserId = userId;
     this.render();
+  }
+
+  private handleRemove(userId: string, email: string): void {
+    this.dispatchEvent(new CustomEvent('user-remove-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId, email },
+    }));
   }
 
   private handleCancel(): void {

@@ -66,5 +66,18 @@ public static class AdminRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound)
 			.Produces(StatusCodes.Status422UnprocessableEntity);
+
+		group
+			.MapDelete("/{userId:guid}", async (Guid userId, DeactivateUserHandler handler, CancellationToken ct) =>
+			{
+				var command = new DeactivateUserCommand(userId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("DeactivateUser")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

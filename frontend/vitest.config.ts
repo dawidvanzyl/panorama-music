@@ -24,6 +24,8 @@ export default defineConfig({
       { name: 'M1.1UC15', description: 'Saving inline edit sends PATCH and returns row to display mode with updated badges' },
       { name: 'M1.1UC23', description: 'Admin creates user with multiple roles; all roles are persisted' },
       { name: 'M1.1UC24', description: 'Admin selects multiple roles in create-user form; all role badges appear for new user' },
+      { name: 'M1.1UC18', description: 'Remove button opens delete confirmation modal showing user email and destructive Delete User action' },
+      { name: 'M1.1UC19', description: 'Confirming deletion calls DELETE endpoint; modal closes and row is removed from User Directory table' },
     ],
   },
 })
