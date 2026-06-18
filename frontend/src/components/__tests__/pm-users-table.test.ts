@@ -20,6 +20,8 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
 
   afterEach(() => {
     document.body.removeChild(el);
+    localStorage.removeItem('pm_access_token');
+    localStorage.removeItem('pm_expires_at');
   });
 
   it('active user row renders an Edit button in display mode', () => {

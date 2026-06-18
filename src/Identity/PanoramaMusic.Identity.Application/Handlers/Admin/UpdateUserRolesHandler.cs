@@ -14,6 +14,9 @@ public sealed class UpdateUserRolesHandler(
 {
 	public async Task<UpdateUserRolesResult> HandleAsync(UpdateUserRolesCommand command, CancellationToken cancellationToken)
 	{
+		if (command.Request.Roles.Count == 0)
+			throw new ValidationException("At least one role must be assigned.");
+
 		var requestingUserId = Guid.Parse(currentUser.FindFirst("sub")!.Value);
 
 		if (command.UserId == requestingUserId)
@@ -24,9 +27,6 @@ public sealed class UpdateUserRolesHandler(
 
 		if (!string.IsNullOrEmpty(adminOptions.SeedAdminEmail) && string.Equals(user.Email.Value, adminOptions.SeedAdminEmail, StringComparison.OrdinalIgnoreCase))
 			throw new DomainException("The seed administrator account cannot be modified.");
-
-		if (command.Request.Roles.Count == 0)
-			throw new ValidationException("At least one role must be assigned.");
 
 		await userRoleRepository.SetRolesAsync(command.UserId, command.Request.Roles, cancellationToken);
 
