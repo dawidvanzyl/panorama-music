@@ -14,7 +14,6 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
-using System.Security.Claims;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -95,7 +94,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IEmailSender, SmtpEmailSender>();
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		services.AddHttpContextAccessor();
-		services.AddScoped(sp => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal(new ClaimsIdentity()));
+		services.AddScoped<IUserContext, UserContext>();
 		return services;
 	}
 

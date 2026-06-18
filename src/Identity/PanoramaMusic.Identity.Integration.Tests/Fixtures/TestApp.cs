@@ -15,6 +15,7 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
+using PanoramaMusic.Identity.Infrastructure.Services;
 using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -74,7 +75,7 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.Configure<AdminOptions>(opts => opts.Email = seedAdminEmail);
 		builder.Services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		builder.Services.AddHttpContextAccessor();
-		builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal(new ClaimsIdentity()));
+		builder.Services.AddScoped<IUserContext, UserContext>();
 		builder.Services.AddTransient(_ => (userRepo ?? new Mock<IUserRepository>()).Object);
 		builder.Services.AddTransient(_ => (roleRepo ?? new Mock<IUserRoleRepository>()).Object);
 		builder.Services.AddTransient(_ => (hasher ?? new Mock<IPasswordHasher>()).Object);
