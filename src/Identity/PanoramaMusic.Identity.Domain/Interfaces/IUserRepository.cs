@@ -11,4 +11,5 @@ public interface IUserRepository
 	Task UpdateAsync(User user, CancellationToken cancellationToken);
 	Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken);
 	Task DeactivateAsync(Guid userId, CancellationToken cancellationToken);
+	Task DeleteAsync(Guid userId, CancellationToken cancellationToken);
 }

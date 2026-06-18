@@ -16,16 +16,16 @@ vi.mock('../../services/admin', () => ({
   },
 }));
 
-const activeUser: GetUserResult = {
-  userId: 'user-active',
+const deactivatedUser: GetUserResult = {
+  userId: 'user-deactivated',
   email: 'teacher@test.com',
   roles: ['Teacher'],
-  isActive: true,
+  isActive: false,
   isProtected: false,
   hasCompletedRegistration: true,
 };
 
-describe('pm-users-table — remove button', { tags: ['M1.1UC18'] }, () => {
+describe('pm-users-table — delete button for deactivated users', { tags: ['M1.1UC27'] }, () => {
   let table: PmUsersTable;
 
   beforeEach(() => {
@@ -35,54 +35,29 @@ describe('pm-users-table — remove button', { tags: ['M1.1UC18'] }, () => {
 
   afterEach(() => {
     document.body.removeChild(table);
-    localStorage.removeItem('pm_access_token');
-    localStorage.removeItem('pm_expires_at');
   });
 
-  it('active non-protected non-self user row renders a Remove button', () => {
-    table.users = [activeUser];
-    const removeBtn = table.shadowRoot!.querySelector('.users-table__btn--remove');
-    expect(removeBtn).not.toBeNull();
-    expect(removeBtn!.textContent).toBe('Remove');
+  it('deactivated user row renders a Delete button', () => {
+    table.users = [deactivatedUser];
+    const deleteBtn = table.shadowRoot!.querySelector('.users-table__btn--delete');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn!.textContent).toBe('Delete');
   });
 
-  it('clicking Remove dispatches user-remove-requested event with userId and email', () => {
-    table.users = [activeUser];
+  it('clicking Delete dispatches user-delete-requested event with userId and email', () => {
+    table.users = [deactivatedUser];
     const events: CustomEvent[] = [];
-    table.addEventListener('user-remove-requested', (e) => events.push(e as CustomEvent));
+    table.addEventListener('user-delete-requested', (e) => events.push(e as CustomEvent));
 
-    table.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--remove')!.click();
+    table.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--delete')!.click();
 
     expect(events).toHaveLength(1);
-    expect(events[0].detail.userId).toBe(activeUser.userId);
-    expect(events[0].detail.email).toBe(activeUser.email);
-  });
-
-  it('own user row shows a hidden Remove button', () => {
-    const sub = btoa(JSON.stringify({ sub: activeUser.userId, roles: 'Admin', exp: 9999999999 }));
-    localStorage.setItem('pm_access_token', `header.${sub}.sig`);
-    localStorage.setItem('pm_expires_at', new Date(Date.now() + 3600_000).toISOString());
-
-    table.users = [activeUser];
-    const btn = table.shadowRoot!.querySelector<HTMLElement>('.users-table__btn--remove');
-    expect(btn).not.toBeNull();
-    expect(btn!.style.visibility).toBe('hidden');
-  });
-
-  it('protected user row shows a hidden Remove button', () => {
-    table.users = [{ ...activeUser, isProtected: true }];
-    const btn = table.shadowRoot!.querySelector<HTMLElement>('.users-table__btn--remove');
-    expect(btn).not.toBeNull();
-    expect(btn!.style.visibility).toBe('hidden');
-  });
-
-  it('inactive user row shows no Remove button', () => {
-    table.users = [{ ...activeUser, isActive: false }];
-    expect(table.shadowRoot!.querySelector('.users-table__btn--remove')).toBeNull();
+    expect(events[0].detail.userId).toBe(deactivatedUser.userId);
+    expect(events[0].detail.email).toBe(deactivatedUser.email);
   });
 });
 
-describe('pm-delete-user-modal — confirmation dialog', { tags: ['M1.1UC18'] }, () => {
+describe('pm-delete-user-modal — confirmation dialog', { tags: ['M1.1UC28'] }, () => {
   let modal: PmDeleteUserModal;
 
   beforeEach(() => {
@@ -105,19 +80,45 @@ describe('pm-delete-user-modal — confirmation dialog', { tags: ['M1.1UC18'] },
     expect(emailEl!.textContent).toBe('teacher@test.com');
   });
 
-  it('Cancel button closes the modal without making an API call', () => {
+  it('Delete button is disabled when modal opens', () => {
     modal.show('user-id-1', 'teacher@test.com');
-    modal.shadowRoot!.getElementById('cancelBtn')!.dispatchEvent(new Event('click'));
-    expect(modal.hasAttribute('open')).toBe(false);
+    const deleteBtn = modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
+    expect(deleteBtn.disabled).toBe(true);
   });
 
-  it('Delete User button is present', () => {
+  it('Delete button remains disabled when wrong email is typed', () => {
     modal.show('user-id-1', 'teacher@test.com');
-    expect(modal.shadowRoot!.getElementById('deleteBtn')).not.toBeNull();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'wrong@test.com';
+    input.dispatchEvent(new Event('input'));
+    const deleteBtn = modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
+    expect(deleteBtn.disabled).toBe(true);
   });
 });
 
-describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC19'] }, () => {
+describe('pm-delete-user-modal — email confirmation enables delete', { tags: ['M1.1UC29'] }, () => {
+  let modal: PmDeleteUserModal;
+
+  beforeEach(() => {
+    modal = new PmDeleteUserModal();
+    document.body.appendChild(modal);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(modal);
+  });
+
+  it('Delete button becomes enabled when correct email is typed', () => {
+    modal.show('user-id-1', 'teacher@test.com');
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'teacher@test.com';
+    input.dispatchEvent(new Event('input'));
+    const deleteBtn = modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
+    expect(deleteBtn.disabled).toBe(false);
+  });
+});
+
+describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] }, () => {
   let modal: PmDeleteUserModal;
 
   beforeEach(() => {
@@ -131,11 +132,14 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC19'] },
     vi.clearAllMocks();
   });
 
-  it('clicking Delete User calls deleteUser, closes modal, and emits user-deleted event', async () => {
+  it('clicking Delete calls deleteUser, closes modal, and emits user-deleted event', async () => {
     const events: CustomEvent[] = [];
     modal.addEventListener('user-deleted', (e) => events.push(e as CustomEvent));
 
     modal.show('user-id-1', 'teacher@test.com');
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'teacher@test.com';
+    input.dispatchEvent(new Event('input'));
     modal.shadowRoot!.getElementById('deleteBtn')!.click();
 
     await new Promise<void>(resolve => setTimeout(resolve, 0));
@@ -144,5 +148,25 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC19'] },
     expect(modal.hasAttribute('open')).toBe(false);
     expect(events).toHaveLength(1);
     expect(events[0].detail.userId).toBe('user-id-1');
+  });
+});
+
+describe('pm-delete-user-modal — cancel', { tags: ['M1.1UC31'] }, () => {
+  let modal: PmDeleteUserModal;
+
+  beforeEach(() => {
+    modal = new PmDeleteUserModal();
+    document.body.appendChild(modal);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(modal);
+  });
+
+  it('Cancel button closes the modal without making an API call', () => {
+    modal.show('user-id-1', 'teacher@test.com');
+    modal.shadowRoot!.getElementById('cancelBtn')!.dispatchEvent(new Event('click'));
+    expect(modal.hasAttribute('open')).toBe(false);
+    expect(vi.mocked(deleteUser)).not.toHaveBeenCalled();
   });
 });

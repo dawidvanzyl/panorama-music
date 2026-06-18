@@ -57,6 +57,7 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     el.users = [{ ...activeUser, userId: 'user-pending', isActive: false, hasCompletedRegistration: false }];
     expect(el.shadowRoot!.querySelector('.users-table__btn--edit')).toBeNull();
     expect(el.shadowRoot!.querySelector('.users-table__regenerate')).not.toBeNull();
+    expect(el.shadowRoot!.querySelector('.users-table__btn--delete')).toBeNull();
   });
 
   it('only one row can be in edit mode at a time', () => {

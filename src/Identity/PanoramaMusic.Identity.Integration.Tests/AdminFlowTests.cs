@@ -4,6 +4,7 @@ using PanoramaMusic.Identity.Application.Requests.Admin;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Integration.Tests.Fixtures;
 using Shouldly;
 using System.Net;
@@ -311,6 +312,78 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
 		var response = await app.Client.DeleteAsync($"/api/users/{seedAdminId}", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT11")]
+	public async Task DeleteUserFlow_AdminDeletesDeactivatedUser_Returns200()
+	{
+		var userId = Guid.NewGuid();
+		var user = new User(userId, Email.Create("deactivated@test.com"), DateTime.UtcNow);
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		UserRepo
+			.Setup(r => r.DeleteAsync(userId, It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo);
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.DeleteAsync($"/api/users/{userId}/permanent", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		UserRepo.Verify(r => r.DeleteAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT12")]
+	public async Task DeleteUserFlow_NonAdminRole_Forbidden()
+	{
+		using var app = TestApp.CreateTestApp();
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Teacher]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.DeleteAsync($"/api/users/{Guid.NewGuid()}/permanent", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT13")]
+	public async Task DeleteUserFlow_SelfDelete_Returns400()
+	{
+		var adminId = Guid.NewGuid();
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo);
+		var token = TestApp.GenerateAccessToken(adminId, [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.DeleteAsync($"/api/users/{adminId}/permanent", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT14")]
+	public async Task DeleteUserFlow_ActiveUser_Returns400()
+	{
+		var user = fixture.CreateActiveUser("active@test.com");
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo);
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.DeleteAsync($"/api/users/{user.UserId}/permanent", TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 	}

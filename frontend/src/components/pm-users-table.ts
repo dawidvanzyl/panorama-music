@@ -70,13 +70,21 @@ template.innerHTML = `
     .users-table__btn--edit:hover {
       background: rgba(79, 124, 255, 0.1);
     }
-    .users-table__btn--remove {
+    .users-table__btn--deactivate {
       background: transparent;
       border: 1px solid var(--pm-danger, #e05252);
       color: var(--pm-danger, #e05252);
     }
-    .users-table__btn--remove:hover {
+    .users-table__btn--deactivate:hover {
       background: rgba(224, 82, 82, 0.1);
+    }
+    .users-table__btn--delete {
+      background: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger, #e05252);
+      color: #fff;
+    }
+    .users-table__btn--delete:hover {
+      opacity: 0.9;
     }
     .users-table__btn--save {
       background: var(--pm-accent);
@@ -269,12 +277,12 @@ export class PmUsersTable extends HTMLElement {
       editBtn.addEventListener('click', () => this.handleEdit(user.userId));
       actionsCell.appendChild(editBtn);
 
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.classList.add('users-table__btn', 'users-table__btn--remove');
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => this.handleRemove(user.userId, user.email));
-      actionsCell.appendChild(removeBtn);
+      const deactivateBtn = document.createElement('button');
+      deactivateBtn.type = 'button';
+      deactivateBtn.classList.add('users-table__btn', 'users-table__btn--deactivate');
+      deactivateBtn.textContent = 'Deactivate';
+      deactivateBtn.addEventListener('click', () => this.handleDeactivate(user.userId, user.email));
+      actionsCell.appendChild(deactivateBtn);
     } else if (user.isActive) {
       const placeholder = document.createElement('button');
       placeholder.type = 'button';
@@ -283,12 +291,12 @@ export class PmUsersTable extends HTMLElement {
       placeholder.style.visibility = 'hidden';
       actionsCell.appendChild(placeholder);
 
-      const removePlaceholder = document.createElement('button');
-      removePlaceholder.type = 'button';
-      removePlaceholder.classList.add('users-table__btn', 'users-table__btn--remove');
-      removePlaceholder.textContent = 'Remove';
-      removePlaceholder.style.visibility = 'hidden';
-      actionsCell.appendChild(removePlaceholder);
+      const deactivatePlaceholder = document.createElement('button');
+      deactivatePlaceholder.type = 'button';
+      deactivatePlaceholder.classList.add('users-table__btn', 'users-table__btn--deactivate');
+      deactivatePlaceholder.textContent = 'Deactivate';
+      deactivatePlaceholder.style.visibility = 'hidden';
+      actionsCell.appendChild(deactivatePlaceholder);
     } else if (!user.isActive && !user.hasCompletedRegistration) {
       const regenerateBtn = document.createElement('button');
       regenerateBtn.type = 'button';
@@ -296,6 +304,13 @@ export class PmUsersTable extends HTMLElement {
       regenerateBtn.textContent = 'Regenerate Invite';
       regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
       actionsCell.appendChild(regenerateBtn);
+    } else {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.classList.add('users-table__btn', 'users-table__btn--delete');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => this.handleDelete(user.userId, user.email));
+      actionsCell.appendChild(deleteBtn);
     }
 
     row.append(emailCell, rolesCell, statusCell, actionsCell);
@@ -348,8 +363,16 @@ export class PmUsersTable extends HTMLElement {
     this.render();
   }
 
-  private handleRemove(userId: string, email: string): void {
-    this.dispatchEvent(new CustomEvent('user-remove-requested', {
+  private handleDeactivate(userId: string, email: string): void {
+    this.dispatchEvent(new CustomEvent('user-deactivate-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId, email },
+    }));
+  }
+
+  private handleDelete(userId: string, email: string): void {
+    this.dispatchEvent(new CustomEvent('user-delete-requested', {
       bubbles: true,
       composed: true,
       detail: { userId, email },

@@ -1,4 +1,4 @@
-import { deleteUser, AdminError } from '../services/admin';
+import { deactivateUser, AdminError } from '../services/admin';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -48,32 +48,11 @@ template.innerHTML = `
       font-size: 14px;
       line-height: 1.6;
       color: var(--pm-text-muted, #9194a6);
-      margin-bottom: 16px;
+      margin-bottom: 32px;
     }
     .modal__email {
       color: var(--pm-text, #e2e1ed);
       font-weight: 500;
-    }
-    .modal__confirm-label {
-      font-size: 13px;
-      color: var(--pm-text-muted, #9194a6);
-      margin-bottom: 6px;
-      display: block;
-    }
-    .modal__confirm-input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px 12px;
-      border-radius: var(--pm-radius, 6px);
-      border: 1px solid var(--pm-border, #2e3250);
-      background: var(--pm-surface-2, #22263a);
-      color: var(--pm-text, #e2e1ed);
-      font-size: 13px;
-      margin-bottom: 24px;
-      outline: none;
-    }
-    .modal__confirm-input:focus {
-      border-color: var(--pm-danger, #e05252);
     }
     .modal__actions {
       display: flex;
@@ -99,12 +78,12 @@ template.innerHTML = `
     .modal__btn--cancel:hover:not(:disabled) {
       background: var(--pm-surface-2, #22263a);
     }
-    .modal__btn--delete {
+    .modal__btn--deactivate {
       background: var(--pm-danger, #e05252);
       border: 1px solid var(--pm-danger, #e05252);
       color: #fff;
     }
-    .modal__btn--delete:hover:not(:disabled) {
+    .modal__btn--deactivate:hover:not(:disabled) {
       opacity: 0.9;
     }
     .modal__error {
@@ -121,26 +100,23 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card">
       <div class="modal__header">
-        <span class="modal__icon">delete_forever</span>
-        <h2 class="modal__title">Permanently Delete User</h2>
+        <span class="modal__icon">warning</span>
+        <h2 class="modal__title">Deactivate User</h2>
       </div>
       <p class="modal__body">
-        This action <strong>cannot be undone</strong>. All data for <span class="modal__email" id="modalEmail"></span> will be permanently removed.
+        Are you sure you want to deactivate the user <span class="modal__email" id="modalEmail"></span>? They will no longer be able to log in.
       </p>
-      <label class="modal__confirm-label" for="confirmInput">Type the user's email to confirm</label>
-      <input class="modal__confirm-input" id="confirmInput" type="text" autocomplete="off" />
       <p class="modal__error" id="modalError"></p>
       <div class="modal__actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button" disabled>Delete</button>
+        <button class="modal__btn modal__btn--deactivate" id="deactivateBtn" type="button">Deactivate</button>
       </div>
     </div>
   </div>
 `;
 
-export class PmDeleteUserModal extends HTMLElement {
+export class PmDeactivateUserModal extends HTMLElement {
   private _userId: string = '';
-  private _email: string = '';
 
   constructor() {
     super();
@@ -150,16 +126,12 @@ export class PmDeleteUserModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
-    this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', () => this.handleDelete());
-    this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
+    this.shadowRoot!.getElementById('deactivateBtn')!.addEventListener('click', () => this.handleDeactivate());
   }
 
   show(userId: string, email: string): void {
     this._userId = userId;
-    this._email = email;
     this.shadowRoot!.getElementById('modalEmail')!.textContent = email;
-    (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).value = '';
-    (this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled = true;
     this.clearError();
     this.setAttribute('open', '');
   }
@@ -168,29 +140,23 @@ export class PmDeleteUserModal extends HTMLElement {
     this.removeAttribute('open');
   }
 
-  private checkConfirmation(): void {
-    const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
-    const deleteBtn = this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
-    deleteBtn.disabled = input.value !== this._email;
-  }
-
   private clearError(): void {
     const error = this.shadowRoot!.getElementById('modalError')!;
     error.textContent = '';
     error.classList.remove('modal__error--visible');
   }
 
-  private handleDelete = async (): Promise<void> => {
+  private handleDeactivate = async (): Promise<void> => {
     const cancelBtn = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
-    const deleteBtn = this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
+    const deactivateBtn = this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement;
 
     cancelBtn.disabled = true;
-    deleteBtn.disabled = true;
+    deactivateBtn.disabled = true;
     this.clearError();
 
     try {
-      await deleteUser(this._userId);
-      this.dispatchEvent(new CustomEvent('user-deleted', {
+      await deactivateUser(this._userId);
+      this.dispatchEvent(new CustomEvent('user-deactivated', {
         bubbles: true,
         composed: true,
         detail: { userId: this._userId },
@@ -201,9 +167,9 @@ export class PmDeleteUserModal extends HTMLElement {
       error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
       error.classList.add('modal__error--visible');
       cancelBtn.disabled = false;
-      deleteBtn.disabled = false;
+      deactivateBtn.disabled = false;
     }
   };
 }
 
-customElements.define('pm-delete-user-modal', PmDeleteUserModal);
+customElements.define('pm-deactivate-user-modal', PmDeactivateUserModal);

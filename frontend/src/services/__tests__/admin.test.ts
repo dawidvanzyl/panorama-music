@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getUsers, createUser, updateUserRoles, regenerateInvite, deleteUser, clearUsersCache, AdminError } from '../admin';
+import { getUsers, createUser, updateUserRoles, regenerateInvite, deactivateUser, deleteUser, clearUsersCache, AdminError } from '../admin';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -218,7 +218,7 @@ describe('regenerateInvite', { tags: ['M1UC47'] }, () => {
   });
 });
 
-describe('deleteUser', { tags: ['M1.1UC19'] }, () => {
+describe('deactivateUser', { tags: ['M1.1UC19'] }, () => {
   it('calls DELETE endpoint and invalidates cache on success', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');
 
@@ -229,7 +229,7 @@ describe('deleteUser', { tags: ['M1.1UC19'] }, () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
 
     await getUsers();
-    await deleteUser('u1');
+    await deactivateUser('u1');
     await getUsers();
 
     expect(mockFetch).toHaveBeenCalledTimes(3);
@@ -246,6 +246,38 @@ describe('deleteUser', { tags: ['M1.1UC19'] }, () => {
       json: async () => ({ error: 'Forbidden' }),
     });
 
-    await expect(deleteUser('u1')).rejects.toThrow('Forbidden');
+    await expect(deactivateUser('u1')).rejects.toThrow('Forbidden');
+  });
+});
+
+describe('deleteUser', { tags: ['M1.1UC32'] }, () => {
+  it('calls DELETE /permanent endpoint and invalidates cache on success', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: false, isProtected: false, hasCompletedRegistration: true }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] });
+
+    await getUsers();
+    await deleteUser('u1');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledWith('/api/users/u1/permanent', expect.objectContaining({
+      method: 'DELETE',
+      headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+    }));
+  });
+
+  it('throws AdminError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Only deactivated users can be permanently deleted.' }),
+    });
+
+    await expect(deleteUser('u1')).rejects.toThrow('Only deactivated users can be permanently deleted.');
   });
 });

@@ -1,8 +1,10 @@
 import '../components/pm-create-user-form';
 import '../components/pm-users-table';
+import '../components/pm-deactivate-user-modal';
 import '../components/pm-delete-user-modal';
 import { getUsers, AdminError } from '../services/admin';
 import type { PmUsersTable } from '../components/pm-users-table';
+import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
 import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
 
 const template = document.createElement('template');
@@ -45,11 +47,13 @@ template.innerHTML = `
     <div class="admin-users__error" id="error"></div>
     <pm-users-table id="usersTable"></pm-users-table>
   </div>
+  <pm-deactivate-user-modal id="deactivateModal"></pm-deactivate-user-modal>
   <pm-delete-user-modal id="deleteModal"></pm-delete-user-modal>
 `;
 
 export class PmAdminUsersPage extends HTMLElement {
   private usersTable: PmUsersTable | null = null;
+  private deactivateModal: PmDeactivateUserModal | null = null;
   private deleteModal: PmDeleteUserModal | null = null;
   private errorBanner: HTMLElement | null = null;
 
@@ -61,22 +65,37 @@ export class PmAdminUsersPage extends HTMLElement {
 
   connectedCallback(): void {
     this.usersTable = this.shadowRoot!.getElementById('usersTable') as unknown as PmUsersTable;
+    this.deactivateModal = this.shadowRoot!.getElementById('deactivateModal') as unknown as PmDeactivateUserModal;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteUserModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     this.addEventListener('user-created', this.loadUsers);
-    this.shadowRoot!.addEventListener('user-remove-requested', this.handleRemoveRequested);
+    this.shadowRoot!.addEventListener('user-deactivate-requested', this.handleDeactivateRequested);
+    this.shadowRoot!.addEventListener('user-deactivated', this.handleUserDeactivated);
+    this.shadowRoot!.addEventListener('user-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.addEventListener('user-deleted', this.handleUserDeleted);
     void this.loadUsers();
   }
 
   disconnectedCallback(): void {
     this.removeEventListener('user-created', this.loadUsers);
-    this.shadowRoot!.removeEventListener('user-remove-requested', this.handleRemoveRequested);
+    this.shadowRoot!.removeEventListener('user-deactivate-requested', this.handleDeactivateRequested);
+    this.shadowRoot!.removeEventListener('user-deactivated', this.handleUserDeactivated);
+    this.shadowRoot!.removeEventListener('user-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.removeEventListener('user-deleted', this.handleUserDeleted);
   }
 
-  private handleRemoveRequested = (event: Event): void => {
+  private handleDeactivateRequested = (event: Event): void => {
+    const { userId, email } = (event as CustomEvent<{ userId: string; email: string }>).detail;
+    this.deactivateModal!.show(userId, email);
+  };
+
+  private handleUserDeactivated = (event: Event): void => {
+    const { userId } = (event as CustomEvent<{ userId: string }>).detail;
+    this.usersTable!.removeUser(userId);
+  };
+
+  private handleDeleteRequested = (event: Event): void => {
     const { userId, email } = (event as CustomEvent<{ userId: string; email: string }>).detail;
     this.deleteModal!.show(userId, email);
   };
