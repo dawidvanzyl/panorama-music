@@ -1,4 +1,4 @@
-using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Interfaces;
 
 namespace PanoramaMusic.Identity.Infrastructure.Configurations;
 

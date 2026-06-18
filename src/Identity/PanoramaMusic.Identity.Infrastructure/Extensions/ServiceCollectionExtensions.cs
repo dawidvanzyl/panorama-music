@@ -5,12 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
+using PanoramaMusic.Identity.Infrastructure.Contexts;
 using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
@@ -88,10 +89,10 @@ public static class ServiceCollectionExtensions
 
 	private static IServiceCollection AddServices(this IServiceCollection services)
 	{
-		services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();
-		services.AddTransient<IEmailSender, SmtpEmailSender>();
+		services.AddTransient<IEmailService, SmtpEmailService>();
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		services.AddHttpContextAccessor();
 		services.AddScoped<IUserContext, UserContext>();

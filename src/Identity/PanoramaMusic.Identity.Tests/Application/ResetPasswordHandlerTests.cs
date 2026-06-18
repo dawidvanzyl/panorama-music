@@ -18,7 +18,7 @@ public class ResetPasswordHandlerTests
 	public ResetPasswordHandlerTests()
 	{
 		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
-		Hasher = new Mock<IPasswordHasher>();
+		Hasher = new Mock<IPasswordHashService>();
 
 		Hasher
 			.Setup(h => h.Hash(It.IsAny<string>()))
@@ -32,7 +32,7 @@ public class ResetPasswordHandlerTests
 	}
 
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
-	public Mock<IPasswordHasher> Hasher { get; }
+	public Mock<IPasswordHashService> Hasher { get; }
 	public ResetPasswordHandler Handler { get; }
 
 	[Fact]

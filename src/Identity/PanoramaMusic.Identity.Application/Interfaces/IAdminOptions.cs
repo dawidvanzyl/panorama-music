@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Identity.Application;
+namespace PanoramaMusic.Identity.Application.Interfaces;
 
 public interface IAdminOptions
 {

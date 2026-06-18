@@ -18,7 +18,7 @@ public class CompleteRegistrationHandlerTests
 	{
 		InviteRepo = new Mock<IInviteTokenRepository>();
 		UserRepo = new Mock<IUserRepository>();
-		Hasher = new Mock<IPasswordHasher>();
+		Hasher = new Mock<IPasswordHashService>();
 
 		UserRepo
 			.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -33,7 +33,7 @@ public class CompleteRegistrationHandlerTests
 
 	public Mock<IInviteTokenRepository> InviteRepo { get; }
 	public Mock<IUserRepository> UserRepo { get; }
-	public Mock<IPasswordHasher> Hasher { get; }
+	public Mock<IPasswordHashService> Hasher { get; }
 	public CompleteRegistrationHandler Handler { get; }
 
 	[Fact]

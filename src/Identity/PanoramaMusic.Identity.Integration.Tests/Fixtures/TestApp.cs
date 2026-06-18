@@ -8,14 +8,14 @@ using Microsoft.IdentityModel.Tokens;
 using Moq;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes.Identity;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
+using PanoramaMusic.Identity.Infrastructure.Contexts;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
-using PanoramaMusic.Identity.Infrastructure.Services;
 using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -60,12 +60,12 @@ public sealed class TestApp(WebApplication app) : IDisposable
 	public static TestApp CreateTestApp(
 		Mock<IUserRepository>? userRepo = null,
 		Mock<IUserRoleRepository>? roleRepo = null,
-		Mock<IPasswordHasher>? hasher = null,
+		Mock<IPasswordHashService>? hasher = null,
 		Mock<IJwtService>? jwt = null,
 		Mock<IRefreshTokenRepository>? refreshRepo = null,
 		Mock<IInviteTokenRepository>? inviteRepo = null,
 		Mock<IPasswordResetTokenRepository>? resetTokenRepo = null,
-		Mock<IEmailSender>? emailSender = null,
+		Mock<IEmailService>? emailService = null,
 		string seedAdminEmail = "")
 	{
 		var builder = WebApplication.CreateBuilder();
@@ -78,12 +78,12 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.AddScoped<IUserContext, UserContext>();
 		builder.Services.AddTransient(_ => (userRepo ?? new Mock<IUserRepository>()).Object);
 		builder.Services.AddTransient(_ => (roleRepo ?? new Mock<IUserRoleRepository>()).Object);
-		builder.Services.AddTransient(_ => (hasher ?? new Mock<IPasswordHasher>()).Object);
+		builder.Services.AddTransient(_ => (hasher ?? new Mock<IPasswordHashService>()).Object);
 		builder.Services.AddTransient(_ => (jwt ?? new Mock<IJwtService>()).Object);
 		builder.Services.AddTransient(_ => (refreshRepo ?? new Mock<IRefreshTokenRepository>()).Object);
 		builder.Services.AddTransient(_ => (inviteRepo ?? new Mock<IInviteTokenRepository>()).Object);
 		builder.Services.AddTransient(_ => (resetTokenRepo ?? new Mock<IPasswordResetTokenRepository>()).Object);
-		builder.Services.AddTransient(_ => (emailSender ?? new Mock<IEmailSender>()).Object);
+		builder.Services.AddTransient(_ => (emailService ?? new Mock<IEmailService>()).Object);
 
 		builder.Services.AddTransient<LoginHandler>();
 		builder.Services.AddTransient<RefreshTokenHandler>();

@@ -4,8 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes.Identity;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -28,8 +28,8 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; } = new Mock<IRefreshTokenRepository>();
 	public Mock<IInviteTokenRepository> InviteRepo { get; } = new Mock<IInviteTokenRepository>();
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; } = new Mock<IPasswordResetTokenRepository>();
-	public Mock<IEmailSender> EmailSender { get; } = new Mock<IEmailSender>();
-	public Mock<IPasswordHasher> Hasher { get; } = new Mock<IPasswordHasher>();
+	public Mock<IEmailService> EmailService { get; } = new Mock<IEmailService>();
+	public Mock<IPasswordHashService> Hasher { get; } = new Mock<IPasswordHashService>();
 	public Mock<IJwtService> Jwt { get; } = new Mock<IJwtService>();
 
 	[Fact]
@@ -189,7 +189,7 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 			.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync((User?)null);
 
-		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailSender: EmailSender);
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailService: EmailService);
 		var response = await app.Client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "anyone@test.com" }, TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
@@ -209,16 +209,16 @@ public sealed class AuthFlowTests(AuthFlowFixture fixture) : IClassFixture<AuthF
 			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		EmailSender
+		EmailService
 			.Setup(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailSender: EmailSender);
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo, resetTokenRepo: ResetTokenRepo, emailService: EmailService);
 		var response = await app.Client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "reset@test.com" }, TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Once);
-		EmailSender.Verify(e => e.SendPasswordResetAsync("reset@test.com", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+		EmailService.Verify(e => e.SendPasswordResetAsync("reset@test.com", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]

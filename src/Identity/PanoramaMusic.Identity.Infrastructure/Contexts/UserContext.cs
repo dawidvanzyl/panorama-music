@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Http;
-using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Interfaces;
 using System.Security.Claims;
 
-namespace PanoramaMusic.Identity.Infrastructure.Services;
+namespace PanoramaMusic.Identity.Infrastructure.Contexts;
 
 public sealed class UserContext(IHttpContextAccessor accessor) : IUserContext
 {

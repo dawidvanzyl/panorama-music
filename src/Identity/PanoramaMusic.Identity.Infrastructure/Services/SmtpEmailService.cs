@@ -3,11 +3,12 @@ using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
-public sealed class SmtpEmailSender(IOptions<SmtpOptions> options) : IEmailSender
+public sealed class SmtpEmailService(IOptions<SmtpOptions> options) : IEmailService
 {
 	private readonly SmtpOptions _options = options.Value;
 

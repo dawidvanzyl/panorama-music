@@ -35,7 +35,7 @@ public class AdminSeedService(
 
 		var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 		var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
-		var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+		var hashService = scope.ServiceProvider.GetRequiredService<IPasswordHashService>();
 
 		var existing = await userRepo.GetByEmailAsync(email, cancellationToken);
 		if (existing is not null)
@@ -45,7 +45,7 @@ public class AdminSeedService(
 		}
 
 		var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
-		user.SetPassword(hasher.Hash(password));
+		user.SetPassword(hashService.Hash(password));
 		user.Activate();
 
 		await userRepo.AddAsync(user, cancellationToken);

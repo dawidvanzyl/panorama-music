@@ -1,7 +1,7 @@
 using Moq;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -17,22 +17,22 @@ public class RequestPasswordResetHandlerTests
 	{
 		UserRepo = new Mock<IUserRepository>();
 		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
-		EmailSender = new Mock<IEmailSender>();
+		EmailService = new Mock<IEmailService>();
 
 		ResetTokenRepo
 			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		EmailSender
+		EmailService
 			.Setup(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		Handler = new RequestPasswordResetHandler(UserRepo.Object, ResetTokenRepo.Object, EmailSender.Object);
+		Handler = new RequestPasswordResetHandler(UserRepo.Object, ResetTokenRepo.Object, EmailService.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
-	public Mock<IEmailSender> EmailSender { get; }
+	public Mock<IEmailService> EmailService { get; }
 	public RequestPasswordResetHandler Handler { get; }
 
 	[Fact]
@@ -52,7 +52,7 @@ public class RequestPasswordResetHandlerTests
 			TestContext.Current.CancellationToken);
 
 		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
-		EmailSender.Verify(e => e.SendPasswordResetAsync("user@test.com", It.IsAny<string>(), TestContext.Current.CancellationToken), Times.Once);
+		EmailService.Verify(e => e.SendPasswordResetAsync("user@test.com", It.IsAny<string>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -68,7 +68,7 @@ public class RequestPasswordResetHandlerTests
 			TestContext.Current.CancellationToken);
 
 		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
-		EmailSender.Verify(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+		EmailService.Verify(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]

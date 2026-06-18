@@ -1,6 +1,6 @@
-namespace PanoramaMusic.Identity.Application;
+namespace PanoramaMusic.Identity.Application.Interfaces;
 
-public interface IEmailSender
+public interface IEmailService
 {
 	Task SendPasswordResetAsync(string to, string rawToken, CancellationToken cancellationToken);
 }
