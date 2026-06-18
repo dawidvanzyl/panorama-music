@@ -79,7 +79,8 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
 
   it('protected user row shows no Edit button', () => {
     el.users = [{ ...activeUser, isProtected: true }];
-    expect(el.shadowRoot!.querySelector('.users-table__btn--edit')).toBeNull();
+    const editBtns = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.users-table__btn--edit')];
+    expect(editBtns.every(btn => btn.style.visibility === 'hidden')).toBe(true);
     expect(el.shadowRoot!.querySelector('.users-table__regenerate')).toBeNull();
   });
 
@@ -89,6 +90,7 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     localStorage.setItem('pm_expires_at', new Date(Date.now() + 3600_000).toISOString());
 
     el.users = [activeUser];
-    expect(el.shadowRoot!.querySelector('.users-table__btn--edit')).toBeNull();
+    const editBtns = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.users-table__btn--edit')];
+    expect(editBtns.every(btn => btn.style.visibility === 'hidden')).toBe(true);
   });
 });

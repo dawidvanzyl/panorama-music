@@ -145,6 +145,7 @@ template.innerHTML = `
       display: flex;
       gap: 6px;
       justify-content: flex-end;
+      align-items: center;
     }
   </style>
 
@@ -249,6 +250,13 @@ export class PmUsersTable extends HTMLElement {
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => this.handleEdit(user.userId));
       actionsCell.appendChild(editBtn);
+    } else if (user.isActive) {
+      const placeholder = document.createElement('button');
+      placeholder.type = 'button';
+      placeholder.classList.add('users-table__btn', 'users-table__btn--edit');
+      placeholder.textContent = 'Edit';
+      placeholder.style.visibility = 'hidden';
+      actionsCell.appendChild(placeholder);
     } else if (!user.isActive) {
       const regenerateBtn = document.createElement('button');
       regenerateBtn.type = 'button';
