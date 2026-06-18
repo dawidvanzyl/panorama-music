@@ -27,6 +27,7 @@ public class ClaimsPrincipalExtensionsTests
 	}
 
 	[Fact]
+	[Trait("AC", "M1.1UC12")]
 	public void HasRole_WhenPrincipalHasAdminRole_ReturnsTrue()
 	{
 		var user = BuildPrincipal(Role.Admin);
@@ -35,6 +36,7 @@ public class ClaimsPrincipalExtensionsTests
 	}
 
 	[Fact]
+	[Trait("AC", "M1.1UC12")]
 	public void HasRole_WhenPrincipalHasMultipleRolesIncludingAdmin_ReturnsTrue()
 	{
 		var user = BuildPrincipal(Role.Teacher, Role.Admin);
