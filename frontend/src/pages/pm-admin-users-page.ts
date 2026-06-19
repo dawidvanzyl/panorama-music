@@ -2,7 +2,7 @@ import '../components/pm-create-user-form';
 import '../components/pm-users-table';
 import '../components/pm-deactivate-user-modal';
 import '../components/pm-delete-user-modal';
-import { getUsers, activateUser, AdminError } from '../services/admin';
+import { getUsers, activateUser, clearUsersCache, AdminError } from '../services/admin';
 import type { PmUsersTable } from '../components/pm-users-table';
 import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
 import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
@@ -76,6 +76,7 @@ export class PmAdminUsersPage extends HTMLElement {
     this.shadowRoot!.addEventListener('user-deactivated', this.handleUserDeactivated);
     this.shadowRoot!.addEventListener('user-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.addEventListener('user-deleted', this.handleUserDeleted);
+    clearUsersCache();
     void this.loadUsers();
   }
 
