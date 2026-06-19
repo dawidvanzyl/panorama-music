@@ -56,6 +56,7 @@ export class PmAdminUsersPage extends HTMLElement {
   private deactivateModal: PmDeactivateUserModal | null = null;
   private deleteModal: PmDeleteUserModal | null = null;
   private errorBanner: HTMLElement | null = null;
+  private _activatingUserId: string | null = null;
 
   constructor() {
     super();
@@ -89,6 +90,8 @@ export class PmAdminUsersPage extends HTMLElement {
 
   private handleActivateRequested = async (event: Event): Promise<void> => {
     const { userId } = (event as CustomEvent<{ userId: string }>).detail;
+    if (this._activatingUserId === userId) return;
+    this._activatingUserId = userId;
     this.errorBanner!.classList.remove('admin-users__error--visible');
     try {
       await activateUser(userId);
@@ -96,6 +99,8 @@ export class PmAdminUsersPage extends HTMLElement {
     } catch (err) {
       this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
       this.errorBanner!.classList.add('admin-users__error--visible');
+    } finally {
+      this._activatingUserId = null;
     }
   };
 
