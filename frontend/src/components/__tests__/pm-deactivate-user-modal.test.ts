@@ -145,4 +145,17 @@ describe('pm-deactivate-user-modal — deactivate confirmation', { tags: ['M1.1U
     expect(events).toHaveLength(1);
     expect(events[0].detail.userId).toBe('user-id-1');
   });
+
+  it('buttons are re-enabled when show() is called after a previous successful deactivation', async () => {
+    modal.show('user-id-1', 'teacher@test.com');
+    modal.shadowRoot!.getElementById('deactivateBtn')!.click();
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    modal.show('user-id-2', 'other@test.com');
+
+    const cancelBtn = modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    const deactivateBtn = modal.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement;
+    expect(cancelBtn.disabled).toBe(false);
+    expect(deactivateBtn.disabled).toBe(false);
+  });
 });

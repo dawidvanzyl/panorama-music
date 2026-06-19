@@ -132,6 +132,8 @@ export class PmDeactivateUserModal extends HTMLElement {
   show(userId: string, email: string): void {
     this._userId = userId;
     this.shadowRoot!.getElementById('modalEmail')!.textContent = email;
+    (this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled = false;
+    (this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement).disabled = false;
     this.clearError();
     this.setAttribute('open', '');
   }
