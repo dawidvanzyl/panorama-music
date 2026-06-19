@@ -387,4 +387,61 @@ public sealed class AdminFlowTests(AuthFlowFixture fixture) : IClassFixture<Auth
 
 		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT15")]
+	public async Task ActivateUserFlow_AdminActivatesDeactivatedUser_Returns200()
+	{
+		var userId = Guid.NewGuid();
+		var user = new User(userId, Email.Create("deactivated@test.com"), DateTime.UtcNow);
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		UserRepo
+			.Setup(r => r.ActivateAsync(userId, It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo);
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsync($"/api/users/{userId}/activate", null, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		UserRepo.Verify(r => r.ActivateAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT16")]
+	public async Task ActivateUserFlow_NonAdminRole_Forbidden()
+	{
+		using var app = TestApp.CreateTestApp();
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Teacher]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsync($"/api/users/{Guid.NewGuid()}/activate", null, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1IT17")]
+	public async Task ActivateUserFlow_ActiveUser_Returns400()
+	{
+		var user = fixture.CreateActiveUser("active@test.com");
+
+		UserRepo
+			.Setup(r => r.GetByIdAsync(user.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		using var app = TestApp.CreateTestApp(userRepo: UserRepo);
+		var token = TestApp.GenerateAccessToken(Guid.NewGuid(), [Role.Admin]);
+		app.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await app.Client.PatchAsync($"/api/users/{user.UserId}/activate", null, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
 }

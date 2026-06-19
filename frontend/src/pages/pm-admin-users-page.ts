@@ -2,7 +2,7 @@ import '../components/pm-create-user-form';
 import '../components/pm-users-table';
 import '../components/pm-deactivate-user-modal';
 import '../components/pm-delete-user-modal';
-import { getUsers, AdminError } from '../services/admin';
+import { getUsers, activateUser, AdminError } from '../services/admin';
 import type { PmUsersTable } from '../components/pm-users-table';
 import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
 import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
@@ -70,6 +70,7 @@ export class PmAdminUsersPage extends HTMLElement {
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     this.addEventListener('user-created', this.loadUsers);
+    this.shadowRoot!.addEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.addEventListener('user-deactivate-requested', this.handleDeactivateRequested);
     this.shadowRoot!.addEventListener('user-deactivated', this.handleUserDeactivated);
     this.shadowRoot!.addEventListener('user-delete-requested', this.handleDeleteRequested);
@@ -79,11 +80,24 @@ export class PmAdminUsersPage extends HTMLElement {
 
   disconnectedCallback(): void {
     this.removeEventListener('user-created', this.loadUsers);
+    this.shadowRoot!.removeEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.removeEventListener('user-deactivate-requested', this.handleDeactivateRequested);
     this.shadowRoot!.removeEventListener('user-deactivated', this.handleUserDeactivated);
     this.shadowRoot!.removeEventListener('user-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.removeEventListener('user-deleted', this.handleUserDeleted);
   }
+
+  private handleActivateRequested = async (event: Event): Promise<void> => {
+    const { userId } = (event as CustomEvent<{ userId: string }>).detail;
+    this.errorBanner!.classList.remove('admin-users__error--visible');
+    try {
+      await activateUser(userId);
+      void this.loadUsers();
+    } catch (err) {
+      this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
+      this.errorBanner!.classList.add('admin-users__error--visible');
+    }
+  };
 
   private handleDeactivateRequested = (event: Event): void => {
     const { userId, email } = (event as CustomEvent<{ userId: string; email: string }>).detail;

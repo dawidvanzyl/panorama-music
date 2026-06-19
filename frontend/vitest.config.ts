@@ -32,6 +32,9 @@ export default defineConfig({
       { name: 'M1.1UC30', description: 'Confirming permanent delete calls DELETE /permanent; modal closes and row is removed' },
       { name: 'M1.1UC31', description: 'Cancel on permanent-delete modal closes it with no API call' },
       { name: 'M1.1UC32', description: 'deleteUser service calls DELETE /api/users/{id}/permanent and invalidates cache' },
+      { name: 'M1.1UC38', description: 'Deactivated user row renders Activate button to the left of Delete' },
+      { name: 'M1.1UC39', description: 'Clicking Activate dispatches user-activate-requested; on success table reloads showing Active row' },
+      { name: 'M1.1UC40', description: 'activateUser service calls PATCH /api/users/{id}/activate and invalidates cache' },
     ],
   },
 })

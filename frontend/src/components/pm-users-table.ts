@@ -78,6 +78,14 @@ template.innerHTML = `
     .users-table__btn--deactivate:hover {
       background: rgba(224, 82, 82, 0.1);
     }
+    .users-table__btn--activate {
+      background: transparent;
+      border: 1px solid #8fd44e;
+      color: #8fd44e;
+    }
+    .users-table__btn--activate:hover {
+      background: rgba(143, 212, 78, 0.1);
+    }
     .users-table__btn--delete {
       background: var(--pm-danger, #e05252);
       border: 1px solid var(--pm-danger, #e05252);
@@ -305,6 +313,13 @@ export class PmUsersTable extends HTMLElement {
       regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
       actionsCell.appendChild(regenerateBtn);
     } else {
+      const activateBtn = document.createElement('button');
+      activateBtn.type = 'button';
+      activateBtn.classList.add('users-table__btn', 'users-table__btn--activate');
+      activateBtn.textContent = 'Activate';
+      activateBtn.addEventListener('click', () => this.handleActivate(user.userId));
+      actionsCell.appendChild(activateBtn);
+
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.classList.add('users-table__btn', 'users-table__btn--delete');
@@ -368,6 +383,14 @@ export class PmUsersTable extends HTMLElement {
       bubbles: true,
       composed: true,
       detail: { userId, email },
+    }));
+  }
+
+  private handleActivate(userId: string): void {
+    this.dispatchEvent(new CustomEvent('user-activate-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId },
     }));
   }
 

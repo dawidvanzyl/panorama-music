@@ -125,3 +125,15 @@ export async function deleteUser(userId: string): Promise<void> {
   }
   _usersCache = null;
 }
+
+export async function activateUser(userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${userId}/activate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
+  }
+  _usersCache = null;
+}

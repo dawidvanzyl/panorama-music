@@ -156,6 +156,17 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		await dbConnection.ExecuteAsync(command);
 	}
 
+	public async Task ActivateAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		var command = CreateCommandDefinition(
+			"identity.activate_user",
+			new { p_user_id = userId },
+			cancellationToken: cancellationToken);
+		await dbConnection.ExecuteAsync(command);
+	}
+
 	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken)
 	{
 		var dbConnection = CreateConnection();
