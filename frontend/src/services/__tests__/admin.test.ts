@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getUsers, createUser, updateUserRoles, regenerateInvite, clearUsersCache, AdminError } from '../admin';
+import { getUsers, createUser, updateUserRoles, regenerateInvite, deactivateUser, deleteUser, activateUser, clearUsersCache, AdminError } from '../admin';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -13,8 +13,8 @@ beforeEach(() => {
 describe('getUsers', { tags: ['M1UC49'] }, () => {
   it('returns the list of users', async () => {
     const users = [
-      { userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false },
-      { userId: 'u2', email: 'teacher@test.com', roles: ['Teacher'], isActive: false, isProtected: false },
+      { userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false, hasCompletedRegistration: true },
+      { userId: 'u2', email: 'teacher@test.com', roles: ['Teacher'], isActive: false, isProtected: false, hasCompletedRegistration: false },
     ];
 
     mockFetch.mockResolvedValueOnce({
@@ -42,7 +42,7 @@ describe('getUsers', { tags: ['M1UC49'] }, () => {
   });
 
   it('returns cached result and does not fetch again on second call', async () => {
-    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false }];
+    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false, hasCompletedRegistration: true }];
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -88,7 +88,7 @@ describe('createUser', { tags: ['M1UC46'] }, () => {
   });
 
   it('invalidates the users cache', async () => {
-    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false }];
+    const users = [{ userId: 'u1', email: 'admin@test.com', roles: ['Admin'], isActive: true, isProtected: false, hasCompletedRegistration: true }];
     mockFetch
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
       .mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ userId: 'u2', inviteUrl: '/#/register?token=x' }) })
@@ -154,10 +154,10 @@ describe('updateUserRoles', { tags: ['M1.1UC15'] }, () => {
   });
 
   it('invalidates the users cache', async () => {
-    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false }];
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false, hasCompletedRegistration: true }];
     mockFetch
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher', 'Admin'], isActive: true, isProtected: false }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher', 'Admin'], isActive: true, isProtected: false, hasCompletedRegistration: true }) })
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
 
     await getUsers();
@@ -171,8 +171,8 @@ describe('updateUserRoles', { tags: ['M1.1UC15'] }, () => {
 describe('getUsers returns current roles for pre-population', { tags: ['M1.1UC14'] }, () => {
   it('returns roles per user so edit mode can pre-check correct roles', async () => {
     const users = [
-      { userId: 'u1', email: 'admin@test.com', roles: ['Admin', 'Teacher'], isActive: true, isProtected: false },
-      { userId: 'u2', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false },
+      { userId: 'u1', email: 'admin@test.com', roles: ['Admin', 'Teacher'], isActive: true, isProtected: false, hasCompletedRegistration: true },
+      { userId: 'u2', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false, hasCompletedRegistration: true },
     ];
 
     mockFetch.mockResolvedValueOnce({
@@ -215,5 +215,101 @@ describe('regenerateInvite', { tags: ['M1UC47'] }, () => {
     });
 
     await expect(regenerateInvite('unknown-id')).rejects.toThrow('User not found.');
+  });
+});
+
+describe('deactivateUser', { tags: ['M1.1UC19'] }, () => {
+  it('calls DELETE endpoint and invalidates cache on success', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: true, isProtected: false, hasCompletedRegistration: true }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
+
+    await getUsers();
+    await deactivateUser('u1');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledWith('/api/users/u1', expect.objectContaining({
+      method: 'DELETE',
+      headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+    }));
+  });
+
+  it('throws AdminError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Forbidden' }),
+    });
+
+    await expect(deactivateUser('u1')).rejects.toThrow('Forbidden');
+  });
+});
+
+describe('deleteUser', { tags: ['M1.1UC32'] }, () => {
+  it('calls DELETE /permanent endpoint and invalidates cache on success', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: false, isProtected: false, hasCompletedRegistration: true }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] });
+
+    await getUsers();
+    await deleteUser('u1');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledWith('/api/users/u1/permanent', expect.objectContaining({
+      method: 'DELETE',
+      headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+    }));
+  });
+
+  it('throws AdminError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Only deactivated users can be permanently deleted.' }),
+    });
+
+    await expect(deleteUser('u1')).rejects.toThrow('Only deactivated users can be permanently deleted.');
+  });
+});
+
+describe('activateUser', { tags: ['M1.1UC40'] }, () => {
+  it('calls PATCH /activate endpoint and invalidates cache on success', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const users = [{ userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: false, isProtected: false, hasCompletedRegistration: true }];
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => users });
+
+    await getUsers();
+    await activateUser('u1');
+    await getUsers();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledWith('/api/users/u1/activate', expect.objectContaining({
+      method: 'PATCH',
+      headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+    }));
+  });
+
+  it('throws AdminError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Only deactivated users can be activated.' }),
+    });
+
+    await expect(activateUser('u1')).rejects.toThrow('Only deactivated users can be activated.');
   });
 });

@@ -30,6 +30,9 @@ public sealed class RefreshTokenHandler(
 		var user = await userRepository.GetByIdAsync(existing.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
+		if (!user.IsActive)
+			throw new UnauthorizedException("User account is not active.");
+
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 

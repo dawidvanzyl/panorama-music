@@ -52,6 +52,10 @@ template.innerHTML = `
       background: rgba(79, 124, 255, 0.1);
       color: var(--pm-accent);
     }
+    .users-table__status--deactivated {
+      background: rgba(224, 82, 82, 0.1);
+      color: var(--pm-danger, #e05252);
+    }
     .users-table__btn {
       border-radius: var(--pm-radius);
       font-size: 12px;
@@ -65,6 +69,30 @@ template.innerHTML = `
     }
     .users-table__btn--edit:hover {
       background: rgba(79, 124, 255, 0.1);
+    }
+    .users-table__btn--deactivate {
+      background: transparent;
+      border: 1px solid var(--pm-danger, #e05252);
+      color: var(--pm-danger, #e05252);
+    }
+    .users-table__btn--deactivate:hover {
+      background: rgba(224, 82, 82, 0.1);
+    }
+    .users-table__btn--activate {
+      background: transparent;
+      border: 1px solid #8fd44e;
+      color: #8fd44e;
+    }
+    .users-table__btn--activate:hover {
+      background: rgba(143, 212, 78, 0.1);
+    }
+    .users-table__btn--delete {
+      background: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger, #e05252);
+      color: #fff;
+    }
+    .users-table__btn--delete:hover {
+      opacity: 0.9;
     }
     .users-table__btn--save {
       background: var(--pm-accent);
@@ -222,8 +250,14 @@ export class PmUsersTable extends HTMLElement {
 
     const statusCell = document.createElement('td');
     const statusBadge = document.createElement('span');
-    statusBadge.classList.add('users-table__status', user.isActive ? 'users-table__status--active' : 'users-table__status--pending');
-    statusBadge.textContent = user.isActive ? 'Active' : 'Pending';
+    const statusClass = user.isActive
+      ? 'users-table__status--active'
+      : user.hasCompletedRegistration
+        ? 'users-table__status--deactivated'
+        : 'users-table__status--pending';
+    const statusText = user.isActive ? 'Active' : user.hasCompletedRegistration ? 'Deactivated' : 'Pending';
+    statusBadge.classList.add('users-table__status', statusClass);
+    statusBadge.textContent = statusText;
     statusCell.appendChild(statusBadge);
 
     const actionsCell = document.createElement('td');
@@ -250,6 +284,13 @@ export class PmUsersTable extends HTMLElement {
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => this.handleEdit(user.userId));
       actionsCell.appendChild(editBtn);
+
+      const deactivateBtn = document.createElement('button');
+      deactivateBtn.type = 'button';
+      deactivateBtn.classList.add('users-table__btn', 'users-table__btn--deactivate');
+      deactivateBtn.textContent = 'Deactivate';
+      deactivateBtn.addEventListener('click', () => this.handleDeactivate(user.userId, user.email));
+      actionsCell.appendChild(deactivateBtn);
     } else if (user.isActive) {
       const placeholder = document.createElement('button');
       placeholder.type = 'button';
@@ -257,13 +298,34 @@ export class PmUsersTable extends HTMLElement {
       placeholder.textContent = 'Edit';
       placeholder.style.visibility = 'hidden';
       actionsCell.appendChild(placeholder);
-    } else if (!user.isActive) {
+
+      const deactivatePlaceholder = document.createElement('button');
+      deactivatePlaceholder.type = 'button';
+      deactivatePlaceholder.classList.add('users-table__btn', 'users-table__btn--deactivate');
+      deactivatePlaceholder.textContent = 'Deactivate';
+      deactivatePlaceholder.style.visibility = 'hidden';
+      actionsCell.appendChild(deactivatePlaceholder);
+    } else if (!user.isActive && !user.hasCompletedRegistration) {
       const regenerateBtn = document.createElement('button');
       regenerateBtn.type = 'button';
       regenerateBtn.classList.add('users-table__regenerate');
       regenerateBtn.textContent = 'Regenerate Invite';
       regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
       actionsCell.appendChild(regenerateBtn);
+    } else {
+      const activateBtn = document.createElement('button');
+      activateBtn.type = 'button';
+      activateBtn.classList.add('users-table__btn', 'users-table__btn--activate');
+      activateBtn.textContent = 'Activate';
+      activateBtn.addEventListener('click', () => this.handleActivate(user.userId));
+      actionsCell.appendChild(activateBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.classList.add('users-table__btn', 'users-table__btn--delete');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => this.handleDelete(user.userId, user.email));
+      actionsCell.appendChild(deleteBtn);
     }
 
     row.append(emailCell, rolesCell, statusCell, actionsCell);
@@ -306,9 +368,38 @@ export class PmUsersTable extends HTMLElement {
       .map(cb => cb.value);
   }
 
+  removeUser(userId: string): void {
+    this._users = this._users.filter(u => u.userId !== userId);
+    this.render();
+  }
+
   private handleEdit(userId: string): void {
     this._editingUserId = userId;
     this.render();
+  }
+
+  private handleDeactivate(userId: string, email: string): void {
+    this.dispatchEvent(new CustomEvent('user-deactivate-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId, email },
+    }));
+  }
+
+  private handleActivate(userId: string): void {
+    this.dispatchEvent(new CustomEvent('user-activate-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId },
+    }));
+  }
+
+  private handleDelete(userId: string, email: string): void {
+    this.dispatchEvent(new CustomEvent('user-delete-requested', {
+      bubbles: true,
+      composed: true,
+      detail: { userId, email },
+    }));
   }
 
   private handleCancel(): void {

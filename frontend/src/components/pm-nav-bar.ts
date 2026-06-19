@@ -1,5 +1,6 @@
 import { isAuthenticated, logout } from '../services/auth';
 import { hasRole } from '../services/token-storage';
+import { clearUsersCache } from '../services/admin';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -90,6 +91,7 @@ export class PmNavBar extends HTMLElement {
   };
 
   private handleLogout = async (): Promise<void> => {
+    clearUsersCache();
     await logout();
     this.updateVisibility();
     window.location.hash = '#/login';

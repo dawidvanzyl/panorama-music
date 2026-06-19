@@ -115,6 +115,58 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		}
 	}
 
+	public async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			var deactivateCommand = CreateCommandDefinition(
+				"identity.deactivate_user",
+				new { p_user_id = userId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(deactivateCommand);
+
+			var revokeTokensCommand = CreateCommandDefinition(
+				"identity.revoke_all_refresh_tokens",
+				new { p_user_id = userId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(revokeTokensCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
+	}
+
+	public async Task DeleteAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		var command = CreateCommandDefinition(
+			"identity.delete_user",
+			new { p_user_id = userId },
+			cancellationToken: cancellationToken);
+		await dbConnection.ExecuteAsync(command);
+	}
+
+	public async Task ActivateAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		var command = CreateCommandDefinition(
+			"identity.activate_user",
+			new { p_user_id = userId },
+			cancellationToken: cancellationToken);
+		await dbConnection.ExecuteAsync(command);
+	}
+
 	public async Task CompleteActivationAsync(User user, Guid inviteTokenId, CancellationToken cancellationToken)
 	{
 		var dbConnection = CreateConnection();

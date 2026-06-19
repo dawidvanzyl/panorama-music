@@ -93,6 +93,9 @@ public sealed class TestApp(WebApplication app) : IDisposable
 		builder.Services.AddTransient<RegenerateInviteTokenHandler>();
 		builder.Services.AddTransient<GetUsersHandler>();
 		builder.Services.AddTransient<UpdateUserRolesHandler>();
+		builder.Services.AddTransient<DeactivateUserHandler>();
+		builder.Services.AddTransient<DeleteUserHandler>();
+		builder.Services.AddTransient<ActivateUserHandler>();
 		builder.Services.AddTransient<RequestPasswordResetHandler>();
 		builder.Services.AddTransient<ResetPasswordHandler>();
 

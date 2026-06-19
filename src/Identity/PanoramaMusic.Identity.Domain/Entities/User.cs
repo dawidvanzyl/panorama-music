@@ -7,6 +7,8 @@ public record User(Guid UserId, Email Email, DateTime CreatedAt)
 	public PasswordHash? PasswordHash { get; private set; }
 	public bool IsActive { get; private set; }
 
+	public bool HasCompletedRegistration => PasswordHash is not null;
+
 	public void SetPassword(PasswordHash hash) => PasswordHash = hash;
 
 	public void Activate() => IsActive = true;

@@ -8,7 +8,62 @@ const activeUser: GetUserResult = {
   roles: ['Teacher'],
   isActive: true,
   isProtected: false,
+  hasCompletedRegistration: true,
 };
+
+const deactivatedUser: GetUserResult = {
+  userId: 'user-deactivated',
+  email: 'deactivated@test.com',
+  roles: ['Teacher'],
+  isActive: false,
+  isProtected: false,
+  hasCompletedRegistration: true,
+};
+
+describe('pm-users-table — deactivated user row', { tags: ['M1.1UC38', 'M1.1UC39'] }, () => {
+  let el: PmUsersTable;
+
+  beforeEach(() => {
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('deactivated user row renders Activate button to the left of Delete', () => {
+    el.users = [deactivatedUser];
+
+    const activateBtn = el.shadowRoot!.querySelector('.users-table__btn--activate');
+    const deleteBtn = el.shadowRoot!.querySelector('.users-table__btn--delete');
+
+    expect(activateBtn).not.toBeNull();
+    expect(activateBtn!.textContent).toBe('Activate');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn!.textContent).toBe('Delete');
+
+    const actionsCell = el.shadowRoot!.querySelector('.users-table__actions')!;
+    const buttons = actionsCell.querySelectorAll('button');
+    const activateIndex = [...buttons].findIndex(b => b.classList.contains('users-table__btn--activate'));
+    const deleteIndex = [...buttons].findIndex(b => b.classList.contains('users-table__btn--delete'));
+    expect(activateIndex).toBeLessThan(deleteIndex);
+  });
+
+  it('clicking Activate dispatches user-activate-requested with the correct userId', () => {
+    el.users = [deactivatedUser];
+
+    let capturedEvent: CustomEvent<{ userId: string }> | null = null;
+    el.addEventListener('user-activate-requested', (e) => {
+      capturedEvent = e as CustomEvent<{ userId: string }>;
+    });
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--activate')!.click();
+
+    expect(capturedEvent).not.toBeNull();
+    expect(capturedEvent!.detail.userId).toBe(deactivatedUser.userId);
+  });
+});
 
 describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
   let el: PmUsersTable;
@@ -53,9 +108,10 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
   });
 
   it('pending user row shows Regenerate Invite instead of Edit', () => {
-    el.users = [{ ...activeUser, userId: 'user-pending', isActive: false }];
+    el.users = [{ ...activeUser, userId: 'user-pending', isActive: false, hasCompletedRegistration: false }];
     expect(el.shadowRoot!.querySelector('.users-table__btn--edit')).toBeNull();
     expect(el.shadowRoot!.querySelector('.users-table__regenerate')).not.toBeNull();
+    expect(el.shadowRoot!.querySelector('.users-table__btn--delete')).toBeNull();
   });
 
   it('only one row can be in edit mode at a time', () => {

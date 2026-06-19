@@ -8,6 +8,7 @@ export interface GetUserResult {
   roles: string[];
   isActive: boolean;
   isProtected: boolean;
+  hasCompletedRegistration: boolean;
 }
 
 export interface CreateUserResult {
@@ -99,4 +100,40 @@ export async function regenerateInvite(userId: string): Promise<RegenerateInvite
   });
 
   return handleResponse<RegenerateInviteTokenResult>(response);
+}
+
+export async function deactivateUser(userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${userId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
+  }
+  _usersCache = null;
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${userId}/permanent`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
+  }
+  _usersCache = null;
+}
+
+export async function activateUser(userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${userId}/activate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
+  }
+  _usersCache = null;
 }
