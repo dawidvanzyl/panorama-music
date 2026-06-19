@@ -117,7 +117,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 
 	public async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken)
 	{
-		var dbConnection = CreateConnection();
+		await using var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
@@ -147,7 +147,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 
 	public async Task DeleteAsync(Guid userId, CancellationToken cancellationToken)
 	{
-		var dbConnection = CreateConnection();
+		await using var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		var command = CreateCommandDefinition(
 			"identity.delete_user",
