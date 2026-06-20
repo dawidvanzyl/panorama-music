@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PmResetPasswordPage } from '../pm-reset-password-page';
 
 const mockResetPassword = vi.fn();
-vi.mock('../../services/auth', () => ({
+vi.mock('../../../../services/auth', () => ({
   resetPassword: (...args: unknown[]) => mockResetPassword(...args),
   AuthError: class AuthError extends Error {
     constructor(message: string, public status: number, public hasPolicyRules: boolean = false) {
@@ -12,7 +12,7 @@ vi.mock('../../services/auth', () => ({
   },
 }));
 
-vi.mock('../../services/password-policy', () => ({
+vi.mock('../../../../services/password-policy', () => ({
   evaluatePasswordPolicy: () => ({ minLength: false, mixedCase: false, hasDigit: false }),
 }));
 
@@ -59,7 +59,7 @@ describe('pm-reset-password-page', () => {
     });
 
     it('shows inline error when API returns 422 policy error', async () => {
-      const { AuthError } = await import('../../services/auth');
+      const { AuthError } = await import('../../../../services/auth');
       mockResetPassword.mockRejectedValueOnce(new AuthError('Password must be at least 8 characters.', 422, true));
 
       const shadow = el.shadowRoot!;
@@ -117,7 +117,7 @@ describe('pm-reset-password-page', () => {
       el = new PmResetPasswordPage();
       document.body.appendChild(el);
 
-      const { AuthError } = await import('../../services/auth');
+      const { AuthError } = await import('../../../../services/auth');
       mockResetPassword.mockRejectedValueOnce(new AuthError('Password reset token is invalid or expired.', 422));
 
       const shadow = el.shadowRoot!;

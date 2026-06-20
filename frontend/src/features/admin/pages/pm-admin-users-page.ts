@@ -1,15 +1,15 @@
-import '../components/pm-create-user-form';
-import '../components/pm-users-table';
-import '../components/pm-deactivate-user-modal';
-import '../components/pm-delete-user-modal';
-import '../components/pm-user-created-banner';
-import '../components/pm-reinvite-banner';
-import { getUsers, activateUser, clearUsersCache, AdminError } from '../services/admin';
-import type { PmUsersTable } from '../components/pm-users-table';
-import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
-import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
-import type { PmUserCreatedBanner } from '../components/pm-user-created-banner';
-import type { PmReinviteBanner } from '../components/pm-reinvite-banner';
+import '../../../components/pm-create-user-form';
+import '../../../components/pm-users-table';
+import '../../../components/pm-deactivate-user-modal';
+import '../../../components/pm-delete-user-modal';
+import '../../../components/pm-user-created-banner';
+import '../../../components/pm-reinvite-banner';
+import { getUsers, activateUser, clearUsersCache, AdminError } from '../../../services/admin';
+import type { PmUsersTable } from '../../../components/pm-users-table';
+import type { PmDeactivateUserModal } from '../../../components/pm-deactivate-user-modal';
+import type { PmDeleteUserModal } from '../../../components/pm-delete-user-modal';
+import type { PmUserCreatedBanner } from '../../../components/pm-user-created-banner';
+import type { PmReinviteBanner } from '../../../components/pm-reinvite-banner';
 
 const template = document.createElement('template');
 template.innerHTML = `

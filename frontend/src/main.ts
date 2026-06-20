@@ -1,11 +1,11 @@
 import './styles/global.css';
 import './components/pm-nav-bar';
 import './components/pm-password-strength-indicator';
-import './pages/pm-login-page';
-import './pages/pm-registration-page';
-import './pages/pm-admin-users-page';
-import './pages/pm-forgot-password-page';
-import './pages/pm-reset-password-page';
+import './features/authentication/pages/pm-login-page';
+import './features/authentication/pages/pm-registration-page';
+import './features/admin/pages/pm-admin-users-page';
+import './features/authentication/pages/pm-forgot-password-page';
+import './features/authentication/pages/pm-reset-password-page';
 import { isAuthenticated } from './services/auth';
 import { hasRole } from './services/token-storage';
 

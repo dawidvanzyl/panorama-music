@@ -1,4 +1,4 @@
-import { login, AuthError } from '../services/auth';
+import { login, AuthError } from '../../../services/auth';
 
 const template = document.createElement('template');
 template.innerHTML = `
