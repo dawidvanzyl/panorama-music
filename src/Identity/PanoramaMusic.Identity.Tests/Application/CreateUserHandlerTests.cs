@@ -1,6 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Requests.Admin;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -32,7 +33,9 @@ public class CreateUserHandlerTests
 			.Setup(r => r.AddAsync(It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		Handler = new CreateUserHandler(UserRepo.Object, UserRoleRepo.Object, InviteRepo.Object);
+		var appOptions = new Mock<IAppOptions>();
+		appOptions.Setup(o => o.AppBaseUrl).Returns(string.Empty);
+		Handler = new CreateUserHandler(UserRepo.Object, UserRoleRepo.Object, InviteRepo.Object, appOptions.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }

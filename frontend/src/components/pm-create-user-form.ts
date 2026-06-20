@@ -105,26 +105,6 @@ template.innerHTML = `
       border: 1px solid var(--pm-danger);
       color: var(--pm-danger);
     }
-    .create-user__invite-url {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .create-user__invite-url code {
-      flex: 1;
-      word-break: break-all;
-      color: var(--pm-text);
-    }
-    .create-user__copy {
-      border: 1px solid var(--pm-border);
-      border-radius: var(--pm-radius);
-      background: var(--pm-surface-2);
-      color: var(--pm-text);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-    }
   </style>
 
   <div class="create-user__card">
@@ -153,10 +133,6 @@ template.innerHTML = `
     </form>
     <div class="create-user__message" id="message">
       <div id="messageText"></div>
-      <div class="create-user__invite-url" id="inviteUrlWrap" hidden>
-        <code id="inviteUrlText"></code>
-        <button type="button" class="create-user__copy" id="copyBtn">Copy</button>
-      </div>
     </div>
   </div>
 `;
@@ -169,9 +145,6 @@ export class PmCreateUserForm extends HTMLElement {
   private submitBtn: HTMLButtonElement | null = null;
   private message: HTMLElement | null = null;
   private messageText: HTMLElement | null = null;
-  private inviteUrlWrap: HTMLElement | null = null;
-  private inviteUrlText: HTMLElement | null = null;
-  private copyBtn: HTMLButtonElement | null = null;
 
   constructor() {
     super();
@@ -187,17 +160,12 @@ export class PmCreateUserForm extends HTMLElement {
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
     this.messageText = this.shadowRoot!.getElementById('messageText') as HTMLElement;
-    this.inviteUrlWrap = this.shadowRoot!.getElementById('inviteUrlWrap') as HTMLElement;
-    this.inviteUrlText = this.shadowRoot!.getElementById('inviteUrlText') as HTMLElement;
-    this.copyBtn = this.shadowRoot!.getElementById('copyBtn') as HTMLButtonElement;
 
     this.form.addEventListener('submit', this.handleSubmit);
-    this.copyBtn.addEventListener('click', this.handleCopy);
   }
 
   disconnectedCallback(): void {
     this.form?.removeEventListener('submit', this.handleSubmit);
-    this.copyBtn?.removeEventListener('click', this.handleCopy);
   }
 
   private getSelectedRoles(): string[] {
@@ -207,14 +175,9 @@ export class PmCreateUserForm extends HTMLElement {
     return roles;
   }
 
-  private handleCopy = async (): Promise<void> => {
-    await navigator.clipboard.writeText(this.inviteUrlText!.textContent ?? '');
-  };
-
   private handleSubmit = async (e: Event): Promise<void> => {
     e.preventDefault();
     this.message!.className = 'create-user__message';
-    this.inviteUrlWrap!.hidden = true;
     this.submitBtn!.disabled = true;
 
     const roles = this.getSelectedRoles();
@@ -227,13 +190,13 @@ export class PmCreateUserForm extends HTMLElement {
 
     try {
       const result = await createUser(this.emailInput!.value, roles);
-      this.messageText!.textContent = 'User created successfully. Invite URL:';
-      this.message!.classList.add('create-user__message--success');
-      this.inviteUrlText!.textContent = result.inviteUrl;
-      this.inviteUrlWrap!.hidden = false;
       this.form!.reset();
       this.roleTeacher!.checked = true;
-      this.dispatchEvent(new CustomEvent('user-created', { bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent('user-created', {
+        bubbles: true,
+        composed: true,
+        detail: { inviteUrl: result.inviteUrl },
+      }));
     } catch (err) {
       this.messageText!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
       this.message!.classList.add('create-user__message--error');

@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
@@ -9,7 +10,8 @@ namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 
 public sealed class RegenerateInviteTokenHandler(
 	IUserRepository userRepository,
-	IInviteTokenRepository inviteTokenRepository)
+	IInviteTokenRepository inviteTokenRepository,
+	IAppOptions appOptions)
 {
 	public async Task<RegenerateInviteTokenResult> HandleAsync(RegenerateInviteTokenCommand command, CancellationToken cancellationToken)
 	{
@@ -20,6 +22,6 @@ public sealed class RegenerateInviteTokenHandler(
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
 		await inviteTokenRepository.RevokeAndIssueAsync(user.UserId, inviteToken, cancellationToken);
 
-		return new RegenerateInviteTokenResult($"/#/register?token={token.Value}");
+		return new RegenerateInviteTokenResult($"{appOptions.AppBaseUrl}/#/register?token={token.Value}");
 	}
 }

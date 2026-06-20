@@ -2,10 +2,14 @@ import '../components/pm-create-user-form';
 import '../components/pm-users-table';
 import '../components/pm-deactivate-user-modal';
 import '../components/pm-delete-user-modal';
+import '../components/pm-user-created-banner';
+import '../components/pm-reinvite-banner';
 import { getUsers, activateUser, clearUsersCache, AdminError } from '../services/admin';
 import type { PmUsersTable } from '../components/pm-users-table';
 import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
 import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
+import type { PmUserCreatedBanner } from '../components/pm-user-created-banner';
+import type { PmReinviteBanner } from '../components/pm-reinvite-banner';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -44,6 +48,8 @@ template.innerHTML = `
   <div class="admin-users__container">
     <h1 class="admin-users__title">User Management</h1>
     <pm-create-user-form></pm-create-user-form>
+    <pm-user-created-banner id="userCreatedBanner"></pm-user-created-banner>
+    <pm-reinvite-banner id="reinviteBanner"></pm-reinvite-banner>
     <div class="admin-users__error" id="error"></div>
     <pm-users-table id="usersTable"></pm-users-table>
   </div>
@@ -55,6 +61,8 @@ export class PmAdminUsersPage extends HTMLElement {
   private usersTable: PmUsersTable | null = null;
   private deactivateModal: PmDeactivateUserModal | null = null;
   private deleteModal: PmDeleteUserModal | null = null;
+  private userCreatedBanner: PmUserCreatedBanner | null = null;
+  private reinviteBanner: PmReinviteBanner | null = null;
   private errorBanner: HTMLElement | null = null;
   private _activatingUserId: string | null = null;
 
@@ -68,9 +76,12 @@ export class PmAdminUsersPage extends HTMLElement {
     this.usersTable = this.shadowRoot!.getElementById('usersTable') as unknown as PmUsersTable;
     this.deactivateModal = this.shadowRoot!.getElementById('deactivateModal') as unknown as PmDeactivateUserModal;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteUserModal;
+    this.userCreatedBanner = this.shadowRoot!.getElementById('userCreatedBanner') as unknown as PmUserCreatedBanner;
+    this.reinviteBanner = this.shadowRoot!.getElementById('reinviteBanner') as unknown as PmReinviteBanner;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
-    this.addEventListener('user-created', this.loadUsers);
+    this.shadowRoot!.addEventListener('user-created', this.handleUserCreated);
+    this.shadowRoot!.addEventListener('invite-regenerated', this.handleInviteRegenerated);
     this.shadowRoot!.addEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.addEventListener('user-deactivate-requested', this.handleDeactivateRequested);
     this.shadowRoot!.addEventListener('user-deactivated', this.handleUserDeactivated);
@@ -81,13 +92,27 @@ export class PmAdminUsersPage extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    this.removeEventListener('user-created', this.loadUsers);
+    this.shadowRoot!.removeEventListener('user-created', this.handleUserCreated);
+    this.shadowRoot!.removeEventListener('invite-regenerated', this.handleInviteRegenerated);
     this.shadowRoot!.removeEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.removeEventListener('user-deactivate-requested', this.handleDeactivateRequested);
     this.shadowRoot!.removeEventListener('user-deactivated', this.handleUserDeactivated);
     this.shadowRoot!.removeEventListener('user-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.removeEventListener('user-deleted', this.handleUserDeleted);
   }
+
+  private handleUserCreated = (event: Event): void => {
+    const { inviteUrl } = (event as CustomEvent<{ inviteUrl: string }>).detail;
+    this.userCreatedBanner!.show(inviteUrl);
+    this.reinviteBanner!.hide();
+    void this.loadUsers();
+  };
+
+  private handleInviteRegenerated = (event: Event): void => {
+    const { inviteUrl } = (event as CustomEvent<{ inviteUrl: string }>).detail;
+    this.reinviteBanner!.show(inviteUrl);
+    this.userCreatedBanner!.hide();
+  };
 
   private handleActivateRequested = async (event: Event): Promise<void> => {
     const { userId } = (event as CustomEvent<{ userId: string }>).detail;
