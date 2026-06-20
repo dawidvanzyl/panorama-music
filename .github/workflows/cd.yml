@@ -5,6 +5,9 @@ on:
     tags:
       - "milestone/*"
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to Render

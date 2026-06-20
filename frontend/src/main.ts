@@ -38,7 +38,9 @@ function render(): void {
     return;
   }
 
-  const route = ROUTES[basePath] ?? (() => '<pm-login-page></pm-login-page>');
+  const route = Object.hasOwn(ROUTES, basePath)
+    ? ROUTES[basePath]
+    : (() => '<pm-login-page></pm-login-page>');
   app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
 }
 
