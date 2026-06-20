@@ -1,6 +1,39 @@
 @PanoramaMusic.Api_HostAddress = http://localhost:5102
 
+### Health check
 GET {{PanoramaMusic.Api_HostAddress}}/api/health
-Accept: application/json
 
-###
+### Login → capture tokens
+# @name login
+POST {{PanoramaMusic.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Refresh token
+POST {{PanoramaMusic.Api_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "token": "{{login.response.body.refreshToken}}"
+}
+
+### Logout
+POST {{PanoramaMusic.Api_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "token": "{{login.response.body.refreshToken}}"
+}
+
+### Complete registration
+POST {{PanoramaMusic.Api_HostAddress}}/api/auth/complete-registration
+Content-Type: application/json
+
+{
+  "inviteToken": "some-invite-token",
+  "newPassword": "Str0ngP@ss!"
+}

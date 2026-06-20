@@ -1,6 +1,6 @@
 ---
 name: Sub-Issue
-about: Implementation sub-issue linked to a milestone epic backlog item
+about: Story-level requirement brief for agent implementation
 title: '[M?] Short descriptive title'
 labels: ''
 assignees: dawidvanzyl
@@ -8,71 +8,103 @@ assignees: dawidvanzyl
 
 ## Overview
 
-One paragraph. What this issue implements and why it exists in the context of the milestone.
+One paragraph. What this story delivers from a **user or system value perspective**, and why it exists at this point in the milestone sequence.
 
 ---
 
 ## Epic Reference
 
 - Milestone: [M? — Milestone Title](#issue-number)
-- Anticipated Work Areas:
-  - [ ] Exact checkbox text copied from epic issue
-  - [ ] Exact checkbox text copied from epic issue
-- Acceptance Criteria:
-  - [ ] `[IT_CODE]` Exact checkbox text copied from epic issue (e.g. `M1IT1`)
-  - [ ] `[IT_CODE]` Exact checkbox text copied from epic issue (e.g. `M1IT2`)
+- Work Areas:
+  - [ ] Exact checkbox text copied from epic
+- Acceptance Criteria Covered:
+  - [ ] `[IT_CODE]` Exact checkbox text copied from epic (e.g. `M1IT1`)
 
 ---
 
-## Scope
+## Context & Constraints
 
-**In scope:**
+> What the agent needs to know before writing a single line — prior decisions, patterns already established, things that must not change.
 
-- What this issue explicitly covers
-
-**Out of scope:**
-
-- What is explicitly deferred to another issue or milestone
+- **Existing patterns to follow:** e.g. all service classes use X pattern; auth is handled via Y middleware
+- **Known constraints:** e.g. must remain backwards-compatible with M1 endpoint contract
+- **Related issues:** Depends on #issue / Supersedes decision from #issue
 
 ---
 
-## Implementation Plan
+## Functional Requirements
 
-Step-by-step descriptive instructions. Layer by layer where applicable. Detailed enough that no additional context is needed beyond this issue.
+What this story must do, written as observable behaviours — not file names or function signatures.
 
-### Files to Create
+- Users must be able to…
+- The system must…
+- When X occurs, Y must happen…
 
-- `path/to/file.ts` — purpose
+---
 
-### Files to Modify
+## Domain & Data
 
-- `path/to/file.ts` — what changes and why
+> Describe the entities and relationships involved, not the schema. The agent derives the schema from this.
+
+**Entities touched:**
+- `EntityName` — what it represents; relevant fields for this story (e.g. `status`, `ownerId`)
+- `OtherEntity` — relationship to above
+
+**Business rules:**
+- e.g. A `Project` may only transition to `active` if it has at least one assigned `Member`
+- e.g. `archivedAt` must be set when status becomes `archived`
+
+---
+
+## API / Interface Contract
+
+> Describe the intended interface at the boundary level. No implementation detail — just what crosses the wire or the component boundary.
+
+**Endpoints / Actions:**
+- `POST /resource` — creates X; requires Y; returns Z
+- `GET /resource/:id` — returns X; 404 if not found
+
+**Events / Side-effects** (if applicable):
+- Emits `resource.created` with payload `{ id, ownerId }`
+
+**UI entry points** (if applicable):
+- Accessible from: [screen/route]
+- Triggered by: [user action]
+- Visible to: [role/condition]
+
+---
+
+## Page Architecture
+> Only required for sub-issues with `layer: frontend`. Omit entirely otherwise.
+
+**Screen description:** ...
+
+**Component hierarchy:**
+```mermaid
+flowchart TD
+```
+
+**User interaction flow:**
+```mermaid
+sequenceDiagram
+```
 
 ---
 
 ## Acceptance Criteria (G/W/T)
 
-When a sub-issue spans both backend and frontend layers, group criteria
-under `### Backend` and `### Frontend` subsections:
-
 ### Backend
 
-- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC1`)
-- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC2`)
+- [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
 
 ### Frontend
 
-- [ ] `[UC_CODE]` GIVEN preconditions WHEN action THEN expected outcome (e.g. `M1UC22`)
+- [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
 
 ---
 
-## Dependencies
+## Out of Scope
 
-- Blocked by: #issue-number (if applicable)
-- Must be merged before: #issue-number (if applicable)
+Explicitly what this story does **not** cover, to prevent scope creep during implementation.
 
----
-
-## Notes
-
-Any constraints, prior decisions, or context the AI needs to avoid going off-script during implementation.
+- Deferred to: #issue or future milestone

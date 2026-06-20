@@ -1,65 +1,69 @@
 using DbUp;
-using DbUp.Engine;
 using Npgsql;
+using System.Reflection;
 
 namespace PanoramaMusic.Infrastructure.Persistence;
 
 public static class DatabaseMigrator
 {
-    public static void Run(string connectionString, bool ensureDatabase = false)
-    {
-        if (ensureDatabase)
-        {
-            EnsureDatabase.For.PostgresqlDatabase(connectionString);
-        }
+	public static void Run(string connectionString, bool ensureDatabase = false, params Assembly[] additionalAssemblies)
+	{
+		if (ensureDatabase)
+		{
+			EnsureDatabase.For.PostgresqlDatabase(connectionString);
+		}
 
-        RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration");
-        RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment");
-        RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed");
-    }
+		var assemblies = new[] { typeof(DatabaseMigrator).Assembly }
+			.Concat(additionalAssemblies)
+			.ToArray();
 
-    /// <summary>
-    /// Drops and recreates the public schema, wiping all tables, functions,
-    /// seeds, and migration journals. Intended for QA reset only — never call
-    /// in production.
-    /// </summary>
-    public static void Reset(string connectionString)
-    {
-        using NpgsqlConnection connection = new(connectionString);
-        connection.Open();
+		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assemblies);
+		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assemblies);
+		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assemblies);
+	}
 
-        using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText = """
+	public static void Reset(string connectionString)
+	{
+		using NpgsqlConnection connection = new(connectionString);
+		connection.Open();
+
+		using var command = connection.CreateCommand();
+		command.CommandText = """
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public;
             GRANT ALL ON SCHEMA public TO PUBLIC;
             """;
-        command.ExecuteNonQuery();
-    }
+		command.ExecuteNonQuery();
+	}
 
-    private static void RunScripts(
-        string connectionString,
-        string folderMarker,
-        string journalTable,
-        string label)
-    {
-        UpgradeEngine upgrader = DeployChanges.To
-            .PostgresqlDatabase(connectionString)
-            .WithScriptsEmbeddedInAssembly(
-                typeof(DatabaseMigrator).Assembly,
-                name => name.Contains(folderMarker))
-            .JournalToPostgresqlTable("public", journalTable)
-            .LogToConsole()
-            .Build();
+	private static void RunScripts(
+		string connectionString,
+		string folderMarker,
+		string journalTable,
+		string label,
+		Assembly[] assemblies)
+	{
+		var upgraderBuilder = DeployChanges.To
+			.PostgresqlDatabase(connectionString)
+			.JournalToPostgresqlTable("public", journalTable)
+			.LogToConsole();
 
-        DatabaseUpgradeResult result = upgrader.PerformUpgrade();
+		foreach (var assembly in assemblies)
+		{
+			upgraderBuilder = upgraderBuilder.WithScriptsEmbeddedInAssembly(
+				assembly,
+				name => name.Contains(folderMarker));
+		}
 
-        if (!result.Successful)
-        {
-            throw new InvalidOperationException(
-                $"Database {label} failed: {result.Error.Message}",
-                result.Error
-            );
-        }
-    }
+		var upgrader = upgraderBuilder.Build();
+		var result = upgrader.PerformUpgrade();
+
+		if (!result.Successful)
+		{
+			throw new InvalidOperationException(
+				$"Database {label} failed: {result.Error.Message}",
+				result.Error
+			);
+		}
+	}
 }

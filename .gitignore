@@ -24,3 +24,6 @@ dist/
 .DS_Store
 Thumbs.db
 /nul
+
+# Design assets (local only)
+.design/
