@@ -190,8 +190,6 @@ export class PmCreateUserForm extends HTMLElement {
 
     try {
       const result = await createUser(this.emailInput!.value, roles);
-      this.messageText!.textContent = 'User created successfully.';
-      this.message!.classList.add('create-user__message--success');
       this.form!.reset();
       this.roleTeacher!.checked = true;
       this.dispatchEvent(new CustomEvent('user-created', {
