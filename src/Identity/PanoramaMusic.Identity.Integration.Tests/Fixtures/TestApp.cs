@@ -74,6 +74,7 @@ public sealed class TestApp(WebApplication app) : IDisposable
 
 		builder.Services.Configure<AdminOptions>(opts => opts.Email = seedAdminEmail);
 		builder.Services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
+		builder.Services.AddSingleton<IAppOptions>(new AppOptions());
 		builder.Services.AddHttpContextAccessor();
 		builder.Services.AddScoped<IUserContext, UserContext>();
 		builder.Services.AddTransient(_ => (userRepo ?? new Mock<IUserRepository>()).Object);

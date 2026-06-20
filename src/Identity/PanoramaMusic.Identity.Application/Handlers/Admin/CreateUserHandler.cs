@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
@@ -10,7 +11,8 @@ namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 public sealed class CreateUserHandler(
 	IUserRepository userRepository,
 	IUserRoleRepository userRoleRepository,
-	IInviteTokenRepository inviteTokenRepository)
+	IInviteTokenRepository inviteTokenRepository,
+	IAppOptions appOptions)
 {
 	public async Task<CreateUserResult> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
 	{
@@ -32,6 +34,6 @@ public sealed class CreateUserHandler(
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
 		await inviteTokenRepository.AddAsync(inviteToken, cancellationToken);
 
-		return new CreateUserResult(user.UserId, $"/#/register?token={token.Value}");
+		return new CreateUserResult(user.UserId, $"{appOptions.AppBaseUrl}/#/register?token={token.Value}");
 	}
 }

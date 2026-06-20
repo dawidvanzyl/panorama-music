@@ -35,6 +35,9 @@ export default defineConfig({
       { name: 'M1.1UC38', description: 'Deactivated user row renders Activate button to the left of Delete' },
       { name: 'M1.1UC39', description: 'Clicking Activate dispatches user-activate-requested; on success table reloads showing Active row' },
       { name: 'M1.1UC40', description: 'activateUser service calls PATCH /api/users/{id}/activate and invalidates cache' },
+      { name: 'M1.1UC20', description: 'Create-user success banner appears with invite link and Copy Link button' },
+      { name: 'M1.1UC21', description: 'Regenerate-invite compact banner appears with new invite link and Copy Link button' },
+      { name: 'M1.1UC22', description: 'Status filter filters User Directory rows client-side; All restores full list' },
     ],
   },
 })

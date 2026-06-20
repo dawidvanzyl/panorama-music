@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+		services.Configure<AppOptions>(configuration);
 		services.AddDataAccess(connectionString);
 		services.AddRepositories();
 		services.AddServices();
@@ -94,6 +95,7 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<IHostedService, AdminSeedService>();
 		services.AddTransient<IEmailService, SmtpEmailService>();
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
+		services.AddSingleton<IAppOptions>(sp => sp.GetRequiredService<IOptions<AppOptions>>().Value);
 		services.AddHttpContextAccessor();
 		services.AddScoped<IUserContext, UserContext>();
 		return services;

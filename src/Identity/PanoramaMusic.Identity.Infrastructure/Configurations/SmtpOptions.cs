@@ -10,5 +10,4 @@ public sealed class SmtpOptions
 	public string Password { get; set; } = string.Empty;
 	public string From { get; set; } = string.Empty;
 	public string FromDisplayName { get; set; } = "Panorama Music";
-	public string AppBaseUrl { get; set; } = string.Empty;
 }

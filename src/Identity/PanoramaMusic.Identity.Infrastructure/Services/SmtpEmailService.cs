@@ -8,14 +8,13 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
-public sealed class SmtpEmailService(IOptions<SmtpOptions> options) : IEmailService
+public sealed class SmtpEmailService(IOptions<SmtpOptions> options, IAppOptions appOptions) : IEmailService
 {
 	private readonly SmtpOptions _options = options.Value;
 
 	public async Task SendPasswordResetAsync(string to, string rawToken, CancellationToken cancellationToken)
 	{
-		var resetLink = $"{_options.AppBaseUrl}/#/reset-password?token={rawToken}";
-
+		var resetLink = $"{appOptions.AppBaseUrl}/#/reset-password?token={rawToken}";
 		var message = new MimeMessage();
 		message.From.Add(new MailboxAddress(_options.FromDisplayName, _options.From));
 		message.To.Add(MailboxAddress.Parse(to));

@@ -150,3 +150,70 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     expect(editBtns.every(btn => btn.style.visibility === 'hidden')).toBe(true);
   });
 });
+
+describe('pm-users-table — status filter', { tags: ['M1.1UC22'] }, () => {
+  let el: PmUsersTable;
+
+  const pendingUser: GetUserResult = {
+    userId: 'user-pending',
+    email: 'pending@test.com',
+    roles: ['Teacher'],
+    isActive: false,
+    isProtected: false,
+    hasCompletedRegistration: false,
+  };
+
+  beforeEach(() => {
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+    el.users = [activeUser, pendingUser];
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('shows all users when filter is "All" (default)', () => {
+    const rows = el.shadowRoot!.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(2);
+  });
+
+  it('selecting Active shows only active users', () => {
+    const activeOption = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="active"]')!;
+    activeOption.click();
+
+    const rows = el.shadowRoot!.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain(activeUser.email);
+  });
+
+  it('selecting Pending shows only pending users', () => {
+    const pendingOption = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="pending"]')!;
+    pendingOption.click();
+
+    const rows = el.shadowRoot!.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain(pendingUser.email);
+  });
+
+  it('selecting All after a filter restores the full list', () => {
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="active"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="all"]')!.click();
+
+    const rows = el.shadowRoot!.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(2);
+  });
+
+  it('the filter label reflects the active selection', () => {
+    const filterLabel = el.shadowRoot!.getElementById('filterLabel')!;
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="active"]')!.click();
+    expect(filterLabel.textContent).toBe('Active');
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="pending"]')!.click();
+    expect(filterLabel.textContent).toBe('Pending');
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="all"]')!.click();
+    expect(filterLabel.textContent).toBe('Status');
+  });
+});

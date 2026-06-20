@@ -130,12 +130,65 @@ template.innerHTML = `
       opacity: 0.65;
       cursor: not-allowed;
     }
-    .users-table__invite-url {
-      display: block;
-      margin-top: 6px;
-      font-size: 12px;
-      word-break: break-all;
+    .users-table__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .users-table__filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border: 1px solid var(--pm-border);
+      border-radius: 9999px;
+      background: transparent;
       color: var(--pm-text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      position: relative;
+    }
+    .users-table__filter-btn:hover {
+      background: var(--pm-surface-2);
+    }
+    .users-table__filter-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 16px;
+    }
+    .users-table__dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--pm-surface);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      min-width: 120px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .users-table__dropdown--open {
+      display: block;
+    }
+    .users-table__dropdown-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: var(--pm-text);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .users-table__dropdown-item:hover {
+      background: var(--pm-surface-2);
+    }
+    .users-table__dropdown-item--active {
+      color: var(--pm-accent);
     }
     .users-table__error {
       display: block;
@@ -175,10 +228,26 @@ template.innerHTML = `
       justify-content: flex-end;
       align-items: center;
     }
+    .users-table__filter-wrap {
+      position: relative;
+    }
   </style>
 
   <div class="users-table__card">
-    <h2 class="users-table__title">Users</h2>
+    <div class="users-table__header">
+      <h2 class="users-table__title">User Directory</h2>
+      <div class="users-table__filter-wrap">
+        <button type="button" class="users-table__filter-btn" id="filterBtn">
+          <span id="filterLabel">Status</span>
+          <span class="users-table__filter-icon">expand_more</span>
+        </button>
+        <div class="users-table__dropdown" id="filterDropdown">
+          <button type="button" class="users-table__dropdown-item users-table__dropdown-item--active" data-value="all">All</button>
+          <button type="button" class="users-table__dropdown-item" data-value="active">Active</button>
+          <button type="button" class="users-table__dropdown-item" data-value="pending">Pending</button>
+        </div>
+      </div>
+    </div>
     <table>
       <thead>
         <tr>
@@ -197,8 +266,12 @@ template.innerHTML = `
 export class PmUsersTable extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
+  private filterBtn: HTMLButtonElement | null = null;
+  private filterDropdown: HTMLElement | null = null;
+  private filterLabel: HTMLElement | null = null;
   private _users: GetUserResult[] = [];
   private _editingUserId: string | null = null;
+  private _statusFilter: 'all' | 'active' | 'pending' = 'all';
 
   constructor() {
     super();
@@ -209,7 +282,20 @@ export class PmUsersTable extends HTMLElement {
   connectedCallback(): void {
     this.rowsBody = this.shadowRoot!.getElementById('rows') as HTMLElement;
     this.emptyMessage = this.shadowRoot!.getElementById('empty') as HTMLElement;
+    this.filterBtn = this.shadowRoot!.getElementById('filterBtn') as HTMLButtonElement;
+    this.filterDropdown = this.shadowRoot!.getElementById('filterDropdown') as HTMLElement;
+    this.filterLabel = this.shadowRoot!.getElementById('filterLabel') as HTMLElement;
+
+    this.filterBtn.addEventListener('click', this.handleFilterBtnClick);
+    this.filterDropdown.addEventListener('click', this.handleFilterOptionClick);
+    document.addEventListener('click', this.handleOutsideClick);
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.filterBtn?.removeEventListener('click', this.handleFilterBtnClick);
+    this.filterDropdown?.removeEventListener('click', this.handleFilterOptionClick);
+    document.removeEventListener('click', this.handleOutsideClick);
   }
 
   set users(value: GetUserResult[]) {
@@ -222,18 +308,48 @@ export class PmUsersTable extends HTMLElement {
     return this._users;
   }
 
+  private get filteredUsers(): GetUserResult[] {
+    if (this._statusFilter === 'all') return this._users;
+    if (this._statusFilter === 'active') return this._users.filter(u => u.isActive);
+    return this._users.filter(u => !u.isActive && !u.hasCompletedRegistration);
+  }
+
   private render(): void {
     if (!this.rowsBody || !this.emptyMessage) return;
 
+    const visible = this.filteredUsers;
     this.rowsBody.innerHTML = '';
-    this.emptyMessage.hidden = this._users.length > 0;
+    this.emptyMessage.hidden = visible.length > 0;
 
-    for (const user of this._users) {
+    for (const user of visible) {
       const isEditing = this._editingUserId === user.userId;
       const row = this.buildRow(user, isEditing);
       this.rowsBody.appendChild(row);
     }
   }
+
+  private handleFilterBtnClick = (e: Event): void => {
+    e.stopPropagation();
+    this.filterDropdown!.classList.toggle('users-table__dropdown--open');
+  };
+
+  private handleFilterOptionClick = (e: Event): void => {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-value]');
+    if (!target) return;
+    const value = target.dataset['value'] as 'all' | 'active' | 'pending';
+    this._statusFilter = value;
+    const labels: Record<string, string> = { all: 'Status', active: 'Active', pending: 'Pending' };
+    this.filterLabel!.textContent = labels[value];
+    this.filterDropdown!.querySelectorAll('.users-table__dropdown-item').forEach(item => {
+      item.classList.toggle('users-table__dropdown-item--active', (item as HTMLElement).dataset['value'] === value);
+    });
+    this.filterDropdown!.classList.remove('users-table__dropdown--open');
+    this.render();
+  };
+
+  private handleOutsideClick = (): void => {
+    this.filterDropdown?.classList.remove('users-table__dropdown--open');
+  };
 
   private buildRow(user: GetUserResult, isEditing: boolean): HTMLTableRowElement {
     const row = document.createElement('tr');
@@ -447,15 +563,15 @@ export class PmUsersTable extends HTMLElement {
 
   private handleRegenerate = async (userId: string, actionsCell: HTMLElement, button: HTMLButtonElement): Promise<void> => {
     button.disabled = true;
-    actionsCell.querySelector('.users-table__invite-url')?.remove();
     actionsCell.querySelector('.users-table__error')?.remove();
 
     try {
       const result = await regenerateInvite(userId);
-      const inviteUrl = document.createElement('span');
-      inviteUrl.classList.add('users-table__invite-url');
-      inviteUrl.textContent = result.inviteUrl;
-      actionsCell.appendChild(inviteUrl);
+      this.dispatchEvent(new CustomEvent('invite-regenerated', {
+        bubbles: true,
+        composed: true,
+        detail: { inviteUrl: result.inviteUrl },
+      }));
     } catch (err) {
       const error = document.createElement('span');
       error.classList.add('users-table__error');

@@ -1,6 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -21,7 +22,9 @@ public class RegenerateInviteTokenHandlerTests
 			.Setup(r => r.RevokeAndIssueAsync(It.IsAny<Guid>(), It.IsAny<InviteToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		Handler = new RegenerateInviteTokenHandler(UserRepo.Object, InviteRepo.Object);
+		var appOptions = new Mock<IAppOptions>();
+		appOptions.Setup(o => o.AppBaseUrl).Returns(string.Empty);
+		Handler = new RegenerateInviteTokenHandler(UserRepo.Object, InviteRepo.Object, appOptions.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
