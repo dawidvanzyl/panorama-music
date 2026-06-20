@@ -1,4 +1,4 @@
-import { getAccessToken } from './token-storage';
+import { getAccessToken } from '../../../services/token-storage';
 
 const API_BASE = '/api/users';
 

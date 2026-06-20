@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PmForgotPasswordPage } from '../pm-forgot-password-page';
 
 const mockForgotPassword = vi.fn();
-vi.mock('../../services/auth', () => ({
+vi.mock('../../../../services/auth', () => ({
   forgotPassword: (...args: unknown[]) => mockForgotPassword(...args),
   AuthError: class AuthError extends Error {
     constructor(message: string, public status: number) {

@@ -1,5 +1,5 @@
 import { regenerateInvite, updateUserRoles, AdminError, type GetUserResult } from '../services/admin';
-import { getUserId } from '../services/token-storage';
+import { getUserId } from '../../../services/token-storage';
 
 const template = document.createElement('template');
 template.innerHTML = `

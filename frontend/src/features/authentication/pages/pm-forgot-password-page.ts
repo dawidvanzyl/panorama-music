@@ -1,4 +1,4 @@
-import { forgotPassword, AuthError } from '../services/auth';
+import { forgotPassword, AuthError } from '../../../services/auth';
 
 const template = document.createElement('template');
 template.innerHTML = `

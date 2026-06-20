@@ -1,6 +1,6 @@
 import { isAuthenticated, logout } from '../services/auth';
 import { hasRole } from '../services/token-storage';
-import { clearUsersCache } from '../services/admin';
+import { clearUsersCache } from '../features/admin/services/admin';
 
 const template = document.createElement('template');
 template.innerHTML = `
