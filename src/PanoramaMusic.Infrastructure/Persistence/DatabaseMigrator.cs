@@ -29,6 +29,9 @@ public static class DatabaseMigrator
 
 		using var command = connection.CreateCommand();
 		command.CommandText = """
+            DROP SCHEMA IF EXISTS identity CASCADE;
+            DROP SCHEMA IF EXISTS tables CASCADE;
+            DROP SCHEMA IF EXISTS funcs CASCADE;
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public;
             GRANT ALL ON SCHEMA public TO PUBLIC;
