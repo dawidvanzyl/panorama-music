@@ -58,8 +58,23 @@ Post: "PR merged. Proceeding with milestone close, branch deletion, and tagging.
 
 ### 1) Close GitHub milestone
 
+`MILESTONE_NUMBER` (e.g. `1` or `1.1`) is the branch/tag suffix derived from
+the epic title — it is NOT the GitHub milestone API number, and the two can
+diverge (e.g. milestone "M1 — Identity & Auth" is API number `3`, not `1`).
+Look up the real API number from the merged PR's milestone field rather than
+assuming they match:
+
 ```
-gh api repos/{owner}/{repo}/milestones/$MILESTONE_NUMBER -X PATCH -f state=closed
+gh pr view $PR_NUMBER --json milestone --jq '.milestone.number'
+```
+
+If this returns empty/null, the PR has no milestone attached — post an error
+and stop execution. Do not guess or fall back to `$MILESTONE_NUMBER`.
+
+Store the result as `GITHUB_MILESTONE_NUMBER`, then:
+
+```
+gh api repos/{owner}/{repo}/milestones/$GITHUB_MILESTONE_NUMBER -X PATCH -f state=closed
 ```
 
 If the command fails (non-zero exit code), post the error output and stop execution. Do not proceed to prepare-base, branch deletion, or tagging.

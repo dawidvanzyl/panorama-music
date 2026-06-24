@@ -49,9 +49,10 @@ Close out a completed milestone by:
 ### 1) Read context
 
 - Fetch the epic issue `#{epic_issue_number}`.
-- Extract `milestone_number` using pattern `M(\d+)` against the epic title
-  (consistent with `plan-milestone.md`'s extraction rule). For example,
-  `[Backlog] M1 — Identity & Auth` yields milestone number `1`.
+- Extract `milestone_number` using pattern `M(\d+(?:\.\d+)?)` against the epic
+  title (consistent with `plan-milestone.md`'s extraction rule). For example,
+  `[Backlog] M1 — Identity & Auth` yields milestone number `1`; `[Backlog]
+  M1.1 — Identity Hardening & QA` yields `1.1`.
 - If multiple matches exist or no match is found, notify and ask for the
   milestone number manually. Do not proceed until confirmed.
 - Derive `milestone_branch` = `milestone/m{milestone_number}`.
@@ -129,7 +130,9 @@ Close out a completed milestone by:
     if any, will surface on GitHub)."
   - Accept only `yes | y | confirm` to proceed without resolving. Anything
     else: stop execution.
-- Run `git push origin milestone/m{milestone_number}`.
+- Run `git push origin refs/heads/milestone/m{milestone_number}:refs/heads/milestone/m{milestone_number}`
+  (fully-qualified refspec — a prior closed milestone leaves a tag of the same
+  name, which makes the short-name push ambiguous and fails).
 - Create PR to master:
   ```
   gh pr create \
