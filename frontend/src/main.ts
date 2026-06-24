@@ -6,8 +6,8 @@ import './features/authentication/pages/pm-registration-page';
 import './features/admin/pages/pm-admin-users-page';
 import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
-import { isAuthenticated } from './services/auth';
-import { hasRole } from './services/token-storage';
+import { AuthError, isAuthenticated, refreshToken } from './services/auth';
+import { getRefreshToken, hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 
@@ -20,7 +20,7 @@ const ROUTES: Record<string, () => string> = {
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
-function render(): void {
+async function render(): Promise<void> {
   const app = document.getElementById('app');
   if (!app) return;
 
@@ -29,8 +29,12 @@ function render(): void {
   const isPublicPage = PUBLIC_PATHS.has(basePath);
 
   if (!isPublicPage && !isAuthenticated()) {
-    window.location.hash = '#/login';
-    return;
+    const canAttemptRefresh = getRefreshToken() !== null;
+    const refreshed = canAttemptRefresh && (await tryRefresh());
+    if (!refreshed) {
+      window.location.hash = '#/login';
+      return;
+    }
   }
 
   if (basePath === '/admin/users' && !hasRole('Admin')) {
@@ -44,5 +48,28 @@ function render(): void {
   app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
 }
 
-window.addEventListener('hashchange', render);
-render();
+let pendingRefresh: Promise<boolean> | null = null;
+
+async function refreshOnce(): Promise<boolean> {
+  try {
+    await refreshToken();
+    return true;
+  } catch (err) {
+    if (!(err instanceof AuthError)) {
+      console.error('Unexpected error refreshing session', err);
+    }
+    return false;
+  }
+}
+
+function tryRefresh(): Promise<boolean> {
+  if (!pendingRefresh) {
+    pendingRefresh = refreshOnce().finally(() => {
+      pendingRefresh = null;
+    });
+  }
+  return pendingRefresh;
+}
+
+window.addEventListener('hashchange', () => void render());
+void render();

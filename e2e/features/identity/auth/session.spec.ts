@@ -61,7 +61,7 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
     await expect(page).toHaveURL(/#\/login$/);
   });
 
-  test.fixme('continues the session transparently via refresh token rotation when the access token expires (blocked by #136)', async ({
+  test('continues the session transparently via refresh token rotation when the access token expires', async ({
     page,
   }) => {
     const loginPage = new LoginPage(page);
