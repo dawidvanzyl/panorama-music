@@ -9,7 +9,7 @@ A self-hosted music streaming application built with C# (ASP.NET Core Minimal AP
 - **Backend:** .NET 10, ASP.NET Core Minimal API, Dapper, Npgsql, DbUp
 - **Database:** PostgreSQL
 - **Frontend:** Vite, Web Components, TypeScript, ESLint, Prettier
-- **Testing (planned):** xUnit
+- **Testing:** xUnit (backend unit), Vitest (frontend unit), Playwright (E2E)
 - **Infrastructure:** Docker Compose, GitHub Actions
 
 ## CI
@@ -116,7 +116,7 @@ curl http://localhost:3000/api/health
 
 To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
 
-1. Drop and recreate the `public` schema (all tables and data are wiped)
+1. Drop and recreate the `public`, `identity`, `tables`, and `funcs` schemas (all tables and data across every bounded context are wiped)
 2. Re-run all DbUp migrations from scratch
 3. Execute all seed scripts from `Persistence/Seeds/` in filename order
 
@@ -128,6 +128,26 @@ RESET_DB=true docker compose --profile qa up --build
 ```
 
 > `RESET_DB` defaults to `false`. It is safe to leave the variable present in `.env`; only the value `true` (case-insensitive) triggers a reset.
+
+## End-to-End Testing (Playwright)
+
+The Playwright E2E suite is a self-contained npm project under `e2e/` (mirroring how `frontend/` owns its own `package.json`) and runs against the `qa` Docker Compose profile (`http://localhost:3000`) — the same artifact deployed to Render, with the frontend served statically by the API.
+
+```bash
+cd e2e
+npm install
+RESET_DB=true docker compose --profile qa up --build -d
+npm run test:e2e
+```
+
+Specs are organised by feature under `e2e/features/` (e.g. `e2e/features/identity/auth/`), with shared fixtures in `e2e/fixtures/` and page objects in `e2e/pages/`. Every future milestone extends this same structure rather than introducing a new suite.
+
+Linting and formatting (ESLint + Prettier, mirroring `frontend/`'s setup):
+
+```bash
+npm run lint
+npm run format
+```
 
 ## Deployment
 
