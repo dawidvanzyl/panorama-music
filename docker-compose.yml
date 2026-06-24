@@ -47,7 +47,7 @@ services:
       dockerfile: Dockerfile
     profiles: [qa]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: QA
       ASPNETCORE_URLS: http://+:3000
       ConnectionStrings__DefaultConnection: >-
         Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
