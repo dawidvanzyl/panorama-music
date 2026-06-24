@@ -136,11 +136,14 @@ The Playwright E2E suite is a self-contained npm project under `e2e/` (mirroring
 ```bash
 cd e2e
 npm install
+npx playwright install chromium
 RESET_DB=true docker compose --profile qa up --build -d
 npm run test:e2e
 ```
 
 Specs are organised by feature under `e2e/features/` (e.g. `e2e/features/identity/auth/`), with shared fixtures in `e2e/fixtures/` and page objects in `e2e/pages/`. Every future milestone extends this same structure rather than introducing a new suite.
+
+Specs that log in (e.g. `auth/session.spec.ts`) authenticate as the seeded admin user and read credentials from the same `Admin__Email` / `Admin__Password` environment variables used to seed them (falling back to the `.env.example` defaults if unset) — export them before `npm run test:e2e` if your `.env` overrides the defaults.
 
 Linting and formatting (ESLint + Prettier, mirroring `frontend/`'s setup):
 
