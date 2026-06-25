@@ -141,7 +141,7 @@ describe('completeRegistration', { tags: ['M1UC36'] }, () => {
   });
 });
 
-describe('tryRefresh', () => {
+describe('tryRefresh', { tags: ['M1.2UC1'] }, () => {
   it('resolves "ok" and stores new tokens when refresh succeeds', async () => {
     localStorage.setItem('pm_refresh_token', 'old-refresh-token');
 
