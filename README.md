@@ -20,8 +20,9 @@ The CI workflow runs on every push and pull request to `master`.
 |-----|-------|
 | `backend-ci` | `dotnet restore` → `dotnet build` → `dotnet test` → `dotnet format --verify-no-changes` |
 | `frontend-ci` | `npm ci` → `npm run lint` → `npm run typecheck` (`tsc --noEmit`) → `npx vite build` |
+| `e2e-ci` | Brings up the `qa` Compose profile with `RESET_DB=true`, waits for `/api/health`, then runs `npx playwright test` |
 
-Both jobs run in parallel. Formatting or lint failures will block the workflow.
+All jobs run in parallel. Formatting, lint, or E2E spec failures will block the workflow. The `e2e-ci` job supplies the `qa` stack's JWT/admin/Postgres credentials as inline CI-only placeholder values — the stack is ephemeral, local to the job, and never exposed, so no GitHub Secrets are needed.
 
 ## Getting Started
 

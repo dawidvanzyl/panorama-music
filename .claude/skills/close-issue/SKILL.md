@@ -55,12 +55,21 @@ gh issue view #{issue_number} --json title,body,milestone
 Extract codes from the issue body, following the `sub-issue.md` template
 structure:
 
-- **IT codes** — from `## Epic Reference > Acceptance Criteria Covered`,
-  lines matching:
-  ```
-  - [ ] `[IT_CODE]` <text>
-  ```
-- **UC codes** — from `## Acceptance Criteria (G/W/T)`, lines matching:
+- **IT codes** — there are only two code types, IT and UC; IT codes appear in
+  two places in the issue body:
+  - `## Epic Reference > Acceptance Criteria Covered`, lines matching:
+    ```
+    - [ ] `[IT_CODE]` <text>
+    ```
+  - `## Acceptance Criteria (G/W/T) > ### E2E`, lines matching the same
+    `- [ ] \`[IT_CODE]\` <text>` shape. The same IT code is typically repeated
+    across multiple lines here (one per G/W/T scenario covered by that spec
+    file's tagged `test.describe` block) and commonly duplicates a code
+    already listed under Epic Reference. Keep every line as a distinct
+    checkbox to tick later, but dedupe codes before running anything (see
+    step 3).
+- **UC codes** — from `## Acceptance Criteria (G/W/T) > ### Backend` and
+  `### Frontend`, lines matching:
   ```
   - [ ] `[UC_CODE]` <text>
   ```
@@ -77,7 +86,7 @@ to verify; this is expected for sub-issues flagged with empty criteria in
 
 ### 3) Verify each code
 
-#### Backend (IT and UC under `### Backend`)
+#### Backend (UC under `### Backend`, and IT codes with a matching backend trait test)
 
 For each code:
 
@@ -85,13 +94,17 @@ For each code:
 grep -r '\[Trait("AC", "CODE")\]' src/ --include="*.cs"
 ```
 
-- Not found → ❌ FAIL ("no test tagged with this AC code").
 - Found → run:
   ```bash
   dotnet test --filter "AC=CODE" --no-build
   ```
   - Pass → ✅ PASS
   - Fail → ❌ FAIL
+- Not found:
+  - UC code under `### Backend` → ❌ FAIL ("no test tagged with this AC code").
+  - IT code → IT codes have no heading to bucket them by layer, so absence of
+    a backend trait test only rules out backend; fall through to E2E below
+    before deciding FAIL.
 
 #### Frontend (UC under `### Frontend`)
 
@@ -109,14 +122,52 @@ npx vitest run --reporter=verbose --tags-filter="AC=CODE"
 > backend `--filter "AC=CODE"` run). Do not attempt to map a single full-suite
 > run back to individual codes.
 
+#### E2E (IT codes under `### E2E`, and Epic-Reference IT codes with no backend trait test)
+
+These codes are verified by the Playwright suite (`e2e/`) instead of a
+unit-test runner. Build the set of codes to verify here as the union of:
+the Epic-Reference IT codes that fell through from the Backend step above,
+and every distinct code listed under `### E2E` (the same IT code commonly
+appears in both places, and repeated across multiple `### E2E` lines —
+deduplicate before running anything; run each unique code only once).
+
+Before verifying any code in this section, confirm the `qa` stack is healthy:
+
+```bash
+curl --silent --fail http://localhost:3000/api/health
+```
+
+- If this fails, bring the stack up first and wait for health before
+  continuing:
+  ```bash
+  RESET_DB=true docker compose --profile qa up --build -d
+  ```
+
+For each unique code:
+
+```bash
+npx playwright test --tag @CODE
+```
+
+(run from the `e2e/` directory)
+
+- No tests matched the tag → ❌ FAIL ("no test tagged with this AC code").
+- Tests matched and passed → ✅ PASS
+- Tests matched and failed → ❌ FAIL
+
+Apply the result to every checkbox line carrying that code — in the Epic
+Reference list and every repeated occurrence under `### E2E`.
+
 ---
 
 ### 4) Evaluate results
 
-Compute:
+Compute, counting every checkbox line separately (a single IT code repeated
+across multiple `### E2E` lines counts once per line, each carrying the
+verification result of its underlying code):
 
-- `n` = codes with ✅ PASS
-- `m` = total codes (IT + UC)
+- `n` = checkbox lines with ✅ PASS
+- `m` = total checkbox lines (IT + UC)
 
 ---
 
@@ -139,9 +190,11 @@ If `n < m`:
 ### 5) Update issue checkboxes (idempotent)
 
 - Re-fetch the issue body before editing.
-- For each ✅ PASS code, change `- [ ] \`[CODE]\`` to `- [x] \`[CODE]\`` in
-  the corresponding section.
-- Leave ❌ FAIL codes as `- [ ]`.
+- For each ✅ PASS code, change `- [ ] \`[CODE]\`` to `- [x] \`[CODE]\`` for
+  every matching checkbox line in the issue body (an IT code may appear on
+  several lines under `### E2E`, plus once under Epic Reference — tick all
+  of them).
+- Leave ❌ FAIL codes as `- [ ]` on every matching line.
 - Only write the body if at least one checkbox state actually changes.
 - Do not write any temporary files. Pass the updated body directly via `--body`.
 
@@ -176,7 +229,7 @@ Return:
 
 - PR merge status: merged
 - AC result: n/m passing
-- IT codes: list with ✅/❌
+- IT codes: list with ✅/❌ (noting Epic Reference vs `### E2E` occurrences if both exist)
 - UC codes: list with ✅/❌ (grouped Backend/Frontend if applicable)
 - Issue state: closed/open
 

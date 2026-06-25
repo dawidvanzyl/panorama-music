@@ -25,7 +25,7 @@ At the start of execution, always post a visible message to the user:
 
 Close out a completed milestone by:
 1) verifying all sub-issues are closed,
-2) verifying milestone IT acceptance criteria (backend and frontend) pass,
+2) verifying milestone IT acceptance criteria (backend, frontend, and e2e) pass,
 3) creating a PR from `milestone/m{number}` to `master`,
 4) launching the `close-milestone-watch` command that waits for the merge,
 5) which then closes the GitHub milestone, deletes the milestone branch, runs
@@ -81,8 +81,9 @@ Close out a completed milestone by:
 
 - Using the sub-issue data fetched in step 2, determine scope per IT code:
   if the corresponding sub-issue has a `layer: frontend` label, the IT code
-  is `frontend` scope; otherwise `backend`. If scope cannot be determined,
-  default to `backend`.
+  is `frontend` scope; if it has a `layer: backend` label, it is `backend`
+  scope; otherwise `e2e` scope (full-stack E2E sub-issues, e.g. M1.2 onward,
+  carry no `layer: backend`/`layer: frontend` label by convention).
 
 #### Backend IT codes
 
@@ -105,16 +106,29 @@ Close out a completed milestone by:
     failure list.
 - If no IT codes are frontend-scoped, skip this subsection.
 
+#### E2E IT codes
+
+- If any IT codes are e2e-scoped:
+  - Confirm the `qa` stack is healthy: `curl --silent --fail http://localhost:3000/api/health`.
+    If unhealthy, bring it up and wait for health before continuing:
+    `RESET_DB=true docker compose --profile qa up --build -d`.
+  - For each e2e-scoped `[IT_CODE]`, run (from the `e2e/` directory):
+    `npx playwright test --tag @{IT_CODE}`
+  - Map each code to its result:
+    - ✅ PASS — tests matched and passed
+    - ❌ FAIL — tests matched and failed, or no test found matching this tag
+- If no IT codes are e2e-scoped, skip this subsection.
+
 #### Combine results
 
 - Re-fetch the epic body immediately before editing. For each ✅ PASS code
-  (backend or frontend), change `- [ ] \`[IT_CODE]\`` to `- [x] \`[IT_CODE]\``
-  in `## Acceptance Criteria`. Leave ❌ FAIL codes as `- [ ]`. Only write the
-  body if at least one checkbox state actually changes.
-- Compute `n` = total codes ✅ PASS (backend + frontend), `m` = total IT codes.
+  (backend, frontend, or e2e), change `- [ ] \`[IT_CODE]\`` to
+  `- [x] \`[IT_CODE]\`` in `## Acceptance Criteria`. Leave ❌ FAIL codes as
+  `- [ ]`. Only write the body if at least one checkbox state actually changes.
+- Compute `n` = total codes ✅ PASS (backend + frontend + e2e), `m` = total IT codes.
 - If `n < m`:
   - Output: "Milestone M{milestone_number} integration tests partially
-    passing: {n}/{m}. Failing codes: {list} (grouped Backend/Frontend)."
+    passing: {n}/{m}. Failing codes: {list} (grouped Backend/Frontend/E2E)."
   - Stop execution. Do not proceed to step 4.
 - If `n == m`, proceed to step 4.
 
