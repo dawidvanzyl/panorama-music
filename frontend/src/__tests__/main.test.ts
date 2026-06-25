@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 
 const mockIsAuthenticated = vi.fn();
 const mockTryRefresh = vi.fn();
@@ -15,20 +15,30 @@ vi.mock('../services/token-storage', () => ({
 }));
 
 describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }, () => {
-  beforeEach(async () => {
+  // main.ts pulls in component modules that call customElements.define() at
+  // module scope, so it can only be imported once per test run — re-importing
+  // it (e.g. via vi.resetModules()) throws "already registered in the
+  // registry". Loaded once here; every other piece of state (mocks, DOM,
+  // hash) is reset per test in beforeEach below instead.
+  beforeAll(async () => {
+    await import('../main');
+  });
+
+  beforeEach(() => {
     vi.useFakeTimers();
+    vi.resetAllMocks();
     document.body.innerHTML = '<div id="app"></div>';
     mockIsAuthenticated.mockReturnValue(false);
     mockGetRefreshToken.mockReturnValue('a-refresh-token');
     mockHasRole.mockReturnValue(false);
-    window.location.hash = '#/';
-
-    await import('../main');
+    // A public page as the neutral baseline: it skips the refresh-check
+    // block entirely, so navigating to it can never trigger a stray
+    // tryRefresh() call carrying over leftover mock state from a prior test.
+    window.location.hash = '#/login';
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.clearAllMocks();
   });
 
   it('shows a retry message and re-attempts the refresh after a delay when it fails unexpectedly', async () => {
