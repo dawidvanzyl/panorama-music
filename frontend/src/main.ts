@@ -21,7 +21,14 @@ const ROUTES: Record<string, () => string> = {
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
+let retryTimer: ReturnType<typeof window.setTimeout> | null = null;
+
 async function render(): Promise<void> {
+  if (retryTimer !== null) {
+    window.clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
   const app = document.getElementById('app');
   if (!app) return;
 
@@ -41,7 +48,7 @@ async function render(): Promise<void> {
     }
     if (outcome === 'failed') {
       app.innerHTML = '<p>Unable to verify your session. Retrying…</p>';
-      window.setTimeout(() => void render(), REFRESH_RETRY_DELAY_MS);
+      retryTimer = window.setTimeout(() => void render(), REFRESH_RETRY_DELAY_MS);
       return;
     }
   }

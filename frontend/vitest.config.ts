@@ -39,6 +39,7 @@ export default defineConfig({
       { name: 'M1.1UC21', description: 'Regenerate-invite compact banner appears with new invite link and Copy Link button' },
       { name: 'M1.1UC22', description: 'Status filter filters User Directory rows client-side; All restores full list' },
       { name: 'M1.2UC1', description: 'tryRefresh() distinguishes confirmed rejection from unexpected failure and dedupes concurrent calls' },
+      { name: 'M1.2UC2', description: 'render() shows a retry message on refresh failure and cancels a stale retry timer when navigation triggers a new render first' },
     ],
   },
 })
