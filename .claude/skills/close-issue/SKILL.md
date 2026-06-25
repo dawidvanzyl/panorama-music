@@ -60,12 +60,22 @@ structure:
   ```
   - [ ] `[IT_CODE]` <text>
   ```
-- **UC codes** — from `## Acceptance Criteria (G/W/T)`, lines matching:
+- **UC codes** — from `## Acceptance Criteria (G/W/T) > ### Backend` and
+  `### Frontend`, lines matching:
   ```
   - [ ] `[UC_CODE]` <text>
   ```
-  Note which subsection (`### Backend` / `### Frontend` / `### Full-Stack`)
-  each UC lives under.
+  Note which subsection (`### Backend` / `### Frontend`) each UC lives under.
+- **E2E codes** — from `## Acceptance Criteria (G/W/T) > ### E2E`, lines
+  matching:
+  ```
+  - [ ] `[IT_CODE]` <text>
+  ```
+  These are IT-shaped codes, not UC codes — the same IT code is typically
+  repeated across multiple lines (one per G/W/T scenario covered by that
+  spec file's tagged `test.describe` block). Keep every line as a distinct
+  checkbox to tick later, but the codes are deduplicated before running
+  anything (see step 3).
 
 If a checkbox line does not match `- [ ] \`[CODE]\` ...`, skip it — do not
 infer codes from free text.
@@ -95,8 +105,8 @@ grep -r '\[Trait("AC", "CODE")\]' src/ --include="*.cs"
 - Not found:
   - UC code under `### Backend` → ❌ FAIL ("no test tagged with this AC code").
   - IT code → IT codes have no heading to bucket them by layer, so absence of
-    a backend trait test only rules out backend; fall through to Full-Stack /
-    E2E below before deciding FAIL.
+    a backend trait test only rules out backend; fall through to E2E below
+    before deciding FAIL.
 
 #### Frontend (UC under `### Frontend`)
 
@@ -114,11 +124,16 @@ npx vitest run --reporter=verbose --tags-filter="AC=CODE"
 > backend `--filter "AC=CODE"` run). Do not attempt to map a single full-suite
 > run back to individual codes.
 
-#### Full-Stack / E2E (UC under `### Full-Stack`, and IT codes with no backend trait test)
+#### E2E (codes under `### E2E`, and Epic-Reference IT codes with no backend trait test)
 
 These codes are verified by the Playwright suite (`e2e/`) instead of a
-unit-test runner. Before verifying any code in this section, confirm the `qa`
-stack is healthy:
+unit-test runner. Build the set of codes to verify here as the union of:
+the Epic-Reference IT codes that fell through from the Backend step above,
+and every distinct code listed under `### E2E` (the same IT code commonly
+appears in both places, and repeated across multiple `### E2E` lines —
+deduplicate before running anything; run each unique code only once).
+
+Before verifying any code in this section, confirm the `qa` stack is healthy:
 
 ```bash
 curl --silent --fail http://localhost:3000/api/health
@@ -130,7 +145,7 @@ curl --silent --fail http://localhost:3000/api/health
   RESET_DB=true docker compose --profile qa up --build -d
   ```
 
-For each code:
+For each unique code:
 
 ```bash
 npx playwright test --tag @CODE
@@ -142,14 +157,19 @@ npx playwright test --tag @CODE
 - Tests matched and passed → ✅ PASS
 - Tests matched and failed → ❌ FAIL
 
+Apply the result to every checkbox line carrying that code — in the Epic
+Reference list and every repeated occurrence under `### E2E`.
+
 ---
 
 ### 4) Evaluate results
 
-Compute:
+Compute, counting every checkbox line separately (a single E2E code repeated
+across multiple `### E2E` lines counts once per line, each carrying the
+verification result of its underlying code):
 
-- `n` = codes with ✅ PASS
-- `m` = total codes (IT + UC)
+- `n` = checkbox lines with ✅ PASS
+- `m` = total checkbox lines (IT + UC + E2E)
 
 ---
 
@@ -172,9 +192,11 @@ If `n < m`:
 ### 5) Update issue checkboxes (idempotent)
 
 - Re-fetch the issue body before editing.
-- For each ✅ PASS code, change `- [ ] \`[CODE]\`` to `- [x] \`[CODE]\`` in
-  the corresponding section.
-- Leave ❌ FAIL codes as `- [ ]`.
+- For each ✅ PASS code, change `- [ ] \`[CODE]\`` to `- [x] \`[CODE]\`` for
+  every matching checkbox line in the issue body (an E2E code may appear on
+  several lines under `### E2E`, plus once under Epic Reference — tick all
+  of them).
+- Leave ❌ FAIL codes as `- [ ]` on every matching line.
 - Only write the body if at least one checkbox state actually changes.
 - Do not write any temporary files. Pass the updated body directly via `--body`.
 
@@ -210,7 +232,8 @@ Return:
 - PR merge status: merged
 - AC result: n/m passing
 - IT codes: list with ✅/❌
-- UC codes: list with ✅/❌ (grouped Backend/Frontend/Full-Stack if applicable)
+- UC codes: list with ✅/❌ (grouped Backend/Frontend if applicable)
+- E2E codes: list with ✅/❌
 - Issue state: closed/open
 
 ## Guardrails
