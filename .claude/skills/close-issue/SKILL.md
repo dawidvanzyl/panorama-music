@@ -55,27 +55,25 @@ gh issue view #{issue_number} --json title,body,milestone
 Extract codes from the issue body, following the `sub-issue.md` template
 structure:
 
-- **IT codes** — from `## Epic Reference > Acceptance Criteria Covered`,
-  lines matching:
-  ```
-  - [ ] `[IT_CODE]` <text>
-  ```
+- **IT codes** — there are only two code types, IT and UC; IT codes appear in
+  two places in the issue body:
+  - `## Epic Reference > Acceptance Criteria Covered`, lines matching:
+    ```
+    - [ ] `[IT_CODE]` <text>
+    ```
+  - `## Acceptance Criteria (G/W/T) > ### E2E`, lines matching the same
+    `- [ ] \`[IT_CODE]\` <text>` shape. The same IT code is typically repeated
+    across multiple lines here (one per G/W/T scenario covered by that spec
+    file's tagged `test.describe` block) and commonly duplicates a code
+    already listed under Epic Reference. Keep every line as a distinct
+    checkbox to tick later, but dedupe codes before running anything (see
+    step 3).
 - **UC codes** — from `## Acceptance Criteria (G/W/T) > ### Backend` and
   `### Frontend`, lines matching:
   ```
   - [ ] `[UC_CODE]` <text>
   ```
   Note which subsection (`### Backend` / `### Frontend`) each UC lives under.
-- **E2E codes** — from `## Acceptance Criteria (G/W/T) > ### E2E`, lines
-  matching:
-  ```
-  - [ ] `[IT_CODE]` <text>
-  ```
-  These are IT-shaped codes, not UC codes — the same IT code is typically
-  repeated across multiple lines (one per G/W/T scenario covered by that
-  spec file's tagged `test.describe` block). Keep every line as a distinct
-  checkbox to tick later, but the codes are deduplicated before running
-  anything (see step 3).
 
 If a checkbox line does not match `- [ ] \`[CODE]\` ...`, skip it — do not
 infer codes from free text.
@@ -124,7 +122,7 @@ npx vitest run --reporter=verbose --tags-filter="AC=CODE"
 > backend `--filter "AC=CODE"` run). Do not attempt to map a single full-suite
 > run back to individual codes.
 
-#### E2E (codes under `### E2E`, and Epic-Reference IT codes with no backend trait test)
+#### E2E (IT codes under `### E2E`, and Epic-Reference IT codes with no backend trait test)
 
 These codes are verified by the Playwright suite (`e2e/`) instead of a
 unit-test runner. Build the set of codes to verify here as the union of:
@@ -164,12 +162,12 @@ Reference list and every repeated occurrence under `### E2E`.
 
 ### 4) Evaluate results
 
-Compute, counting every checkbox line separately (a single E2E code repeated
+Compute, counting every checkbox line separately (a single IT code repeated
 across multiple `### E2E` lines counts once per line, each carrying the
 verification result of its underlying code):
 
 - `n` = checkbox lines with ✅ PASS
-- `m` = total checkbox lines (IT + UC + E2E)
+- `m` = total checkbox lines (IT + UC)
 
 ---
 
@@ -193,7 +191,7 @@ If `n < m`:
 
 - Re-fetch the issue body before editing.
 - For each ✅ PASS code, change `- [ ] \`[CODE]\`` to `- [x] \`[CODE]\`` for
-  every matching checkbox line in the issue body (an E2E code may appear on
+  every matching checkbox line in the issue body (an IT code may appear on
   several lines under `### E2E`, plus once under Epic Reference — tick all
   of them).
 - Leave ❌ FAIL codes as `- [ ]` on every matching line.
@@ -231,9 +229,8 @@ Return:
 
 - PR merge status: merged
 - AC result: n/m passing
-- IT codes: list with ✅/❌
+- IT codes: list with ✅/❌ (noting Epic Reference vs `### E2E` occurrences if both exist)
 - UC codes: list with ✅/❌ (grouped Backend/Frontend if applicable)
-- E2E codes: list with ✅/❌
 - Issue state: closed/open
 
 ## Guardrails
