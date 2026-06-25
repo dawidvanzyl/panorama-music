@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { login, logout, completeRegistration, refreshToken, isAuthenticated } from '../auth';
+import { login, logout, completeRegistration, refreshToken, isAuthenticated, tryRefresh } from '../auth';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -138,6 +138,94 @@ describe('completeRegistration', { tags: ['M1UC36'] }, () => {
     });
 
     await expect(completeRegistration('bad-token', 'Pass123!')).rejects.toThrow('Invite link is invalid or expired');
+  });
+});
+
+describe('tryRefresh', { tags: ['M1.2UC1'] }, () => {
+  it('resolves "ok" and stores new tokens when refresh succeeds', async () => {
+    localStorage.setItem('pm_refresh_token', 'old-refresh-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...validAuthResult, accessToken: 'rotated-token' }),
+    });
+
+    const outcome = await tryRefresh();
+
+    expect(outcome).toBe('ok');
+    expect(localStorage.getItem('pm_access_token')).toBe('rotated-token');
+  });
+
+  it('resolves "rejected" and clears tokens when the refresh token is invalid/expired/revoked', async () => {
+    localStorage.setItem('pm_refresh_token', 'dead-refresh-token');
+    localStorage.setItem('pm_access_token', 'stale-access-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: 'Invalid or expired refresh token' }),
+    });
+
+    const outcome = await tryRefresh();
+
+    expect(outcome).toBe('rejected');
+    expect(localStorage.getItem('pm_access_token')).toBeNull();
+    expect(localStorage.getItem('pm_refresh_token')).toBeNull();
+  });
+
+  it('resolves "failed" and does not clear tokens on a non-401 server error (e.g. a transient 5xx)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('pm_refresh_token', 'still-valid-refresh-token');
+    localStorage.setItem('pm_access_token', 'stale-access-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'Internal server error' }),
+    });
+
+    const outcome = await tryRefresh();
+
+    expect(outcome).toBe('failed');
+    expect(localStorage.getItem('pm_access_token')).toBe('stale-access-token');
+    expect(localStorage.getItem('pm_refresh_token')).toBe('still-valid-refresh-token');
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
+  it('resolves "failed" and does not clear tokens on an unexpected/network error', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('pm_refresh_token', 'still-valid-refresh-token');
+    localStorage.setItem('pm_access_token', 'stale-access-token');
+
+    mockFetch.mockRejectedValueOnce(new TypeError('Network request failed'));
+
+    const outcome = await tryRefresh();
+
+    expect(outcome).toBe('failed');
+    expect(localStorage.getItem('pm_access_token')).toBe('stale-access-token');
+    expect(localStorage.getItem('pm_refresh_token')).toBe('still-valid-refresh-token');
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
+  it('dedupes concurrent calls into a single in-flight request', async () => {
+    localStorage.setItem('pm_refresh_token', 'old-refresh-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => validAuthResult,
+    });
+
+    const [first, second] = await Promise.all([tryRefresh(), tryRefresh()]);
+
+    expect(first).toBe('ok');
+    expect(second).toBe('ok');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 
