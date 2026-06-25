@@ -174,6 +174,27 @@ describe('tryRefresh', { tags: ['M1.2UC1'] }, () => {
     expect(localStorage.getItem('pm_refresh_token')).toBeNull();
   });
 
+  it('resolves "failed" and does not clear tokens on a non-401 server error (e.g. a transient 5xx)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('pm_refresh_token', 'still-valid-refresh-token');
+    localStorage.setItem('pm_access_token', 'stale-access-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'Internal server error' }),
+    });
+
+    const outcome = await tryRefresh();
+
+    expect(outcome).toBe('failed');
+    expect(localStorage.getItem('pm_access_token')).toBe('stale-access-token');
+    expect(localStorage.getItem('pm_refresh_token')).toBe('still-valid-refresh-token');
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
   it('resolves "failed" and does not clear tokens on an unexpected/network error', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.setItem('pm_refresh_token', 'still-valid-refresh-token');

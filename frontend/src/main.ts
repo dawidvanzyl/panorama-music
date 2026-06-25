@@ -10,6 +10,7 @@ import { isAuthenticated, tryRefresh } from './services/auth';
 import { getRefreshToken, hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
+const REFRESH_RETRY_DELAY_MS = 3000;
 
 const ROUTES: Record<string, () => string> = {
   '/login': () => '<pm-login-page></pm-login-page>',
@@ -39,6 +40,8 @@ async function render(): Promise<void> {
       return;
     }
     if (outcome === 'failed') {
+      app.innerHTML = '<p>Unable to verify your session. Retrying…</p>';
+      window.setTimeout(() => void render(), REFRESH_RETRY_DELAY_MS);
       return;
     }
   }

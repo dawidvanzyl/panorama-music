@@ -135,7 +135,7 @@ export function tryRefresh(): Promise<RefreshOutcome> {
     pendingRefresh = refreshToken()
       .then((): RefreshOutcome => 'ok')
       .catch((err: unknown): RefreshOutcome => {
-        if (err instanceof AuthError) {
+        if (err instanceof AuthError && err.status === 401) {
           clearTokens();
           return 'rejected';
         }
