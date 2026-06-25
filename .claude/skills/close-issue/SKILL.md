@@ -64,7 +64,8 @@ structure:
   ```
   - [ ] `[UC_CODE]` <text>
   ```
-  Note which subsection (`### Backend` / `### Frontend`) each UC lives under.
+  Note which subsection (`### Backend` / `### Frontend` / `### Full-Stack`)
+  each UC lives under.
 
 If a checkbox line does not match `- [ ] \`[CODE]\` ...`, skip it — do not
 infer codes from free text.
@@ -77,7 +78,7 @@ to verify; this is expected for sub-issues flagged with empty criteria in
 
 ### 3) Verify each code
 
-#### Backend (IT and UC under `### Backend`)
+#### Backend (UC under `### Backend`, and IT codes with a matching backend trait test)
 
 For each code:
 
@@ -85,13 +86,17 @@ For each code:
 grep -r '\[Trait("AC", "CODE")\]' src/ --include="*.cs"
 ```
 
-- Not found → ❌ FAIL ("no test tagged with this AC code").
 - Found → run:
   ```bash
   dotnet test --filter "AC=CODE" --no-build
   ```
   - Pass → ✅ PASS
   - Fail → ❌ FAIL
+- Not found:
+  - UC code under `### Backend` → ❌ FAIL ("no test tagged with this AC code").
+  - IT code → IT codes have no heading to bucket them by layer, so absence of
+    a backend trait test only rules out backend; fall through to Full-Stack /
+    E2E below before deciding FAIL.
 
 #### Frontend (UC under `### Frontend`)
 
@@ -108,6 +113,34 @@ npx vitest run --reporter=verbose --tags-filter="AC=CODE"
 > Run one filtered execution per code (this is the per-AC equivalent of the
 > backend `--filter "AC=CODE"` run). Do not attempt to map a single full-suite
 > run back to individual codes.
+
+#### Full-Stack / E2E (UC under `### Full-Stack`, and IT codes with no backend trait test)
+
+These codes are verified by the Playwright suite (`e2e/`) instead of a
+unit-test runner. Before verifying any code in this section, confirm the `qa`
+stack is healthy:
+
+```bash
+curl --silent --fail http://localhost:3000/api/health
+```
+
+- If this fails, bring the stack up first and wait for health before
+  continuing:
+  ```bash
+  RESET_DB=true docker compose --profile qa up --build -d
+  ```
+
+For each code:
+
+```bash
+npx playwright test --tag @CODE
+```
+
+(run from the `e2e/` directory)
+
+- No tests matched the tag → ❌ FAIL ("no test tagged with this AC code").
+- Tests matched and passed → ✅ PASS
+- Tests matched and failed → ❌ FAIL
 
 ---
 
@@ -177,7 +210,7 @@ Return:
 - PR merge status: merged
 - AC result: n/m passing
 - IT codes: list with ✅/❌
-- UC codes: list with ✅/❌ (grouped Backend/Frontend if applicable)
+- UC codes: list with ✅/❌ (grouped Backend/Frontend/Full-Stack if applicable)
 - Issue state: closed/open
 
 ## Guardrails

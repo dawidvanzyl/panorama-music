@@ -101,6 +101,12 @@ sequenceDiagram
 
 - [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
 
+### Full-Stack
+
+> Only for criteria that don't decompose into backend-only or frontend-only behaviour — verified via the Playwright E2E suite instead of the unit-test runners.
+
+- [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
+
 ---
 
 ## Out of Scope
