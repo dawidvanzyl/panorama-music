@@ -6,7 +6,7 @@ import './features/authentication/pages/pm-registration-page';
 import './features/admin/pages/pm-admin-users-page';
 import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
-import { AuthError, isAuthenticated, refreshToken } from './services/auth';
+import { isAuthenticated, tryRefresh } from './services/auth';
 import { getRefreshToken, hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
@@ -29,10 +29,16 @@ async function render(): Promise<void> {
   const isPublicPage = PUBLIC_PATHS.has(basePath);
 
   if (!isPublicPage && !isAuthenticated()) {
-    const canAttemptRefresh = getRefreshToken() !== null;
-    const refreshed = canAttemptRefresh && (await tryRefresh());
-    if (!refreshed) {
+    if (getRefreshToken() === null) {
       window.location.hash = '#/login';
+      return;
+    }
+    const outcome = await tryRefresh();
+    if (outcome === 'rejected') {
+      window.location.hash = '#/login';
+      return;
+    }
+    if (outcome === 'failed') {
       return;
     }
   }
@@ -46,29 +52,6 @@ async function render(): Promise<void> {
     ? ROUTES[basePath]
     : (() => '<pm-login-page></pm-login-page>');
   app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
-}
-
-let pendingRefresh: Promise<boolean> | null = null;
-
-async function refreshOnce(): Promise<boolean> {
-  try {
-    await refreshToken();
-    return true;
-  } catch (err) {
-    if (!(err instanceof AuthError)) {
-      console.error('Unexpected error refreshing session', err);
-    }
-    return false;
-  }
-}
-
-function tryRefresh(): Promise<boolean> {
-  if (!pendingRefresh) {
-    pendingRefresh = refreshOnce().finally(() => {
-      pendingRefresh = null;
-    });
-  }
-  return pendingRefresh;
 }
 
 window.addEventListener('hashchange', () => void render());

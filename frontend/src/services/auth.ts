@@ -126,4 +126,27 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await handleResponse<void>(response);
 }
 
+export type RefreshOutcome = 'ok' | 'rejected' | 'failed';
+
+let pendingRefresh: Promise<RefreshOutcome> | null = null;
+
+export function tryRefresh(): Promise<RefreshOutcome> {
+  if (!pendingRefresh) {
+    pendingRefresh = refreshToken()
+      .then((): RefreshOutcome => 'ok')
+      .catch((err: unknown): RefreshOutcome => {
+        if (err instanceof AuthError) {
+          clearTokens();
+          return 'rejected';
+        }
+        console.error('Unexpected error refreshing session', err);
+        return 'failed';
+      })
+      .finally(() => {
+        pendingRefresh = null;
+      });
+  }
+  return pendingRefresh;
+}
+
 export { isAuthenticated };
