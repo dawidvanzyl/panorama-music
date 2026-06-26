@@ -146,6 +146,10 @@ Specs are organised by feature under `e2e/features/` (e.g. `e2e/features/identit
 
 Specs that log in (e.g. `auth/session.spec.ts`) authenticate as the seeded admin user and read credentials from the same `Admin__Email` / `Admin__Password` environment variables used to seed them (falling back to the `.env.example` defaults if unset) — export them before `npm run test:e2e` if your `.env` overrides the defaults.
 
+Some specs need a precondition that can't be produced through the UI/API alone (e.g. `auth/registration.spec.ts` simulating an already-expired invite token). These use `e2e/fixtures/db.ts` to connect directly to the `qa` Postgres database (`localhost:5433`), reading the same `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB_QA` environment variables the Compose stack is seeded with.
+
+Specs that need a real outgoing email (e.g. `auth/password-reset.spec.ts`) read it back via `e2e/fixtures/mailbox.ts`, which queries the `qa` profile's `smtp4dev` REST API at `http://localhost:5000/api/Messages`. Since `smtp4dev` is a single shared mailbox for the whole run, the helper always filters by the test's own recipient address rather than assuming the latest message belongs to the current test.
+
 Linting and formatting (ESLint + Prettier, mirroring `frontend/`'s setup):
 
 ```bash

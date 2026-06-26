@@ -105,12 +105,38 @@ jobs:
         run: npm ci
         working-directory: e2e
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package-lock.json') }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
         working-directory: e2e
 
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: e2e
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          tags: panorama-music-api:qa
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Start qa Compose profile
-        run: docker compose --profile qa up --build -d
+        run: docker compose --profile qa up -d
 
       - name: Wait for API health
         run: |
