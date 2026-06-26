@@ -42,6 +42,7 @@ services:
       - ServerOptions__HostName=smtp4dev
 
   api:
+    image: panorama-music-api:qa
     build:
       context: .
       dockerfile: Dockerfile
