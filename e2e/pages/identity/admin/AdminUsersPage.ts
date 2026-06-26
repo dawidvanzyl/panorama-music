@@ -11,6 +11,7 @@ export class AdminUsersPage extends BasePage {
   readonly roleAdminCheckbox: Locator;
   readonly submitButton: Locator;
   readonly userCreatedInviteUrl: Locator;
+  readonly reinviteUrl: Locator;
   readonly deactivateModalConfirmButton: Locator;
   readonly deleteModalConfirmInput: Locator;
   readonly deleteModalConfirmButton: Locator;
@@ -22,6 +23,7 @@ export class AdminUsersPage extends BasePage {
     this.roleAdminCheckbox = page.locator('#roleAdmin');
     this.submitButton = page.locator('#submitBtn');
     this.userCreatedInviteUrl = page.locator('#userCreatedBanner').locator('#inviteUrl');
+    this.reinviteUrl = page.locator('#reinviteBanner').locator('#inviteUrl');
     this.deactivateModalConfirmButton = page.locator('#deactivateModal').locator('#deactivateBtn');
     this.deleteModalConfirmInput = page.locator('#deleteModal').locator('#confirmInput');
     this.deleteModalConfirmButton = page.locator('#deleteModal').locator('#deleteBtn');
@@ -81,5 +83,11 @@ export class AdminUsersPage extends BasePage {
     await this.row(email).locator('.users-table__btn--delete').click();
     await this.deleteModalConfirmInput.fill(email);
     await this.deleteModalConfirmButton.click();
+  }
+
+  async regenerateInvite(email: string): Promise<string> {
+    await this.row(email).locator('.users-table__regenerate').click();
+    await this.reinviteUrl.waitFor({ state: 'visible' });
+    return (await this.reinviteUrl.textContent()) ?? '';
   }
 }
