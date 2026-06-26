@@ -1,35 +1,15 @@
-import type { Page } from '@playwright/test';
 import { test, expect } from '../../../fixtures/base';
 import { expireInviteToken } from '../../../fixtures/db';
+import { uniqueTestEmail, inviteUser } from '../../../fixtures/testUsers';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
 import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
 import { RegistrationPage } from '../../../pages/identity/auth/RegistrationPage';
-import { AdminUsersPage, extractInviteToken } from '../../../pages/identity/admin/AdminUsersPage';
 
-const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
-const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
 const TEST_PASSWORD = 'TestPass123';
-
-function uniqueInviteeEmail(label: string): string {
-  return `e2e-registration-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@panorama-music.qa`;
-}
-
-async function inviteUser(page: Page, email: string): Promise<string> {
-  const loginPage = new LoginPage(page);
-  const adminUsersPage = new AdminUsersPage(page);
-
-  await loginPage.gotoLogin();
-  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
-
-  await adminUsersPage.gotoAdminUsers();
-  const inviteUrl = await adminUsersPage.createUser(email, ['Teacher']);
-  return extractInviteToken(inviteUrl);
-}
 
 test.describe('Registration Flow', { tag: '@M1.2IT2' }, () => {
   test('completes registration via a valid invite link and activates the account', async ({ page }) => {
-    const email = uniqueInviteeEmail('valid');
+    const email = uniqueTestEmail('registration-valid');
     const token = await inviteUser(page, email);
 
     const registrationPage = new RegistrationPage(page);
@@ -48,7 +28,7 @@ test.describe('Registration Flow', { tag: '@M1.2IT2' }, () => {
   });
 
   test('rejects an expired invite token and does not create or activate the account', async ({ page }) => {
-    const email = uniqueInviteeEmail('expired');
+    const email = uniqueTestEmail('registration-expired');
     const token = await inviteUser(page, email);
     await expireInviteToken(email);
 
@@ -66,7 +46,7 @@ test.describe('Registration Flow', { tag: '@M1.2IT2' }, () => {
   });
 
   test('rejects an invite token that has already been used and makes no further state change', async ({ page }) => {
-    const email = uniqueInviteeEmail('used');
+    const email = uniqueTestEmail('registration-used');
     const token = await inviteUser(page, email);
 
     const registrationPage = new RegistrationPage(page);

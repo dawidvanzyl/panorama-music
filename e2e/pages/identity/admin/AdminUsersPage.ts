@@ -1,14 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { BasePage } from '../../BasePage';
 
-export function extractInviteToken(inviteUrl: string): string {
-  const hashPart = inviteUrl.split('#')[1] ?? '';
-  const params = new URLSearchParams(hashPart.split('?')[1] ?? '');
-  const token = params.get('token');
-  if (!token) throw new Error(`No invite token found in invite URL: ${inviteUrl}`);
-  return token;
-}
-
 export type UserRole = 'Teacher' | 'Admin';
 
 export class AdminUsersPage extends BasePage {
