@@ -113,7 +113,7 @@ Close out a completed milestone by:
     If unhealthy, bring it up and wait for health before continuing:
     `RESET_DB=true docker compose --profile qa up --build -d`.
   - For each e2e-scoped `[IT_CODE]`, run (from the `e2e/` directory):
-    `npx playwright test --tag @{IT_CODE}`
+    `npx playwright test --grep "@{IT_CODE}"`
   - Map each code to its result:
     - ✅ PASS — tests matched and passed
     - ❌ FAIL — tests matched and failed, or no test found matching this tag
