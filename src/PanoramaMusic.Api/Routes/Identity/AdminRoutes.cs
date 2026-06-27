@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Models;
@@ -32,12 +33,12 @@ public static class AdminRoutes
 				var result = await handler.HandleAsync(command, ct);
 				return Results.Created($"/api/users/{result.UserId}", result);
 			})
+			.AddEndpointFilter<ValidationFilter<CreateUserRequest>>()
 			.WithName("CreateUser")
 			.Produces<CreateUserResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
-			.Produces(StatusCodes.Status403Forbidden)
-			.Produces(StatusCodes.Status422UnprocessableEntity);
+			.Produces(StatusCodes.Status403Forbidden);
 
 		group
 			.MapPost("/{userId:guid}/invite", async (Guid userId, RegenerateInviteTokenHandler handler, CancellationToken ct) =>
@@ -59,13 +60,13 @@ public static class AdminRoutes
 				var result = await handler.HandleAsync(command, ct);
 				return Results.Ok(result);
 			})
+			.AddEndpointFilter<ValidationFilter<UpdateUserRolesRequest>>()
 			.WithName("UpdateUserRoles")
 			.Produces<UpdateUserRolesResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
-			.Produces(StatusCodes.Status404NotFound)
-			.Produces(StatusCodes.Status422UnprocessableEntity);
+			.Produces(StatusCodes.Status404NotFound);
 
 		group
 			.MapDelete("/{userId:guid}", async (Guid userId, DeactivateUserHandler handler, CancellationToken ct) =>

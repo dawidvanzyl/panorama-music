@@ -81,21 +81,6 @@ public class UpdateUserRolesHandlerTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.1UC12")]
-	public async Task HandleAsync_EmptyRoles_ThrowsValidationException()
-	{
-		var userId = Guid.NewGuid();
-
-		await Should.ThrowAsync<ValidationException>(
-			() => Handler.HandleAsync(
-				new UpdateUserRolesCommand(userId, new UpdateUserRolesRequest([])),
-				TestContext.Current.CancellationToken));
-
-		UserRepo.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-		UserRoleRepo.Verify(r => r.SetRolesAsync(It.IsAny<Guid>(), It.IsAny<IList<Role>>(), It.IsAny<CancellationToken>()), Times.Never);
-	}
-
-	[Fact]
 	[Trait("AC", "M1.1UC25")]
 	public async Task HandleAsync_SelfEdit_ThrowsDomainException()
 	{

@@ -14,11 +14,16 @@ export interface AuthResult {
   refreshTokenExpiresAt: string;
 }
 
+export interface ValidationError {
+  propertyName: string;
+  errorMessage: string;
+}
+
 export class AuthError extends Error {
   constructor(
     message: string,
     public status: number,
-    public hasPolicyRules: boolean = false,
+    public validationErrors: ValidationError[] = [],
   ) {
     super(message);
     this.name = 'AuthError';
@@ -28,11 +33,12 @@ export class AuthError extends Error {
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AuthError(
-      body.error ?? `HTTP ${response.status}`,
-      response.status,
-      Array.isArray(body.rules) && body.rules.length > 0,
-    );
+    if (Array.isArray(body)) {
+      const validationErrors = body as ValidationError[];
+      const message = validationErrors.map((e) => e.errorMessage).join(' ') || 'Request failed';
+      throw new AuthError(message, response.status, validationErrors);
+    }
+    throw new AuthError(body.error ?? `HTTP ${response.status}`, response.status);
   }
   if (response.status === 202 || response.status === 204) {
     return undefined as T;

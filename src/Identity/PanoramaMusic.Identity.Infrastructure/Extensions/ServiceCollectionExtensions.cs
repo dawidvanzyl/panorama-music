@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -8,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Identity.Application.Validators.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
@@ -34,6 +36,7 @@ public static class ServiceCollectionExtensions
 		services.AddRepositories();
 		services.AddServices();
 		services.AddHandlers();
+		services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 		return services;
 	}
 

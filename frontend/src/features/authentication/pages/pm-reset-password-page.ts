@@ -453,11 +453,10 @@ export class PmResetPasswordPage extends HTMLElement {
       await resetPassword(this.resetToken!, this.passwordInput!.value);
       window.location.hash = '#/login';
     } catch (err) {
-      if (err instanceof AuthError && err.status === 422) {
-        if (!err.hasPolicyRules) {
-          this.showInvalidState();
-          return;
-        }
+      if (err instanceof AuthError && err.status === 401) {
+        this.showInvalidState();
+        return;
+      } else if (err instanceof AuthError && err.status === 400) {
         this.errorText!.textContent = err.message;
       } else {
         this.errorText!.textContent = 'An unexpected error occurred';

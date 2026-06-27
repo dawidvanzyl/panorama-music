@@ -22,9 +22,6 @@ public sealed class CreateUserHandler(
 		if (existing is not null)
 			throw new DomainException("A user with this email already exists.");
 
-		if (command.Request.Roles.Count == 0)
-			throw new ValidationException("At least one role must be assigned.");
-
 		var user = new User(Guid.NewGuid(), email, DateTime.UtcNow);
 		await userRepository.AddAsync(user, cancellationToken);
 		foreach (var role in command.Request.Roles)

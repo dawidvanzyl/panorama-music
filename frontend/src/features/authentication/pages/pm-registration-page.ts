@@ -483,7 +483,7 @@ export class PmRegistrationPage extends HTMLElement {
       }, 1500);
     } catch (err) {
       if (err instanceof AuthError) {
-        this.errorText!.textContent = err.status === 422
+        this.errorText!.textContent = err.status === 400
           ? err.message
           : 'Invite link is invalid or expired';
       } else {
