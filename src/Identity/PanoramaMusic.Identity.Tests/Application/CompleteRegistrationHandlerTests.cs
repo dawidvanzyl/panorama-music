@@ -37,14 +37,6 @@ public class CompleteRegistrationHandlerTests
 	public CompleteRegistrationHandler Handler { get; }
 
 	[Fact]
-	[Trait("AC", "M1.1UC1")]
-	public async Task HandleAsync_WeakPassword_ThrowsPasswordPolicyException()
-	{
-		await Should.ThrowAsync<PasswordPolicyException>(
-			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest("any-token", "weak")), TestContext.Current.CancellationToken));
-	}
-
-	[Fact]
 	[Trait("AC", "M1.1UC2")]
 	public async Task HandleAsync_PolicyCompliantPassword_ActivatesUser()
 	{

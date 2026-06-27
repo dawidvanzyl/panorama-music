@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Models;
@@ -17,8 +18,10 @@ public static class AuthRoutes
 			var result = await handler.HandleAsync(command, ct);
 			return Results.Ok(result);
 		})
+		.AddEndpointFilter<ValidationFilter<LoginRequest>>()
 		.WithName("Login")
 		.Produces<AuthResult>(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
 
 		group.MapPost("/refresh", async (RefreshTokenRequest request, RefreshTokenHandler handler, CancellationToken ct) =>
@@ -27,8 +30,10 @@ public static class AuthRoutes
 			var result = await handler.HandleAsync(command, ct);
 			return Results.Ok(result);
 		})
+		.AddEndpointFilter<ValidationFilter<RefreshTokenRequest>>()
 		.WithName("RefreshToken")
 		.Produces<AuthResult>(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
 
 		group.MapPost("/logout", async (RefreshTokenRequest request, LogoutHandler handler, CancellationToken ct) =>
@@ -37,8 +42,10 @@ public static class AuthRoutes
 			await handler.HandleAsync(command, ct);
 			return Results.NoContent();
 		})
+		.AddEndpointFilter<ValidationFilter<RefreshTokenRequest>>()
 		.WithName("Logout")
 		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
 
 		group.MapPost("/complete-registration", async (CompleteRegistrationRequest request, CompleteRegistrationHandler handler, CancellationToken ct) =>
@@ -47,10 +54,10 @@ public static class AuthRoutes
 			await handler.HandleAsync(command, ct);
 			return Results.NoContent();
 		})
+		.AddEndpointFilter<ValidationFilter<CompleteRegistrationRequest>>()
 		.WithName("CompleteRegistration")
 		.Produces(StatusCodes.Status204NoContent)
-		.Produces(StatusCodes.Status400BadRequest)
-		.Produces(StatusCodes.Status422UnprocessableEntity);
+		.Produces(StatusCodes.Status400BadRequest);
 
 		group.MapPost("/forgot-password", async (RequestPasswordResetRequest request, RequestPasswordResetHandler handler, CancellationToken ct) =>
 		{
@@ -58,8 +65,10 @@ public static class AuthRoutes
 			await handler.HandleAsync(command, ct);
 			return Results.Accepted();
 		})
+		.AddEndpointFilter<ValidationFilter<RequestPasswordResetRequest>>()
 		.WithName("ForgotPassword")
-		.Produces(StatusCodes.Status202Accepted);
+		.Produces(StatusCodes.Status202Accepted)
+		.Produces(StatusCodes.Status400BadRequest);
 
 		group.MapPost("/reset-password", async (ResetPasswordRequest request, ResetPasswordHandler handler, CancellationToken ct) =>
 		{
@@ -67,8 +76,10 @@ public static class AuthRoutes
 			await handler.HandleAsync(command, ct);
 			return Results.NoContent();
 		})
+		.AddEndpointFilter<ValidationFilter<ResetPasswordRequest>>()
 		.WithName("ResetPassword")
 		.Produces(StatusCodes.Status204NoContent)
-		.Produces(StatusCodes.Status422UnprocessableEntity);
+		.Produces(StatusCodes.Status400BadRequest)
+		.Produces(StatusCodes.Status401Unauthorized);
 	}
 }

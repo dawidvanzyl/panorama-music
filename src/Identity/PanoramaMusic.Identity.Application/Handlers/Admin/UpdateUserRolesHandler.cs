@@ -14,9 +14,6 @@ public sealed class UpdateUserRolesHandler(
 {
 	public async Task<UpdateUserRolesResult> HandleAsync(UpdateUserRolesCommand command, CancellationToken cancellationToken)
 	{
-		if (command.Request.Roles.Count == 0)
-			throw new ValidationException("At least one role must be assigned.");
-
 		if (command.UserId == userContext.UserId)
 			throw new DomainException("You cannot edit your own role assignment.");
 

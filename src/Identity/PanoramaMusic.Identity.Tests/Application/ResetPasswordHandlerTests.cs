@@ -55,19 +55,6 @@ public class ResetPasswordHandlerTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.1UC8")]
-	public async Task HandleAsync_WeakPassword_ThrowsPasswordPolicyExceptionWithoutConsumingToken()
-	{
-		await Should.ThrowAsync<PasswordPolicyException>(
-			() => Handler.HandleAsync(
-				new ResetPasswordCommand(new ResetPasswordRequest("any-token", "weak")),
-				TestContext.Current.CancellationToken));
-
-		ResetTokenRepo.Verify(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-	}
-
-	[Fact]
 	[Trait("AC", "M1.1UC7")]
 	public async Task HandleAsync_NonExistentToken_ThrowsInvalidResetTokenException()
 	{
