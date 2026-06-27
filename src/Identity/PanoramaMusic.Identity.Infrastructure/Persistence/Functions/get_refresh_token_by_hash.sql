@@ -1,4 +1,4 @@
--- V010: get_refresh_token_by_hash
+-- get_refresh_token_by_hash
 -- Returns a single refresh token row by token_hash.
 
 CREATE OR REPLACE FUNCTION identity.get_refresh_token_by_hash(

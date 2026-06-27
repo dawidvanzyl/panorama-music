@@ -1,4 +1,4 @@
--- V003: get_user_by_id
+-- get_user_by_id
 -- Returns a single user row by user_id.
 
 CREATE OR REPLACE FUNCTION identity.get_user_by_id(

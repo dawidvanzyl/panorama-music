@@ -1,7 +1,7 @@
--- V008: add_user_role
+-- create_user_role
 -- Inserts a role assignment for a user.
 
-CREATE OR REPLACE FUNCTION identity.add_user_role(
+CREATE OR REPLACE FUNCTION identity.create_user_role(
     p_user_id UUID,
     p_role    TEXT
 )

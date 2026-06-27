@@ -1,7 +1,7 @@
--- V023: deactivate_user
+-- update_deactivate_user
 -- Sets is_active = FALSE for a user.
 
-CREATE OR REPLACE FUNCTION identity.deactivate_user(
+CREATE OR REPLACE FUNCTION identity.update_deactivate_user(
     p_user_id UUID
 )
 RETURNS void

@@ -1,5 +1,0 @@
--- V001: Baseline migration
--- Establishes the DbUp schema versions journal table.
--- No domain tables are created in this migration.
-
-SELECT 1;

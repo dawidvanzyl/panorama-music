@@ -1,7 +1,7 @@
--- V022: set_user_roles
+-- update_user_roles
 -- Replaces all role assignments for a user with the provided set.
 
-CREATE OR REPLACE FUNCTION identity.set_user_roles(
+CREATE OR REPLACE FUNCTION identity.update_user_roles(
     p_user_id UUID,
     p_roles   TEXT[]
 )

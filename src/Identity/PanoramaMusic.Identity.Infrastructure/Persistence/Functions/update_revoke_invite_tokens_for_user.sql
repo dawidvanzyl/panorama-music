@@ -1,7 +1,7 @@
--- V016: revoke_invite_tokens_for_user
+-- update_revoke_invite_tokens_for_user
 -- Sets used_at = NOW() on all unused invite tokens for a user.
 
-CREATE OR REPLACE FUNCTION identity.revoke_invite_tokens_for_user(
+CREATE OR REPLACE FUNCTION identity.update_revoke_invite_tokens_for_user(
     p_user_id UUID
 )
 RETURNS void

@@ -42,7 +42,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 	{
 		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
-			"identity.revoke_refresh_token",
+			"identity.update_revoke_refresh_token",
 			new { p_token_id = token.TokenId },
 			cancellationToken);
 		await connection.ExecuteAsync(command);
@@ -56,7 +56,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 		try
 		{
 			var revokeCommand = CreateCommandDefinition(
-				"identity.revoke_refresh_token",
+				"identity.update_revoke_refresh_token",
 				new { p_token_id = oldTokenId },
 				transaction,
 				cancellationToken);

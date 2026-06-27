@@ -1,4 +1,4 @@
--- V019: get_password_reset_token_by_hash
+-- get_password_reset_token_by_hash
 -- Returns a single password reset token row by token_hash.
 
 CREATE OR REPLACE FUNCTION identity.get_password_reset_token_by_hash(

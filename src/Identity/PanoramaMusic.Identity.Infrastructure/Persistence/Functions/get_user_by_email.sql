@@ -1,4 +1,4 @@
--- V004: get_user_by_email
+-- get_user_by_email
 -- Returns a single user row by email address.
 
 CREATE OR REPLACE FUNCTION identity.get_user_by_email(

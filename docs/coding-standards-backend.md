@@ -385,17 +385,21 @@ Database scripts are separated by responsibility:
 * function definitions
 * seed data
 
-These concerns must remain separated.
+These concerns must remain separated, each tracked by its own DbUp journal table.
 
 ---
 
-## Versioning
+## Naming and Versioning
+
+Schema/table migration scripts use a per-domain counter (e.g. `01__create_x_table.sql`, `02__create_y_table.sql`), scoped to the bounded context's own `Migrations` folder. There is no shared counter across bounded contexts — each context numbers its own migrations independently.
 
 Migration scripts are immutable once applied.
 
 Never modify a migration that has already been executed in another environment.
 
 New behaviour requires a new script.
+
+Function scripts use a descriptive, unversioned name matching the function (e.g. `create_user.sql`). Because functions are deployed with `CREATE OR REPLACE` semantics, a behaviour change to an existing function is made by editing its file in place rather than adding a new versioned file.
 
 ---
 

@@ -99,7 +99,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 			if (user.IsActive)
 			{
 				var activateUserCommand = CreateCommandDefinition(
-					"identity.activate_user",
+					"identity.update_activate_user",
 					new { p_user_id = user.UserId },
 					transaction,
 					cancellationToken);
@@ -123,14 +123,14 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		try
 		{
 			var deactivateCommand = CreateCommandDefinition(
-				"identity.deactivate_user",
+				"identity.update_deactivate_user",
 				new { p_user_id = userId },
 				transaction,
 				cancellationToken);
 			await dbConnection.ExecuteAsync(deactivateCommand);
 
 			var revokeTokensCommand = CreateCommandDefinition(
-				"identity.revoke_all_refresh_tokens",
+				"identity.update_revoke_all_refresh_tokens",
 				new { p_user_id = userId },
 				transaction,
 				cancellationToken);
@@ -161,7 +161,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		await using var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		var command = CreateCommandDefinition(
-			"identity.activate_user",
+			"identity.update_activate_user",
 			new { p_user_id = userId },
 			cancellationToken: cancellationToken);
 		await dbConnection.ExecuteAsync(command);
@@ -187,7 +187,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 			if (user.IsActive)
 			{
 				var activateUserCommand = CreateCommandDefinition(
-					"identity.activate_user",
+					"identity.update_activate_user",
 					new { p_user_id = user.UserId },
 					transaction,
 					cancellationToken);
@@ -195,7 +195,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 			}
 
 			var useInviteTokenCommand = CreateCommandDefinition(
-				"identity.use_invite_token",
+				"identity.update_use_invite_token",
 				new { p_token_id = inviteTokenId },
 				transaction,
 				cancellationToken);

@@ -1,4 +1,4 @@
--- V018: create_password_reset_token
+-- create_password_reset_token
 -- Inserts a new password reset token for a user.
 
 CREATE OR REPLACE FUNCTION identity.create_password_reset_token(

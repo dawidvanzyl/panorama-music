@@ -46,7 +46,7 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : Rep
 		try
 		{
 			var revokeCommand = CreateCommandDefinition(
-				"identity.revoke_invite_tokens_for_user",
+				"identity.update_revoke_invite_tokens_for_user",
 				new { p_user_id = userId },
 				transaction,
 				cancellationToken);

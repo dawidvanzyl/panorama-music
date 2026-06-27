@@ -1,7 +1,7 @@
--- V015: use_invite_token
+-- update_use_invite_token
 -- Sets used_at = NOW() on a single invite token.
 
-CREATE OR REPLACE FUNCTION identity.use_invite_token(
+CREATE OR REPLACE FUNCTION identity.update_use_invite_token(
     p_token_id UUID
 )
 RETURNS void

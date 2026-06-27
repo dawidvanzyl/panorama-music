@@ -1,7 +1,7 @@
--- V011: revoke_refresh_token
+-- update_revoke_refresh_token
 -- Sets revoked_at = NOW() on a single refresh token.
 
-CREATE OR REPLACE FUNCTION identity.revoke_refresh_token(
+CREATE OR REPLACE FUNCTION identity.update_revoke_refresh_token(
     p_token_id UUID
 )
 RETURNS void
