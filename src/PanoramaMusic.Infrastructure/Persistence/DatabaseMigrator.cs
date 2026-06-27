@@ -1,4 +1,6 @@
 using DbUp;
+using DbUp.Engine;
+using DbUp.Support;
 using Npgsql;
 using System.Reflection;
 
@@ -17,9 +19,9 @@ public static class DatabaseMigrator
 			.Concat(additionalAssemblies)
 			.ToArray();
 
-		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assemblies);
-		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assemblies);
-		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assemblies);
+		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assemblies, ScriptType.RunOnce);
+		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assemblies, ScriptType.RunAlways);
+		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assemblies, ScriptType.RunAlways);
 	}
 
 	public static void Reset(string connectionString)
@@ -44,18 +46,22 @@ public static class DatabaseMigrator
 		string folderMarker,
 		string journalTable,
 		string label,
-		Assembly[] assemblies)
+		Assembly[] assemblies,
+		ScriptType scriptType)
 	{
 		var upgraderBuilder = DeployChanges.To
 			.PostgresqlDatabase(connectionString)
 			.JournalToPostgresqlTable("public", journalTable)
 			.LogToConsole();
 
+		var scriptOptions = new SqlScriptOptions { ScriptType = scriptType };
+
 		foreach (var assembly in assemblies)
 		{
 			upgraderBuilder = upgraderBuilder.WithScriptsEmbeddedInAssembly(
 				assembly,
-				name => name.Contains(folderMarker));
+				name => name.Contains(folderMarker),
+				scriptOptions);
 		}
 
 		var upgrader = upgraderBuilder.Build();

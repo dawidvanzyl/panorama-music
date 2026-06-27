@@ -401,6 +401,8 @@ New behaviour requires a new script.
 
 Function scripts use a descriptive, unversioned name matching the function (e.g. `create_user.sql`). Because functions are deployed with `CREATE OR REPLACE` semantics, a behaviour change to an existing function is made by editing its file in place rather than adding a new versioned file.
 
+Function and seed scripts run on every deploy (`RunAlways`), not just once — only schema/table migrations are journal-gated to apply exactly once. Every seed script must therefore be safely re-runnable: use `ON CONFLICT DO NOTHING` or a `WHERE NOT EXISTS` guard so re-applying it on an already-seeded database is a no-op rather than a duplicate-insert error.
+
 ---
 
 ## Execution Order
