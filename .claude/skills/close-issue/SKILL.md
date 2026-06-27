@@ -146,7 +146,7 @@ curl --silent --fail http://localhost:3000/api/health
 For each unique code:
 
 ```bash
-npx playwright test --tag @CODE
+npx playwright test --grep "@CODE"
 ```
 
 (run from the `e2e/` directory)
