@@ -1,4 +1,4 @@
--- V013: create_invite_token
+-- create_invite_token
 -- Inserts a new invite token for a user.
 
 CREATE OR REPLACE FUNCTION identity.create_invite_token(

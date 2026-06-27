@@ -54,7 +54,7 @@ public class PasswordResetTokenRepository(IDbConnectionFactory connectionFactory
 			await dbConnection.ExecuteAsync(updatePasswordCommand);
 
 			var useTokenCommand = CreateCommandDefinition(
-				"identity.use_password_reset_token",
+				"identity.update_use_password_reset_token",
 				new { p_token_id = tokenId },
 				transaction,
 				cancellationToken);

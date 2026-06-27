@@ -1,7 +1,7 @@
--- V007: activate_user
+-- update_activate_user
 -- Sets is_active = TRUE for a user.
 
-CREATE OR REPLACE FUNCTION identity.activate_user(
+CREATE OR REPLACE FUNCTION identity.update_activate_user(
     p_user_id UUID
 )
 RETURNS void

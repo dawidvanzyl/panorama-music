@@ -1,4 +1,4 @@
--- V017: get_users
+-- get_users
 -- Returns all user rows, ordered by creation date.
 
 CREATE OR REPLACE FUNCTION identity.get_users()

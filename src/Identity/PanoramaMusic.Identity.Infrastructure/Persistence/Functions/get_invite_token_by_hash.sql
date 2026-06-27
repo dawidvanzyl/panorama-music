@@ -1,4 +1,4 @@
--- V014: get_invite_token_by_hash
+-- get_invite_token_by_hash
 -- Returns a single invite token row by token_hash.
 
 CREATE OR REPLACE FUNCTION identity.get_invite_token_by_hash(

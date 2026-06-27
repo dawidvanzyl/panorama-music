@@ -1,8 +1,9 @@
--- V021: use_password_reset_token — add NOT FOUND guard
+-- update_use_password_reset_token
+-- Sets used_at = NOW() on a single password reset token.
 -- Raises an exception if the target token has already been used or does not exist,
 -- making any future bypass a visible error rather than a silent commit.
 
-CREATE OR REPLACE FUNCTION identity.use_password_reset_token(
+CREATE OR REPLACE FUNCTION identity.update_use_password_reset_token(
     p_token_id UUID
 )
 RETURNS void

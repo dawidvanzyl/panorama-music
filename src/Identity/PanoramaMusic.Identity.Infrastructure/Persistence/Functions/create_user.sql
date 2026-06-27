@@ -1,4 +1,4 @@
--- V002: create_user
+-- create_user
 -- Inserts a new user into identity.users.
 
 CREATE OR REPLACE FUNCTION identity.create_user(

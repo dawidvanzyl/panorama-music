@@ -1,4 +1,4 @@
--- V006: update_user_password
+-- update_user_password
 -- Updates the password_hash for a user.
 
 CREATE OR REPLACE FUNCTION identity.update_user_password(

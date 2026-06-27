@@ -1,4 +1,4 @@
--- V009: create_refresh_token
+-- create_refresh_token
 -- Inserts a new refresh token for a user.
 
 CREATE OR REPLACE FUNCTION identity.create_refresh_token(

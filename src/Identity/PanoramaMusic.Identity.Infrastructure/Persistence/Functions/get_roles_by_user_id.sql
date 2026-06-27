@@ -1,4 +1,4 @@
--- V005: get_roles_by_user_id
+-- get_roles_by_user_id
 -- Returns all roles assigned to a user.
 
 CREATE OR REPLACE FUNCTION identity.get_roles_by_user_id(

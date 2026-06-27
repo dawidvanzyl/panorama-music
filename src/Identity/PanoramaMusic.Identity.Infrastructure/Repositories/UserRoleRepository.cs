@@ -13,7 +13,7 @@ public class UserRoleRepository(IDbConnectionFactory connectionFactory) : Reposi
 	{
 		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
-			"identity.add_user_role",
+			"identity.create_user_role",
 			new { p_user_id = userRole.UserId, p_role = userRole.Role.ToString() },
 			cancellationToken);
 		await connection.ExecuteAsync(command);
@@ -35,7 +35,7 @@ public class UserRoleRepository(IDbConnectionFactory connectionFactory) : Reposi
 	{
 		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
-			"identity.set_user_roles",
+			"identity.update_user_roles",
 			new { p_user_id = userId, p_roles = roles.Select(r => r.ToString()).ToArray() },
 			cancellationToken);
 		await connection.ExecuteAsync(command);

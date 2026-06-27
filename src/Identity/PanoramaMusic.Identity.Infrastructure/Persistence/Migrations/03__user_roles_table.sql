@@ -1,4 +1,4 @@
--- V005: Create user_roles table
+-- Create user_roles table
 -- Stores role assignments for identity users.
 
 CREATE TABLE IF NOT EXISTS identity.user_roles (

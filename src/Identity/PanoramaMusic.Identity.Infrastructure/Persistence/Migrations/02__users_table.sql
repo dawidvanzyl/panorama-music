@@ -1,4 +1,4 @@
--- V004: Create users table
+-- Create users table
 -- Stores identity user records in the identity schema.
 
 CREATE TABLE IF NOT EXISTS identity.users (

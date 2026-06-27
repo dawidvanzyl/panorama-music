@@ -1,4 +1,4 @@
--- V024: delete_user
+-- delete_user
 -- Permanently removes a user and all associated data from the database.
 
 CREATE OR REPLACE FUNCTION identity.delete_user(

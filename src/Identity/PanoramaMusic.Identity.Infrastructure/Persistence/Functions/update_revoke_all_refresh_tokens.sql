@@ -1,7 +1,7 @@
--- V012: revoke_all_refresh_tokens
+-- update_revoke_all_refresh_tokens
 -- Sets revoked_at = NOW() on all non-revoked refresh tokens for a user.
 
-CREATE OR REPLACE FUNCTION identity.revoke_all_refresh_tokens(
+CREATE OR REPLACE FUNCTION identity.update_revoke_all_refresh_tokens(
     p_user_id UUID
 )
 RETURNS void
