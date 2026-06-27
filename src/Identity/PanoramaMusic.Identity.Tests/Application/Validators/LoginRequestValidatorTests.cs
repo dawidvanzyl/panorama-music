@@ -13,7 +13,7 @@ public class LoginRequestValidatorTests
 	[InlineData("", "Password1")]
 	[InlineData("not-an-email", "Password1")]
 	[InlineData("user@test.com", "")]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_InvalidFieldValues_ReturnsFailureNamingInvalidField(string email, string password)
 	{
 		var result = _validator.Validate(new LoginRequest(email, password));
@@ -23,7 +23,7 @@ public class LoginRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_ValidRequest_ReturnsSuccess()
 	{
 		var result = _validator.Validate(new LoginRequest("user@test.com", "Password1"));

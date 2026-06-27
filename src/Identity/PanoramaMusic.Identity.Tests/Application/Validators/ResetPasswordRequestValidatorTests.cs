@@ -10,7 +10,7 @@ public class ResetPasswordRequestValidatorTests
 	private readonly ResetPasswordRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_EmptyToken_ReturnsFailureNamingToken()
 	{
 		var result = _validator.Validate(new ResetPasswordRequest("", "ValidPass1"));
@@ -22,7 +22,7 @@ public class ResetPasswordRequestValidatorTests
 	[Theory]
 	[InlineData("weak")]
 	[InlineData("nodigithere")]
-	[Trait("AC", "M1.3UC4")]
+	[Trait("AC", "M1.3UC2")]
 	public void Validate_WeakPassword_ReturnsFailureForViolatedRule(string password)
 	{
 		var result = _validator.Validate(new ResetPasswordRequest("token", password));
@@ -32,7 +32,7 @@ public class ResetPasswordRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC4")]
+	[Trait("AC", "M1.3UC2")]
 	public void Validate_PolicyCompliantPassword_DoesNotFailOnPassword()
 	{
 		var result = _validator.Validate(new ResetPasswordRequest("token", "ValidPass1"));

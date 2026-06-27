@@ -10,7 +10,7 @@ public class CompleteRegistrationRequestValidatorTests
 	private readonly CompleteRegistrationRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_EmptyInviteToken_ReturnsFailureNamingInviteToken()
 	{
 		var result = _validator.Validate(new CompleteRegistrationRequest("", "ValidPass1"));
@@ -24,7 +24,7 @@ public class CompleteRegistrationRequestValidatorTests
 	[InlineData("alllowercase1")]
 	[InlineData("ALLUPPERCASE1")]
 	[InlineData("NoDigitHere")]
-	[Trait("AC", "M1.3UC4")]
+	[Trait("AC", "M1.3UC2")]
 	public void Validate_WeakPassword_ReturnsFailureForViolatedRule(string password)
 	{
 		var result = _validator.Validate(new CompleteRegistrationRequest("token", password));
@@ -34,7 +34,7 @@ public class CompleteRegistrationRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC4")]
+	[Trait("AC", "M1.3UC2")]
 	public void Validate_PolicyCompliantPassword_DoesNotFailOnPassword()
 	{
 		var result = _validator.Validate(new CompleteRegistrationRequest("token", "ValidPass1"));

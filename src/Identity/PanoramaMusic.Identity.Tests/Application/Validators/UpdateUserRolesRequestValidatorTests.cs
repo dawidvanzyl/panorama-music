@@ -11,7 +11,7 @@ public class UpdateUserRolesRequestValidatorTests
 	private readonly UpdateUserRolesRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_EmptyRoles_ReturnsFailureNamingRoles()
 	{
 		var result = _validator.Validate(new UpdateUserRolesRequest([]));
@@ -21,7 +21,7 @@ public class UpdateUserRolesRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_NonEmptyRoles_ReturnsSuccess()
 	{
 		var result = _validator.Validate(new UpdateUserRolesRequest([Role.Teacher]));

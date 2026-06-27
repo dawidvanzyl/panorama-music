@@ -10,7 +10,7 @@ public class RefreshTokenRequestValidatorTests
 	private readonly RefreshTokenRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_EmptyToken_ReturnsFailureNamingToken()
 	{
 		var result = _validator.Validate(new RefreshTokenRequest(""));
@@ -20,7 +20,7 @@ public class RefreshTokenRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_NonEmptyToken_ReturnsSuccess()
 	{
 		var result = _validator.Validate(new RefreshTokenRequest("a-token"));
