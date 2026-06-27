@@ -13,7 +13,7 @@ const NEW_PASSWORD = 'NewPass456';
 test.describe('Identity Request Validation', () => {
   test(
     'rejects a request that fails FluentValidation before the handler runs, then accepts a corrected one',
-    { tag: ['@M1.3UC1', '@M1.3UC2'] },
+    { tag: ['@M1.3IT1', '@M1.3IT2'] },
     async ({ page }) => {
       const email = uniqueTestEmail('request-validation');
       await createRegisteredUser(page, email, ORIGINAL_PASSWORD);
@@ -29,7 +29,7 @@ test.describe('Identity Request Validation', () => {
       const resetPasswordPage = new ResetPasswordPage(page);
       await resetPasswordPage.gotoReset(resetToken);
 
-      // M1.3UC1: a password that fails the validator's policy rules (too
+      // M1.3IT1: a password that fails the validator's policy rules (too
       // short, no mixed case, no digit) is rejected with the standardized
       // 400 validation-failure response, surfaced inline rather than as the
       // invalid-token banner.
@@ -44,7 +44,7 @@ test.describe('Identity Request Validation', () => {
       // The reset token must still be unconsumed — proof the route handler
       // was never invoked for the rejected request, not just that the UI
       // showed an error. Reusing the same already-loaded form (no token
-      // round-trip) and submitting a policy-compliant password (M1.3UC2)
+      // round-trip) and submitting a policy-compliant password (M1.3IT2)
       // succeeds, which would fail with "invalid or expired" had the first,
       // invalid attempt reached and consumed the token.
       await resetPasswordPage.resetPassword(NEW_PASSWORD, NEW_PASSWORD);

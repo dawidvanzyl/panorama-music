@@ -11,7 +11,7 @@ public class CreateUserRequestValidatorTests
 	private readonly CreateUserRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_InvalidEmail_ReturnsFailureNamingEmail()
 	{
 		var result = _validator.Validate(new CreateUserRequest("not-an-email", [Role.Teacher]));
@@ -21,7 +21,7 @@ public class CreateUserRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_EmptyRoles_ReturnsFailureNamingRoles()
 	{
 		var result = _validator.Validate(new CreateUserRequest("user@test.com", []));
@@ -31,7 +31,7 @@ public class CreateUserRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_ValidRequest_ReturnsSuccess()
 	{
 		var result = _validator.Validate(new CreateUserRequest("user@test.com", [Role.Teacher]));

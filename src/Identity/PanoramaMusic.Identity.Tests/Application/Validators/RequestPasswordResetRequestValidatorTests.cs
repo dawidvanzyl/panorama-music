@@ -12,7 +12,7 @@ public class RequestPasswordResetRequestValidatorTests
 	[Theory]
 	[InlineData("")]
 	[InlineData("not-an-email")]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_InvalidEmail_ReturnsFailureNamingEmail(string email)
 	{
 		var result = _validator.Validate(new RequestPasswordResetRequest(email));
@@ -22,7 +22,7 @@ public class RequestPasswordResetRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC3")]
+	[Trait("AC", "M1.3UC1")]
 	public void Validate_ValidEmail_ReturnsSuccess()
 	{
 		var result = _validator.Validate(new RequestPasswordResetRequest("user@test.com"));
