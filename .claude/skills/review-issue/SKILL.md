@@ -168,10 +168,10 @@ Apply these severity levels to every finding:
 
 ### 7) Standards review
 
-Read the relevant standards doc(s) for the affected scopes plus `.editorconfig`:
+Read the relevant coding standards doc(s) for the affected scopes plus
+`.editorconfig`:
 
 - Always read: `docs/coding-standards.md` (shared conventions)
-- Always read: `docs/security-standards.md` (security requirements — apply only rules relevant to the changed code; use the severity mapping in its Appendix)
 - Backend scope: `docs/coding-standards-backend.md`
 - Frontend scope: `docs/coding-standards-frontend.md`
 - Backend Formatting rules: `src/.editorconfig`
@@ -183,6 +183,15 @@ and the code does Y, that is a violation regardless of intent.
 
 Use the same severity levels as step 6. Cite the doc and section for every
 finding.
+
+**Security review:** invoke the `asvs-security-review` skill in `delegated`
+mode, passing the diff already captured in step 3 (do not re-fetch it). It
+performs the `docs/security-standards.md` rule walk, scoped to the sections
+the diff actually touches, and returns findings in the same
+`# | file:line | Category | Detail` row shape used below (with `Category`
+set to `Security`). Merge its rows directly into the severity tables built
+in step 8 — do not print its output as a separate report. If it reports "no
+security-relevant code paths touched," note that and move on.
 
 ### 8) Build the report
 
