@@ -1,8 +1,7 @@
 import type { PasswordPolicyResult } from '../services/password-policy';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: block;
     }
@@ -60,7 +59,10 @@ template.innerHTML = `
     .strength-rule__label--satisfied {
       color: #8fd44e;
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="strength-indicator">
     <div class="strength-rule" id="rule-min-length">
@@ -82,6 +84,7 @@ export class PmPasswordStrengthIndicator extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

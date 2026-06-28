@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
@@ -19,6 +20,7 @@ public static class AuthRoutes
 			return Results.Ok(result);
 		})
 		.AddEndpointFilter<ValidationFilter<LoginRequest>>()
+		.MarkSensitiveResponse()
 		.WithName("Login")
 		.Produces<AuthResult>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status400BadRequest)
@@ -31,6 +33,7 @@ public static class AuthRoutes
 			return Results.Ok(result);
 		})
 		.AddEndpointFilter<ValidationFilter<RefreshTokenRequest>>()
+		.MarkSensitiveResponse()
 		.WithName("RefreshToken")
 		.Produces<AuthResult>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status400BadRequest)

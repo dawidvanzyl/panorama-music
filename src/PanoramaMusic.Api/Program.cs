@@ -39,6 +39,8 @@ if (app.Environment.IsDevelopment())
 	app.MapOpenApi();
 }
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseExceptionHandler();

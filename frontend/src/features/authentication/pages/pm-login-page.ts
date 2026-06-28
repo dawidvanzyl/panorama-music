@@ -1,8 +1,7 @@
 import { login, AuthError } from '../../../services/auth';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: flex;
       align-items: center;
@@ -282,7 +281,10 @@ template.innerHTML = `
       opacity: 0.6;
       line-height: 1.6;
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="login__glow" aria-hidden="true">
     <div class="login__glow-spot login__glow-spot--top"></div>
@@ -353,6 +355,7 @@ export class PmLoginPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

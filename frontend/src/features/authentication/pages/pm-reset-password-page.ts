@@ -2,9 +2,8 @@ import { resetPassword, AuthError } from '../../../services/auth';
 import { evaluatePasswordPolicy } from '../../../services/password-policy';
 import { PmPasswordStrengthIndicator } from '../../../components/pm-password-strength-indicator';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: flex;
       align-items: center;
@@ -268,8 +267,10 @@ template.innerHTML = `
       opacity: 0.6;
       line-height: 1.6;
     }
-  </style>
+  `);
 
+const template = document.createElement('template');
+template.innerHTML = `
   <div class="reset__glow" aria-hidden="true">
     <div class="reset__glow-spot reset__glow-spot--top"></div>
     <div class="reset__glow-spot reset__glow-spot--bottom"></div>
@@ -363,6 +364,7 @@ export class PmResetPasswordPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

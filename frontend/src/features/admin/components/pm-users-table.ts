@@ -1,9 +1,8 @@
 import { regenerateInvite, updateUserRoles, AdminError, type GetUserResult } from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
     }
@@ -231,7 +230,13 @@ template.innerHTML = `
     .users-table__filter-wrap {
       position: relative;
     }
-  </style>
+    .users-table__actions-header {
+      text-align: right;
+    }
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="users-table__card">
     <div class="users-table__header">
@@ -254,7 +259,7 @@ template.innerHTML = `
           <th>Email</th>
           <th>Roles</th>
           <th>Status</th>
-          <th style="text-align:right">Actions</th>
+          <th class="users-table__actions-header">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -276,6 +281,7 @@ export class PmUsersTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

@@ -1,6 +1,5 @@
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: none;
       font-family: 'Inter', system-ui, sans-serif;
@@ -88,7 +87,10 @@ template.innerHTML = `
       font-family: 'Material Symbols Outlined', sans-serif;
       font-size: 18px;
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="banner" role="status">
     <div class="banner__header">
@@ -118,6 +120,7 @@ export class PmUserCreatedBanner extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

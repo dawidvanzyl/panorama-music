@@ -1,0 +1,37 @@
+using Microsoft.AspNetCore.Mvc.Testing;
+using Testcontainers.PostgreSql;
+using Xunit;
+
+namespace PanoramaMusic.Api.Tests;
+
+/// <summary>
+/// Program.cs reads the connection string into a local variable from plain
+/// top-level code before any WebApplicationFactory host-builder hook can run,
+/// so the only reliable override point is environment variables — the same
+/// mechanism docker-compose and CI already use to configure this app.
+/// </summary>
+public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifetime
+{
+	private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
+		.WithImage("postgres:16")
+		.Build();
+
+	private readonly string _webRoot = Directory.CreateTempSubdirectory("panorama-api-tests-wwwroot-").FullName;
+
+	public async ValueTask InitializeAsync()
+	{
+		await _postgres.StartAsync();
+		Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _postgres.GetConnectionString());
+		Environment.SetEnvironmentVariable("JWT__Secret", "test-only-secret-at-least-32-characters-long!!");
+		Environment.SetEnvironmentVariable("ASPNETCORE_WEBROOT", _webRoot);
+
+		File.WriteAllText(Path.Combine(_webRoot, "index.html"), "<html><body>test</body></html>");
+	}
+
+	public override async ValueTask DisposeAsync()
+	{
+		await base.DisposeAsync();
+		await _postgres.DisposeAsync();
+		Directory.Delete(_webRoot, recursive: true);
+	}
+}

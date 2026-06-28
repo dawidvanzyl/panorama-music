@@ -2,9 +2,8 @@ import { isAuthenticated, logout } from '../services/auth';
 import { hasRole } from '../services/token-storage';
 import { clearUsersCache } from '../features/admin/services/admin';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
     }
@@ -52,7 +51,10 @@ template.innerHTML = `
     .nav-bar__link:hover {
       color: var(--pm-text);
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
   <nav>
     <span class="nav-bar__brand">Panorama Music</span>
     <div class="nav-bar__links">
@@ -69,6 +71,7 @@ export class PmNavBar extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
