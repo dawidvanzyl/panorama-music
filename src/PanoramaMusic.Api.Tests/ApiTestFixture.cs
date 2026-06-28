@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using PanoramaMusic.Api.Tests.Middleware;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -25,7 +28,18 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifet
 		Environment.SetEnvironmentVariable("JWT__Secret", "test-only-secret-at-least-32-characters-long!!");
 		Environment.SetEnvironmentVariable("ASPNETCORE_WEBROOT", _webRoot);
 
+		// Smaller account limit than the IP limit lets tests trip the account-keyed
+		// bucket deterministically while the IP-keyed bucket still has headroom.
+		Environment.SetEnvironmentVariable("RateLimiting__Auth__IpPermitLimit", "10");
+		Environment.SetEnvironmentVariable("RateLimiting__Auth__AccountPermitLimit", "3");
+		Environment.SetEnvironmentVariable("RateLimiting__Auth__WindowSeconds", "60");
+
 		File.WriteAllText(Path.Combine(_webRoot, "index.html"), "<html><body>test</body></html>");
+	}
+
+	protected override void ConfigureWebHost(IWebHostBuilder builder)
+	{
+		builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>());
 	}
 
 	public override async ValueTask DisposeAsync()

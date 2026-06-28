@@ -25,6 +25,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
+builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddValidation();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -40,6 +41,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RateLimitingAccountKeyMiddleware>();
+app.UseRateLimiter();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
