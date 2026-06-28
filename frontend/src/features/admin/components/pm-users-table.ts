@@ -230,6 +230,9 @@ styles.replaceSync(`
     .users-table__filter-wrap {
       position: relative;
     }
+    .users-table__actions-header {
+      text-align: right;
+    }
   `);
 
 const template = document.createElement('template');
@@ -256,7 +259,7 @@ template.innerHTML = `
           <th>Email</th>
           <th>Roles</th>
           <th>Status</th>
-          <th style="text-align:right">Actions</th>
+          <th class="users-table__actions-header">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
