@@ -1,8 +1,7 @@
 import { deleteUser, AdminError } from '../services/admin';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: none;
     }
@@ -116,7 +115,10 @@ template.innerHTML = `
     .modal__error--visible {
       display: block;
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="modal__backdrop">
     <div class="modal__card">
@@ -145,6 +147,7 @@ export class PmDeleteUserModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
