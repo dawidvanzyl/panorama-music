@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Identity.Application.Services.Auth;
 using PanoramaMusic.Identity.Application.Validators.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -119,6 +120,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<ActivateUserHandler>();
 		services.AddTransient<RequestPasswordResetHandler>();
 		services.AddTransient<ResetPasswordHandler>();
+		services.AddTransient<RateLimitTokenService>();
 		return services;
 	}
 }

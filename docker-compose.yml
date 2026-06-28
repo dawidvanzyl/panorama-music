@@ -58,13 +58,6 @@ services:
       JWT__Secret: ${JWT__Secret}
       Admin__Email: ${Admin__Email}
       Admin__Password: ${Admin__Password}
-      Smtp__Host: smtp4dev
-      Smtp__Port: 25
-      Smtp__Username: ""
-      Smtp__Password: ""
-      Smtp__From: ${Smtp__From:-noreply@panorama-music.qa}
-      Smtp__FromDisplayName: ${Smtp__FromDisplayName:-Panorama Music (QA)}
-      AppBaseUrl: ${AppBaseUrl:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:

@@ -1,10 +1,12 @@
+using PanoramaMusic.Api.Tests.Fixtures;
 using Shouldly;
 using System.Net.Http.Json;
 using Xunit;
 
 namespace PanoramaMusic.Api.Tests;
 
-public sealed class SecurityHeadersTests(ApiTestFixture fixture) : IClassFixture<ApiTestFixture>
+[Collection(ApiTestCollection.Name)]
+public sealed class SecurityHeadersTests(ApiTestFixture fixture)
 {
 	[Fact]
 	[Trait("AC", "M1.4UC1")]
