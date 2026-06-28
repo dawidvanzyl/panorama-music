@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
@@ -22,6 +23,18 @@ if (string.IsNullOrWhiteSpace(connectionString))
 	throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
 }
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+	options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+	// Render's edge proxy is the sole intermediary in front of the container — there is no
+	// additional untrusted hop to defend against — so trust exactly one forwarded hop rather
+	// than maintaining an IP/network allowlist for a proxy whose IPs Render doesn't publish.
+	options.ForwardLimit = 1;
+	options.KnownIPNetworks.Clear();
+	options.KnownProxies.Clear();
+});
+
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
@@ -39,6 +52,8 @@ if (app.Environment.IsDevelopment())
 {
 	app.MapOpenApi();
 }
+
+app.UseForwardedHeaders();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<RateLimitingAccountKeyMiddleware>();

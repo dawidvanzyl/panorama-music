@@ -1,6 +1,5 @@
 using PanoramaMusic.Api.Configurations;
-using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Identity.Application.Services.Auth;
 using System.Text.Json;
 
 namespace PanoramaMusic.Api.Middleware;
@@ -15,7 +14,7 @@ public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
 	public const string AccountKeyItem = "RateLimiting:AccountKey";
 	public const string TokenKeyItem = "RateLimiting:TokenKey";
 
-	public async Task InvokeAsync(HttpContext context, IRefreshTokenRepository refreshTokenRepository, IPasswordResetTokenRepository passwordResetTokenRepository)
+	public async Task InvokeAsync(HttpContext context, RateLimitTokenAccountResolver tokenAccountResolver)
 	{
 		var path = context.Request.Path.Value ?? string.Empty;
 
@@ -32,7 +31,7 @@ public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
 				context.Items[TokenKeyItem] = rawToken ?? ip;
 				context.Items[AccountKeyItem] = rawToken is null
 					? ip
-					: await ResolveAccountKeyAsync(context, path, rawToken, refreshTokenRepository, passwordResetTokenRepository);
+					: await ResolveAccountKeyAsync(context, path, rawToken, tokenAccountResolver);
 			}
 			else
 			{
@@ -48,13 +47,11 @@ public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
 		HttpContext context,
 		string path,
 		string rawToken,
-		IRefreshTokenRepository refreshTokenRepository,
-		IPasswordResetTokenRepository passwordResetTokenRepository)
+		RateLimitTokenAccountResolver tokenAccountResolver)
 	{
-		var tokenHash = RawToken.From(rawToken).Hash;
 		var userId = string.Equals(path, "/api/auth/refresh", StringComparison.OrdinalIgnoreCase)
-			? (await refreshTokenRepository.GetByTokenHashAsync(tokenHash, context.RequestAborted))?.UserId
-			: (await passwordResetTokenRepository.GetByTokenHashAsync(tokenHash, context.RequestAborted))?.UserId;
+			? await tokenAccountResolver.ResolveRefreshTokenAccountAsync(rawToken, context.RequestAborted)
+			: await tokenAccountResolver.ResolvePasswordResetTokenAccountAsync(rawToken, context.RequestAborted);
 
 		// An unresolvable token still discriminates by the token text itself, so distinct
 		// invalid tokens don't collide into one shared bucket either.
