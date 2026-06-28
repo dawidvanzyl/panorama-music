@@ -26,6 +26,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Tests", "Identity\PanoramaMusic.Identity.Tests\PanoramaMusic.Identity.Tests.csproj", "{ABB986C3-EA51-9248-F1CD-0F82B54F9170}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Api.Tests", "PanoramaMusic.Api.Tests\PanoramaMusic.Api.Tests.csproj", "{62F953F3-1BBE-45A3-9312-6EC10102AF94}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -132,6 +134,18 @@ Global
 		{ABB986C3-EA51-9248-F1CD-0F82B54F9170}.Release|x64.Build.0 = Release|Any CPU
 		{ABB986C3-EA51-9248-F1CD-0F82B54F9170}.Release|x86.ActiveCfg = Release|Any CPU
 		{ABB986C3-EA51-9248-F1CD-0F82B54F9170}.Release|x86.Build.0 = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|x64.Build.0 = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Debug|x86.Build.0 = Debug|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|x64.ActiveCfg = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|x64.Build.0 = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|x86.ActiveCfg = Release|Any CPU
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
