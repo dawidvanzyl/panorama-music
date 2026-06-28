@@ -11,7 +11,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 			headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
 			headers["X-Content-Type-Options"] = "nosniff";
 			headers["Referrer-Policy"] = "no-referrer";
-			headers["Content-Security-Policy"] = "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com";
+			headers["Content-Security-Policy"] = "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com";
 
 			if (context.Response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
 			{
