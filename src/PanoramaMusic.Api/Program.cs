@@ -43,6 +43,8 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseExceptionHandler();
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

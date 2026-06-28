@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
@@ -47,6 +48,7 @@ public static class AdminRoutes
 				var result = await handler.HandleAsync(command, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("RegenerateInviteToken")
 			.Produces<RegenerateInviteTokenResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
