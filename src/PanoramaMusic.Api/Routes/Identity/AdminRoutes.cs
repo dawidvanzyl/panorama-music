@@ -35,6 +35,7 @@ public static class AdminRoutes
 				return Results.Created($"/api/users/{result.UserId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<CreateUserRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("CreateUser")
 			.Produces<CreateUserResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
