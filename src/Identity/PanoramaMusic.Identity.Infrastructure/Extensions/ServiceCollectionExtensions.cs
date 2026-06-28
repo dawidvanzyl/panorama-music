@@ -120,7 +120,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<ActivateUserHandler>();
 		services.AddTransient<RequestPasswordResetHandler>();
 		services.AddTransient<ResetPasswordHandler>();
-		services.AddTransient<RateLimitTokenAccountResolver>();
+		services.AddTransient<RateLimitTokenService>();
 		return services;
 	}
 }

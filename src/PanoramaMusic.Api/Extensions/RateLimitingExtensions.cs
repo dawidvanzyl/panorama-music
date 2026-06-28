@@ -51,7 +51,7 @@ public static class RateLimitingExtensions
 			options.AccountPermitLimit,
 			options.WindowSeconds,
 			IsAccountKeyedEndpoint,
-			httpContext => GetItem(httpContext, RateLimitingAccountKeyMiddleware.AccountKeyItem));
+			httpContext => GetItem(httpContext, RateLimitingMiddleware.AccountKeyItem));
 	}
 
 	private static PartitionedRateLimiter<HttpContext> CreateTokenLimiter(AuthRateLimitOptions options)
@@ -61,7 +61,7 @@ public static class RateLimitingExtensions
 			options.AccountPermitLimit,
 			options.WindowSeconds,
 			IsTokenKeyedEndpoint,
-			httpContext => GetItem(httpContext, RateLimitingAccountKeyMiddleware.TokenKeyItem));
+			httpContext => GetItem(httpContext, RateLimitingMiddleware.TokenKeyItem));
 	}
 
 	private static PartitionedRateLimiter<HttpContext> CreateLimiter(

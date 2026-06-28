@@ -9,12 +9,12 @@ namespace PanoramaMusic.Api.Middleware;
 /// keys in <see cref="HttpContext.Items"/>, since the rate limiter middleware runs before model
 /// binding and cannot read the body (or resolve a token to its owning account) itself.
 /// </summary>
-public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
+public sealed class RateLimitingMiddleware(RequestDelegate next)
 {
 	public const string AccountKeyItem = "RateLimiting:AccountKey";
 	public const string TokenKeyItem = "RateLimiting:TokenKey";
 
-	public async Task InvokeAsync(HttpContext context, RateLimitTokenAccountResolver tokenAccountResolver)
+	public async Task InvokeAsync(HttpContext context, RateLimitTokenService rateLimitTokenService)
 	{
 		var path = context.Request.Path.Value ?? string.Empty;
 
@@ -31,7 +31,7 @@ public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
 				context.Items[TokenKeyItem] = rawToken ?? ip;
 				context.Items[AccountKeyItem] = rawToken is null
 					? ip
-					: await ResolveAccountKeyAsync(context, path, rawToken, tokenAccountResolver);
+					: await ResolveAccountKeyAsync(context, path, rawToken, rateLimitTokenService);
 			}
 			else
 			{
@@ -47,11 +47,11 @@ public sealed class RateLimitingAccountKeyMiddleware(RequestDelegate next)
 		HttpContext context,
 		string path,
 		string rawToken,
-		RateLimitTokenAccountResolver tokenAccountResolver)
+		RateLimitTokenService rateLimitTokenService)
 	{
 		var userId = string.Equals(path, "/api/auth/refresh", StringComparison.OrdinalIgnoreCase)
-			? await tokenAccountResolver.ResolveRefreshTokenAccountAsync(rawToken, context.RequestAborted)
-			: await tokenAccountResolver.ResolvePasswordResetTokenAccountAsync(rawToken, context.RequestAborted);
+			? await rateLimitTokenService.GetRefreshTokenAccountAsync(rawToken, context.RequestAborted)
+			: await rateLimitTokenService.GetPasswordResetTokenAccountAsync(rawToken, context.RequestAborted);
 
 		// An unresolvable token still discriminates by the token text itself, so distinct
 		// invalid tokens don't collide into one shared bucket either.

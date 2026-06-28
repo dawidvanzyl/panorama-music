@@ -5,7 +5,7 @@ namespace PanoramaMusic.Api.Configurations;
 /// <summary>
 /// The auth endpoints subject to rate limiting, and which of those are keyed by an opaque
 /// token (rather than an email) for the account dimension. Shared by
-/// <see cref="Middleware.RateLimitingAccountKeyMiddleware"/> and
+/// <see cref="Middleware.RateLimitingMiddleware"/> and
 /// <see cref="Extensions.RateLimitingExtensions"/> so both agree on exactly the same set.
 /// </summary>
 public static class RateLimitedAuthPaths

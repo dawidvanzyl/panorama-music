@@ -56,7 +56,7 @@ if (app.Environment.IsDevelopment())
 app.UseForwardedHeaders();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseMiddleware<RateLimitingAccountKeyMiddleware>();
+app.UseMiddleware<RateLimitingMiddleware>();
 app.UseRateLimiter();
 
 app.UseDefaultFiles();
