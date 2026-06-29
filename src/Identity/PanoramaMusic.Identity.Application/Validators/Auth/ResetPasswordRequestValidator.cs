@@ -12,6 +12,7 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
 			.NotEmpty();
 
 		RuleFor(x => x.NewPassword)
+			.Cascade(CascadeMode.Stop)
 			.NotEmpty()
 			.MaximumLength(PasswordValidationRules.MaxLength)
 			.PasswordPolicy(commonPasswordService);

@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,11 +13,16 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 /// and logs a warning) if the API is unreachable, so registration/reset never depends on a
 /// third party's uptime.
 /// </summary>
-public sealed class HibpPasswordService(HttpClient httpClient, ILogger<HibpPasswordService> logger)
-	: IHibpPasswordService
+public sealed class HibpPasswordService(
+	HttpClient httpClient,
+	IOptions<HibpOptions> options,
+	ILogger<HibpPasswordService> logger) : IHibpPasswordService
 {
 	public async Task<bool> ValidateAsync(string password, CancellationToken cancellationToken)
 	{
+		if (!options.Value.Enabled)
+			return true;
+
 		var hash = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(password)));
 		var prefix = hash[..5];
 		var suffix = hash[5..];

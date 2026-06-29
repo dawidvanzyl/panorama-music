@@ -12,6 +12,7 @@ public sealed class CompleteRegistrationRequestValidator : AbstractValidator<Com
 			.NotEmpty();
 
 		RuleFor(x => x.NewPassword)
+			.Cascade(CascadeMode.Stop)
 			.NotEmpty()
 			.MaximumLength(PasswordValidationRules.MaxLength)
 			.PasswordPolicy(commonPasswordService);

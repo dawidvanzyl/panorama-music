@@ -260,7 +260,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 9.4 Hashing
 
-* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose.
+* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose. **Status: scoped exemption** — `HibpPasswordService` uses SHA-1 only to compute the k-anonymity prefix/suffix required by HIBP's Pwned Passwords range API; this is bucketing for a public anonymity-set protocol, not a cryptographic integrity or secrecy use, so the prohibition this control targets doesn't apply.
 * `[L2]` `ASVS 5.0.0-11.4.2` Passwords must be stored using an approved, computationally intensive key derivation function (e.g., Argon2id, bcrypt, scrypt) with parameters configured to make brute-force sufficiently costly. Parameters must be reviewed and updated as hardware improves.
 * `[L2]` `ASVS 5.0.0-11.4.3` Hash functions used in digital signatures or for data authentication/integrity must be collision-resistant with at least 256-bit output. If only resistance to second pre-image attacks is required, at least 128-bit output is required.
 * `[L2]` `ASVS 5.0.0-11.4.4` Approved key derivation functions with key-stretching parameters must be used when deriving secret keys from passwords, balancing security and performance.

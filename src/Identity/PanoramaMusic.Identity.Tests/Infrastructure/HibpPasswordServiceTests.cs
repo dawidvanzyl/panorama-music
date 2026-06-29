@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
+using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using Shouldly;
 using System.Net;
@@ -16,7 +18,10 @@ public class HibpPasswordServiceTests
 	public HibpPasswordServiceTests()
 	{
 		var httpClient = new HttpClient(_handler.Object) { BaseAddress = new Uri("https://api.pwnedpasswords.com/") };
-		_hibpPasswordService = new HibpPasswordService(httpClient, Mock.Of<ILogger<HibpPasswordService>>());
+		_hibpPasswordService = new HibpPasswordService(
+			httpClient,
+			Options.Create(new HibpOptions { Enabled = true }),
+			Mock.Of<ILogger<HibpPasswordService>>());
 	}
 
 	private void SetupResponse(HttpStatusCode statusCode, string content)
@@ -77,5 +82,21 @@ public class HibpPasswordServiceTests
 		var result = await _hibpPasswordService.ValidateAsync("anything", TestContext.Current.CancellationToken);
 
 		result.ShouldBeTrue();
+	}
+
+	[Fact]
+	[Trait("AC", "NFC")]
+	public async Task ValidateAsync_DisabledViaOptions_ReturnsTrueWithoutCallingHttp()
+	{
+		var httpClient = new HttpClient(_handler.Object) { BaseAddress = new Uri("https://api.pwnedpasswords.com/") };
+		var disabledService = new HibpPasswordService(
+			httpClient,
+			Options.Create(new HibpOptions { Enabled = false }),
+			Mock.Of<ILogger<HibpPasswordService>>());
+
+		var result = await disabledService.ValidateAsync("password", TestContext.Current.CancellationToken);
+
+		result.ShouldBeTrue();
+		_handler.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
 	}
 }

@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+		services.Configure<HibpOptions>(configuration.GetSection(HibpOptions.SectionName));
 		services.Configure<AppOptions>(configuration);
 		services.AddDataAccess(connectionString);
 		services.AddRepositories();
