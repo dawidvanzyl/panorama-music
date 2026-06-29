@@ -94,6 +94,14 @@ public static class ServiceCollectionExtensions
 
 	private static IServiceCollection AddServices(this IServiceCollection services)
 	{
+		services.AddHttpClient<IHibpPasswordService, HibpPasswordService>(client =>
+		{
+			client.BaseAddress = new Uri("https://api.pwnedpasswords.com/");
+			client.Timeout = TimeSpan.FromSeconds(2);
+			client.DefaultRequestHeaders.Add("Add-Padding", "true");
+		});
+		services.AddSingleton<IDenyListPasswordService, DenyListPasswordService>();
+		services.AddSingleton<ICommonPasswordService, CommonPasswordService>();
 		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();
