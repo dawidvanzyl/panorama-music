@@ -7,7 +7,7 @@ import './features/admin/pages/pm-admin-users-page';
 import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
-import { getRefreshToken, hasRole } from './services/token-storage';
+import { hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const REFRESH_RETRY_DELAY_MS = 3000;
@@ -37,10 +37,9 @@ async function render(): Promise<void> {
   const isPublicPage = PUBLIC_PATHS.has(basePath);
 
   if (!isPublicPage && !isAuthenticated()) {
-    if (getRefreshToken() === null) {
-      window.location.hash = '#/login';
-      return;
-    }
+    // The refresh token now lives in an HttpOnly cookie, so the frontend can't
+    // check for its presence before asking the server — always attempt refresh
+    // and let the response (401 if no/invalid cookie) decide.
     const outcome = await tryRefresh();
     if (outcome === 'rejected') {
       window.location.hash = '#/login';

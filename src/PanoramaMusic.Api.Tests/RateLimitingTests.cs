@@ -72,11 +72,10 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 		{
 			// The token never resolves to an account, so the per-account bucket stays empty.
 			// A distinct simulated IP every call rules out the per-IP bucket too, isolating
-			// the per-token bucket as the only thing that can return 429 here.
-			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh")
-			{
-				Content = JsonContent.Create(new { Token = "not-a-real-refresh-token" }),
-			};
+			// the per-token bucket as the only thing that can return 429 here. The refresh
+			// token travels as a cookie, not the body — see RefreshTokenCookieExtensions.
+			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+			request.Headers.Add("Cookie", "refresh_token=not-a-real-refresh-token");
 			request.Headers.Add(TestRemoteIpStartupFilter.HeaderName, $"10.0.1.{i + 1}");
 
 			lastResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -98,10 +97,8 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 		{
 			// The token resolves to the same account every time, but each call comes from a
 			// distinct simulated IP, so only the resolved-account bucket can trip here.
-			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh")
-			{
-				Content = JsonContent.Create(new { Token = rawToken }),
-			};
+			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+			request.Headers.Add("Cookie", $"refresh_token={rawToken}");
 			request.Headers.Add(TestRemoteIpStartupFilter.HeaderName, $"10.0.2.{i + 1}");
 
 			lastResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -145,7 +142,8 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 		await userRepository.AddAsync(user, TestContext.Current.CancellationToken);
 
 		var rawToken = RawToken.Generate();
-		var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, rawToken.Hash, DateTime.UtcNow.AddDays(7));
+		var tokenId = Guid.NewGuid();
+		var refreshToken = new RefreshToken(tokenId, user.UserId, rawToken.Hash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
 		await refreshTokenRepository.AddAsync(refreshToken, TestContext.Current.CancellationToken);
 
 		return rawToken.Value;

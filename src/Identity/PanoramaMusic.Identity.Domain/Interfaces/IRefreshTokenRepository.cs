@@ -8,4 +8,5 @@ public interface IRefreshTokenRepository
 	Task AddAsync(RefreshToken token, CancellationToken cancellationToken);
 	Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken);
 	Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken);
+	Task RevokeFamilyAsync(Guid familyId, CancellationToken cancellationToken);
 }

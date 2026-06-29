@@ -26,6 +26,9 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifet
 		await _postgres.StartAsync();
 		Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _postgres.GetConnectionString());
 		Environment.SetEnvironmentVariable("JWT__Secret", "test-only-secret-at-least-32-characters-long!!");
+		Environment.SetEnvironmentVariable("JWT__Issuer", "panorama-music-api-tests");
+		Environment.SetEnvironmentVariable("JWT__Audience", "panorama-music-client-tests");
+		Environment.SetEnvironmentVariable("JWT__AbsoluteSessionLifetimeDays", "30");
 		Environment.SetEnvironmentVariable("ASPNETCORE_WEBROOT", _webRoot);
 
 		// Smaller account limit than the IP limit lets tests trip the account-keyed

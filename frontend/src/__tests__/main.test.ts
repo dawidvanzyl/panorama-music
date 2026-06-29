@@ -7,10 +7,8 @@ vi.mock('../services/auth', () => ({
   tryRefresh: () => mockTryRefresh(),
 }));
 
-const mockGetRefreshToken = vi.fn();
 const mockHasRole = vi.fn();
 vi.mock('../services/token-storage', () => ({
-  getRefreshToken: () => mockGetRefreshToken(),
   hasRole: () => mockHasRole(),
 }));
 
@@ -29,7 +27,6 @@ describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }
     vi.resetAllMocks();
     document.body.innerHTML = '<div id="app"></div>';
     mockIsAuthenticated.mockReturnValue(false);
-    mockGetRefreshToken.mockReturnValue('a-refresh-token');
     mockHasRole.mockReturnValue(false);
     // A public page as the neutral baseline: it skips the refresh-check
     // block entirely, so navigating to it can never trigger a stray

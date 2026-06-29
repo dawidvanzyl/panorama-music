@@ -1,4 +1,5 @@
 using PanoramaMusic.Api.Configurations;
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Identity.Application.Services.Auth;
 using System.Text.Json;
 
@@ -27,7 +28,12 @@ public sealed class RateLimitingMiddleware(RequestDelegate next)
 
 			if (RateLimitedAuthPaths.TokenKeyed.Contains(path))
 			{
-				var rawToken = await ExtractFieldAsync(context.Request, "token");
+				// /api/auth/refresh's token now travels as an HttpOnly cookie rather than in the
+				// body (see RefreshTokenCookieExtensions); reset-password's token is unrelated and
+				// still arrives in the body.
+				var rawToken = string.Equals(path, "/api/auth/refresh", StringComparison.OrdinalIgnoreCase)
+					? context.Request.GetRefreshTokenCookie()
+					: await ExtractFieldAsync(context.Request, "token");
 				context.Items[TokenKeyItem] = rawToken ?? ip;
 				context.Items[AccountKeyItem] = rawToken is null
 					? ip

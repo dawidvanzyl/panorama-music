@@ -1,4 +1,5 @@
 import { test, expect } from '../../../fixtures/base';
+import { uniqueTestEmail, createRegisteredUser, goToAdminUsersPage } from '../../../fixtures/testUsers';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
 import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
 
@@ -85,5 +86,55 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
     await expect(page).toHaveURL(/#\/$/);
     await expect(dashboardPage.heading).toBeVisible();
     await expect(dashboardPage.logoutButton).toBeVisible();
+  });
+});
+
+test.describe('Token Revocation', () => {
+  test('denies a protected API action with the previous access token after logging out', { tag: '@M1.4IT1' }, async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    const dashboardPage = new DashboardPage(page);
+
+    await loginPage.gotoLogin();
+    await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await expect(dashboardPage.heading).toBeVisible();
+
+    const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+
+    await dashboardPage.logout();
+    await expect(page).toHaveURL(/#\/login$/);
+
+    const response = await page.request.get('/api/users', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(response.status()).toBe(401);
+  });
+
+  test('denies a protected API action for a user whose session was active when an admin deactivates them', { tag: '@M1.4IT2' }, async ({ page, browser }) => {
+    const email = uniqueTestEmail('session-deactivate');
+    const password = 'SessionDeactivate123';
+    await createRegisteredUser(page, email, password);
+
+    const userContext = await browser.newContext();
+    const userPage = await userContext.newPage();
+    const userLoginPage = new LoginPage(userPage);
+    const userDashboardPage = new DashboardPage(userPage);
+    await userLoginPage.gotoLogin();
+    await userLoginPage.login(email, password);
+    await expect(userDashboardPage.heading).toBeVisible();
+
+    const accessToken = await userPage.evaluate(() => localStorage.getItem('pm_access_token'));
+
+    const adminUsersPage = await goToAdminUsersPage(page);
+    await adminUsersPage.deactivateUser(email);
+    await expect(adminUsersPage.status(email)).toHaveText('Deactivated');
+
+    const response = await userPage.request.get('/api/users', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(response.status()).toBe(401);
+
+    await userContext.close();
   });
 });
