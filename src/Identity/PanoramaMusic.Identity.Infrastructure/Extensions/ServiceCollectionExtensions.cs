@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
 					ValidateIssuerSigningKey = true,
 					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
 					ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+					RequireSignedTokens = true,
 				};
 				options.Events = new JwtBearerEvents
 				{

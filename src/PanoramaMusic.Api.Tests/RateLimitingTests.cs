@@ -75,7 +75,7 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 			// the per-token bucket as the only thing that can return 429 here. The refresh
 			// token travels as a cookie, not the body — see RefreshTokenCookieExtensions.
 			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
-			request.Headers.Add("Cookie", "refresh_token=not-a-real-refresh-token");
+			request.Headers.Add("Cookie", "__Secure-refresh_token=not-a-real-refresh-token");
 			request.Headers.Add(TestRemoteIpStartupFilter.HeaderName, $"10.0.1.{i + 1}");
 
 			lastResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -98,7 +98,7 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 			// The token resolves to the same account every time, but each call comes from a
 			// distinct simulated IP, so only the resolved-account bucket can trip here.
 			using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
-			request.Headers.Add("Cookie", $"refresh_token={rawToken}");
+			request.Headers.Add("Cookie", $"__Secure-refresh_token={rawToken}");
 			request.Headers.Add(TestRemoteIpStartupFilter.HeaderName, $"10.0.2.{i + 1}");
 
 			lastResponse = await client.SendAsync(request, TestContext.Current.CancellationToken);

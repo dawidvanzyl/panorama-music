@@ -6,7 +6,7 @@ namespace PanoramaMusic.Api.Extensions;
 /// </summary>
 public static class RefreshTokenCookieExtensions
 {
-	public const string CookieName = "refresh_token";
+	public const string CookieName = "__Secure-refresh_token";
 
 	private const string _cookiePath = "/api/auth";
 

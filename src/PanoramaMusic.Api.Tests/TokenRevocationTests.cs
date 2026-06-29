@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Api.Tests.Fixtures;
+using PanoramaMusic.Api.Tests.Middleware;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -24,7 +25,7 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 	public async Task PostLogout_ThenReusingTheSameAccessToken_ReturnsUnauthorized()
 	{
 		var (email, _) = await SeedActiveUserAsync();
-		var client = fixture.CreateClient();
+		var client = CreateIsolatedClient("10.0.9.1");
 		var (accessToken, _) = await LoginAsync(client, email);
 
 		var logoutResponse = await client.SendAsync(AuthorizedLogoutRequest(accessToken), TestContext.Current.CancellationToken);
@@ -40,7 +41,7 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 	public async Task PostLogout_WithoutAValidAccessToken_StillRevokesTheRefreshToken()
 	{
 		var (email, _) = await SeedActiveUserAsync();
-		var client = fixture.CreateClient();
+		var client = CreateIsolatedClient("10.0.9.2");
 		var (_, refreshTokenCookie) = await LoginAsync(client, email);
 
 		// Logout must not depend on a still-valid access token — an expired one (e.g. an idle
@@ -48,7 +49,7 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 		// Authorization header entirely; /logout has no RequireAuthorization() and falls back
 		// to the refresh-token cookie alone.
 		using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
-		logoutRequest.Headers.Add("Cookie", $"refresh_token={refreshTokenCookie}");
+		logoutRequest.Headers.Add("Cookie", $"__Secure-refresh_token={refreshTokenCookie}");
 		var logoutResponse = await client.SendAsync(logoutRequest, TestContext.Current.CancellationToken);
 		logoutResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -65,7 +66,7 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 	public async Task DeactivateUser_ThenUsingTheirExistingAccessToken_ReturnsUnauthorized()
 	{
 		var (email, userId) = await SeedActiveUserAsync();
-		var client = fixture.CreateClient();
+		var client = CreateIsolatedClient("10.0.9.3");
 		var (accessToken, _) = await LoginAsync(client, email);
 
 		using var scope = fixture.Services.CreateScope();
@@ -75,6 +76,17 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 		var response = await client.SendAsync(AuthorizedProtectedActionRequest(accessToken), TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+	}
+
+	// PanoramaMusic.Api.Tests classes share one host/in-memory rate limiter (see
+	// ApiTestCollection), running sequentially across the whole assembly. RateLimitingTests
+	// deliberately exhausts the default/no-IP-override per-IP login bucket, so every request
+	// here needs its own simulated source IP to avoid colliding with that shared state.
+	private HttpClient CreateIsolatedClient(string simulatedIp)
+	{
+		var client = fixture.CreateClient();
+		client.DefaultRequestHeaders.Add(TestRemoteIpStartupFilter.HeaderName, simulatedIp);
+		return client;
 	}
 
 	private static HttpRequestMessage AuthorizedLogoutRequest(string accessToken)
@@ -120,8 +132,8 @@ public sealed class TokenRevocationTests(ApiTestFixture fixture)
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
 		var result = await response.Content.ReadFromJsonAsync<AccessTokenResult>(TestContext.Current.CancellationToken);
 
-		var setCookie = response.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith("refresh_token=", StringComparison.Ordinal));
-		var refreshTokenCookie = Regex.Match(setCookie, "refresh_token=([^;]+)").Groups[1].Value;
+		var setCookie = response.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith("__Secure-refresh_token=", StringComparison.Ordinal));
+		var refreshTokenCookie = Regex.Match(setCookie, "__Secure-refresh_token=([^;]+)").Groups[1].Value;
 
 		return (result!.AccessToken, refreshTokenCookie);
 	}
