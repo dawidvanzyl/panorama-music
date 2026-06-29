@@ -9,6 +9,7 @@ public sealed class RequestPasswordResetRequestValidator : AbstractValidator<Req
 	{
 		RuleFor(x => x.Email)
 			.NotEmpty()
+			.MaximumLength(EmailValidationRules.MaxLength)
 			.EmailAddress();
 	}
 }

@@ -302,7 +302,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-13.2.2` Communications between backend application components must use accounts assigned the least necessary privilege.
 * `[L2]` `ASVS 5.0.0-13.2.3` If a credential is used for service authentication, it must not be a default credential (e.g., `root/root`, `admin/admin`).
 * `[L2]` `ASVS 5.0.0-13.2.4` An allowlist must define the external resources or systems with which the application is permitted to communicate. This allowlist may be implemented at the application layer, web server, firewall, or a combination.
-* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** the API's only outbound destination is the SMTP host defined by `Smtp__Host`/`Smtp__Port` (config-driven, not user-influenced). No other egress exists.
+* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** the SMTP host defined by `Smtp__Host`/`Smtp__Port`, and `api.pwnedpasswords.com` (HIBP Pwned Passwords range endpoint, called by `HibpPasswordService`; base address is hardcoded, not user-influenced, and toggled via `Hibp:Enabled`). No other egress exists.
 
 ## 11.2 Secret Management
 

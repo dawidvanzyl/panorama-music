@@ -29,4 +29,16 @@ public class RequestPasswordResetRequestValidatorTests
 
 		result.IsValid.ShouldBeTrue();
 	}
+
+	[Fact]
+	[Trait("AC", "NFC")]
+	public void Validate_EmailExceedsMaximumLength_ReturnsFailureNamingEmail()
+	{
+		var overlongEmail = $"{new string('a', 250)}@test.com";
+
+		var result = _validator.Validate(new RequestPasswordResetRequest(overlongEmail));
+
+		result.IsValid.ShouldBeFalse();
+		result.Errors.ShouldContain(e => e.PropertyName == nameof(RequestPasswordResetRequest.Email));
+	}
 }
