@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+		services.Configure<HibpOptions>(configuration.GetSection(HibpOptions.SectionName));
 		services.Configure<AppOptions>(configuration);
 		services.AddDataAccess(connectionString);
 		services.AddRepositories();
@@ -94,6 +95,14 @@ public static class ServiceCollectionExtensions
 
 	private static IServiceCollection AddServices(this IServiceCollection services)
 	{
+		services.AddHttpClient<IHibpPasswordService, HibpPasswordService>(client =>
+		{
+			client.BaseAddress = new Uri("https://api.pwnedpasswords.com/");
+			client.Timeout = TimeSpan.FromSeconds(2);
+			client.DefaultRequestHeaders.Add("Add-Padding", "true");
+		});
+		services.AddSingleton<IDenyListPasswordService, DenyListPasswordService>();
+		services.AddSingleton<ICommonPasswordService, CommonPasswordService>();
 		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();

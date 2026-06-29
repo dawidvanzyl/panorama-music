@@ -32,3 +32,6 @@ Thumbs.db
 
 # Design assets (local only)
 .design/
+
+# Claude Code (local-only settings)
+.claude/settings.local.json

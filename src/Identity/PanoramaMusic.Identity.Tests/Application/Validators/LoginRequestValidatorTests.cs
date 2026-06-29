@@ -30,4 +30,26 @@ public class LoginRequestValidatorTests
 
 		result.IsValid.ShouldBeTrue();
 	}
+
+	[Fact]
+	[Trait("AC", "NFC")]
+	public void Validate_EmailExceedsMaximumLength_ReturnsFailureNamingEmail()
+	{
+		var overlongEmail = $"{new string('a', 250)}@test.com";
+
+		var result = _validator.Validate(new LoginRequest(overlongEmail, "Password1"));
+
+		result.IsValid.ShouldBeFalse();
+		result.Errors.ShouldContain(e => e.PropertyName == nameof(LoginRequest.Email));
+	}
+
+	[Fact]
+	[Trait("AC", "NFC")]
+	public void Validate_PasswordExceedsMaximumLength_ReturnsFailureNamingPassword()
+	{
+		var result = _validator.Validate(new LoginRequest("user@test.com", new string('a', 129)));
+
+		result.IsValid.ShouldBeFalse();
+		result.Errors.ShouldContain(e => e.PropertyName == nameof(LoginRequest.Password));
+	}
 }

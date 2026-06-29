@@ -69,14 +69,6 @@ template.innerHTML = `
       <span class="material-symbols-outlined strength-rule__icon" id="icon-min-length">radio_button_unchecked</span>
       <span class="strength-rule__label" id="label-min-length">At least 8 characters</span>
     </div>
-    <div class="strength-rule" id="rule-mixed-case">
-      <span class="material-symbols-outlined strength-rule__icon" id="icon-mixed-case">radio_button_unchecked</span>
-      <span class="strength-rule__label" id="label-mixed-case">Mixed case (AA/aa)</span>
-    </div>
-    <div class="strength-rule" id="rule-has-digit">
-      <span class="material-symbols-outlined strength-rule__icon" id="icon-has-digit">radio_button_unchecked</span>
-      <span class="strength-rule__label" id="label-has-digit">Include digits (0-9)</span>
-    </div>
   </div>
 `;
 
@@ -90,8 +82,6 @@ export class PmPasswordStrengthIndicator extends HTMLElement {
 
   set result(value: PasswordPolicyResult) {
     this._setRule('min-length', value.minLength);
-    this._setRule('mixed-case', value.mixedCase);
-    this._setRule('has-digit', value.hasDigit);
   }
 
   private _setRule(ruleId: string, satisfied: boolean): void {

@@ -30,15 +30,12 @@ test.describe('Identity Request Validation', () => {
       await resetPasswordPage.gotoReset(resetToken);
 
       // M1.3IT1: a password that fails the validator's policy rules (too
-      // short, no mixed case, no digit) is rejected with the standardized
-      // 400 validation-failure response, surfaced inline rather than as the
-      // invalid-token banner.
+      // short) is rejected with the standardized 400 validation-failure
+      // response, surfaced inline rather than as the invalid-token banner.
       await resetPasswordPage.resetPassword('weak', 'weak');
 
       await expect(resetPasswordPage.errorBanner).toBeVisible();
       await expect(resetPasswordPage.errorText).toContainText('8 characters');
-      await expect(resetPasswordPage.errorText).toContainText('mixed case');
-      await expect(resetPasswordPage.errorText).toContainText('digit');
       await expect(resetPasswordPage.invalidBanner).toBeHidden();
 
       // The reset token must still be unconsumed — proof the route handler

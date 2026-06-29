@@ -499,3 +499,15 @@ The following are prohibited unless explicitly justified:
 * duplication of business rules across layers
 
 When in doubt, prefer explicit domain modelling and clear separation of responsibilities.
+
+---
+
+# 10. Environment Configuration
+
+## QA-Environment Defaults
+
+QA-environment defaults must be expressed as `${VAR:-default}` entries in `docker-compose.yml`'s `api` service `environment:` block, not as a committed `appsettings.{Environment}.json` file.
+
+`docker-compose.yml` is the project's single source of truth for which environment variables the QA environment needs. It also serves as the reference for what to configure as environment variables on the actual QA deployment (Render). A second, parallel JSON-file mechanism duplicates that list and risks drifting from what the real deployment needs.
+
+Production and Development configuration are unaffected by this rule — they continue to use `appsettings.json` / `appsettings.Development.json` as already established.

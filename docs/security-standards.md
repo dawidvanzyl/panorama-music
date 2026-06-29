@@ -260,7 +260,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 9.4 Hashing
 
-* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose.
+* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose. **Status: scoped exemption** — `HibpPasswordService` uses SHA-1 only to compute the k-anonymity prefix/suffix required by HIBP's Pwned Passwords range API; this is bucketing for a public anonymity-set protocol, not a cryptographic integrity or secrecy use, so the prohibition this control targets doesn't apply.
 * `[L2]` `ASVS 5.0.0-11.4.2` Passwords must be stored using an approved, computationally intensive key derivation function (e.g., Argon2id, bcrypt, scrypt) with parameters configured to make brute-force sufficiently costly. Parameters must be reviewed and updated as hardware improves.
 * `[L2]` `ASVS 5.0.0-11.4.3` Hash functions used in digital signatures or for data authentication/integrity must be collision-resistant with at least 256-bit output. If only resistance to second pre-image attacks is required, at least 128-bit output is required.
 * `[L2]` `ASVS 5.0.0-11.4.4` Approved key derivation functions with key-stretching parameters must be used when deriving secret keys from passwords, balancing security and performance.
@@ -302,7 +302,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-13.2.2` Communications between backend application components must use accounts assigned the least necessary privilege.
 * `[L2]` `ASVS 5.0.0-13.2.3` If a credential is used for service authentication, it must not be a default credential (e.g., `root/root`, `admin/admin`).
 * `[L2]` `ASVS 5.0.0-13.2.4` An allowlist must define the external resources or systems with which the application is permitted to communicate. This allowlist may be implemented at the application layer, web server, firewall, or a combination.
-* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** the API's only outbound destination is the SMTP host defined by `Smtp__Host`/`Smtp__Port` (config-driven, not user-influenced). No other egress exists.
+* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** the SMTP host defined by `Smtp__Host`/`Smtp__Port`, and `api.pwnedpasswords.com` (HIBP Pwned Passwords range endpoint, called by `HibpPasswordService`; base address is hardcoded, not user-influenced, and toggled via `Hibp:Enabled`). No other egress exists.
 
 ## 11.2 Secret Management
 

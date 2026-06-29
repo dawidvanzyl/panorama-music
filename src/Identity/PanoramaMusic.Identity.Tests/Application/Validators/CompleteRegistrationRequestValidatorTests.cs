@@ -1,3 +1,5 @@
+using Moq;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Application.Validators.Auth;
 using Shouldly;
@@ -7,38 +9,65 @@ namespace PanoramaMusic.Identity.Tests.Application.Validators;
 
 public class CompleteRegistrationRequestValidatorTests
 {
-	private readonly CompleteRegistrationRequestValidator _validator = new();
+	private readonly Mock<ICommonPasswordService> _commonPasswordService = new();
+	private readonly CompleteRegistrationRequestValidator _validator;
+
+	public CompleteRegistrationRequestValidatorTests()
+	{
+		_commonPasswordService
+			.Setup(s => s.ValidateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
+		_validator = new CompleteRegistrationRequestValidator(_commonPasswordService.Object);
+	}
 
 	[Fact]
 	[Trait("AC", "M1.3UC1")]
-	public void Validate_EmptyInviteToken_ReturnsFailureNamingInviteToken()
+	public async Task Validate_EmptyInviteToken_ReturnsFailureNamingInviteToken()
 	{
-		var result = _validator.Validate(new CompleteRegistrationRequest("", "ValidPass1"));
+		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("", "alllowercaseletters"), TestContext.Current.CancellationToken);
 
 		result.IsValid.ShouldBeFalse();
 		result.Errors.ShouldContain(e => e.PropertyName == nameof(CompleteRegistrationRequest.InviteToken));
 	}
 
-	[Theory]
-	[InlineData("short1A")]
-	[InlineData("alllowercase1")]
-	[InlineData("ALLUPPERCASE1")]
-	[InlineData("NoDigitHere")]
-	[Trait("AC", "M1.3UC2")]
-	public void Validate_WeakPassword_ReturnsFailureForViolatedRule(string password)
+	[Fact]
+	[Trait("AC", "M1.4UC1")]
+	public async Task Validate_PasswordMeetsLengthMinimumWithNoCharacterClassMix_IsAccepted()
 	{
-		var result = _validator.Validate(new CompleteRegistrationRequest("token", password));
+		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("token", "alllowercaseletters"), TestContext.Current.CancellationToken);
+
+		result.IsValid.ShouldBeTrue();
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC1")]
+	public async Task Validate_PasswordBelowLengthMinimum_ReturnsFailureNamingPassword()
+	{
+		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("token", "short1A"), TestContext.Current.CancellationToken);
 
 		result.IsValid.ShouldBeFalse();
 		result.Errors.ShouldContain(e => e.PropertyName == nameof(CompleteRegistrationRequest.NewPassword));
 	}
 
 	[Fact]
-	[Trait("AC", "M1.3UC2")]
-	public void Validate_PolicyCompliantPassword_DoesNotFailOnPassword()
+	[Trait("AC", "M1.4UC2")]
+	public async Task Validate_PasswordFailsCommonPasswordCheck_ReturnsFailureNamingPassword()
 	{
-		var result = _validator.Validate(new CompleteRegistrationRequest("token", "ValidPass1"));
+		_commonPasswordService.Setup(s => s.ValidateAsync("password123", It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-		result.IsValid.ShouldBeTrue();
+		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("token", "password123"), TestContext.Current.CancellationToken);
+
+		result.IsValid.ShouldBeFalse();
+		result.Errors.ShouldContain(e => e.PropertyName == nameof(CompleteRegistrationRequest.NewPassword));
+	}
+
+	[Fact]
+	[Trait("AC", "NFC")]
+	public async Task Validate_PasswordExceedsMaximumLength_ReturnsFailureNamingPassword()
+	{
+		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("token", new string('a', 129)), TestContext.Current.CancellationToken);
+
+		result.IsValid.ShouldBeFalse();
+		result.Errors.ShouldContain(e => e.PropertyName == nameof(CompleteRegistrationRequest.NewPassword));
 	}
 }
