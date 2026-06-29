@@ -13,7 +13,7 @@ vi.mock('../../../../services/auth', () => ({
 }));
 
 vi.mock('../../../../services/password-policy', () => ({
-  evaluatePasswordPolicy: () => ({ minLength: false, mixedCase: false, hasDigit: false }),
+  evaluatePasswordPolicy: () => ({ minLength: false }),
 }));
 
 describe('pm-reset-password-page', () => {
