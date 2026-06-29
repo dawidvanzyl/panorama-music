@@ -31,9 +31,11 @@ public sealed class LoginHandler(
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
 
 		var rawRefreshToken = RawToken.Generate();
-		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
+		var now = DateTime.UtcNow;
+		var refreshTokenExpiresAt = now.AddDays(_refreshTokenExpiryDays);
 
-		var refreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt);
+		var tokenId = Guid.NewGuid();
+		var refreshToken = new RefreshToken(tokenId, user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt, tokenId, now);
 		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
 		return new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);

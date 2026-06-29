@@ -1,4 +1,4 @@
-﻿using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -11,7 +11,9 @@ internal static class RefreshTokenDtoExtensions
 			dto.Token_Id,
 			dto.User_Id,
 			dto.Token_Hash,
-			dto.Expires_At);
+			dto.Expires_At,
+			dto.Family_Id,
+			dto.Session_Started_At);
 
 		if (dto.Revoked_At.HasValue)
 			token.Revoke(dto.Revoked_At.Value);

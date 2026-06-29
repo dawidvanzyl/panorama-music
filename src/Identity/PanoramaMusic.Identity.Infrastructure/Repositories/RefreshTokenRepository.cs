@@ -33,6 +33,8 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 				p_user_id = token.UserId,
 				p_token_hash = token.TokenHash,
 				p_expires_at = token.ExpiresAt,
+				p_family_id = token.FamilyId,
+				p_session_started_at = token.SessionStartedAt,
 			},
 			cancellationToken);
 		await connection.ExecuteAsync(command);
@@ -70,6 +72,8 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 					p_user_id = newToken.UserId,
 					p_token_hash = newToken.TokenHash,
 					p_expires_at = newToken.ExpiresAt,
+					p_family_id = newToken.FamilyId,
+					p_session_started_at = newToken.SessionStartedAt,
 				},
 				transaction,
 				cancellationToken);
@@ -82,5 +86,15 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 			await transaction.RollbackAsync(cancellationToken);
 			throw;
 		}
+	}
+
+	public async Task RevokeFamilyAsync(Guid familyId, CancellationToken cancellationToken)
+	{
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
+			"identity.update_revoke_refresh_token_family",
+			new { p_family_id = familyId },
+			cancellationToken);
+		await connection.ExecuteAsync(command);
 	}
 }

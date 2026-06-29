@@ -1,4 +1,4 @@
-import { clearTokens, storeTokens, getRefreshToken, isAuthenticated } from './token-storage';
+import { clearTokens, storeTokens, getAccessToken, isAuthenticated } from './token-storage';
 
 const API_BASE = '/api/auth';
 
@@ -9,9 +9,7 @@ export interface LoginRequest {
 
 export interface AuthResult {
   accessToken: string;
-  refreshToken: string;
   accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
 }
 
 export interface ValidationError {
@@ -49,6 +47,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function login(email: string, password: string): Promise<AuthResult> {
   const response = await fetch(`${API_BASE}/login`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password } satisfies LoginRequest),
   });
@@ -56,43 +55,35 @@ export async function login(email: string, password: string): Promise<AuthResult
   const result = await handleResponse<AuthResult>(response);
   storeTokens({
     accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
     expiresAt: result.accessTokenExpiresAt,
   });
   return result;
 }
 
 export async function refreshToken(): Promise<AuthResult> {
-  const token = getRefreshToken();
-  if (!token) throw new AuthError('No refresh token available', 401);
-
+  // The refresh token travels in an HttpOnly cookie the browser attaches
+  // automatically — there is nothing for the frontend to read or send here.
   const response = await fetch(`${API_BASE}/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
+    credentials: 'include',
   });
 
   const result = await handleResponse<AuthResult>(response);
   storeTokens({
     accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
     expiresAt: result.accessTokenExpiresAt,
   });
   return result;
 }
 
 export async function logout(): Promise<void> {
-  const token = getRefreshToken();
-  if (!token) {
-    clearTokens();
-    return;
-  }
+  const accessToken = getAccessToken();
 
   try {
     await fetch(`${API_BASE}/logout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      credentials: 'include',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
     });
   } finally {
     clearTokens();

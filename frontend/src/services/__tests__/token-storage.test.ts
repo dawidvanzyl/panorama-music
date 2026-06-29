@@ -23,7 +23,6 @@ describe('isAuthenticated', { tags: ['M1UC48'] }, () => {
   it('returns true once tokens are stored with a future expiry', () => {
     storeTokens({
       accessToken: buildJwt('Admin'),
-      refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
 
@@ -40,7 +39,6 @@ describe('getRoles / hasRole', { tags: ['M1UC48'] }, () => {
   it('decodes roles from the access token', () => {
     storeTokens({
       accessToken: buildJwt('Admin,Teacher'),
-      refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
 
@@ -52,7 +50,6 @@ describe('getRoles / hasRole', { tags: ['M1UC48'] }, () => {
   it('returns false for a role the user does not have', () => {
     storeTokens({
       accessToken: buildJwt('Teacher'),
-      refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using PanoramaMusic.Identity.Application.Enums;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -18,6 +19,7 @@ using PanoramaMusic.Identity.Infrastructure.Contexts;
 using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -52,6 +54,12 @@ public static class ServiceCollectionExtensions
 		if (string.IsNullOrWhiteSpace(secret))
 			throw new InvalidOperationException($"'{JwtOptions.SectionName}:{nameof(JwtOptions.Secret)}' is not configured.");
 
+		if (string.IsNullOrWhiteSpace(jwtOptions?.Issuer))
+			throw new InvalidOperationException($"'{JwtOptions.SectionName}:{nameof(JwtOptions.Issuer)}' is not configured.");
+
+		if (string.IsNullOrWhiteSpace(jwtOptions.Audience))
+			throw new InvalidOperationException($"'{JwtOptions.SectionName}:{nameof(JwtOptions.Audience)}' is not configured.");
+
 		services
 			.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 			.AddJwtBearer(options =>
@@ -59,11 +67,44 @@ public static class ServiceCollectionExtensions
 				options.MapInboundClaims = false;
 				options.TokenValidationParameters = new TokenValidationParameters
 				{
-					ValidateIssuer = false,
-					ValidateAudience = false,
+					ValidateIssuer = true,
+					ValidIssuer = jwtOptions!.Issuer,
+					ValidateAudience = true,
+					ValidAudience = jwtOptions.Audience,
 					ValidateLifetime = true,
 					ValidateIssuerSigningKey = true,
 					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+					ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+					RequireSignedTokens = true,
+				};
+				options.Events = new JwtBearerEvents
+				{
+					// Delegates to AccessTokenValidationService, which checks the two distinct
+					// revocation mechanisms: a per-session jti denylist (logout) and the account's
+					// active status (deactivation/deletion). Kept here as a thin adapter so the
+					// actual check stays a directly testable, non-pipeline-coupled service.
+					OnTokenValidated = async context =>
+					{
+						var principal = context.Principal!;
+						var jtiClaim = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+						var subClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+						if (!Guid.TryParse(jtiClaim, out var jti) || !Guid.TryParse(subClaim, out var userId))
+						{
+							context.Fail("Token is missing a valid jti or sub claim.");
+							return;
+						}
+
+						var validationService = context.HttpContext.RequestServices.GetRequiredService<AccessTokenValidationService>();
+						var result = await validationService.ValidateAsync(jti, userId, context.HttpContext.RequestAborted);
+
+						if (result != AccessTokenState.Valid)
+						{
+							context.Fail(result == AccessTokenState.Revoked
+								? "Token has been revoked."
+								: "User account is no longer active.");
+						}
+					},
 				};
 			});
 
@@ -89,6 +130,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IUserRoleRepository, UserRoleRepository>();
 		services.AddTransient<IInviteTokenRepository, InviteTokenRepository>();
 		services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
+		services.AddTransient<IRevokedAccessTokenRepository, RevokedAccessTokenRepository>();
 		services.AddTransient<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 		return services;
 	}
@@ -109,8 +151,11 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IEmailService, SmtpEmailService>();
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		services.AddSingleton<IAppOptions>(sp => sp.GetRequiredService<IOptions<AppOptions>>().Value);
+		services.AddSingleton<ISessionOptions>(sp => sp.GetRequiredService<IOptions<JwtOptions>>().Value);
 		services.AddHttpContextAccessor();
 		services.AddScoped<IUserContext, UserContext>();
+		services.AddScoped<IAccessTokenContext, AccessTokenContext>();
+		services.AddTransient<AccessTokenValidationService>();
 		return services;
 	}
 

@@ -56,6 +56,9 @@ services:
       # re-apply seed data on the next container start.  Never set in production.
       RESET_DB: ${RESET_DB:-false}
       JWT__Secret: ${JWT__Secret}
+      JWT__Issuer: ${JWT__Issuer:-panorama-music-api}
+      JWT__Audience: ${JWT__Audience:-panorama-music-client}
+      JWT__AbsoluteSessionLifetimeDays: ${JWT__AbsoluteSessionLifetimeDays:-30}
       Admin__Email: ${Admin__Email}
       Admin__Password: ${Admin__Password}
       RateLimiting__Auth__IpPermitLimit: ${RateLimiting__Auth__IpPermitLimit:-1000}

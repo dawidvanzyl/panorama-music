@@ -13,43 +13,49 @@ public static class AuthRoutes
 	{
 		var group = app.MapGroup("/api/auth").WithTags("Auth");
 
-		group.MapPost("/login", async (LoginRequest request, LoginHandler handler, CancellationToken ct) =>
+		group.MapPost("/login", async (LoginRequest request, LoginHandler handler, HttpResponse response, CancellationToken ct) =>
 		{
 			var command = new LoginCommand(request);
 			var result = await handler.HandleAsync(command, ct);
-			return Results.Ok(result);
+			response.SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
+			return Results.Ok(new AccessTokenResult(result.AccessToken, result.AccessTokenExpiresAt));
 		})
 		.AddEndpointFilter<ValidationFilter<LoginRequest>>()
 		.MarkSensitiveResponse()
 		.WithName("Login")
-		.Produces<AuthResult>(StatusCodes.Status200OK)
+		.Produces<AccessTokenResult>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
 
-		group.MapPost("/refresh", async (RefreshTokenRequest request, RefreshTokenHandler handler, CancellationToken ct) =>
+		group.MapPost("/refresh", async (HttpRequest request, HttpResponse response, RefreshTokenHandler handler, CancellationToken ct) =>
 		{
-			var command = new RefreshTokenCommand(request);
+			var refreshToken = request.GetRefreshTokenCookie();
+			if (string.IsNullOrEmpty(refreshToken))
+				return Results.Unauthorized();
+
+			var command = new RefreshTokenCommand(new RefreshTokenRequest(refreshToken));
 			var result = await handler.HandleAsync(command, ct);
-			return Results.Ok(result);
+			response.SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
+			return Results.Ok(new AccessTokenResult(result.AccessToken, result.AccessTokenExpiresAt));
 		})
-		.AddEndpointFilter<ValidationFilter<RefreshTokenRequest>>()
 		.MarkSensitiveResponse()
 		.WithName("RefreshToken")
-		.Produces<AuthResult>(StatusCodes.Status200OK)
-		.Produces(StatusCodes.Status400BadRequest)
+		.Produces<AccessTokenResult>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status401Unauthorized);
 
-		group.MapPost("/logout", async (RefreshTokenRequest request, LogoutHandler handler, CancellationToken ct) =>
+		group.MapPost("/logout", async (HttpRequest request, HttpResponse response, LogoutHandler handler, CancellationToken ct) =>
 		{
-			var command = new LogoutCommand(request.Token);
+			// Deliberately not .RequireAuthorization(): logout must still revoke the refresh
+			// token even if the caller's access token has already expired. When a valid Bearer
+			// token IS present, UseAuthentication() still populates HttpContext.User, so
+			// LogoutHandler can denylist its jti on a best-effort basis via IAccessTokenContext.
+			var command = new LogoutCommand(request.GetRefreshTokenCookie());
 			await handler.HandleAsync(command, ct);
+			response.ClearRefreshTokenCookie();
 			return Results.NoContent();
 		})
-		.AddEndpointFilter<ValidationFilter<RefreshTokenRequest>>()
 		.WithName("Logout")
-		.Produces(StatusCodes.Status204NoContent)
-		.Produces(StatusCodes.Status400BadRequest)
-		.Produces(StatusCodes.Status401Unauthorized);
+		.Produces(StatusCodes.Status204NoContent);
 
 		group.MapPost("/complete-registration", async (CompleteRegistrationRequest request, CompleteRegistrationHandler handler, CancellationToken ct) =>
 		{

@@ -5,4 +5,6 @@ internal sealed record RefreshTokenDto(
 	Guid User_Id,
 	string Token_Hash,
 	DateTime Expires_At,
-	DateTime? Revoked_At);
+	DateTime? Revoked_At,
+	Guid Family_Id,
+	DateTime Session_Started_At);
