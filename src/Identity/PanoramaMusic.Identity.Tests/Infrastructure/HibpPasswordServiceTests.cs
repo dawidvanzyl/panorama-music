@@ -63,7 +63,7 @@ public class HibpPasswordServiceTests
 	}
 
 	[Fact]
-	[Trait("AC", "NFC")]
+	[Trait("AC", "M1.4UC4")]
 	public async Task ValidateAsync_HttpRequestThrows_FailsOpenAndReturnsTrue()
 	{
 		SetupThrows(new HttpRequestException("network down"));
@@ -74,7 +74,7 @@ public class HibpPasswordServiceTests
 	}
 
 	[Fact]
-	[Trait("AC", "NFC")]
+	[Trait("AC", "M1.4UC4")]
 	public async Task ValidateAsync_RequestTimesOut_FailsOpenAndReturnsTrue()
 	{
 		SetupThrows(new TaskCanceledException("timed out"));
@@ -85,7 +85,7 @@ public class HibpPasswordServiceTests
 	}
 
 	[Fact]
-	[Trait("AC", "NFC")]
+	[Trait("AC", "M1.4UC4")]
 	public async Task ValidateAsync_DisabledViaOptions_ReturnsTrueWithoutCallingHttp()
 	{
 		var httpClient = new HttpClient(_handler.Object) { BaseAddress = new Uri("https://api.pwnedpasswords.com/") };
