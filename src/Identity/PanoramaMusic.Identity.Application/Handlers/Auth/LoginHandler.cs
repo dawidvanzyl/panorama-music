@@ -12,11 +12,12 @@ public sealed class LoginHandler(
 	IUserRoleRepository userRoleRepository,
 	IPasswordHashService passwordHashService,
 	IJwtService jwtService,
-	IRefreshTokenRepository refreshTokenRepository)
+	IRefreshTokenRepository refreshTokenRepository,
+	IPasswordResetTokenRepository passwordResetTokenRepository)
 {
 	private const int _refreshTokenExpiryDays = 7;
 
-	public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
+	public async Task<LoginResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
 	{
 		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken);
 		if (user is null || !user.IsActive)
@@ -27,6 +28,19 @@ public sealed class LoginHandler(
 
 		if (user.PasswordHash is null || !passwordHashService.Verify(command.Request.Password, user.PasswordHash))
 			throw new UnauthorizedException("Invalid credentials.");
+
+		if (user.RequiresPasswordReset)
+		{
+			var rawResetToken = RawToken.Generate();
+			var resetToken = new PasswordResetToken(
+				Guid.NewGuid(),
+				user.UserId,
+				rawResetToken.Hash,
+				DateTime.UtcNow.AddHours(TokenConstants.PasswordResetTokenExpiryHours));
+			await passwordResetTokenRepository.AddAsync(resetToken, cancellationToken);
+
+			return LoginResult.RotationRequired(rawResetToken.Value);
+		}
 
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
@@ -39,6 +53,6 @@ public sealed class LoginHandler(
 		var refreshToken = new RefreshToken(tokenId, user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt, tokenId, now);
 		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
-		return new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);
+		return LoginResult.Success(new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt));
 	}
 }

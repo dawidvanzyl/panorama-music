@@ -176,6 +176,8 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 
 On startup, DbUp automatically runs all pending migrations against the Neon database.
 
+In Production, the seeded admin account is created with a forced credential rotation: its first successful login is denied normal access and directed into the password-reset flow instead, so the documented seed password (`Admin__Password`) cannot remain valid indefinitely if left unchanged. Outbound email (e.g. password reset) also requires STARTTLS in Production — the send fails rather than falling back to plaintext if the SMTP server doesn't support it. Development and QA both run against a local docker mail catcher (smtp4dev) with no TLS configured, so they use opportunistic STARTTLS instead.
+
 #### Adding seed data
 
 Add numbered SQL files to `src/PanoramaMusic.Infrastructure/Persistence/Seeds/`, following the same `S001__description.sql` convention. They are embedded in the assembly at build time and executed in alphabetical order after every reset.

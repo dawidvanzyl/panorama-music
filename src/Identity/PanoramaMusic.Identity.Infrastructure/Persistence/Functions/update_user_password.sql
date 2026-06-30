@@ -10,7 +10,8 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     UPDATE identity.users
-    SET password_hash = p_password_hash
+    SET password_hash = p_password_hash,
+        requires_password_reset = FALSE
     WHERE user_id = p_user_id;
 END;
 $$;
