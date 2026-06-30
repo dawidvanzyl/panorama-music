@@ -22,7 +22,7 @@ public sealed class LoginHandler(
 			?? throw new UnauthorizedException("Invalid credentials.");
 
 		if (!user.IsActive)
-			throw new UnauthorizedException("User account is not active.");
+			throw new UnauthorizedException("Invalid credentials.");
 
 		if (user.PasswordHash is null || !passwordHashService.Verify(command.Request.Password, user.PasswordHash))
 			throw new UnauthorizedException("Invalid credentials.");

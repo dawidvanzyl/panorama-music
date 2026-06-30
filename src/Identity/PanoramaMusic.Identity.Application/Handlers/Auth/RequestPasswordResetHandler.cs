@@ -13,7 +13,7 @@ public sealed class RequestPasswordResetHandler(
 {
 	public async Task HandleAsync(RequestPasswordResetCommand command, CancellationToken cancellationToken)
 	{
-		var user = await userRepository.GetByEmailAsync(command.Request.Email, cancellationToken);
+		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken);
 		if (user is null)
 			return;
 

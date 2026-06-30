@@ -122,4 +122,39 @@ public class LoginHandlerTests
 		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("user@test.com", "password")), TestContext.Current.CancellationToken));
 	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC5")]
+	public async Task HandleAsync_UnknownEmailWrongPasswordAndInactiveAccount_ThrowSameGenericError()
+	{
+		var activeUser = CreateActiveUser("active@test.com");
+		var inactiveUser = new User(Guid.NewGuid(), Email.Create("inactive@test.com"), DateTime.UtcNow);
+		inactiveUser.SetPassword(PasswordHash.Create("$argon2id$v=19$valid"));
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("unknown@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("active@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(activeUser);
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("inactive@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(inactiveUser);
+
+		Hasher
+			.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>()))
+			.Returns(false);
+
+		var unknownEmailEx = await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("unknown@test.com", "password")), TestContext.Current.CancellationToken));
+
+		var wrongPasswordEx = await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("active@test.com", "wrongpass")), TestContext.Current.CancellationToken));
+
+		var inactiveAccountEx = await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("inactive@test.com", "password")), TestContext.Current.CancellationToken));
+
+		unknownEmailEx.Message.ShouldBe(wrongPasswordEx.Message);
+		wrongPasswordEx.Message.ShouldBe(inactiveAccountEx.Message);
+	}
 }

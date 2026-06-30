@@ -137,4 +137,31 @@ test.describe('Token Revocation', () => {
 
     await userContext.close();
   });
+
+  test('shows the same generic login error for an unknown email, a wrong password, and a deactivated account', { tag: '@M1.4IT3' }, async ({ page }) => {
+    const email = uniqueTestEmail('login-parity');
+    const password = 'LoginParity123';
+    await createRegisteredUser(page, email, password);
+
+    const adminUsersPage = await goToAdminUsersPage(page);
+    await adminUsersPage.deactivateUser(email);
+    await expect(adminUsersPage.status(email)).toHaveText('Deactivated');
+
+    const loginPage = new LoginPage(page);
+
+    await loginPage.gotoLogin();
+    await loginPage.login('nonexistent-user@panorama-music.qa', 'whatever-password');
+    await expect(loginPage.errorBanner).toBeVisible();
+    await expect(loginPage.errorText).toHaveText('Invalid email or password');
+
+    await loginPage.gotoLogin();
+    await loginPage.login(email, 'definitely-wrong-password');
+    await expect(loginPage.errorBanner).toBeVisible();
+    await expect(loginPage.errorText).toHaveText('Invalid email or password');
+
+    await loginPage.gotoLogin();
+    await loginPage.login(email, password);
+    await expect(loginPage.errorBanner).toBeVisible();
+    await expect(loginPage.errorText).toHaveText('Invalid email or password');
+  });
 });
