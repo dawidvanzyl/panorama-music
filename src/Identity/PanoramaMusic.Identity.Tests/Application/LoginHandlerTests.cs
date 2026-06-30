@@ -157,4 +157,33 @@ public class LoginHandlerTests
 		unknownEmailEx.Message.ShouldBe(wrongPasswordEx.Message);
 		wrongPasswordEx.Message.ShouldBe(inactiveAccountEx.Message);
 	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC7")]
+	public async Task HandleAsync_UnknownEmailOrInactiveAccount_VerifiesAgainstDummyHash()
+	{
+		var dummyHash = PasswordHash.Create("dummy-salt.dummy-hash");
+		var inactiveUser = new User(Guid.NewGuid(), Email.Create("inactive@test.com"), DateTime.UtcNow);
+		inactiveUser.SetPassword(PasswordHash.Create("$argon2id$v=19$valid"));
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("unknown@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("inactive@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(inactiveUser);
+
+		Hasher.Setup(h => h.DummyHash).Returns(dummyHash);
+		Hasher
+			.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<PasswordHash>()))
+			.Returns(false);
+
+		await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("unknown@test.com", "password")), TestContext.Current.CancellationToken));
+		Hasher.Verify(h => h.Verify("password", dummyHash), Times.Once);
+
+		await Should.ThrowAsync<UnauthorizedException>(
+			() => Handler.HandleAsync(new LoginCommand(new LoginRequest("inactive@test.com", "password")), TestContext.Current.CancellationToken));
+		Hasher.Verify(h => h.Verify("password", dummyHash), Times.Exactly(2));
+	}
 }

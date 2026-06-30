@@ -18,11 +18,12 @@ public sealed class LoginHandler(
 
 	public async Task<AuthResult> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
 	{
-		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken)
-			?? throw new UnauthorizedException("Invalid credentials.");
-
-		if (!user.IsActive)
+		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken);
+		if (user is null || !user.IsActive)
+		{
+			passwordHashService.Verify(command.Request.Password, passwordHashService.DummyHash);
 			throw new UnauthorizedException("Invalid credentials.");
+		}
 
 		if (user.PasswordHash is null || !passwordHashService.Verify(command.Request.Password, user.PasswordHash))
 			throw new UnauthorizedException("Invalid credentials.");
