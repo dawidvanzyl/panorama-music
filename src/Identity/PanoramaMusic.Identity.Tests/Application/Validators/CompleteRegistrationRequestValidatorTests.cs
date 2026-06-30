@@ -62,7 +62,7 @@ public class CompleteRegistrationRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "NFC")]
+	[Trait("AC", "M1.4UC3")]
 	public async Task Validate_PasswordExceedsMaximumLength_ReturnsFailureNamingPassword()
 	{
 		var result = await _validator.ValidateAsync(new CompleteRegistrationRequest("token", new string('a', 129)), TestContext.Current.CancellationToken);

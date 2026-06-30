@@ -31,7 +31,7 @@ public class RequestPasswordResetRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "NFC")]
+	[Trait("AC", "M1.4UC3")]
 	public void Validate_EmailExceedsMaximumLength_ReturnsFailureNamingEmail()
 	{
 		var overlongEmail = $"{new string('a', 250)}@test.com";

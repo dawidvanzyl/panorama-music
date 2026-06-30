@@ -16,6 +16,9 @@ public class Argon2PasswordHashService : IPasswordHashService
 	private const int _memorySize = 19456;
 	private const int _iterations = 2;
 
+	public PasswordHash DummyHash { get; } =
+		PasswordHash.Create($"{Convert.ToBase64String(new byte[_saltLength])}.{Convert.ToBase64String(new byte[_hashLength])}");
+
 	public PasswordHash Hash(string password)
 	{
 		var salt = new byte[_saltLength];

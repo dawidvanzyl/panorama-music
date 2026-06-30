@@ -97,4 +97,24 @@ public class RequestPasswordResetHandlerTests
 		captured.ExpiresAt.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(59));
 		captured.ExpiresAt.ShouldBeLessThan(DateTime.UtcNow.AddHours(2));
 	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC6")]
+	public async Task HandleAsync_MixedCaseEmail_NormalizesToLowerCaseBeforeLookup()
+	{
+		var user = new User(Guid.NewGuid(), Email.Create("user@test.com"), DateTime.UtcNow);
+		user.SetPassword(PasswordHash.Create("$argon2id$v=19$existing-hash"));
+		user.Activate();
+
+		UserRepo
+			.Setup(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		await Handler.HandleAsync(
+			new RequestPasswordResetCommand(new RequestPasswordResetRequest("User@Test.com")),
+			TestContext.Current.CancellationToken);
+
+		UserRepo.Verify(r => r.GetByEmailAsync("user@test.com", TestContext.Current.CancellationToken), Times.Once);
+		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
+	}
 }
