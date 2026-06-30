@@ -54,7 +54,10 @@ public class AdminSeedService(
 		// the E2E suite) seed throwaway credentials on every ephemeral run, so
 		// forcing rotation there would just break the seeded-admin login path.
 		if (hostEnvironment.IsProduction())
+		{
+			logger.LogInformation("Admin user {Email} requires a password reset.", email);
 			user.RequirePasswordReset();
+		}
 
 		await userRepo.AddAsync(user, cancellationToken);
 		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);
