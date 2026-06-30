@@ -411,8 +411,10 @@ export class PmLoginPage extends HTMLElement {
     this.submitIcon!.classList.add('login__spinner');
 
     try {
-      await login(this.emailInput!.value, this.passwordInput!.value);
-      window.location.hash = '#/';
+      const outcome = await login(this.emailInput!.value, this.passwordInput!.value);
+      window.location.hash = outcome.status === 'passwordResetRequired'
+        ? `#/reset-password?token=${encodeURIComponent(outcome.resetToken)}`
+        : '#/';
     } catch (err) {
       if (err instanceof AuthError) {
         this.errorText!.textContent = 'Invalid email or password';
