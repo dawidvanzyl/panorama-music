@@ -12,6 +12,10 @@ export interface AuthResult {
   accessTokenExpiresAt: string;
 }
 
+export type LoginOutcome =
+  | { status: 'success'; accessToken: string; accessTokenExpiresAt: string }
+  | { status: 'passwordResetRequired'; resetToken: string };
+
 export interface ValidationError {
   propertyName: string;
   errorMessage: string;
@@ -44,7 +48,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function login(email: string, password: string): Promise<AuthResult> {
+export async function login(email: string, password: string): Promise<LoginOutcome> {
   const response = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     credentials: 'include',
@@ -52,12 +56,20 @@ export async function login(email: string, password: string): Promise<AuthResult
     body: JSON.stringify({ email, password } satisfies LoginRequest),
   });
 
+  if (response.status === 403) {
+    const body = await response.json().catch(() => null);
+    if (body && body.passwordResetRequired === true && typeof body.resetToken === 'string') {
+      return { status: 'passwordResetRequired', resetToken: body.resetToken };
+    }
+    throw new AuthError(body?.error ?? `HTTP ${response.status}`, response.status);
+  }
+
   const result = await handleResponse<AuthResult>(response);
   storeTokens({
     accessToken: result.accessToken,
     expiresAt: result.accessTokenExpiresAt,
   });
-  return result;
+  return { status: 'success', accessToken: result.accessToken, accessTokenExpiresAt: result.accessTokenExpiresAt };
 }
 
 export async function refreshToken(): Promise<AuthResult> {

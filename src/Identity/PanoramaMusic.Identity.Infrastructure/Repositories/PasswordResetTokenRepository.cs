@@ -48,7 +48,7 @@ public class PasswordResetTokenRepository(IDbConnectionFactory connectionFactory
 		{
 			var updatePasswordCommand = CreateCommandDefinition(
 				"identity.update_user_password",
-				new { p_user_id = userId, p_password_hash = passwordHash.Value },
+				new { p_user_id = userId, p_password_hash = passwordHash.Value, p_clear_requires_password_reset = true },
 				transaction,
 				cancellationToken);
 			await dbConnection.ExecuteAsync(updatePasswordCommand);

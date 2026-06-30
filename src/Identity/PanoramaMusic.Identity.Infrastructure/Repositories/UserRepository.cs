@@ -55,7 +55,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : Repository
 		{
 			var createUserCommand = CreateCommandDefinition(
 				"identity.create_user",
-				new { p_user_id = user.UserId, p_email = user.Email.Value, p_is_active = user.IsActive },
+				new
+				{
+					p_user_id = user.UserId,
+					p_email = user.Email.Value,
+					p_is_active = user.IsActive,
+					p_requires_password_reset = user.RequiresPasswordReset,
+				},
 				transaction,
 				cancellationToken);
 			await dbConnection.ExecuteAsync(createUserCommand);

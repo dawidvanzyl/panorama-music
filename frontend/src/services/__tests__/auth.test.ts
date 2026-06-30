@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { login, logout, completeRegistration, refreshToken, isAuthenticated, tryRefresh } from '../auth';
+import { login, logout, completeRegistration, refreshToken, isAuthenticated, tryRefresh, AuthError } from '../auth';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -24,7 +24,8 @@ describe('login', { tags: ['M1UC35'] }, () => {
 
     const result = await login('test@example.com', 'password123');
 
-    expect(result.accessToken).toBe('jwt-token-123');
+    expect(result.status).toBe('success');
+    expect(result).toMatchObject({ accessToken: 'jwt-token-123' });
     expect(localStorage.getItem('pm_access_token')).toBe('jwt-token-123');
     expect(localStorage.getItem('pm_refresh_token')).toBeNull();
     expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
@@ -40,6 +41,30 @@ describe('login', { tags: ['M1UC35'] }, () => {
     });
 
     await expect(login('test@example.com', 'wrongpass')).rejects.toThrow('Invalid credentials');
+    expect(localStorage.getItem('pm_access_token')).toBeNull();
+  });
+
+  it('returns a passwordResetRequired outcome on 403 without storing tokens', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ passwordResetRequired: true, resetToken: 'reset-tok-abc' }),
+    });
+
+    const result = await login('admin@test.com', 'password123');
+
+    expect(result).toEqual({ status: 'passwordResetRequired', resetToken: 'reset-tok-abc' });
+    expect(localStorage.getItem('pm_access_token')).toBeNull();
+  });
+
+  it('throws AuthError on a malformed 403 body', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ passwordResetRequired: false }),
+    });
+
+    await expect(login('admin@test.com', 'password123')).rejects.toThrow(AuthError);
     expect(localStorage.getItem('pm_access_token')).toBeNull();
   });
 });

@@ -18,7 +18,8 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 public class AdminSeedService(
 	IOptions<AdminOptions> adminOptions,
 	IServiceProvider serviceProvider,
-	ILogger<AdminSeedService> logger) : IHostedService
+	ILogger<AdminSeedService> logger,
+	IHostEnvironment hostEnvironment) : IHostedService
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
@@ -47,6 +48,16 @@ public class AdminSeedService(
 		var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
 		user.SetPassword(hashService.Hash(password));
 		user.Activate();
+
+		// Only Production deployments are at risk of the documented seed password
+		// being left unchanged indefinitely. Development and the QA stack (used by
+		// the E2E suite) seed throwaway credentials on every ephemeral run, so
+		// forcing rotation there would just break the seeded-admin login path.
+		if (hostEnvironment.IsProduction())
+		{
+			logger.LogInformation("Admin user {Email} requires a password reset.", email);
+			user.RequirePasswordReset();
+		}
 
 		await userRepo.AddAsync(user, cancellationToken);
 		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);

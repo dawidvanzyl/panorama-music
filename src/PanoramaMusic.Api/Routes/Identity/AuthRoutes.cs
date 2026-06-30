@@ -17,13 +17,18 @@ public static class AuthRoutes
 		{
 			var command = new LoginCommand(request);
 			var result = await handler.HandleAsync(command, ct);
-			response.SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
-			return Results.Ok(new AccessTokenResult(result.AccessToken, result.AccessTokenExpiresAt));
+
+			if (result.RequiresPasswordReset)
+				return Results.Json(new PasswordResetRequiredResult(true, result.PasswordResetToken!), statusCode: StatusCodes.Status403Forbidden);
+
+			response.SetRefreshTokenCookie(result.Tokens!.RefreshToken, result.Tokens.RefreshTokenExpiresAt);
+			return Results.Ok(new AccessTokenResult(result.Tokens.AccessToken, result.Tokens.AccessTokenExpiresAt));
 		})
 		.AddEndpointFilter<ValidationFilter<LoginRequest>>()
 		.MarkSensitiveResponse()
 		.WithName("Login")
 		.Produces<AccessTokenResult>(StatusCodes.Status200OK)
+		.Produces<PasswordResetRequiredResult>(StatusCodes.Status403Forbidden)
 		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
 

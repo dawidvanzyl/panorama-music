@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -17,7 +18,8 @@ public class AdminSeedServiceTests
 	private static AdminSeedService CreateService(
 		AdminOptions adminOptions,
 		Mock<IUserRepository> mockUserRepo,
-		Mock<IUserRoleRepository> mockUserRoleRepo)
+		Mock<IUserRoleRepository> mockUserRoleRepo,
+		string environmentName = "Production")
 	{
 		var options = Options.Create(adminOptions);
 		var services = new ServiceCollection();
@@ -25,7 +27,9 @@ public class AdminSeedServiceTests
 		services.AddSingleton(mockUserRoleRepo.Object);
 		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		var sp = services.BuildServiceProvider();
-		return new AdminSeedService(options, sp, NullLogger<AdminSeedService>.Instance);
+		var mockHostEnvironment = new Mock<IHostEnvironment>();
+		mockHostEnvironment.SetupGet(e => e.EnvironmentName).Returns(environmentName);
+		return new AdminSeedService(options, sp, NullLogger<AdminSeedService>.Instance, mockHostEnvironment.Object);
 	}
 
 	[Fact]
@@ -60,6 +64,49 @@ public class AdminSeedServiceTests
 
 		mockUserRepo.Verify(r => r.AddAsync(It.Is<User>(u => u.Email.Value == "admin@test.com"), TestContext.Current.CancellationToken), Times.Once);
 		mockUserRoleRepo.Verify(r => r.AddAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), TestContext.Current.CancellationToken), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC10")]
+	public async Task StartAsync_WhenSeedingAdmin_MarksAccountAsRequiringPasswordReset()
+	{
+		var mockUserRepo = new Mock<IUserRepository>();
+		mockUserRepo
+			.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
+		var service = CreateService(
+			new AdminOptions { Email = "admin@test.com", Password = "StrongPassword1!" },
+			mockUserRepo,
+			mockUserRoleRepo);
+
+		await service.StartAsync(TestContext.Current.CancellationToken);
+
+		mockUserRepo.Verify(r => r.AddAsync(It.Is<User>(u => u.RequiresPasswordReset), TestContext.Current.CancellationToken), Times.Once);
+	}
+
+	[Theory]
+	[InlineData("Development")]
+	[InlineData("QA")]
+	[Trait("AC", "M1.4UC10")]
+	public async Task StartAsync_InDevelopmentOrQa_DoesNotForcePasswordReset(string environmentName)
+	{
+		var mockUserRepo = new Mock<IUserRepository>();
+		mockUserRepo
+			.Setup(r => r.GetByEmailAsync("admin@test.com", It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		var mockUserRoleRepo = new Mock<IUserRoleRepository>();
+		var service = CreateService(
+			new AdminOptions { Email = "admin@test.com", Password = "StrongPassword1!" },
+			mockUserRepo,
+			mockUserRoleRepo,
+			environmentName);
+
+		await service.StartAsync(TestContext.Current.CancellationToken);
+
+		mockUserRepo.Verify(r => r.AddAsync(It.Is<User>(u => !u.RequiresPasswordReset), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
