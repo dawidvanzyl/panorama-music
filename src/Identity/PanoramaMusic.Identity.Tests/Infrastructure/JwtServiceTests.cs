@@ -58,6 +58,11 @@ public class JwtServiceTests
 			() => firstJwt.Audiences.ShouldContain("test-audience")
 		);
 		firstJwt.Id.ShouldNotBe(secondJwt.Id);
+
+		// The returned JwtToken.Jti must match the jti actually embedded in the token, so
+		// callers (session revocation) can denylist the exact access token that was issued.
+		first.Jti.ToString().ShouldBe(firstJwt.Id);
+		second.Jti.ToString().ShouldBe(secondJwt.Id);
 	}
 
 	[Fact]

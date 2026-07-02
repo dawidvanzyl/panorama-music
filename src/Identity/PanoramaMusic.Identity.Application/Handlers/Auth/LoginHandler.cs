@@ -52,7 +52,18 @@ public sealed class LoginHandler(
 		var refreshTokenExpiresAt = now.AddDays(_refreshTokenExpiryDays);
 
 		var tokenId = Guid.NewGuid();
-		var refreshToken = new RefreshToken(tokenId, user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt, tokenId, now, clientContext.UserAgent, clientContext.IpAddress);
+		var refreshToken = new RefreshToken(
+			tokenId,
+			user.UserId,
+			rawRefreshToken.Hash,
+			refreshTokenExpiresAt,
+			tokenId,
+			now,
+			clientContext.UserAgent,
+			clientContext.IpAddress,
+			generatedToken.Jti,
+			generatedToken.ExpiresAt);
+
 		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
 		return LoginResult.Success(new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt));

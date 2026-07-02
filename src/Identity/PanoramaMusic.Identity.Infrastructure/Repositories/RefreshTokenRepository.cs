@@ -73,6 +73,8 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 				p_session_started_at = token.SessionStartedAt,
 				p_device_label = token.DeviceLabel,
 				p_ip_address = token.IpAddress,
+				p_access_token_jti = token.AccessTokenJti,
+				p_access_token_expires_at = token.AccessTokenExpiresAt,
 			},
 			cancellationToken);
 		await connection.ExecuteAsync(command);
@@ -114,6 +116,8 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 					p_session_started_at = newToken.SessionStartedAt,
 					p_device_label = newToken.DeviceLabel,
 					p_ip_address = newToken.IpAddress,
+					p_access_token_jti = newToken.AccessTokenJti,
+					p_access_token_expires_at = newToken.AccessTokenExpiresAt,
 				},
 				transaction,
 				cancellationToken);

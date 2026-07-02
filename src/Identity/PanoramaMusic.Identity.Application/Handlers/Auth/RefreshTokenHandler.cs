@@ -55,7 +55,18 @@ public sealed class RefreshTokenHandler(
 		var newRawToken = RawToken.Generate();
 		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-		var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newRawToken.Hash, refreshTokenExpiresAt, existing.FamilyId, existing.SessionStartedAt, clientContext.UserAgent, clientContext.IpAddress);
+		var newRefreshToken = new RefreshToken(
+			Guid.NewGuid(),
+			user.UserId,
+			newRawToken.Hash,
+			refreshTokenExpiresAt,
+			existing.FamilyId,
+			existing.SessionStartedAt,
+			clientContext.UserAgent,
+			clientContext.IpAddress,
+			generatedToken.Jti,
+			generatedToken.ExpiresAt);
+
 		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken, cancellationToken);
 
 		return new AuthResult(generatedToken.Token, newRawToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);

@@ -15,7 +15,9 @@ internal static class RefreshTokenDtoExtensions
 			dto.Family_Id,
 			dto.Session_Started_At,
 			dto.Device_Label,
-			dto.Ip_Address);
+			dto.Ip_Address,
+			dto.Access_Token_Jti,
+			dto.Access_Token_Expires_At);
 
 		token.Touch(dto.Last_Seen_At);
 

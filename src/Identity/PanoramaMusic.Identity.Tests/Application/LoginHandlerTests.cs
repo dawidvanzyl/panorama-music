@@ -35,7 +35,7 @@ public class LoginHandlerTests
 
 		Jwt
 			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
-			.Returns(new JwtToken("access-token", DateTime.UtcNow));
+			.Returns(new JwtToken("access-token", DateTime.UtcNow, Guid.NewGuid()));
 
 		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object, PasswordResetTokenRepo.Object, ClientContext.Object);
 	}

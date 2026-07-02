@@ -34,7 +34,7 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 	{
 		var (email, _) = await SeedActiveUserAsync();
 		var client = CreateIsolatedClient("10.0.10.1");
-		var (_, firstSessionToken) = await LoginAsync(client, email);
+		var (firstAccessToken, firstSessionToken) = await LoginAsync(client, email);
 		var (secondAccessToken, secondSessionToken) = await LoginAsync(client, email);
 
 		var firstSessionId = await GetSessionIdForRefreshTokenAsync(firstSessionToken);
@@ -54,6 +54,14 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 		refreshUsingRevokedSession.Headers.Add("Cookie", $"__Secure-refresh_token={firstSessionToken}");
 		var refreshResponse = await client.SendAsync(refreshUsingRevokedSession, TestContext.Current.CancellationToken);
 		refreshResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		// The revoked session's access token must stop working immediately too - not just
+		// its ability to be refreshed - so a still-open tab is locked out right away rather
+		// than staying signed in for up to its remaining 15-minute lifetime.
+		var protectedCallWithRevokedAccessToken = await client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", firstAccessToken),
+			TestContext.Current.CancellationToken);
+		protectedCallWithRevokedAccessToken.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 	}
 
 	[Fact]
@@ -66,7 +74,7 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 		var memberClient = CreateIsolatedClient("10.0.10.3");
 
 		var (adminAccessToken, _) = await LoginAsync(adminClient, adminEmail);
-		var (_, memberSessionToken) = await LoginAsync(memberClient, memberEmail);
+		var (memberAccessToken, memberSessionToken) = await LoginAsync(memberClient, memberEmail);
 		var memberSessionId = await GetSessionIdForRefreshTokenAsync(memberSessionToken);
 
 		var revokeResponse = await adminClient.SendAsync(
@@ -84,6 +92,14 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 		refreshUsingRevokedSession.Headers.Add("Cookie", $"__Secure-refresh_token={memberSessionToken}");
 		var refreshResponse = await memberClient.SendAsync(refreshUsingRevokedSession, TestContext.Current.CancellationToken);
 		refreshResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		// The revoked member's access token must stop working immediately too - not just
+		// its ability to be refreshed - so an admin-initiated revocation locks the member
+		// out right away rather than waiting for the token's remaining 15-minute lifetime.
+		var protectedCallWithRevokedAccessToken = await memberClient.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", memberAccessToken),
+			TestContext.Current.CancellationToken);
+		protectedCallWithRevokedAccessToken.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
 		_ = adminUserId;
 	}

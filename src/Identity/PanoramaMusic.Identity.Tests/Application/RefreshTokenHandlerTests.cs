@@ -41,7 +41,7 @@ public class RefreshTokenHandlerTests
 
 		Jwt
 			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
-			.Returns(new JwtToken("new-access-token", DateTime.UtcNow));
+			.Returns(new JwtToken("new-access-token", DateTime.UtcNow, Guid.NewGuid()));
 
 		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object);
 	}

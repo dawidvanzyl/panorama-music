@@ -10,4 +10,6 @@ internal sealed record RefreshTokenDto(
 	DateTime Session_Started_At,
 	string? Device_Label,
 	string? Ip_Address,
-	DateTime Last_Seen_At);
+	DateTime Last_Seen_At,
+	Guid? Access_Token_Jti,
+	DateTime? Access_Token_Expires_At);
