@@ -10,6 +10,7 @@ vi.mock('../services/auth', () => ({
 const mockHasRole = vi.fn();
 vi.mock('../services/token-storage', () => ({
   hasRole: () => mockHasRole(),
+  getEmail: () => 'test@example.com',
 }));
 
 describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }, () => {
@@ -76,5 +77,35 @@ describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(mockTryRefresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('main router — persistent sidebar', { tags: ['M1.4UC12'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it('renders the sidebar alongside the nav bar on the dashboard route', async () => {
+    mockHasRole.mockReturnValue(false);
+    window.location.hash = '#/';
+
+    await vi.waitFor(() => {
+      const app = document.getElementById('app')!;
+      expect(app.innerHTML).toContain('<pm-nav-bar>');
+      expect(app.innerHTML).toContain('<pm-sidebar>');
+    });
+  });
+
+  it('renders the sidebar alongside the nav bar on the pre-existing admin users route', async () => {
+    mockHasRole.mockReturnValue(true);
+    window.location.hash = '#/admin/users';
+
+    await vi.waitFor(() => {
+      const app = document.getElementById('app')!;
+      expect(app.innerHTML).toContain('<pm-nav-bar>');
+      expect(app.innerHTML).toContain('<pm-sidebar>');
+    });
   });
 });

@@ -51,7 +51,7 @@ public class LogoutHandlerTests
 		var userId = Guid.NewGuid();
 
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, userId, tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, userId, tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);
@@ -69,7 +69,7 @@ public class LogoutHandlerTests
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);
@@ -103,7 +103,7 @@ public class LogoutHandlerTests
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);

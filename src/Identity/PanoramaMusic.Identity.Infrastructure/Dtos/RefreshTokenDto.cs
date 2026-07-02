@@ -7,4 +7,7 @@ internal sealed record RefreshTokenDto(
 	DateTime Expires_At,
 	DateTime? Revoked_At,
 	Guid Family_Id,
-	DateTime Session_Started_At);
+	DateTime Session_Started_At,
+	string? Device_Label,
+	string? Ip_Address,
+	DateTime Last_Seen_At);

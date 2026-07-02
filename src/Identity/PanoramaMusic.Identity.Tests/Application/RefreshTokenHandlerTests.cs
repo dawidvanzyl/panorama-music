@@ -23,6 +23,7 @@ public class RefreshTokenHandlerTests
 		RoleRepo = new Mock<IUserRoleRepository>();
 		Jwt = new Mock<IJwtService>();
 		SessionOptions = new Mock<ISessionOptions>();
+		ClientContext = new Mock<IClientContext>();
 
 		SessionOptions.SetupGet(o => o.AbsoluteSessionLifetimeDays).Returns(30);
 
@@ -39,10 +40,10 @@ public class RefreshTokenHandlerTests
 			.Returns(Task.CompletedTask);
 
 		Jwt
-			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>()))
+			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("new-access-token", DateTime.UtcNow));
 
-		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object);
+		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
@@ -50,12 +51,13 @@ public class RefreshTokenHandlerTests
 	public Mock<IUserRoleRepository> RoleRepo { get; }
 	public Mock<IJwtService> Jwt { get; }
 	public Mock<ISessionOptions> SessionOptions { get; }
+	public Mock<IClientContext> ClientContext { get; }
 	public RefreshTokenHandler Handler { get; }
 
 	private static RefreshToken CreateToken(string tokenHash, Guid userId, DateTime expiresAt, DateTime? sessionStartedAt = null, Guid? familyId = null)
 	{
 		var tokenId = Guid.NewGuid();
-		return new RefreshToken(tokenId, userId, tokenHash, expiresAt, familyId ?? tokenId, sessionStartedAt ?? DateTime.UtcNow);
+		return new RefreshToken(tokenId, userId, tokenHash, expiresAt, familyId ?? tokenId, sessionStartedAt ?? DateTime.UtcNow, null, null);
 	}
 
 	[Fact]

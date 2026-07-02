@@ -9,7 +9,7 @@ public class RefreshTokenTests
 	private static RefreshToken CreateToken(DateTime expiresAt, DateTime? sessionStartedAt = null)
 	{
 		var tokenId = Guid.NewGuid();
-		return new RefreshToken(tokenId, Guid.NewGuid(), "hash", expiresAt, tokenId, sessionStartedAt ?? DateTime.UtcNow);
+		return new RefreshToken(tokenId, Guid.NewGuid(), "hash", expiresAt, tokenId, sessionStartedAt ?? DateTime.UtcNow, null, null);
 	}
 
 	[Fact]

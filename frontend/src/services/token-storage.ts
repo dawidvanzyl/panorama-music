@@ -53,3 +53,14 @@ export function getUserId(): string | null {
     return null;
   }
 }
+
+export function getEmail(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return (payload.email as string) ?? null;
+  } catch {
+    return null;
+  }
+}

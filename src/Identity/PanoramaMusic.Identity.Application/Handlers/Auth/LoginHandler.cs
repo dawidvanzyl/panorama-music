@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
@@ -13,7 +14,8 @@ public sealed class LoginHandler(
 	IPasswordHashService passwordHashService,
 	IJwtService jwtService,
 	IRefreshTokenRepository refreshTokenRepository,
-	IPasswordResetTokenRepository passwordResetTokenRepository)
+	IPasswordResetTokenRepository passwordResetTokenRepository,
+	IClientContext clientContext)
 {
 	private const int _refreshTokenExpiryDays = 7;
 
@@ -43,14 +45,14 @@ public sealed class LoginHandler(
 		}
 
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
-		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
+		var generatedToken = jwtService.GenerateToken(user.UserId, user.Email.Value, roles);
 
 		var rawRefreshToken = RawToken.Generate();
 		var now = DateTime.UtcNow;
 		var refreshTokenExpiresAt = now.AddDays(_refreshTokenExpiryDays);
 
 		var tokenId = Guid.NewGuid();
-		var refreshToken = new RefreshToken(tokenId, user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt, tokenId, now);
+		var refreshToken = new RefreshToken(tokenId, user.UserId, rawRefreshToken.Hash, refreshTokenExpiresAt, tokenId, now, clientContext.UserAgent, clientContext.IpAddress);
 		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
 
 		return LoginResult.Success(new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt));

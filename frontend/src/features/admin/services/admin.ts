@@ -1,4 +1,5 @@
 import { getAccessToken } from '../../../services/token-storage';
+import { handleUnauthorized } from '../../../services/auth';
 
 const API_BASE = '/api/users';
 
@@ -45,14 +46,18 @@ function authHeaders(): HeadersInit {
   };
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+async function assertOk(response: Response): Promise<void> {
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AdminError(
-      body.error ?? `HTTP ${response.status}`,
-      response.status,
-    );
+    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
   }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  await assertOk(response);
   return response.json() as Promise<T>;
 }
 
@@ -107,10 +112,7 @@ export async function deactivateUser(userId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
+  await assertOk(response);
   _usersCache = null;
 }
 
@@ -119,10 +121,7 @@ export async function deleteUser(userId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
+  await assertOk(response);
   _usersCache = null;
 }
 
@@ -131,9 +130,6 @@ export async function activateUser(userId: string): Promise<void> {
     method: 'PATCH',
     headers: authHeaders(),
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AdminError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
+  await assertOk(response);
   _usersCache = null;
 }

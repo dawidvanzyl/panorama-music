@@ -40,6 +40,12 @@ export default defineConfig({
       { name: 'M1.1UC22', description: 'Status filter filters User Directory rows client-side; All restores full list' },
       { name: 'M1.2UC1', description: 'tryRefresh() distinguishes confirmed rejection from unexpected failure and dedupes concurrent calls' },
       { name: 'M1.2UC2', description: 'render() shows a retry message on refresh failure and cancels a stale retry timer when navigation triggers a new render first' },
+      { name: 'M1.4UC6', description: 'GetOwnSessions returns only the caller own sessions with the current session identifiable' },
+      { name: 'M1.4UC7', description: 'Revoking an own session or all own other sessions never revokes the current session' },
+      { name: 'M1.4UC8', description: 'Admin global session list spans every user with the owning user identified' },
+      { name: 'M1.4UC9', description: 'Admin can revoke a specific session or every session except their own current one' },
+      { name: 'M1.4UC11', description: 'Viewer own current session is distinguishable in the My Active Sessions and Global Session Management views' },
+      { name: 'M1.4UC12', description: 'The sidebar appears alongside the top nav bar on every authenticated page' },
     ],
   },
 })

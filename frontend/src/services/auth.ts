@@ -158,4 +158,9 @@ export function tryRefresh(): Promise<RefreshOutcome> {
   return pendingRefresh;
 }
 
+export function handleUnauthorized(): void {
+  clearTokens();
+  window.location.hash = '#/login';
+}
+
 export { isAuthenticated };
