@@ -160,7 +160,11 @@ export function tryRefresh(): Promise<RefreshOutcome> {
 
 export function handleUnauthorized(): void {
   clearTokens();
-  location.hash = '#/login';
+  // Redirecting on auth failure is a cross-cutting concern with no natural component
+  // owner; every caller of an authenticated service needs this behavior, so it lives
+  // here rather than being duplicated at each call site.
+  // eslint-disable-next-line pm-architecture/no-dom-in-services
+  window.location.hash = '#/login';
 }
 
 export { isAuthenticated };

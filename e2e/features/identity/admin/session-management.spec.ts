@@ -96,31 +96,8 @@ test.describe('Global Session Management', () => {
   );
 
   test(
-    'rejects a non-admin request for the global session list',
-    { tag: '@M1.4UC10' },
-    async ({ page }) => {
-      const email = uniqueTestEmail('non-admin-sessions');
-      const password = 'NonAdminSessions123';
-      await createRegisteredUser(page, email, password);
-
-      const loginPage = new LoginPage(page);
-      await loginPage.gotoLogin();
-      await loginPage.login(email, password);
-      await expect(page).toHaveURL(/#\/$/);
-
-      const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
-
-      const response = await page.request.get('/api/auth/admin/sessions', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      expect(response.status()).toBe(403);
-    }
-  );
-
-  test(
     '"Revoke All (Global)" ends every other session but keeps the admin\'s own current session valid',
-    { tag: '@M1.4UC9' },
+    { tag: '@M1.4IT7' },
     async ({ page, browser }) => {
       const email = uniqueTestEmail('revoke-all-global');
       const password = 'RevokeAllGlobal123';

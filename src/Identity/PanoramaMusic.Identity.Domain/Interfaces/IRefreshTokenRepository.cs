@@ -13,7 +13,7 @@ public interface IRefreshTokenRepository
 	Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken);
 	Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken);
 	Task RevokeFamilyAsync(Guid familyId, CancellationToken cancellationToken);
-	Task RevokeAsync(Guid tokenId, CancellationToken cancellationToken);
+	Task RevokeAsync(Guid tokenId, RevokedAccessToken? accessTokenToRevoke, CancellationToken cancellationToken);
 	Task RevokeAllForUserExceptAsync(Guid userId, Guid exceptTokenId, IReadOnlyList<RevokedAccessToken> accessTokensToRevoke, CancellationToken cancellationToken);
 	Task RevokeAllExceptAsync(Guid exceptTokenId, IReadOnlyList<RevokedAccessToken> accessTokensToRevoke, CancellationToken cancellationToken);
 }

@@ -16,17 +16,15 @@ public class RevokeOwnSessionHandlerTests
 	public RevokeOwnSessionHandlerTests()
 	{
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
-		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
 		UserContext = new Mock<IUserContext>();
 
 		UserId = Guid.NewGuid();
 		UserContext.SetupGet(c => c.UserId).Returns(UserId);
 
-		Handler = new RevokeOwnSessionHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object, UserContext.Object, new CurrentSessionResolver(RefreshRepo.Object));
+		Handler = new RevokeOwnSessionHandler(RefreshRepo.Object, UserContext.Object, new CurrentSessionResolver(RefreshRepo.Object));
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
-	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
 	public Mock<IUserContext> UserContext { get; }
 	public Guid UserId { get; }
 	public RevokeOwnSessionHandler Handler { get; }
@@ -40,13 +38,13 @@ public class RevokeOwnSessionHandlerTests
 
 		RefreshRepo.Setup(r => r.GetByTokenIdAsync(otherToken.TokenId, It.IsAny<CancellationToken>())).ReturnsAsync(otherToken);
 		RefreshRepo.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(currentToken);
-		RefreshRepo.Setup(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+		RefreshRepo.Setup(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(
 			new RevokeOwnSessionCommand(otherToken.TokenId, "raw-current-token"),
 			TestContext.Current.CancellationToken);
 
-		RefreshRepo.Verify(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<CancellationToken>()), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
@@ -62,14 +60,17 @@ public class RevokeOwnSessionHandlerTests
 
 		RefreshRepo.Setup(r => r.GetByTokenIdAsync(otherToken.TokenId, It.IsAny<CancellationToken>())).ReturnsAsync(otherToken);
 		RefreshRepo.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(currentToken);
-		RefreshRepo.Setup(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+		RefreshRepo.Setup(r => r.RevokeAsync(otherToken.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(
 			new RevokeOwnSessionCommand(otherToken.TokenId, "raw-current-token"),
 			TestContext.Current.CancellationToken);
 
-		RevokedAccessTokenRepo.Verify(
-			r => r.AddAsync(It.Is<RevokedAccessToken>(t => t.Jti == accessTokenJti && t.ExpiresAt == accessTokenExpiresAt), It.IsAny<CancellationToken>()),
+		RefreshRepo.Verify(
+			r => r.RevokeAsync(
+				otherToken.TokenId,
+				It.Is<RevokedAccessToken?>(t => t != null && t.Jti == accessTokenJti && t.ExpiresAt == accessTokenExpiresAt),
+				It.IsAny<CancellationToken>()),
 			Times.Once);
 	}
 
@@ -87,7 +88,7 @@ public class RevokeOwnSessionHandlerTests
 				new RevokeOwnSessionCommand(currentToken.TokenId, "raw-current-token"),
 				TestContext.Current.CancellationToken));
 
-		RefreshRepo.Verify(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		RefreshRepo.Verify(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -103,6 +104,6 @@ public class RevokeOwnSessionHandlerTests
 				new RevokeOwnSessionCommand(otherUsersToken.TokenId, "raw-current-token"),
 				TestContext.Current.CancellationToken));
 
-		RefreshRepo.Verify(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		RefreshRepo.Verify(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

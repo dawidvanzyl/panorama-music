@@ -10,7 +10,7 @@ export default {
   create(context) {
     return {
       MemberExpression(node) {
-        const filename = context.filename;
+        const filename = context.filename.replace(/\\/g, '/');
 
         const isService = filename.includes('/services/');
         const isTest = filename.includes('__tests__') || filename.includes('.test.') || filename.includes('.spec.');

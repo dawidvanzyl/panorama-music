@@ -154,14 +154,44 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 		await connection.ExecuteAsync(command);
 	}
 
-	public async Task RevokeAsync(Guid tokenId, CancellationToken cancellationToken)
+	public async Task RevokeAsync(Guid tokenId, RevokedAccessToken? accessTokenToRevoke, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
-		var command = CreateCommandDefinition(
-			"identity.update_revoke_refresh_token",
-			new { p_token_id = tokenId },
-			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			if (accessTokenToRevoke is not null)
+			{
+				var cleanupCommand = CreateCommandDefinition(
+					"identity.delete_expired_revoked_access_tokens",
+					null,
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(cleanupCommand);
+
+				var denylistCommand = CreateCommandDefinition(
+					"identity.create_revoked_access_token",
+					new { p_jti = accessTokenToRevoke.Jti, p_expires_at = accessTokenToRevoke.ExpiresAt },
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(denylistCommand);
+			}
+
+			var revokeCommand = CreateCommandDefinition(
+				"identity.update_revoke_refresh_token",
+				new { p_token_id = tokenId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(revokeCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
 	}
 
 	public async Task RevokeAllForUserExceptAsync(Guid userId, Guid exceptTokenId, IReadOnlyList<RevokedAccessToken> accessTokensToRevoke, CancellationToken cancellationToken)

@@ -14,12 +14,10 @@ public class RevokeSessionHandlerTests
 	public RevokeSessionHandlerTests()
 	{
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
-		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
-		Handler = new RevokeSessionHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object);
+		Handler = new RevokeSessionHandler(RefreshRepo.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
-	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
 	public RevokeSessionHandler Handler { get; }
 
 	[Fact]
@@ -28,11 +26,11 @@ public class RevokeSessionHandlerTests
 	{
 		var session = new RefreshToken(Guid.NewGuid(), Guid.NewGuid(), "hash", DateTime.UtcNow.AddDays(7), Guid.NewGuid(), DateTime.UtcNow, null, null);
 		RefreshRepo.Setup(r => r.GetByTokenIdAsync(session.TokenId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
-		RefreshRepo.Setup(r => r.RevokeAsync(session.TokenId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+		RefreshRepo.Setup(r => r.RevokeAsync(session.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(new RevokeSessionCommand(session.TokenId), TestContext.Current.CancellationToken);
 
-		RefreshRepo.Verify(r => r.RevokeAsync(session.TokenId, It.IsAny<CancellationToken>()), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(session.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
@@ -45,12 +43,15 @@ public class RevokeSessionHandlerTests
 			Guid.NewGuid(), Guid.NewGuid(), "hash", DateTime.UtcNow.AddDays(7), Guid.NewGuid(), DateTime.UtcNow, null, null,
 			accessTokenJti, accessTokenExpiresAt);
 		RefreshRepo.Setup(r => r.GetByTokenIdAsync(session.TokenId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
-		RefreshRepo.Setup(r => r.RevokeAsync(session.TokenId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+		RefreshRepo.Setup(r => r.RevokeAsync(session.TokenId, It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(new RevokeSessionCommand(session.TokenId), TestContext.Current.CancellationToken);
 
-		RevokedAccessTokenRepo.Verify(
-			r => r.AddAsync(It.Is<RevokedAccessToken>(t => t.Jti == accessTokenJti && t.ExpiresAt == accessTokenExpiresAt), It.IsAny<CancellationToken>()),
+		RefreshRepo.Verify(
+			r => r.RevokeAsync(
+				session.TokenId,
+				It.Is<RevokedAccessToken?>(t => t != null && t.Jti == accessTokenJti && t.ExpiresAt == accessTokenExpiresAt),
+				It.IsAny<CancellationToken>()),
 			Times.Once);
 	}
 
