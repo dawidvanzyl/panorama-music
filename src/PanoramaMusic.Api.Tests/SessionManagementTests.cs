@@ -29,7 +29,7 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 	};
 
 	[Fact]
-	[Trait("AC", "M1.4IT5")]
+	[Trait("AC", "M1.4UC7")]
 	public async Task RevokeOwnSession_OtherThanCurrent_DisappearsAndIsNoLongerUsable()
 	{
 		var (email, _) = await SeedActiveUserAsync();
@@ -65,7 +65,7 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
-	[Trait("AC", "M1.4IT6")]
+	[Trait("AC", "M1.4UC9")]
 	public async Task AdminRevokeSpecificUsersSession_DisappearsAndIsNoLongerUsableByThatUser()
 	{
 		var (adminEmail, adminUserId) = await SeedActiveUserAsync(Role.Admin);
