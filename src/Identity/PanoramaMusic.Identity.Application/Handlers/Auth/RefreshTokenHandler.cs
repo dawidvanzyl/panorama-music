@@ -13,7 +13,8 @@ public sealed class RefreshTokenHandler(
 	IUserRepository userRepository,
 	IUserRoleRepository userRoleRepository,
 	IJwtService jwtService,
-	ISessionOptions sessionOptions)
+	ISessionOptions sessionOptions,
+	IClientContext clientContext)
 {
 	private const int _refreshTokenExpiryDays = 7;
 
@@ -49,12 +50,23 @@ public sealed class RefreshTokenHandler(
 			throw new UnauthorizedException("User account is not active.");
 
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
-		var generatedToken = jwtService.GenerateToken(user.UserId, roles);
+		var generatedToken = jwtService.GenerateToken(user.UserId, user.Email.Value, roles);
 
 		var newRawToken = RawToken.Generate();
 		var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
 
-		var newRefreshToken = new RefreshToken(Guid.NewGuid(), user.UserId, newRawToken.Hash, refreshTokenExpiresAt, existing.FamilyId, existing.SessionStartedAt);
+		var newRefreshToken = new RefreshToken(
+			Guid.NewGuid(),
+			user.UserId,
+			newRawToken.Hash,
+			refreshTokenExpiresAt,
+			existing.FamilyId,
+			existing.SessionStartedAt,
+			clientContext.UserAgent,
+			clientContext.IpAddress,
+			generatedToken.Jti,
+			generatedToken.ExpiresAt);
+
 		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken, cancellationToken);
 
 		return new AuthResult(generatedToken.Token, newRawToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);

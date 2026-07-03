@@ -300,6 +300,8 @@ Examples:
 * p_user_id
 * p_email
 
+Each function must perform exactly one create, update, or delete operation. Do not combine multiple write operations into a single function for the sake of atomicity — when several writes must succeed or fail together, keep each as its own single-purpose function and coordinate them from the repository method within an explicit transaction (see Transactions).
+
 ---
 
 ## SQL Style
@@ -368,6 +370,39 @@ Transactions belong in Infrastructure.
 When an operation must update multiple persistence resources atomically, Infrastructure should expose a dedicated method that owns the transaction boundary.
 
 Application handlers should coordinate use cases rather than manage database transactions.
+
+The repository method opens its own connection, begins the transaction explicitly, passes that transaction into each `CreateCommandDefinition` call, and commits or rolls back around a try/catch:
+
+```csharp
+var dbConnection = CreateConnection();
+await dbConnection.OpenAsync(cancellationToken);
+await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+try
+{
+    var firstCommand = CreateCommandDefinition(
+        "identity.first_function",
+        new { /* params */ },
+        transaction,
+        cancellationToken);
+    await dbConnection.ExecuteAsync(firstCommand);
+
+    var secondCommand = CreateCommandDefinition(
+        "identity.second_function",
+        new { /* params */ },
+        transaction,
+        cancellationToken);
+    await dbConnection.ExecuteAsync(secondCommand);
+
+    await transaction.CommitAsync(cancellationToken);
+}
+catch
+{
+    await transaction.RollbackAsync(cancellationToken);
+    throw;
+}
+```
+
+See `RefreshTokenRepository.RotateAsync` and `UserRepository.UpdateAsync` for existing examples of this pattern.
 
 ---
 

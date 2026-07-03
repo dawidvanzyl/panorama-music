@@ -143,7 +143,7 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 
 		var rawToken = RawToken.Generate();
 		var tokenId = Guid.NewGuid();
-		var refreshToken = new RefreshToken(tokenId, user.UserId, rawToken.Hash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var refreshToken = new RefreshToken(tokenId, user.UserId, rawToken.Hash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		await refreshTokenRepository.AddAsync(refreshToken, TestContext.Current.CancellationToken);
 
 		return rawToken.Value;

@@ -15,7 +15,7 @@ public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 	private const int _tokenExpiryMinutes = 15;
 	private const int _minSecretLength = 32;
 
-	public JwtToken GenerateToken(Guid userId, IList<Role> roles)
+	public JwtToken GenerateToken(Guid userId, string email, IList<Role> roles)
 	{
 		var secret = jwtOptions.Value.Secret
 			?? throw new InvalidOperationException($"'{JwtOptions.SectionName}:{nameof(JwtOptions.Secret)}' is not configured.");
@@ -36,10 +36,12 @@ public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 
 		var now = DateTime.UtcNow;
 		var expiresAt = now.AddMinutes(_tokenExpiryMinutes);
+		var jti = Guid.NewGuid();
 		var claims = new List<Claim>
 		{
 			new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-			new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+			new(JwtRegisteredClaimNames.Jti, jti.ToString()),
+			new(JwtRegisteredClaimNames.Email, email),
 			new("roles", string.Join(",", roles.Select(r => r.ToString()))),
 		};
 
@@ -55,6 +57,6 @@ public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 
 		var handler = new JwtSecurityTokenHandler();
 		var token = handler.CreateToken(descriptor);
-		return new JwtToken(handler.WriteToken(token), expiresAt);
+		return new JwtToken(handler.WriteToken(token), expiresAt, jti);
 	}
 }

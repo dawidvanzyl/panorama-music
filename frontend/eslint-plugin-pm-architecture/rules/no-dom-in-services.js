@@ -10,10 +10,11 @@ export default {
   create(context) {
     return {
       MemberExpression(node) {
-        const filename = context.filename;
+        const filename = context.filename.replace(/\\/g, '/');
 
         const isService = filename.includes('/services/');
-        if (!isService) return;
+        const isTest = filename.includes('__tests__') || filename.includes('.test.') || filename.includes('.spec.');
+        if (!isService || isTest) return;
 
         const objectName = node.object?.name;
 

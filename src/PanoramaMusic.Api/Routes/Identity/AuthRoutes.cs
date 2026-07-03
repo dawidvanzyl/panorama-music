@@ -1,7 +1,11 @@
 using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
+using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Commands.Sessions;
+using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Handlers.Sessions;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 
@@ -95,5 +99,84 @@ public static class AuthRoutes
 		.Produces(StatusCodes.Status204NoContent)
 		.Produces(StatusCodes.Status400BadRequest)
 		.Produces(StatusCodes.Status401Unauthorized);
+
+		// Mounted under /api/auth (not /api/sessions) so the browser sends the
+		// __Secure-refresh_token cookie, which is scoped to the /api/auth path and is how
+		// these endpoints identify the caller's own current session.
+		var sessions = group.MapGroup("/sessions").RequireAuthorization();
+
+		sessions
+		.MapGet("/", async (HttpRequest request, GetOwnSessionsHandler handler, CancellationToken ct) =>
+		{
+			var command = new GetOwnSessionsCommand(request.GetRefreshTokenCookie());
+			var result = await handler.HandleAsync(command, ct);
+			return Results.Ok(result);
+		})
+		.WithName("GetOwnSessions")
+		.Produces<IList<SessionResult>>(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status401Unauthorized);
+
+		sessions
+		.MapDelete("/others", async (HttpRequest request, RevokeOwnOtherSessionsHandler handler, CancellationToken ct) =>
+		{
+			var command = new RevokeOwnOtherSessionsCommand(request.GetRefreshTokenCookie());
+			await handler.HandleAsync(command, ct);
+			return Results.NoContent();
+		})
+		.WithName("RevokeOwnOtherSessions")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status401Unauthorized);
+
+		sessions
+		.MapDelete("/{tokenId:guid}", async (Guid tokenId, HttpRequest request, RevokeOwnSessionHandler handler, CancellationToken ct) =>
+		{
+			var command = new RevokeOwnSessionCommand(tokenId, request.GetRefreshTokenCookie());
+			await handler.HandleAsync(command, ct);
+			return Results.NoContent();
+		})
+		.WithName("RevokeOwnSession")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status400BadRequest)
+		.Produces(StatusCodes.Status401Unauthorized)
+		.Produces(StatusCodes.Status404NotFound);
+
+		var adminSessions = group.MapGroup("/admin/sessions").RequireAuthorization("AdminPolicy");
+
+		adminSessions
+		.MapGet("/", async (HttpRequest request, GetAllSessionsHandler handler, CancellationToken ct) =>
+		{
+			var command = new GetAllSessionsCommand(request.GetRefreshTokenCookie());
+			var result = await handler.HandleAsync(command, ct);
+			return Results.Ok(result);
+		})
+		.WithName("GetAllSessions")
+		.Produces<IList<AdminSessionResult>>(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status401Unauthorized)
+		.Produces(StatusCodes.Status403Forbidden);
+
+		adminSessions
+		.MapDelete("/all", async (HttpRequest request, RevokeAllSessionsHandler handler, CancellationToken ct) =>
+		{
+			var command = new RevokeAllSessionsCommand(request.GetRefreshTokenCookie());
+			await handler.HandleAsync(command, ct);
+			return Results.NoContent();
+		})
+		.WithName("RevokeAllSessions")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status401Unauthorized)
+		.Produces(StatusCodes.Status403Forbidden);
+
+		adminSessions
+		.MapDelete("/{tokenId:guid}", async (Guid tokenId, RevokeSessionHandler handler, CancellationToken ct) =>
+		{
+			var command = new RevokeSessionCommand(tokenId);
+			await handler.HandleAsync(command, ct);
+			return Results.NoContent();
+		})
+		.WithName("RevokeSession")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status401Unauthorized)
+		.Produces(StatusCodes.Status403Forbidden)
+		.Produces(StatusCodes.Status404NotFound);
 	}
 }

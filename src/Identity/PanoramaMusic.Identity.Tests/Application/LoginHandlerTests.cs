@@ -1,6 +1,7 @@
 using Moq;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -22,6 +23,7 @@ public class LoginHandlerTests
 		Jwt = new Mock<IJwtService>();
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		PasswordResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
+		ClientContext = new Mock<IClientContext>();
 
 		RefreshRepo
 			.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
@@ -32,10 +34,10 @@ public class LoginHandlerTests
 			.Returns(Task.CompletedTask);
 
 		Jwt
-			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<IList<Role>>()))
-			.Returns(new JwtToken("access-token", DateTime.UtcNow));
+			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
+			.Returns(new JwtToken("access-token", DateTime.UtcNow, Guid.NewGuid()));
 
-		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object, PasswordResetTokenRepo.Object);
+		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object, PasswordResetTokenRepo.Object, ClientContext.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
@@ -43,6 +45,7 @@ public class LoginHandlerTests
 	public Mock<IPasswordHashService> Hasher { get; }
 	public Mock<IJwtService> Jwt { get; }
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
+	public Mock<IClientContext> ClientContext { get; }
 	public Mock<IPasswordResetTokenRepository> PasswordResetTokenRepo { get; }
 	public LoginHandler Handler { get; }
 

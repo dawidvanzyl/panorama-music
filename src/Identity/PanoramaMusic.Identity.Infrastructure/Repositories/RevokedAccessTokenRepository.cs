@@ -10,16 +10,36 @@ public class RevokedAccessTokenRepository(IDbConnectionFactory connectionFactory
 {
 	public async Task AddAsync(RevokedAccessToken token, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
-		var command = CreateCommandDefinition(
-			"identity.create_revoked_access_token",
-			new
-			{
-				p_jti = token.Jti,
-				p_expires_at = token.ExpiresAt,
-			},
-			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			var cleanupCommand = CreateCommandDefinition(
+				"identity.delete_expired_revoked_access_tokens",
+				null,
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(cleanupCommand);
+
+			var insertCommand = CreateCommandDefinition(
+				"identity.create_revoked_access_token",
+				new
+				{
+					p_jti = token.Jti,
+					p_expires_at = token.ExpiresAt,
+				},
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(insertCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
 	}
 
 	public async Task<bool> ExistsAsync(Guid jti, CancellationToken cancellationToken)

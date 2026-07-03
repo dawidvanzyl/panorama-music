@@ -16,18 +16,13 @@ styles.replaceSync(`
     :host {
       display: block;
       flex: 1;
-      padding: 24px;
       font-family: 'Inter', system-ui, sans-serif;
-    }
-    .admin-users__container {
-      max-width: 960px;
-      margin: 0 auto;
     }
     .admin-users__title {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--pm-text);
-      margin-bottom: 24px;
+      margin: 0 0 24px;
     }
     .admin-users__error {
       margin-top: 16px;

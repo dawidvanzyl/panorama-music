@@ -26,7 +26,7 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var roles = new List<Role> { Role.Admin };
 
-		var result = service.GenerateToken(userId, roles);
+		var result = service.GenerateToken(userId, "admin@test.com", roles);
 
 		var handler = new JwtSecurityTokenHandler();
 		var token = result.Token;
@@ -34,7 +34,8 @@ public class JwtServiceTests
 
 		jwt.ShouldSatisfyAllConditions(
 			() => jwt.Subject.ShouldBe(userId.ToString()),
-			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin"))
+			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin")),
+			() => jwt.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Email && c.Value == "admin@test.com")
 		);
 	}
 
@@ -44,8 +45,8 @@ public class JwtServiceTests
 	{
 		var service = CreateService("test-secret-key-that-is-at-least-32-chars!!", issuer: "test-issuer", audience: "test-audience");
 
-		var first = service.GenerateToken(Guid.NewGuid(), [Role.Admin]);
-		var second = service.GenerateToken(Guid.NewGuid(), [Role.Admin]);
+		var first = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
+		var second = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
 
 		var handler = new JwtSecurityTokenHandler();
 		var firstJwt = handler.ReadJwtToken(first.Token);
@@ -57,6 +58,11 @@ public class JwtServiceTests
 			() => firstJwt.Audiences.ShouldContain("test-audience")
 		);
 		firstJwt.Id.ShouldNotBe(secondJwt.Id);
+
+		// The returned JwtToken.Jti must match the jti actually embedded in the token, so
+		// callers (session revocation) can denylist the exact access token that was issued.
+		first.Jti.ToString().ShouldBe(firstJwt.Id);
+		second.Jti.ToString().ShouldBe(secondJwt.Id);
 	}
 
 	[Fact]
@@ -67,7 +73,7 @@ public class JwtServiceTests
 		var service = CreateService(secret, issuer: "test-issuer", audience: "test-audience");
 		var userId = Guid.NewGuid();
 
-		var result = service.GenerateToken(userId, [Role.Admin]);
+		var result = service.GenerateToken(userId, "admin@test.com", [Role.Admin]);
 
 		var handler = new JwtSecurityTokenHandler();
 		var token = result.Token;
@@ -94,7 +100,7 @@ public class JwtServiceTests
 	{
 		const string secret = "test-secret-key-that-is-at-least-32-chars!!";
 		var service = CreateService(secret, issuer: "test-issuer", audience: "test-audience");
-		var result = service.GenerateToken(Guid.NewGuid(), [Role.Admin]);
+		var result = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
 
 		var handler = new JwtSecurityTokenHandler();
 		var parameters = new TokenValidationParameters

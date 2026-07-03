@@ -5,5 +5,5 @@ namespace PanoramaMusic.Identity.Domain.Interfaces;
 
 public interface IJwtService
 {
-	JwtToken GenerateToken(Guid userId, IList<Role> roles);
+	JwtToken GenerateToken(Guid userId, string email, IList<Role> roles);
 }

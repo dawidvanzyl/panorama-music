@@ -20,7 +20,7 @@ public class LogoutHandlerTests
 		AccessTokenContext = new Mock<IAccessTokenContext>();
 
 		RefreshRepo
-			.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		RevokedAccessTokenRepo
@@ -51,7 +51,7 @@ public class LogoutHandlerTests
 		var userId = Guid.NewGuid();
 
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, userId, tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, userId, tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);
@@ -59,7 +59,7 @@ public class LogoutHandlerTests
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
 		token.IsRevoked.ShouldBeTrue();
-		RefreshRepo.Verify(r => r.UpdateAsync(token, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, It.IsAny<RevokedAccessToken?>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -69,15 +69,18 @@ public class LogoutHandlerTests
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);
 
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
-		RevokedAccessTokenRepo.Verify(
-			r => r.AddAsync(It.Is<RevokedAccessToken>(t => t.Jti == Jti && t.ExpiresAt == AccessTokenExpiresAtUtc), TestContext.Current.CancellationToken),
+		RefreshRepo.Verify(
+			r => r.RevokeAsync(
+				tokenId,
+				It.Is<RevokedAccessToken?>(t => t != null && t.Jti == Jti && t.ExpiresAt == AccessTokenExpiresAtUtc),
+				TestContext.Current.CancellationToken),
 			Times.Once);
 	}
 
@@ -103,7 +106,7 @@ public class LogoutHandlerTests
 		var rawToken = Guid.NewGuid().ToString();
 		var tokenHash = RawToken.From(rawToken).Hash;
 		var tokenId = Guid.NewGuid();
-		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow);
+		var token = new RefreshToken(tokenId, Guid.NewGuid(), tokenHash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
 		RefreshRepo
 			.Setup(r => r.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken))
 			.ReturnsAsync(token);
@@ -111,7 +114,7 @@ public class LogoutHandlerTests
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
 		token.IsRevoked.ShouldBeTrue();
-		RefreshRepo.Verify(r => r.UpdateAsync(token, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, null, TestContext.Current.CancellationToken), Times.Once);
 		RevokedAccessTokenRepo.Verify(r => r.AddAsync(It.IsAny<RevokedAccessToken>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

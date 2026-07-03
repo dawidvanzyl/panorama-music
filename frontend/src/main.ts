@@ -1,15 +1,20 @@
 import './styles/global.css';
 import './components/pm-nav-bar';
+import './components/pm-sidebar';
+import './components/pm-app-footer';
 import './components/pm-password-strength-indicator';
 import './features/authentication/pages/pm-login-page';
 import './features/authentication/pages/pm-registration-page';
 import './features/admin/pages/pm-admin-users-page';
 import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
+import './features/sessions/pages/pm-sessions-page';
+import './features/sessions/pages/pm-admin-sessions-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
+const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 const ROUTES: Record<string, () => string> = {
@@ -18,6 +23,8 @@ const ROUTES: Record<string, () => string> = {
   '/forgot-password': () => '<pm-forgot-password-page></pm-forgot-password-page>',
   '/reset-password': () => '<pm-reset-password-page></pm-reset-password-page>',
   '/admin/users': () => '<pm-admin-users-page></pm-admin-users-page>',
+  '/admin/sessions': () => '<pm-admin-sessions-page></pm-admin-sessions-page>',
+  '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
@@ -52,7 +59,7 @@ async function render(): Promise<void> {
     }
   }
 
-  if (basePath === '/admin/users' && !hasRole('Admin')) {
+  if (ADMIN_ONLY_PATHS.has(basePath) && !hasRole('Admin')) {
     window.location.hash = '#/';
     return;
   }
@@ -60,7 +67,9 @@ async function render(): Promise<void> {
   const route = Object.hasOwn(ROUTES, basePath)
     ? ROUTES[basePath]
     : (() => '<pm-login-page></pm-login-page>');
-  app.innerHTML = (isPublicPage ? '' : '<pm-nav-bar></pm-nav-bar>') + '<main>' + route() + '</main>';
+  app.innerHTML = isPublicPage
+    ? '<main>' + route() + '</main>'
+    : '<div class="pm-app-shell"><pm-nav-bar></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' + route() + '</main></div><pm-app-footer></pm-app-footer></div>';
 }
 
 window.addEventListener('hashchange', () => void render());

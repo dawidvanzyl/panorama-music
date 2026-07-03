@@ -9,8 +9,10 @@ using Microsoft.IdentityModel.Tokens;
 using PanoramaMusic.Identity.Application.Enums;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
+using PanoramaMusic.Identity.Application.Handlers.Sessions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Services.Auth;
+using PanoramaMusic.Identity.Application.Services.Sessions;
 using PanoramaMusic.Identity.Application.Validators.Auth;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -155,7 +157,9 @@ public static class ServiceCollectionExtensions
 		services.AddHttpContextAccessor();
 		services.AddScoped<IUserContext, UserContext>();
 		services.AddScoped<IAccessTokenContext, AccessTokenContext>();
+		services.AddScoped<IClientContext, ClientContext>();
 		services.AddTransient<AccessTokenValidationService>();
+		services.AddTransient<CurrentSessionResolver>();
 		return services;
 	}
 
@@ -175,6 +179,12 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<RequestPasswordResetHandler>();
 		services.AddTransient<ResetPasswordHandler>();
 		services.AddTransient<RateLimitTokenService>();
+		services.AddTransient<GetOwnSessionsHandler>();
+		services.AddTransient<RevokeOwnSessionHandler>();
+		services.AddTransient<RevokeOwnOtherSessionsHandler>();
+		services.AddTransient<GetAllSessionsHandler>();
+		services.AddTransient<RevokeSessionHandler>();
+		services.AddTransient<RevokeAllSessionsHandler>();
 		return services;
 	}
 }
