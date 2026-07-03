@@ -8,7 +8,6 @@ namespace PanoramaMusic.Identity.Application.Handlers.Sessions;
 
 public sealed class RevokeOwnOtherSessionsHandler(
 	IRefreshTokenRepository refreshTokenRepository,
-	IRevokedAccessTokenRepository revokedAccessTokenRepository,
 	IUserContext userContext,
 	CurrentSessionResolver currentSessionResolver)
 {
@@ -17,16 +16,10 @@ public sealed class RevokeOwnOtherSessionsHandler(
 		var currentTokenId = await currentSessionResolver.ResolveAsync(command.CurrentRefreshToken, cancellationToken)
 			?? throw new UnauthorizedException("Current session could not be identified.");
 
-		// The bulk refresh-token revocation below only blocks future /refresh calls - denylist
-		// each affected session's currently-issued access token too, so they stop working
-		// immediately rather than staying valid for up to their remaining 15-minute lifetime.
-		var activeSessions = await refreshTokenRepository.GetActiveByUserIdAsync(userContext.UserId, cancellationToken);
-		foreach (var session in activeSessions.Where(s => s.TokenId != currentTokenId))
-		{
-			if (session.LiveAccessTokenOrNull() is { } revoked)
-				await revokedAccessTokenRepository.AddAsync(revoked, cancellationToken);
-		}
-
+		// RevokeAllForUserExceptAsync both revokes the refresh tokens and denylists each
+		// affected session's currently-issued access token atomically in a single database
+		// function call, so still-valid access tokens stop working immediately rather than
+		// staying valid for up to their remaining 15-minute lifetime.
 		await refreshTokenRepository.RevokeAllForUserExceptAsync(userContext.UserId, currentTokenId, cancellationToken);
 	}
 }

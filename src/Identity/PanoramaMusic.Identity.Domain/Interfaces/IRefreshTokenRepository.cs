@@ -8,6 +8,7 @@ public interface IRefreshTokenRepository
 	Task<RefreshToken?> GetByTokenIdAsync(Guid tokenId, CancellationToken cancellationToken);
 	Task<IList<RefreshToken>> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 	Task<IList<RefreshToken>> GetAllActiveAsync(CancellationToken cancellationToken);
+	Task<IList<SessionWithOwner>> GetAllActiveWithOwnerAsync(CancellationToken cancellationToken);
 	Task AddAsync(RefreshToken token, CancellationToken cancellationToken);
 	Task UpdateAsync(RefreshToken token, CancellationToken cancellationToken);
 	Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken);

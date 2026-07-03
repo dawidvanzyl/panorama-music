@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -26,4 +27,18 @@ internal static class RefreshTokenDtoExtensions
 
 		return token;
 	}
+
+	internal static SessionWithOwner MapToSessionWithOwner(this SessionWithOwnerDto dto) =>
+		new(
+			dto.Token_Id,
+			dto.User_Id,
+			dto.User_Email,
+			[.. dto.User_Roles
+				.Split(',', StringSplitOptions.RemoveEmptyEntries)
+				.Select(r => Enum.Parse<Role>(r, ignoreCase: true))],
+			dto.Session_Started_At,
+			dto.Last_Seen_At,
+			dto.Expires_At,
+			dto.Device_Label,
+			dto.Ip_Address);
 }

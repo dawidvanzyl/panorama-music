@@ -70,4 +70,42 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
     expect(modal.hasAttribute('open')).toBe(false);
     expect(events).toHaveLength(0);
   });
+
+  it('pressing Escape closes the modal', () => {
+    modal.show();
+    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(modal.hasAttribute('open')).toBe(false);
+  });
+
+  it('clicking the backdrop closes the modal', () => {
+    modal.show();
+    const backdrop = modal.shadowRoot!.getElementById('backdrop') as HTMLElement;
+    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(modal.hasAttribute('open')).toBe(false);
+  });
+
+  it('clicking inside the modal card does not close the modal', () => {
+    modal.show();
+    const card = modal.shadowRoot!.querySelector('.modal__card') as HTMLElement;
+    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(modal.hasAttribute('open')).toBe(true);
+  });
+
+  it('show() moves focus to the confirmation input', () => {
+    modal.show();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    expect(modal.shadowRoot!.activeElement).toBe(input);
+  });
+
+  it('closing the modal restores focus to the previously focused element', () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    modal.show();
+    modal.shadowRoot!.getElementById('cancelBtn')!.dispatchEvent(new Event('click'));
+
+    expect(document.activeElement).toBe(trigger);
+    document.body.removeChild(trigger);
+  });
 });

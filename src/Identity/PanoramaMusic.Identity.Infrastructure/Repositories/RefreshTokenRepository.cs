@@ -58,6 +58,18 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 		return dtos.Select(dto => dto.MapToRefreshToken()).ToList();
 	}
 
+	public async Task<IList<SessionWithOwner>> GetAllActiveWithOwnerAsync(CancellationToken cancellationToken)
+	{
+		using var connection = CreateConnection();
+		var command = CreateCommandDefinition(
+			"identity.get_all_active_sessions_with_owner",
+			null,
+			cancellationToken);
+		var dtos = await connection.QueryAsync<SessionWithOwnerDto>(command);
+
+		return dtos.Select(dto => dto.MapToSessionWithOwner()).ToList();
+	}
+
 	public async Task AddAsync(RefreshToken token, CancellationToken cancellationToken)
 	{
 		using var connection = CreateConnection();

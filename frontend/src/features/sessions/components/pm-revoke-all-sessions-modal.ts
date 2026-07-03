@@ -19,9 +19,9 @@ styles.replaceSync(`
       justify-content: center;
     }
     .modal__card {
-      background: #1a1d27;
-      border: 1px solid #2e3250;
-      border-radius: 10px;
+      background: var(--pm-surface, #1a1d27);
+      border: 1px solid var(--pm-border, #2e3250);
+      border-radius: var(--pm-radius, 10px);
       padding: 24px;
       max-width: 420px;
       width: calc(100% - 32px);
@@ -107,11 +107,11 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <div class="modal__backdrop">
-    <div class="modal__card">
+  <div class="modal__backdrop" id="backdrop">
+    <div class="modal__card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">warning</span>
-        <h2 class="modal__title">Revoke All Sessions</h2>
+        <h2 class="modal__title" id="modalTitle">Revoke All Sessions</h2>
       </div>
       <p class="modal__body">
         This will immediately terminate every other active session across the entire system. Type <strong>${CONFIRM_PHRASE}</strong> to confirm.
@@ -127,6 +127,8 @@ template.innerHTML = `
 `;
 
 export class PmRevokeAllSessionsModal extends HTMLElement {
+  private lastFocusedElement: Element | null = null;
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -138,17 +140,34 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('revokeAllBtn')!.addEventListener('click', () => this.handleConfirm());
     this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
+    this.shadowRoot!.getElementById('backdrop')!.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) this.close();
+    });
+    this.addEventListener('keydown', this.handleKeydown);
+  }
+
+  disconnectedCallback(): void {
+    this.removeEventListener('keydown', this.handleKeydown);
   }
 
   show(): void {
+    this.lastFocusedElement = document.activeElement;
     (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).value = '';
     (this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement).disabled = true;
     this.setAttribute('open', '');
+    (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).focus();
   }
 
   private close(): void {
     this.removeAttribute('open');
+    (this.lastFocusedElement as HTMLElement | null)?.focus();
   }
+
+  private handleKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && this.hasAttribute('open')) {
+      this.close();
+    }
+  };
 
   private checkConfirmation(): void {
     const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
