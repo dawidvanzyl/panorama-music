@@ -13,6 +13,14 @@ public sealed class LogoutHandler(
 {
 	public async Task HandleAsync(LogoutCommand command, CancellationToken cancellationToken)
 	{
+		// The caller's access token may already be expired (e.g. an idle tab) — that's fine,
+		// it can never pass validation again regardless, so there's nothing to denylist.
+		// Logout must not depend on a still-valid access token: the refresh-token revocation
+		// below is the one that must always succeed.
+		var accessTokenToRevoke = accessTokenContext.Jti is Guid jti && accessTokenContext.ExpiresAtUtc is DateTime expiresAt
+			? new RevokedAccessToken(jti, expiresAt)
+			: null;
+
 		if (!string.IsNullOrEmpty(command.Token))
 		{
 			var tokenHash = RawToken.From(command.Token).Hash;
@@ -20,18 +28,17 @@ public sealed class LogoutHandler(
 			if (token is not null)
 			{
 				token.Revoke();
-				await refreshTokenRepository.UpdateAsync(token, cancellationToken);
+
+				// RevokeAsync both revokes the refresh token and denylists the caller's
+				// access token atomically within a single database transaction.
+				await refreshTokenRepository.RevokeAsync(token.TokenId, accessTokenToRevoke, cancellationToken);
+				return;
 			}
 		}
 
-		// The caller's access token may already be expired (e.g. an idle tab) — that's fine,
-		// it can never pass validation again regardless, so there's nothing to denylist.
-		// Logout must not depend on a still-valid access token: the refresh-token revocation
-		// above is the one that must always succeed.
-		if (accessTokenContext.Jti is Guid jti && accessTokenContext.ExpiresAtUtc is DateTime expiresAt)
-		{
-			var revokedAccessToken = new RevokedAccessToken(jti, expiresAt);
-			await revokedAccessTokenRepository.AddAsync(revokedAccessToken, cancellationToken);
-		}
+		// No refresh token to revoke (cookie missing or already gone) - the access token
+		// denylist still needs to happen on its own.
+		if (accessTokenToRevoke is not null)
+			await revokedAccessTokenRepository.AddAsync(accessTokenToRevoke, cancellationToken);
 	}
 }
