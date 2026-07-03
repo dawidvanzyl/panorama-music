@@ -13,7 +13,8 @@ export default {
         const filename = context.filename;
 
         const isService = filename.includes('/services/');
-        if (!isService) return;
+        const isTest = filename.includes('__tests__') || filename.includes('.test.') || filename.includes('.spec.');
+        if (!isService || isTest) return;
 
         const objectName = node.object?.name;
 

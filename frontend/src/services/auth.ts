@@ -160,7 +160,7 @@ export function tryRefresh(): Promise<RefreshOutcome> {
 
 export function handleUnauthorized(): void {
   clearTokens();
-  window.location.hash = '#/login';
+  location.hash = '#/login';
 }
 
 export { isAuthenticated };
