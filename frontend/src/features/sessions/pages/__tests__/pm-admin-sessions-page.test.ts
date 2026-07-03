@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { AdminSessionResult } from '../../services/sessions';
+import { revokeAllSessions } from '../../services/sessions';
 
 const mockGetAllSessions = vi.fn();
 vi.mock('../../services/sessions', async () => {
@@ -14,7 +15,9 @@ vi.mock('../../services/sessions', async () => {
 
 import '../pm-admin-sessions-page';
 import '../../components/pm-sessions-table';
+import '../../components/pm-revoke-all-sessions-modal';
 import type { PmSessionsTable } from '../../components/pm-sessions-table';
+import type { PmRevokeAllSessionsModal } from '../../components/pm-revoke-all-sessions-modal';
 
 const sessions: AdminSessionResult[] = [
   {
@@ -89,5 +92,50 @@ describe('pm-admin-sessions-page — filter control', { tags: ['M1.4UC8'] }, () 
     filterInput.value = '';
     filterInput.dispatchEvent(new Event('input'));
     expect(table.sessions.length).toBe(2);
+  });
+});
+
+describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { tags: ['M1.4UC9'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockResolvedValue(sessions);
+    vi.mocked(revokeAllSessions).mockReset();
+    vi.mocked(revokeAllSessions).mockResolvedValue(undefined);
+    el = document.createElement('pm-admin-sessions-page');
+    document.body.appendChild(el);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('clicking Revoke All (Global) opens the custom modal instead of calling the API directly', () => {
+    const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
+    const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
+
+    revokeAllBtn.click();
+
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(vi.mocked(revokeAllSessions)).not.toHaveBeenCalled();
+  });
+
+  it('confirming the modal calls revokeAllSessions and reloads the list', async () => {
+    const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
+    const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
+
+    revokeAllBtn.click();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'REVOKE ALL';
+    input.dispatchEvent(new Event('input'));
+    modal.shadowRoot!.getElementById('revokeAllBtn')!.click();
+
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledTimes(1);
+    expect(modal.hasAttribute('open')).toBe(false);
   });
 });

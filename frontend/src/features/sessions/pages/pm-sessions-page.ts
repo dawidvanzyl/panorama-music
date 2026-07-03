@@ -7,12 +7,7 @@ styles.replaceSync(`
     :host {
       display: block;
       flex: 1;
-      padding: 24px;
       font-family: 'Inter', system-ui, sans-serif;
-    }
-    .sessions-page__container {
-      max-width: 1000px;
-      margin: 0 auto;
     }
     .sessions-page__header {
       display: flex;
@@ -26,7 +21,7 @@ styles.replaceSync(`
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--pm-text);
-      margin-bottom: 4px;
+      margin: 0 0 4px;
     }
     .sessions-page__subtitle {
       color: var(--pm-text-muted);

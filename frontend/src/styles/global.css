@@ -60,6 +60,8 @@ main {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding: 1cm;
+  box-sizing: border-box;
 }
 
 ::-webkit-scrollbar {

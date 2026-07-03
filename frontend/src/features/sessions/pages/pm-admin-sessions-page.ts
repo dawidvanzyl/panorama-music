@@ -1,18 +1,15 @@
 import '../components/pm-sessions-table';
+import '../components/pm-revoke-all-sessions-modal';
 import { getAllSessions, revokeSession, revokeAllSessions, SessionError, type AdminSessionResult } from '../services/sessions';
 import type { PmSessionsTable } from '../components/pm-sessions-table';
+import type { PmRevokeAllSessionsModal } from '../components/pm-revoke-all-sessions-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
       display: block;
       flex: 1;
-      padding: 24px;
       font-family: 'Inter', system-ui, sans-serif;
-    }
-    .admin-sessions-page__container {
-      max-width: 1200px;
-      margin: 0 auto;
     }
     .admin-sessions-page__header {
       display: flex;
@@ -26,7 +23,7 @@ styles.replaceSync(`
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--pm-text);
-      margin-bottom: 4px;
+      margin: 0 0 4px;
     }
     .admin-sessions-page__subtitle {
       color: var(--pm-text-muted);
@@ -105,6 +102,7 @@ template.innerHTML = `
     </div>
     <pm-sessions-table id="sessionsTable"></pm-sessions-table>
   </div>
+  <pm-revoke-all-sessions-modal id="revokeAllModal"></pm-revoke-all-sessions-modal>
 `;
 
 export class PmAdminSessionsPage extends HTMLElement {
@@ -112,6 +110,7 @@ export class PmAdminSessionsPage extends HTMLElement {
   private errorBanner: HTMLElement | null = null;
   private revokeAllBtn: HTMLButtonElement | null = null;
   private filterInput: HTMLInputElement | null = null;
+  private revokeAllModal: PmRevokeAllSessionsModal | null = null;
   private allSessions: AdminSessionResult[] = [];
 
   constructor() {
@@ -126,11 +125,13 @@ export class PmAdminSessionsPage extends HTMLElement {
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.revokeAllBtn = this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     this.filterInput = this.shadowRoot!.getElementById('filterInput') as HTMLInputElement;
+    this.revokeAllModal = this.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
     this.sessionsTable.showOwner = true;
 
     this.revokeAllBtn.addEventListener('click', this.handleRevokeAll);
     this.filterInput.addEventListener('input', this.applyFilter);
     this.shadowRoot!.addEventListener('session-revoke-requested', this.handleRevoke);
+    this.shadowRoot!.addEventListener('revoke-all-sessions-confirmed', this.handleRevokeAllConfirmed);
 
     void this.loadSessions();
   }
@@ -139,6 +140,7 @@ export class PmAdminSessionsPage extends HTMLElement {
     this.revokeAllBtn?.removeEventListener('click', this.handleRevokeAll);
     this.filterInput?.removeEventListener('input', this.applyFilter);
     this.shadowRoot!.removeEventListener('session-revoke-requested', this.handleRevoke);
+    this.shadowRoot!.removeEventListener('revoke-all-sessions-confirmed', this.handleRevokeAllConfirmed);
   }
 
   private loadSessions = async (): Promise<void> => {
@@ -170,11 +172,11 @@ export class PmAdminSessionsPage extends HTMLElement {
     }
   };
 
-  private handleRevokeAll = async (): Promise<void> => {
-    if (!window.confirm('This will immediately terminate every other active session across the entire system. Are you absolutely sure?')) {
-      return;
-    }
+  private handleRevokeAll = (): void => {
+    this.revokeAllModal!.show();
+  };
 
+  private handleRevokeAllConfirmed = async (): Promise<void> => {
     this.clearError();
     this.revokeAllBtn!.disabled = true;
     try {
