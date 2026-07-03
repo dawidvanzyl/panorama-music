@@ -123,6 +123,84 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 		revokeResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 	}
 
+	[Fact]
+	[Trait("AC", "M1.4UC7")]
+	public async Task RevokeOwnOtherSessions_EndsEveryOtherSessionImmediately_ButNeverTheCurrentOne()
+	{
+		var (email, _) = await SeedActiveUserAsync();
+		var client = CreateIsolatedClient("10.0.10.5");
+		var (otherAccessToken1, _) = await LoginAsync(client, email);
+		var (otherAccessToken2, _) = await LoginAsync(client, email);
+		var (currentAccessToken, currentSessionToken) = await LoginAsync(client, email);
+
+		var revokeResponse = await client.SendAsync(
+			AuthorizedDeleteRequestWithSessionCookie("/api/auth/sessions/others", currentAccessToken, currentSessionToken),
+			TestContext.Current.CancellationToken);
+		revokeResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+		// Both other sessions' access tokens must stop working immediately - this exercises
+		// the bulk denylist insert (create_revoked_access_tokens) with more than one row,
+		// proving both jtis actually persisted rather than just the first.
+		var otherCall1 = await client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", otherAccessToken1),
+			TestContext.Current.CancellationToken);
+		otherCall1.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		var otherCall2 = await client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", otherAccessToken2),
+			TestContext.Current.CancellationToken);
+		otherCall2.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		// The revoke-all-others action must never revoke or denylist the session it was
+		// invoked from.
+		var currentCall = await client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", currentAccessToken),
+			TestContext.Current.CancellationToken);
+		currentCall.StatusCode.ShouldBe(HttpStatusCode.OK);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC9")]
+	public async Task AdminRevokeAllGlobal_EndsEverySessionImmediately_ExceptTheAdminsOwnCurrentOne()
+	{
+		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
+		var (member1Email, _) = await SeedActiveUserAsync();
+		var (member2Email, _) = await SeedActiveUserAsync();
+
+		var adminClient = CreateIsolatedClient("10.0.10.6");
+		var member1Client = CreateIsolatedClient("10.0.10.7");
+		var member2Client = CreateIsolatedClient("10.0.10.8");
+
+		var (member1AccessToken, _) = await LoginAsync(member1Client, member1Email);
+		var (member2AccessToken, _) = await LoginAsync(member2Client, member2Email);
+		var (adminAccessToken, adminSessionToken) = await LoginAsync(adminClient, adminEmail);
+
+		var revokeAllResponse = await adminClient.SendAsync(
+			AuthorizedDeleteRequestWithSessionCookie("/api/auth/admin/sessions/all", adminAccessToken, adminSessionToken),
+			TestContext.Current.CancellationToken);
+		revokeAllResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+		// Both members' access tokens must stop working immediately - this exercises the
+		// bulk denylist insert (create_revoked_access_tokens) with more than one row across
+		// different users, proving both jtis actually persisted rather than just the first.
+		var member1Call = await member1Client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", member1AccessToken),
+			TestContext.Current.CancellationToken);
+		member1Call.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		var member2Call = await member2Client.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", member2AccessToken),
+			TestContext.Current.CancellationToken);
+		member2Call.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		// The global revoke-all action must never revoke or denylist the admin's own
+		// current session.
+		var adminCall = await adminClient.SendAsync(
+			AuthorizedGetRequest("/api/auth/sessions", adminAccessToken),
+			TestContext.Current.CancellationToken);
+		adminCall.StatusCode.ShouldBe(HttpStatusCode.OK);
+	}
+
 	private HttpClient CreateIsolatedClient(string simulatedIp)
 	{
 		var client = fixture.CreateClient();
@@ -141,6 +219,18 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 	{
 		var request = new HttpRequestMessage(HttpMethod.Delete, path);
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+		return request;
+	}
+
+	// __Secure- prefixed cookies aren't resent automatically by HttpClient's cookie
+	// handling over the in-memory (HTTP, not HTTPS) test host, so endpoints that resolve
+	// the caller's current session from that cookie (revoke-all-others, revoke-all-global)
+	// need it attached explicitly - see the manual Cookie header usage elsewhere in this
+	// file for the same reason.
+	private static HttpRequestMessage AuthorizedDeleteRequestWithSessionCookie(string path, string accessToken, string sessionCookie)
+	{
+		var request = AuthorizedDeleteRequest(path, accessToken);
+		request.Headers.Add("Cookie", $"__Secure-refresh_token={sessionCookie}");
 		return request;
 	}
 

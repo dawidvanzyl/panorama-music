@@ -104,7 +104,7 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 
 	public async Task RotateAsync(Guid oldTokenId, RefreshToken newToken, CancellationToken cancellationToken)
 	{
-		var dbConnection = CreateConnection();
+		await using var dbConnection = CreateConnection();
 		await dbConnection.OpenAsync(cancellationToken);
 		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
 		try
@@ -164,23 +164,91 @@ public class RefreshTokenRepository(IDbConnectionFactory connectionFactory) : Re
 		await connection.ExecuteAsync(command);
 	}
 
-	public async Task RevokeAllForUserExceptAsync(Guid userId, Guid exceptTokenId, CancellationToken cancellationToken)
+	public async Task RevokeAllForUserExceptAsync(Guid userId, Guid exceptTokenId, IReadOnlyList<RevokedAccessToken> accessTokensToRevoke, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
-		var command = CreateCommandDefinition(
-			"identity.update_revoke_refresh_tokens_for_user_except",
-			new { p_user_id = userId, p_except_token_id = exceptTokenId },
-			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			if (accessTokensToRevoke.Count > 0)
+			{
+				var cleanupCommand = CreateCommandDefinition(
+					"identity.delete_expired_revoked_access_tokens",
+					null,
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(cleanupCommand);
+
+				var denylistCommand = CreateCommandDefinition(
+					"identity.create_revoked_access_tokens",
+					new
+					{
+						p_jtis = accessTokensToRevoke.Select(t => t.Jti).ToArray(),
+						p_expires_ats = accessTokensToRevoke.Select(t => t.ExpiresAt).ToArray(),
+					},
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(denylistCommand);
+			}
+
+			var revokeCommand = CreateCommandDefinition(
+				"identity.update_revoke_refresh_tokens_for_user_except",
+				new { p_user_id = userId, p_except_token_id = exceptTokenId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(revokeCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
 	}
 
-	public async Task RevokeAllExceptAsync(Guid exceptTokenId, CancellationToken cancellationToken)
+	public async Task RevokeAllExceptAsync(Guid exceptTokenId, IReadOnlyList<RevokedAccessToken> accessTokensToRevoke, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
-		var command = CreateCommandDefinition(
-			"identity.update_revoke_all_refresh_tokens_except",
-			new { p_except_token_id = exceptTokenId },
-			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await using var dbConnection = CreateConnection();
+		await dbConnection.OpenAsync(cancellationToken);
+		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
+		try
+		{
+			if (accessTokensToRevoke.Count > 0)
+			{
+				var cleanupCommand = CreateCommandDefinition(
+					"identity.delete_expired_revoked_access_tokens",
+					null,
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(cleanupCommand);
+
+				var denylistCommand = CreateCommandDefinition(
+					"identity.create_revoked_access_tokens",
+					new
+					{
+						p_jtis = accessTokensToRevoke.Select(t => t.Jti).ToArray(),
+						p_expires_ats = accessTokensToRevoke.Select(t => t.ExpiresAt).ToArray(),
+					},
+					transaction,
+					cancellationToken);
+				await dbConnection.ExecuteAsync(denylistCommand);
+			}
+
+			var revokeCommand = CreateCommandDefinition(
+				"identity.update_revoke_all_refresh_tokens_except",
+				new { p_except_token_id = exceptTokenId },
+				transaction,
+				cancellationToken);
+			await dbConnection.ExecuteAsync(revokeCommand);
+
+			await transaction.CommitAsync(cancellationToken);
+		}
+		catch
+		{
+			await transaction.RollbackAsync(cancellationToken);
+			throw;
+		}
 	}
 }
