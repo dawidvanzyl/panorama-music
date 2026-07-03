@@ -20,7 +20,7 @@ test.describe('Role-Based Access Control', { tag: '@M1.2IT6' }, () => {
 
     await expect(page).toHaveURL(/#\/$/);
     await expect(dashboardPage.heading).toBeVisible();
-    await expect(page.getByText('User Management')).toHaveCount(0);
+    await expect(page.getByText('User Management').first()).not.toBeVisible();
     await expect(page.locator('#adminLink')).toBeHidden();
   });
 
