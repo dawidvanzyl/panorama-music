@@ -1,4 +1,4 @@
-# Security Standards (v1.1)
+# Security Standards (v1.2)
 
 Application security requirements for the Panorama Music project, derived from the **OWASP Application Security Verification Standard (ASVS) 5.0.0**, scoped to this stack: ASP.NET Core API, React SPA, JWT authentication, PostgreSQL, REST endpoints.
 
@@ -382,13 +382,32 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-16.2.3` The application must only store or broadcast logs to the files/services documented in the log inventory (14.1).
 * `[L2]` `ASVS 5.0.0-16.2.4` Logs must be readable and correlatable by the log processor in use, preferably via a common logging format.
 * `[L2]` `ASVS 5.0.0-16.2.5` Logging of sensitive data must respect that data's protection level — credentials/payment details must never be logged; tokens may only be logged hashed or masked.
+* `[L1]` **Project rule (supplements 16.2.5; ties to ASVS 14.1.2 / 14.2.4):** Passwords, raw tokens, and full hashes must never appear in any log entry or audit record — in any field, including message text, structured properties, and the audit `detail` payload. Email is the only PII recorded in audit events, and deliberately so: it is the identifier needed to investigate authentication and delegated-administration activity. Because logs and audit records therefore contain email addresses, access to them falls under the access-control requirement for sensitive data in logs defined by ASVS 14.1.2 / 14.2.4 (see §12.1 / §12.2) and the log-protection controls in §14.4.
 
 ## 14.3 Security Events
 
 * `[L2]` `ASVS 5.0.0-16.3.1` All authentication operations must be logged, including successful and unsuccessful attempts, with metadata such as the authentication method used.
 * `[L2]` `ASVS 5.0.0-16.3.2` Failed authorization attempts must be logged.
-* `[L2]` `ASVS 5.0.0-16.3.3` The application must log the security events defined in its documentation and attempts to bypass security controls (input validation, business logic, anti-automation).
+* `[L2]` `ASVS 5.0.0-16.3.3` The application must log the security events defined in its documentation and attempts to bypass security controls (input validation, business logic, anti-automation). For this application, the events defined in documentation are the entries of the **Audit Event Catalog** below.
 * `[L2]` `ASVS 5.0.0-16.3.4` Unexpected errors and security control failures (e.g. backend TLS failures) must be logged.
+
+### Audit Event Catalog
+
+The concrete set of security- and business-significant events this application is required to emit, satisfying the "events defined in documentation" requirement of 16.3.3. This catalog is informational documentation supplementing 16.3.3, not a new ASVS control. The event fields recorded must respect the never-log rule in §14.2 — outcome captures a reason *category*, never sensitive detail; email is the only PII recorded.
+
+| Event | Trigger | Actor → Target |
+|---|---|---|
+| Login succeeded / failed | `POST /api/auth/login` | user (or anon + attempted identifier) |
+| Logout | `POST /api/auth/logout` | user |
+| Token refreshed / revoked / reuse-detected | `POST /api/auth/refresh` | user |
+| Registration completed | `POST /api/auth/complete-registration` | user |
+| Password reset requested / completed | `POST /api/auth/forgot-password`, `/reset-password` | user (or anon) |
+| User created | `POST /api/users` | admin → new user |
+| Invite generated / regenerated | create, `POST /api/users/{id}/invite` | admin → user |
+| Roles changed (before → after) | `PATCH /api/users/{id}` | admin → user |
+| User activated / deactivated | `PATCH …/activate`, `DELETE /api/users/{id}` | admin → user |
+| User permanently deleted | `DELETE …/permanent` | admin → user |
+| Authorization denied (403) | any admin endpoint | user → resource |
 
 ## 14.4 Log Protection
 
