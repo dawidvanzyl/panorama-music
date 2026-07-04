@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace PanoramaMusic.Infrastructure.Extensions;
+namespace PanoramaMusic.Persistence.Extensions;
 
 public static class ServiceCollectionExtensions
 {
