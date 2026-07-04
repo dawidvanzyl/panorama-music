@@ -13,6 +13,13 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 		Exception exception,
 		CancellationToken cancellationToken)
 	{
+		// A cancelled request means the client is gone: writing a 500 or logging an
+		// Error would only produce noise, so let the pipeline unwind quietly.
+		if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
+		{
+			return true;
+		}
+
 		var correlationId = httpContext.GetCorrelationId();
 
 		if (exception is RequestValidationException requestValidation)

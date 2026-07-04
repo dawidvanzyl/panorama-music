@@ -71,6 +71,20 @@ public sealed class ApiExceptionHandlerTests
 		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
 	}
 
+	[Fact]
+	public async Task TryHandleAsync_CancellationFromClientDisconnect_SwallowsWithoutLoggingOrResponseBody()
+	{
+		var httpContext = CreateHttpContext();
+		httpContext.RequestAborted = new CancellationToken(canceled: true);
+		var exception = new OperationCanceledException();
+
+		var handled = await _handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+		handled.ShouldBeTrue();
+		_captureProvider.Entries.ShouldBeEmpty();
+		ReadBody(httpContext).ShouldBeEmpty();
+	}
+
 	private static DefaultHttpContext CreateHttpContext()
 	{
 		var httpContext = new DefaultHttpContext();
