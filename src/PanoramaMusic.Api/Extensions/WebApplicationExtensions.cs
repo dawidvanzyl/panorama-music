@@ -1,5 +1,6 @@
-using PanoramaMusic.Identity.Infrastructure.Services;
-using PanoramaMusic.Infrastructure.Persistence;
+using PanoramaMusic.Identity.Infrastructure.Persistence;
+using PanoramaMusic.Persistence;
+using PanoramaMusic.Students.Infrastructure.Persistence;
 
 namespace PanoramaMusic.Api.Extensions;
 
@@ -19,8 +20,8 @@ public static class WebApplicationExtensions
 			DatabaseMigrator.Reset(connectionString);
 		}
 
-		DatabaseMigrator.Run(connectionString,
-			ensureDatabase: app.Environment.IsDevelopment(),
-			typeof(AdminSeedService).Assembly);
+		DatabaseMigrator.Run(connectionString, ensureDatabase: app.Environment.IsDevelopment());
+		IdentityMigrator.Run(connectionString);
+		StudentMigrator.Run(connectionString);
 	}
 }

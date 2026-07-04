@@ -117,7 +117,7 @@ curl http://localhost:3000/api/health
 
 To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
 
-1. Drop and recreate the `public`, `identity`, `tables`, and `funcs` schemas (all tables and data across every bounded context are wiped)
+1. Drop and recreate the `public`, `identity`, and `students` schemas (all tables and data across every bounded context are wiped)
 2. Re-run all DbUp migrations from scratch
 3. Execute all seed scripts from `Persistence/Seeds/` in filename order
 
@@ -180,4 +180,4 @@ In Production, the seeded admin account is created with a forced credential rota
 
 #### Adding seed data
 
-Add numbered SQL files to `src/PanoramaMusic.Infrastructure/Persistence/Seeds/`, following the same `S001__description.sql` convention. They are embedded in the assembly at build time and executed in alphabetical order after every reset.
+Add numbered SQL files to the owning bounded context's `Persistence/Seeds/` folder (e.g. `src/Identity/PanoramaMusic.Identity.Infrastructure/Persistence/Seeds/` or `src/Students/PanoramaMusic.Students.Infrastructure/Persistence/Seeds/`), following the same `S001__description.sql` convention. They are embedded in the context's assembly at build time and executed in alphabetical order after every reset.

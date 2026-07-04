@@ -4,24 +4,16 @@ using DbUp.Support;
 using Npgsql;
 using System.Reflection;
 
-namespace PanoramaMusic.Infrastructure.Persistence;
+namespace PanoramaMusic.Persistence;
 
 public static class DatabaseMigrator
 {
-	public static void Run(string connectionString, bool ensureDatabase = false, params Assembly[] additionalAssemblies)
+	public static void Run(string connectionString, bool ensureDatabase = false)
 	{
 		if (ensureDatabase)
 		{
 			EnsureDatabase.For.PostgresqlDatabase(connectionString);
 		}
-
-		var assemblies = new[] { typeof(DatabaseMigrator).Assembly }
-			.Concat(additionalAssemblies)
-			.ToArray();
-
-		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assemblies, ScriptType.RunOnce);
-		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assemblies, ScriptType.RunAlways);
-		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assemblies, ScriptType.RunAlways);
 	}
 
 	public static void Reset(string connectionString)
@@ -32,8 +24,7 @@ public static class DatabaseMigrator
 		using var command = connection.CreateCommand();
 		command.CommandText = """
             DROP SCHEMA IF EXISTS identity CASCADE;
-            DROP SCHEMA IF EXISTS tables CASCADE;
-            DROP SCHEMA IF EXISTS funcs CASCADE;
+            DROP SCHEMA IF EXISTS students CASCADE;
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public;
             GRANT ALL ON SCHEMA public TO PUBLIC;
@@ -41,30 +32,31 @@ public static class DatabaseMigrator
 		command.ExecuteNonQuery();
 	}
 
+	public static void RunAssembly(string connectionString, Assembly assembly)
+	{
+		RunScripts(connectionString, ".Migrations.", "__schema_versions", "schema migration", assembly, ScriptType.RunOnce);
+		RunScripts(connectionString, ".Functions.", "__function_versions", "function deployment", assembly, ScriptType.RunAlways);
+		RunScripts(connectionString, ".Seeds.", "__seed_versions", "seed", assembly, ScriptType.RunAlways);
+	}
+
 	private static void RunScripts(
 		string connectionString,
 		string folderMarker,
 		string journalTable,
 		string label,
-		Assembly[] assemblies,
+		Assembly assembly,
 		ScriptType scriptType)
 	{
-		var upgraderBuilder = DeployChanges.To
+		var upgrader = DeployChanges.To
 			.PostgresqlDatabase(connectionString)
 			.JournalToPostgresqlTable("public", journalTable)
-			.LogToConsole();
-
-		var scriptOptions = new SqlScriptOptions { ScriptType = scriptType };
-
-		foreach (var assembly in assemblies)
-		{
-			upgraderBuilder = upgraderBuilder.WithScriptsEmbeddedInAssembly(
+			.LogToConsole()
+			.WithScriptsEmbeddedInAssembly(
 				assembly,
 				name => name.Contains(folderMarker),
-				scriptOptions);
-		}
+				new SqlScriptOptions { ScriptType = scriptType })
+			.Build();
 
-		var upgrader = upgraderBuilder.Build();
 		var result = upgrader.PerformUpgrade();
 
 		if (!result.Successful)

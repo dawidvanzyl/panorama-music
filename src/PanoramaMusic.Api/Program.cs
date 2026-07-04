@@ -4,7 +4,7 @@ using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
-using PanoramaMusic.Infrastructure.Extensions;
+using PanoramaMusic.Persistence.Extensions;
 using System.Text.Json.Serialization;
 
 AppContext.SetSwitch("Npgsql.EnableStoredProcedureCompatMode", true);
