@@ -173,6 +173,11 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 | `ConnectionStrings__DefaultConnection` | PostgreSQL connection string (use Neon's pooled connection string) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `JWT__Secret` | JWT signing secret (placeholder until M1) |
+| `Serilog__MinimumLevel__Default` | Optional minimum log level override (defaults to `Information` from `appsettings.json`) |
+
+### Logging
+
+The API logs through Serilog behind the standard `Microsoft.Extensions.Logging` abstraction: human-readable console output in Development, structured JSON to stdout everywhere else. Minimum levels come from the `Serilog` configuration section (`appsettings.json`, overridable per environment via `Serilog__*` environment variables — see `docker-compose.yml`). Every request is assigned a correlation ID (propagated from the `X-Correlation-ID` request header when present, generated otherwise); it is attached to all log entries for the request, returned on the `X-Correlation-ID` response header, and included as `correlationId` in error response bodies.
 
 On startup, DbUp automatically runs all pending migrations against the Neon database.
 

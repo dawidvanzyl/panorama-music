@@ -5,11 +5,31 @@ using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Persistence.Extensions;
+using Serilog;
+using Serilog.Formatting.Compact;
 using System.Text.Json.Serialization;
 
 AppContext.SetSwitch("Npgsql.EnableStoredProcedureCompatMode", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSerilog(loggerConfiguration =>
+{
+	// Minimum levels come from the Serilog configuration section (appsettings /
+	// environment variables) — no hardcoded defaults in code.
+	loggerConfiguration
+		.ReadFrom.Configuration(builder.Configuration)
+		.Enrich.FromLogContext();
+
+	if (builder.Environment.IsDevelopment())
+	{
+		loggerConfiguration.WriteTo.Console();
+	}
+	else
+	{
+		loggerConfiguration.WriteTo.Console(new CompactJsonFormatter());
+	}
+});
 
 if (builder.Environment.IsDevelopment())
 {
@@ -54,6 +74,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<RateLimitingMiddleware>();
