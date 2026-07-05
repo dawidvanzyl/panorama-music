@@ -50,7 +50,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: QA
       ASPNETCORE_URLS: http://+:3000
+      # The application connects as the restricted panorama_app role (append-only
+      # audit access); migrations run over the privileged Migrations connection,
+      # which also provisions the panorama_app role on startup.
       ConnectionStrings__DefaultConnection: >-
+        Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=panorama_app;Password=${POSTGRES_APP_PASSWORD:-panorama_app_qa}
+      ConnectionStrings__Migrations: >-
         Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       # Set RESET_DB=true to wipe the QA database, re-run all migrations, and
       # re-apply seed data on the next container start.  Never set in production.

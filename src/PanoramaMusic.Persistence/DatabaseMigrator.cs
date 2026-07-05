@@ -8,12 +8,61 @@ namespace PanoramaMusic.Persistence;
 
 public static class DatabaseMigrator
 {
+	/// <summary>
+	/// The database role the application connects as. Grant scripts in each
+	/// bounded context's migrations reference this name literally, so the
+	/// application connection string must use it.
+	/// </summary>
+	public const string ApplicationRoleName = "panorama_app";
+
 	public static void Run(string connectionString, bool ensureDatabase = false)
 	{
 		if (ensureDatabase)
 		{
 			EnsureDatabase.For.PostgresqlDatabase(connectionString);
 		}
+	}
+
+	/// <summary>
+	/// Provisions the application LOGIN role using the credentials from the
+	/// application connection string, executed over the privileged migration
+	/// connection. Must run before any context migrator so grant scripts can
+	/// reference the role.
+	/// </summary>
+	public static void EnsureApplicationRole(string migrationConnectionString, string applicationConnectionString)
+	{
+		var applicationConnection = new NpgsqlConnectionStringBuilder(applicationConnectionString);
+
+		if (!string.Equals(applicationConnection.Username, ApplicationRoleName, StringComparison.Ordinal))
+			throw new InvalidOperationException($"The application connection string must use the '{ApplicationRoleName}' role — grant scripts reference that role name. Found '{applicationConnection.Username}'.");
+
+		if (string.IsNullOrWhiteSpace(applicationConnection.Password))
+			throw new InvalidOperationException($"The application connection string must include a password for the '{ApplicationRoleName}' role.");
+
+		using NpgsqlConnection connection = new(migrationConnectionString);
+		connection.Open();
+
+		using var command = connection.CreateCommand();
+		// Accepted deviation from the no-string-concatenation rule (ASVS 5.0.0-1.2.4):
+		// CREATE/ALTER ROLE is DDL inside a DO block, which cannot take bind
+		// parameters, so interpolation is the only option. The value is
+		// operator-configured (connection string), never user input, and is
+		// double-escaped — '' doubling here plus format(%L) quoting in the block.
+		// The role is not a superuser and holds only the privileges granted by
+		// context migrations.
+		var escapedPassword = applicationConnection.Password.Replace("'", "''");
+		command.CommandText = $"""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{ApplicationRoleName}') THEN
+                    EXECUTE format('CREATE ROLE {ApplicationRoleName} LOGIN PASSWORD %L', '{escapedPassword}');
+                ELSE
+                    EXECUTE format('ALTER ROLE {ApplicationRoleName} LOGIN PASSWORD %L', '{escapedPassword}');
+                END IF;
+            END
+            $$;
+            """;
+		command.ExecuteNonQuery();
 	}
 
 	public static void Reset(string connectionString)
@@ -23,6 +72,7 @@ public static class DatabaseMigrator
 
 		using var command = connection.CreateCommand();
 		command.CommandText = """
+            DROP SCHEMA IF EXISTS audit CASCADE;
             DROP SCHEMA IF EXISTS identity CASCADE;
             DROP SCHEMA IF EXISTS students CASCADE;
             DROP SCHEMA public CASCADE;

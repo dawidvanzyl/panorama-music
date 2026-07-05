@@ -3,6 +3,7 @@ using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Identity;
+using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Persistence.Extensions;
 using Serilog;
@@ -36,12 +37,11 @@ if (builder.Environment.IsDevelopment())
 	builder.Services.AddOpenApi();
 }
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetRequiredConnectionString("DefaultConnection");
 
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-	throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
-}
+// Validated up front so a missing migration connection fails fast at startup
+// rather than inside InitializeDatabase.
+builder.Configuration.GetRequiredConnectionString("Migrations");
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -56,6 +56,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddAuditInfrastructure(connectionString);
 builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddAuthRateLimiting(builder.Configuration);
