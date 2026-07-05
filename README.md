@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/dawidvanzyl/panorama-music/actions/workflows/ci.yml)
 
-A self-hosted music streaming application built with C# (ASP.NET Core Minimal API) and Vite + Web Components.
+A primary-school music department management application — tracking students, instruments, lessons, teachers, and progress — built with C# (ASP.NET Core Minimal API) and Vite + Web Components.
 
 ## Tech Stack
 
@@ -34,18 +34,23 @@ All jobs run in parallel. Formatting, lint, or E2E spec failures will block the 
 
 ### Configuration
 
-The API reads the database connection string from `ConnectionStrings:DefaultConnection`.
+The API uses two database connection strings:
+
+- `ConnectionStrings:DefaultConnection` — the application's runtime connection. It must connect as the restricted `panorama_app` role, which holds full DML on the `identity` and `students` schemas but only `INSERT`/`SELECT` on the append-only `audit.audit_events` table.
+- `ConnectionStrings:Migrations` — a privileged (superuser/owner) connection used only at startup to run DbUp migrations and provision the `panorama_app` role. The role's credentials are taken from `DefaultConnection`, so the role is created/updated automatically on startup.
 
 For local development, `appsettings.Development.json` is pre-configured for a Docker PostgreSQL instance:
 
 ```
-Host=localhost;Port=5432;Database=panorama_music_dev;Username=postgres;Password=postgres
+DefaultConnection: Host=localhost;Port=5432;Database=panorama_music_dev;Username=panorama_app;Password=panorama_app_dev
+Migrations:        Host=localhost;Port=5432;Database=panorama_music_dev;Username=postgres;Password=postgres
 ```
 
-In production, set the environment variable:
+In production, set the environment variables:
 
 ```
-ConnectionStrings__DefaultConnection=<your-connection-string>
+ConnectionStrings__DefaultConnection=<panorama_app connection string>
+ConnectionStrings__Migrations=<privileged connection string>
 ```
 
 ### Running the API
@@ -117,7 +122,7 @@ curl http://localhost:3000/api/health
 
 To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
 
-1. Drop and recreate the `public`, `identity`, and `students` schemas (all tables and data across every bounded context are wiped)
+1. Drop and recreate the `public`, `audit`, `identity`, and `students` schemas (all tables and data across every bounded context are wiped)
 2. Re-run all DbUp migrations from scratch
 3. Execute all seed scripts from `Persistence/Seeds/` in filename order
 
@@ -170,7 +175,8 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 
 | Variable | Description |
 |---|---|
-| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string (use Neon's pooled connection string) |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string for the `panorama_app` application role (use Neon's pooled connection string) |
+| `ConnectionStrings__Migrations` | Privileged PostgreSQL connection string used for startup migrations and `panorama_app` role provisioning |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `JWT__Secret` | JWT signing secret (placeholder until M1) |
 | `Serilog__MinimumLevel__Default` | Optional minimum log level override (defaults to `Information` from `appsettings.json`) |

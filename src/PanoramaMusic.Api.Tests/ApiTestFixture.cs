@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using PanoramaMusic.Api.Tests.Middleware;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -24,7 +25,17 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifet
 	public async ValueTask InitializeAsync()
 	{
 		await _postgres.StartAsync();
-		Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _postgres.GetConnectionString());
+
+		// The app runs as the restricted panorama_app role (provisioned during
+		// InitializeDatabase); migrations run over the superuser connection.
+		var applicationConnectionString = new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString())
+		{
+			Username = "panorama_app",
+			Password = "panorama_app_test",
+		}.ConnectionString;
+
+		Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", applicationConnectionString);
+		Environment.SetEnvironmentVariable("ConnectionStrings__Migrations", _postgres.GetConnectionString());
 		Environment.SetEnvironmentVariable("JWT__Secret", "test-only-secret-at-least-32-characters-long!!");
 		Environment.SetEnvironmentVariable("JWT__Issuer", "panorama-music-api-tests");
 		Environment.SetEnvironmentVariable("JWT__Audience", "panorama-music-client-tests");
