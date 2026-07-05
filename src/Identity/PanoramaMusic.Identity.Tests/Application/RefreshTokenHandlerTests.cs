@@ -1,5 +1,4 @@
 using Moq;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -9,6 +8,7 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Persistence.Transactions;
 using Shouldly;
 using Xunit;
 
@@ -24,26 +24,33 @@ public class RefreshTokenHandlerTests
 		Jwt = new Mock<IJwtService>();
 		SessionOptions = new Mock<ISessionOptions>();
 		ClientContext = new Mock<IClientContext>();
+		UnitOfWork = new Mock<IUnitOfWork>();
 
 		SessionOptions.SetupGet(o => o.AbsoluteSessionLifetimeDays).Returns(30);
 
+		// Run the isolated work inline so repository verifications still observe
+		// the calls made inside the isolated block.
+		UnitOfWork
+			.Setup(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+			.Returns<Func<Task>, CancellationToken>((work, _) => work());
+
 		RefreshRepo
-			.Setup(r => r.RotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		RefreshRepo
+			.Setup(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		RefreshRepo
 			.Setup(r => r.RevokeFamilyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		RefreshRepo
-			.Setup(r => r.UpdateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
-
 		Jwt
 			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("new-access-token", DateTime.UtcNow, Guid.NewGuid()));
 
-		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object);
+		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object, UnitOfWork.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
@@ -52,6 +59,7 @@ public class RefreshTokenHandlerTests
 	public Mock<IJwtService> Jwt { get; }
 	public Mock<ISessionOptions> SessionOptions { get; }
 	public Mock<IClientContext> ClientContext { get; }
+	public Mock<IUnitOfWork> UnitOfWork { get; }
 	public RefreshTokenHandler Handler { get; }
 
 	private static RefreshToken CreateToken(string tokenHash, Guid userId, DateTime expiresAt, DateTime? sessionStartedAt = null, Guid? familyId = null)
@@ -87,7 +95,8 @@ public class RefreshTokenHandlerTests
 
 		result.ShouldNotBeNull();
 		result.AccessToken.ShouldBe("new-access-token");
-		RefreshRepo.Verify(r => r.RotateAsync(existing.TokenId, It.IsAny<RefreshToken>(), TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(existing.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.CreateAsync(It.IsAny<RefreshToken>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -111,8 +120,8 @@ public class RefreshTokenHandlerTests
 
 		await Handler.HandleAsync(new RefreshTokenCommand(new RefreshTokenRequest(rawToken)), TestContext.Current.CancellationToken);
 
-		RefreshRepo.Verify(r => r.RotateAsync(
-			existing.TokenId,
+		RefreshRepo.Verify(r => r.RevokeAsync(existing.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.CreateAsync(
 			It.Is<RefreshToken>(t => t.FamilyId == existing.FamilyId && t.SessionStartedAt == sessionStartedAt),
 			TestContext.Current.CancellationToken), Times.Once);
 	}
@@ -167,6 +176,7 @@ public class RefreshTokenHandlerTests
 			() => Handler.HandleAsync(new RefreshTokenCommand(new RefreshTokenRequest(rawToken)), TestContext.Current.CancellationToken));
 
 		RefreshRepo.Verify(r => r.RevokeFamilyAsync(familyId, TestContext.Current.CancellationToken), Times.Once);
+		UnitOfWork.Verify(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -184,6 +194,7 @@ public class RefreshTokenHandlerTests
 			() => Handler.HandleAsync(new RefreshTokenCommand(new RefreshTokenRequest(rawToken)), TestContext.Current.CancellationToken));
 
 		staleSession.IsRevoked.ShouldBeTrue();
-		RefreshRepo.Verify(r => r.UpdateAsync(staleSession, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(staleSession.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		UnitOfWork.Verify(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 }

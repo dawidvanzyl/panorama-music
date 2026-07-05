@@ -300,7 +300,7 @@ Examples:
 * p_user_id
 * p_email
 
-Each function must perform exactly one create, update, or delete operation. Do not combine multiple write operations into a single function for the sake of atomicity — when several writes must succeed or fail together, keep each as its own single-purpose function and coordinate them from the repository method within an explicit transaction (see Transactions).
+Each function must perform exactly one create, update, or delete operation. Do not combine multiple write operations into a single function for the sake of atomicity — when several writes must succeed or fail together, keep each as its own single-purpose function and execute them within the shared ambient transaction (see Transactions).
 
 ---
 
@@ -365,44 +365,46 @@ Prefer dedicated mapping extensions or components to embedding complex mapping l
 
 ## Transactions
 
-Transactions belong in Infrastructure.
+The canonical transaction pattern is the shared Unit of Work in `PanoramaMusic.Persistence`.
 
-When an operation must update multiple persistence resources atomically, Infrastructure should expose a dedicated method that owns the transaction boundary.
+`IUnitOfWork` exposes the active `IDbConnection` and `IDbTransaction` and is registered as **scoped**, so every repository resolved within one HTTP request shares the same connection and transaction — including repositories from different bounded contexts (e.g. an Identity write and its Audit record commit or roll back together).
 
-Application handlers should coordinate use cases rather than manage database transactions.
+The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back a transaction directly.
 
-The repository method opens its own connection, begins the transaction explicitly, passes that transaction into each `CreateCommandDefinition` call, and commits or rolls back around a try/catch:
+A repository write method resolves `IUnitOfWork` from DI and executes its database function calls as straight commands on the shared connection and transaction:
 
 ```csharp
-var dbConnection = CreateConnection();
-await dbConnection.OpenAsync(cancellationToken);
-await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
-try
+public class ExampleRepository(IDbConnectionFactory connectionFactory, IUnitOfWork unitOfWork)
+    : RepositoryBase(connectionFactory), IExampleRepository
 {
-    var firstCommand = CreateCommandDefinition(
-        "identity.first_function",
-        new { /* params */ },
-        transaction,
-        cancellationToken);
-    await dbConnection.ExecuteAsync(firstCommand);
+    public async Task DoWriteAsync(/* args */, CancellationToken cancellationToken)
+    {
+        var firstCommand = CreateCommandDefinition(
+            "identity.first_function",
+            new { /* params */ },
+            unitOfWork.Transaction,
+            cancellationToken);
+        await unitOfWork.Connection.ExecuteAsync(firstCommand);
 
-    var secondCommand = CreateCommandDefinition(
-        "identity.second_function",
-        new { /* params */ },
-        transaction,
-        cancellationToken);
-    await dbConnection.ExecuteAsync(secondCommand);
-
-    await transaction.CommitAsync(cancellationToken);
-}
-catch
-{
-    await transaction.RollbackAsync(cancellationToken);
-    throw;
+        var secondCommand = CreateCommandDefinition(
+            "identity.second_function",
+            new { /* params */ },
+            unitOfWork.Transaction,
+            cancellationToken);
+        await unitOfWork.Connection.ExecuteAsync(secondCommand);
+    }
 }
 ```
 
 See `RefreshTokenRepository.RotateAsync` and `UserRepository.UpdateAsync` for existing examples of this pattern.
+
+Read methods use the same shared connection and transaction — repositories resolve their database access exclusively from `IUnitOfWork`; bounded contexts do not own connection factories of their own.
+
+Code that runs outside the HTTP pipeline (hosted services, integration tests) creates its own scope and therefore owns the unit-of-work lifecycle itself: begin, perform the writes, then commit — see `AdminSeedService` for an example.
+
+**Isolated writes.** A deliberate security write that must persist even when the request fails (e.g. revoking a refresh-token family on replay detection before rejecting the request) is wrapped in `IUnitOfWork.ExecuteIsolatedAsync`. The delegate runs on a fresh connection and transaction that commits independently of the ambient request transaction; repositories participate unchanged. See `RefreshTokenHandler` for the two existing call sites. Use this sparingly — an isolated write is intentionally *not* atomic with the rest of the request.
+
+Application handlers coordinate use cases; they never manage database transactions.
 
 ---
 

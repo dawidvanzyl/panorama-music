@@ -5,7 +5,6 @@ using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Services.Sessions;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using Shouldly;
 using Xunit;
 
 namespace PanoramaMusic.Identity.Tests.Application;
@@ -15,15 +14,21 @@ public class RevokeOwnOtherSessionsHandlerTests
 	public RevokeOwnOtherSessionsHandlerTests()
 	{
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
+		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
 		UserContext = new Mock<IUserContext>();
 
 		UserId = Guid.NewGuid();
 		UserContext.SetupGet(c => c.UserId).Returns(UserId);
 
-		Handler = new RevokeOwnOtherSessionsHandler(RefreshRepo.Object, UserContext.Object, new CurrentSessionResolver(RefreshRepo.Object));
+		Handler = new RevokeOwnOtherSessionsHandler(
+			RefreshRepo.Object,
+			RevokedAccessTokenRepo.Object,
+			UserContext.Object,
+			new CurrentSessionResolver(RefreshRepo.Object));
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
+	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
 	public Mock<IUserContext> UserContext { get; }
 	public Guid UserId { get; }
 	public RevokeOwnOtherSessionsHandler Handler { get; }
@@ -44,19 +49,21 @@ public class RevokeOwnOtherSessionsHandlerTests
 			.Setup(r => r.GetActiveByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([currentToken, otherToken]);
 		RefreshRepo
-			.Setup(r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<IReadOnlyList<RevokedAccessToken>>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(
 			new RevokeOwnOtherSessionsCommand("raw-current-token"),
 			TestContext.Current.CancellationToken);
 
-		RefreshRepo.Verify(
-			r => r.RevokeAllForUserExceptAsync(
-				UserId,
-				currentToken.TokenId,
+		RevokedAccessTokenRepo.Verify(r => r.DeleteExpiredAsync(It.IsAny<CancellationToken>()), Times.Once);
+		RevokedAccessTokenRepo.Verify(
+			r => r.CreateManyAsync(
 				It.Is<IReadOnlyList<RevokedAccessToken>>(list => list.Count == 1 && list[0].Jti == accessTokenJti && list[0].ExpiresAt == accessTokenExpiresAt),
 				It.IsAny<CancellationToken>()),
+			Times.Once);
+		RefreshRepo.Verify(
+			r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<CancellationToken>()),
 			Times.Once);
 	}
 
@@ -75,19 +82,17 @@ public class RevokeOwnOtherSessionsHandlerTests
 			.Setup(r => r.GetActiveByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([currentToken, sessionWithoutAccessToken, sessionWithExpiredAccessToken]);
 		RefreshRepo
-			.Setup(r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<IReadOnlyList<RevokedAccessToken>>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		await Handler.HandleAsync(
 			new RevokeOwnOtherSessionsCommand("raw-current-token"),
 			TestContext.Current.CancellationToken);
 
+		RevokedAccessTokenRepo.Verify(r => r.DeleteExpiredAsync(It.IsAny<CancellationToken>()), Times.Never);
+		RevokedAccessTokenRepo.Verify(r => r.CreateManyAsync(It.IsAny<IReadOnlyList<RevokedAccessToken>>(), It.IsAny<CancellationToken>()), Times.Never);
 		RefreshRepo.Verify(
-			r => r.RevokeAllForUserExceptAsync(
-				UserId,
-				currentToken.TokenId,
-				It.Is<IReadOnlyList<RevokedAccessToken>>(list => list.Count == 0),
-				It.IsAny<CancellationToken>()),
+			r => r.RevokeAllForUserExceptAsync(UserId, currentToken.TokenId, It.IsAny<CancellationToken>()),
 			Times.Once);
 	}
 }

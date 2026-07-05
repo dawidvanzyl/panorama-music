@@ -18,20 +18,18 @@ public class ResetPasswordHandlerTests
 	public ResetPasswordHandlerTests()
 	{
 		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
+		UserRepo = new Mock<IUserRepository>();
 		Hasher = new Mock<IPasswordHashService>();
 
 		Hasher
 			.Setup(h => h.Hash(It.IsAny<string>()))
 			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
 
-		ResetTokenRepo
-			.Setup(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
-
-		Handler = new ResetPasswordHandler(ResetTokenRepo.Object, Hasher.Object);
+		Handler = new ResetPasswordHandler(ResetTokenRepo.Object, UserRepo.Object, Hasher.Object);
 	}
 
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
+	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IPasswordHashService> Hasher { get; }
 	public ResetPasswordHandler Handler { get; }
 
@@ -50,7 +48,8 @@ public class ResetPasswordHandlerTests
 			new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
 			TestContext.Current.CancellationToken);
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(token.UserId, It.IsAny<PasswordHash>(), token.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		ResetTokenRepo.Verify(r => r.UseAsync(token.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(token.UserId, It.IsAny<string>(), true, TestContext.Current.CancellationToken), Times.Once);
 		Hasher.Verify(h => h.Hash(_validPassword), Times.Once);
 	}
 
@@ -67,7 +66,8 @@ public class ResetPasswordHandlerTests
 				new ResetPasswordCommand(new ResetPasswordRequest("unknown-token", _validPassword)),
 				TestContext.Current.CancellationToken));
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -86,7 +86,8 @@ public class ResetPasswordHandlerTests
 				new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
 				TestContext.Current.CancellationToken));
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]

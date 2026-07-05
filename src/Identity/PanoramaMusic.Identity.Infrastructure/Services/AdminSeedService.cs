@@ -7,6 +7,7 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
+using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
@@ -38,9 +39,16 @@ public class AdminSeedService(
 		var userRoleRepo = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
 		var hashService = scope.ServiceProvider.GetRequiredService<IPasswordHashService>();
 
+		// Runs outside the HTTP pipeline, so this scope owns the unit-of-work
+		// lifecycle that UnitOfWorkMiddleware would otherwise own per request.
+		// Every repository call — reads included — needs the active transaction.
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		await unitOfWork.BeginAsync(cancellationToken);
+
 		var existing = await userRepo.GetByEmailAsync(email, cancellationToken);
 		if (existing is not null)
 		{
+			await unitOfWork.CommitAsync(cancellationToken);
 			logger.LogInformation("Admin user with email {Email} already exists — skipping seed.", email);
 			return;
 		}
@@ -59,8 +67,17 @@ public class AdminSeedService(
 			user.RequirePasswordReset();
 		}
 
-		await userRepo.AddAsync(user, cancellationToken);
-		await userRoleRepo.AddAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);
+		await userRepo.CreateAsync(user, cancellationToken);
+
+		// CreateAsync persists the user row only; the password hash is written
+		// through its own single-purpose function. clearRequiresPasswordReset
+		// stays false so the Production forced-rotation flag set at creation
+		// survives this write.
+		if (user.PasswordHash is not null)
+			await userRepo.UpdatePasswordAsync(user.UserId, user.PasswordHash.Value, clearRequiresPasswordReset: false, cancellationToken);
+
+		await userRoleRepo.CreateAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);
+		await unitOfWork.CommitAsync(cancellationToken);
 
 		logger.LogInformation("Admin user {Email} created successfully.", email);
 	}

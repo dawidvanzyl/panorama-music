@@ -27,11 +27,13 @@ public sealed class LogoutHandler(
 			var token = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
 			if (token is not null)
 			{
-				token.Revoke();
+				if (accessTokenToRevoke is not null)
+				{
+					await revokedAccessTokenRepository.DeleteExpiredAsync(cancellationToken);
+					await revokedAccessTokenRepository.CreateAsync(accessTokenToRevoke, cancellationToken);
+				}
 
-				// RevokeAsync both revokes the refresh token and denylists the caller's
-				// access token atomically within a single database transaction.
-				await refreshTokenRepository.RevokeAsync(token.TokenId, accessTokenToRevoke, cancellationToken);
+				await refreshTokenRepository.RevokeAsync(token.TokenId, cancellationToken);
 				return;
 			}
 		}
@@ -39,6 +41,6 @@ public sealed class LogoutHandler(
 		// No refresh token to revoke (cookie missing or already gone) - the access token
 		// denylist still needs to happen on its own.
 		if (accessTokenToRevoke is not null)
-			await revokedAccessTokenRepository.AddAsync(accessTokenToRevoke, cancellationToken);
+			await revokedAccessTokenRepository.CreateAsync(accessTokenToRevoke, cancellationToken);
 	}
 }

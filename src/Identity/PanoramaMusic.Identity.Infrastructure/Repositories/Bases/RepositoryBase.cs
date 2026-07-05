@@ -1,23 +1,14 @@
 using Dapper;
-using PanoramaMusic.Identity.Infrastructure.Factories;
+using PanoramaMusic.Persistence.Transactions;
 using System.Data;
-using System.Data.Common;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
 
-public abstract class RepositoryBase
+public abstract class RepositoryBase(IUnitOfWork unitOfWork)
 {
-	private readonly IDbConnectionFactory _connectionFactory;
+	protected IDbConnection Connection => unitOfWork.Connection;
 
-	protected RepositoryBase(IDbConnectionFactory connectionFactory)
-	{
-		_connectionFactory = connectionFactory;
-	}
-
-	protected DbConnection CreateConnection() => (DbConnection)_connectionFactory.CreateConnection();
-
-	protected static CommandDefinition CreateCommandDefinition(string sql, object? parameters, CancellationToken cancellationToken)
-		=> new(sql, parameters, commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken);
+	protected IDbTransaction Transaction => unitOfWork.Transaction;
 
 	protected static CommandDefinition CreateCommandDefinition(string sql, object? parameters, IDbTransaction transaction, CancellationToken cancellationToken)
 		=> new(sql, parameters, transaction: transaction, commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken);

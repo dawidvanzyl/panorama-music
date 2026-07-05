@@ -1,5 +1,4 @@
 using Moq;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Requests.Auth;
@@ -19,10 +18,6 @@ public class CompleteRegistrationHandlerTests
 		InviteRepo = new Mock<IInviteTokenRepository>();
 		UserRepo = new Mock<IUserRepository>();
 		Hasher = new Mock<IPasswordHashService>();
-
-		UserRepo
-			.Setup(r => r.CompleteActivationAsync(It.IsAny<User>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
 
 		Hasher
 			.Setup(h => h.Hash(It.IsAny<string>()))
@@ -56,8 +51,8 @@ public class CompleteRegistrationHandlerTests
 
 		await Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "ValidPass1")), TestContext.Current.CancellationToken);
 
-		user.IsActive.ShouldBeTrue();
-		user.PasswordHash.ShouldNotBeNull();
+		UserRepo.Verify(r => r.UpdatePasswordAsync(userId, It.IsAny<string>(), false, TestContext.Current.CancellationToken), Times.Once);
+		UserRepo.Verify(r => r.ActivateAsync(userId, TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -80,10 +75,9 @@ public class CompleteRegistrationHandlerTests
 
 		await Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken);
 
-		invite.IsUsed.ShouldBeTrue();
-		user.IsActive.ShouldBeTrue();
-		user.PasswordHash.ShouldNotBeNull();
-		UserRepo.Verify(r => r.CompleteActivationAsync(user, invite.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		InviteRepo.Verify(r => r.UseAsync(invite.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(userId, It.IsAny<string>(), false, TestContext.Current.CancellationToken), Times.Once);
+		UserRepo.Verify(r => r.ActivateAsync(userId, TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -101,6 +95,8 @@ public class CompleteRegistrationHandlerTests
 
 		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
+
+		InviteRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -119,5 +115,7 @@ public class CompleteRegistrationHandlerTests
 
 		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new CompleteRegistrationCommand(new CompleteRegistrationRequest(rawToken, "NewPass123!")), TestContext.Current.CancellationToken));
+
+		InviteRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

@@ -9,6 +9,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Sessions;
 
 public sealed class RevokeOwnOtherSessionsHandler(
 	IRefreshTokenRepository refreshTokenRepository,
+	IRevokedAccessTokenRepository revokedAccessTokenRepository,
 	IUserContext userContext,
 	CurrentSessionResolver currentSessionResolver)
 {
@@ -17,15 +18,6 @@ public sealed class RevokeOwnOtherSessionsHandler(
 		var currentTokenId = await currentSessionResolver.ResolveAsync(command.CurrentRefreshToken, cancellationToken)
 			?? throw new UnauthorizedException("Current session could not be identified.");
 
-		// This read happens before RevokeAllForUserExceptAsync's transaction, not inside it,
-		// so a session created in the narrow window between this read and that
-		// transaction's UPDATE would have its refresh token revoked (the UPDATE's own
-		// WHERE clause re-evaluates "every other session for this user" at write time)
-		// without its access token being denylisted here. Accepted trade-off: the impact
-		// is bounded to that one new session's access token remaining valid for at most
-		// its own ~15-minute lifetime, and closing it fully would require moving this read
-		// inside the repository's transaction, which conflicts with keeping list-building
-		// an Application concern.
 		var activeSessions = await refreshTokenRepository.GetActiveByUserIdAsync(userContext.UserId, cancellationToken);
 		var accessTokensToRevoke = activeSessions
 			.Where(s => s.TokenId != currentTokenId)
@@ -33,10 +25,12 @@ public sealed class RevokeOwnOtherSessionsHandler(
 			.OfType<RevokedAccessToken>()
 			.ToList();
 
-		// RevokeAllForUserExceptAsync both revokes the refresh tokens and denylists each
-		// affected session's currently-issued access token atomically within a single
-		// database transaction, so still-valid access tokens stop working immediately
-		// rather than staying valid for up to their remaining 15-minute lifetime.
-		await refreshTokenRepository.RevokeAllForUserExceptAsync(userContext.UserId, currentTokenId, accessTokensToRevoke, cancellationToken);
+		if (accessTokensToRevoke.Count > 0)
+		{
+			await revokedAccessTokenRepository.DeleteExpiredAsync(cancellationToken);
+			await revokedAccessTokenRepository.CreateManyAsync(accessTokensToRevoke, cancellationToken);
+		}
+
+		await refreshTokenRepository.RevokeAllForUserExceptAsync(userContext.UserId, currentTokenId, cancellationToken);
 	}
 }

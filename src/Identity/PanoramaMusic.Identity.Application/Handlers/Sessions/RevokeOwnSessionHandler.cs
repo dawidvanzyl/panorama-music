@@ -8,6 +8,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Sessions;
 
 public sealed class RevokeOwnSessionHandler(
 	IRefreshTokenRepository refreshTokenRepository,
+	IRevokedAccessTokenRepository revokedAccessTokenRepository,
 	IUserContext userContext,
 	CurrentSessionResolver currentSessionResolver)
 {
@@ -21,10 +22,12 @@ public sealed class RevokeOwnSessionHandler(
 		if (session.TokenId == currentTokenId)
 			throw new DomainException("You cannot revoke your current session.");
 
-		// RevokeAsync both revokes the refresh token and denylists the session's
-		// currently-issued access token atomically within a single database transaction,
-		// so a still-valid access token stops working immediately rather than staying
-		// valid for up to its remaining 15-minute lifetime.
-		await refreshTokenRepository.RevokeAsync(command.TokenId, session.LiveAccessTokenOrNull(), cancellationToken);
+		if (session.LiveAccessTokenOrNull() is { } revokedAccessToken)
+		{
+			await revokedAccessTokenRepository.DeleteExpiredAsync(cancellationToken);
+			await revokedAccessTokenRepository.CreateAsync(revokedAccessToken, cancellationToken);
+		}
+
+		await refreshTokenRepository.RevokeAsync(command.TokenId, cancellationToken);
 	}
 }

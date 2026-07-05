@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
+using PanoramaMusic.Persistence.Factories;
+using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Persistence.Extensions;
 
@@ -9,7 +10,11 @@ public static class ServiceCollectionExtensions
 		this IServiceCollection services,
 		string connectionString)
 	{
-		services.AddTransient<NpgsqlConnection>(_ => new NpgsqlConnection(connectionString));
+		services.AddSingleton<IDbConnectionFactory>(_ => new NpgsqlConnectionFactory(connectionString));
+
+		// Scoped so every repository resolved within one request shares the
+		// same connection and transaction.
+		services.AddScoped<IUnitOfWork, NpgsqlUnitOfWork>();
 		return services;
 	}
 }

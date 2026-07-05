@@ -23,13 +23,13 @@ public sealed class CreateUserHandler(
 			throw new DomainException("A user with this email already exists.");
 
 		var user = new User(Guid.NewGuid(), email, DateTime.UtcNow);
-		await userRepository.AddAsync(user, cancellationToken);
+		await userRepository.CreateAsync(user, cancellationToken);
 		foreach (var role in command.Request.Roles)
-			await userRoleRepository.AddAsync(new UserRole(user.UserId, role), cancellationToken);
+			await userRoleRepository.CreateAsync(new UserRole(user.UserId, role), cancellationToken);
 
 		var token = RawToken.Generate();
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
-		await inviteTokenRepository.AddAsync(inviteToken, cancellationToken);
+		await inviteTokenRepository.CreateAsync(inviteToken, cancellationToken);
 
 		return new CreateUserResult(user.UserId, $"{appOptions.AppBaseUrl}/#/register?token={token.Value}");
 	}

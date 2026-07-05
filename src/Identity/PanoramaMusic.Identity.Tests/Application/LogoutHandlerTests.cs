@@ -1,12 +1,10 @@
 using Moq;
-using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
-using Shouldly;
 using Xunit;
 
 namespace PanoramaMusic.Identity.Tests.Application;
@@ -20,11 +18,11 @@ public class LogoutHandlerTests
 		AccessTokenContext = new Mock<IAccessTokenContext>();
 
 		RefreshRepo
-			.Setup(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<RevokedAccessToken?>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		RevokedAccessTokenRepo
-			.Setup(r => r.AddAsync(It.IsAny<RevokedAccessToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<RevokedAccessToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		Jti = Guid.NewGuid();
@@ -58,8 +56,7 @@ public class LogoutHandlerTests
 
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
-		token.IsRevoked.ShouldBeTrue();
-		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, It.IsAny<RevokedAccessToken?>(), TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -76,12 +73,13 @@ public class LogoutHandlerTests
 
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
-		RefreshRepo.Verify(
-			r => r.RevokeAsync(
-				tokenId,
-				It.Is<RevokedAccessToken?>(t => t != null && t.Jti == Jti && t.ExpiresAt == AccessTokenExpiresAtUtc),
+		RevokedAccessTokenRepo.Verify(r => r.DeleteExpiredAsync(TestContext.Current.CancellationToken), Times.Once);
+		RevokedAccessTokenRepo.Verify(
+			r => r.CreateAsync(
+				It.Is<RevokedAccessToken>(t => t.Jti == Jti && t.ExpiresAt == AccessTokenExpiresAtUtc),
 				TestContext.Current.CancellationToken),
 			Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -92,7 +90,7 @@ public class LogoutHandlerTests
 
 		RefreshRepo.Verify(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 		RevokedAccessTokenRepo.Verify(
-			r => r.AddAsync(It.Is<RevokedAccessToken>(t => t.Jti == Jti), TestContext.Current.CancellationToken),
+			r => r.CreateAsync(It.Is<RevokedAccessToken>(t => t.Jti == Jti), TestContext.Current.CancellationToken),
 			Times.Once);
 	}
 
@@ -113,8 +111,7 @@ public class LogoutHandlerTests
 
 		await Handler.HandleAsync(new LogoutCommand(rawToken), TestContext.Current.CancellationToken);
 
-		token.IsRevoked.ShouldBeTrue();
-		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, null, TestContext.Current.CancellationToken), Times.Once);
-		RevokedAccessTokenRepo.Verify(r => r.AddAsync(It.IsAny<RevokedAccessToken>(), It.IsAny<CancellationToken>()), Times.Never);
+		RefreshRepo.Verify(r => r.RevokeAsync(tokenId, TestContext.Current.CancellationToken), Times.Once);
+		RevokedAccessTokenRepo.Verify(r => r.CreateAsync(It.IsAny<RevokedAccessToken>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

@@ -24,7 +24,7 @@ public sealed class RequestPasswordResetHandler(
 			rawToken.Hash,
 			DateTime.UtcNow.AddHours(TokenConstants.PasswordResetTokenExpiryHours));
 
-		await passwordResetTokenRepository.AddAsync(token, cancellationToken);
+		await passwordResetTokenRepository.CreateAsync(token, cancellationToken);
 		await emailService.SendPasswordResetAsync(user.Email.Value, rawToken.Value, cancellationToken);
 	}
 }

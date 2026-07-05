@@ -7,6 +7,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
 public sealed class ResetPasswordHandler(
 	IPasswordResetTokenRepository passwordResetTokenRepository,
+	IUserRepository userRepository,
 	IPasswordHashService passwordHashService)
 {
 	public async Task HandleAsync(ResetPasswordCommand command, CancellationToken cancellationToken)
@@ -21,6 +22,10 @@ public sealed class ResetPasswordHandler(
 		token.MarkUsed();
 
 		var passwordHash = passwordHashService.Hash(command.Request.NewPassword);
-		await passwordResetTokenRepository.CompleteResetAsync(token.UserId, passwordHash, token.TokenId, cancellationToken);
+		await passwordResetTokenRepository.UseAsync(token.TokenId, cancellationToken);
+
+		// clearRequiresPasswordReset: completing a reset ends a forced rotation,
+		// otherwise the account would be re-prompted on every login.
+		await userRepository.UpdatePasswordAsync(token.UserId, passwordHash.Value, clearRequiresPasswordReset: true, cancellationToken);
 	}
 }

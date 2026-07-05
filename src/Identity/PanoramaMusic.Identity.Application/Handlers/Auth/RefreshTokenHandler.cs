@@ -5,6 +5,7 @@ using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 
@@ -14,7 +15,8 @@ public sealed class RefreshTokenHandler(
 	IUserRoleRepository userRoleRepository,
 	IJwtService jwtService,
 	ISessionOptions sessionOptions,
-	IClientContext clientContext)
+	IClientContext clientContext,
+	IUnitOfWork unitOfWork)
 {
 	private const int _refreshTokenExpiryDays = 7;
 
@@ -28,7 +30,11 @@ public sealed class RefreshTokenHandler(
 		{
 			// A previously rotated (and therefore revoked) token being presented again is a replay —
 			// revoke the whole family so the leaked chain can't be used for further rotations.
-			await refreshTokenRepository.RevokeFamilyAsync(existing.FamilyId, cancellationToken);
+			// Isolated: this security write must persist even though the request
+			// fails and the middleware rolls back the ambient transaction.
+			await unitOfWork.ExecuteIsolatedAsync(
+				() => refreshTokenRepository.RevokeFamilyAsync(existing.FamilyId, cancellationToken),
+				cancellationToken);
 			throw new UnauthorizedException("Refresh token has been revoked.");
 		}
 
@@ -39,7 +45,12 @@ public sealed class RefreshTokenHandler(
 		if (existing.IsSessionExpired(absoluteSessionLifetime))
 		{
 			existing.Revoke();
-			await refreshTokenRepository.UpdateAsync(existing, cancellationToken);
+
+			// Isolated: the revocation must persist even though the request
+			// fails and the middleware rolls back the ambient transaction.
+			await unitOfWork.ExecuteIsolatedAsync(
+				() => refreshTokenRepository.RevokeAsync(existing.TokenId, cancellationToken),
+				cancellationToken);
 			throw new UnauthorizedException("Session has expired. Please log in again.");
 		}
 
@@ -67,7 +78,8 @@ public sealed class RefreshTokenHandler(
 			generatedToken.Jti,
 			generatedToken.ExpiresAt);
 
-		await refreshTokenRepository.RotateAsync(existing.TokenId, newRefreshToken, cancellationToken);
+		await refreshTokenRepository.RevokeAsync(existing.TokenId, cancellationToken);
+		await refreshTokenRepository.CreateAsync(newRefreshToken, cancellationToken);
 
 		return new AuthResult(generatedToken.Token, newRawToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);
 	}
