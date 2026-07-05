@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Audit.Domain.Entities;
+namespace PanoramaMusic.Audit.Domain;
 
 public static class AuditOutcomes
 {

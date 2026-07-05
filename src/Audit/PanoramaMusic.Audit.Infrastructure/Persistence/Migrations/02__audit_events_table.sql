@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS audit.audit_events (
     source_ip      TEXT NOT NULL,
     user_agent     TEXT NOT NULL,
     correlation_id UUID NOT NULL,
-    outcome        TEXT NOT NULL,
+    outcome        TEXT NOT NULL CHECK (outcome IN ('success', 'failure')),
     reason         TEXT NULL,
     detail         JSONB NOT NULL
 );

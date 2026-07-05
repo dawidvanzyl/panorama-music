@@ -43,9 +43,13 @@ public static class DatabaseMigrator
 		connection.Open();
 
 		using var command = connection.CreateCommand();
-		// Role names cannot be parameterized in DDL; the password is escaped via
-		// format(%L) inside the DO block. The role is not a superuser and holds
-		// only the privileges granted by context migrations.
+		// Accepted deviation from the no-string-concatenation rule (ASVS 5.0.0-1.2.4):
+		// CREATE/ALTER ROLE is DDL inside a DO block, which cannot take bind
+		// parameters, so interpolation is the only option. The value is
+		// operator-configured (connection string), never user input, and is
+		// double-escaped — '' doubling here plus format(%L) quoting in the block.
+		// The role is not a superuser and holds only the privileges granted by
+		// context migrations.
 		var escapedPassword = applicationConnection.Password.Replace("'", "''");
 		command.CommandText = $"""
             DO $$
