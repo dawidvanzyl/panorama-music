@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using PanoramaMusic.Audit.Application.Factories;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Infrastructure.Contexts;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
 
 namespace PanoramaMusic.Audit.Infrastructure.Extensions;
@@ -12,6 +14,8 @@ public static class ServiceCollectionExtensions
 		// registered by AddInfrastructure, so no context-owned connection
 		// factory is needed.
 		services.AddTransient<IAuditLogger, AuditEventRepository>();
+		services.AddTransient<IAuditContext, AuditContext>();
+		services.AddTransient<IAuditEventFactory, AuditEventFactory>();
 		return services;
 	}
 }

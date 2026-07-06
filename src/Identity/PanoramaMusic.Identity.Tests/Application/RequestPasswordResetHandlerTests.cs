@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -18,6 +21,14 @@ public class RequestPasswordResetHandlerTests
 		UserRepo = new Mock<IUserRepository>();
 		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
 		EmailService = new Mock<IEmailService>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
 		ResetTokenRepo
 			.Setup(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
@@ -27,12 +38,14 @@ public class RequestPasswordResetHandlerTests
 			.Setup(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
-		Handler = new RequestPasswordResetHandler(UserRepo.Object, ResetTokenRepo.Object, EmailService.Object);
+		Handler = new RequestPasswordResetHandler(UserRepo.Object, ResetTokenRepo.Object, EmailService.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
 	public Mock<IEmailService> EmailService { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public RequestPasswordResetHandler Handler { get; }
 
 	[Fact]

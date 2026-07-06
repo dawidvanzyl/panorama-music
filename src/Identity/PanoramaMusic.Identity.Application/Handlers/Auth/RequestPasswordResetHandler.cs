@@ -1,3 +1,6 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -9,7 +12,9 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class RequestPasswordResetHandler(
 	IUserRepository userRepository,
 	IPasswordResetTokenRepository passwordResetTokenRepository,
-	IEmailService emailService)
+	IEmailService emailService,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	public async Task HandleAsync(RequestPasswordResetCommand command, CancellationToken cancellationToken)
 	{
@@ -17,6 +22,11 @@ public sealed class RequestPasswordResetHandler(
 		if (user is null)
 			return;
 
+		await CreateTokenAndSendEmailAsync(user, cancellationToken);
+	}
+
+	private async Task CreateTokenAndSendEmailAsync(User user, CancellationToken cancellationToken)
+	{
 		var rawToken = RawToken.Generate();
 		var token = new PasswordResetToken(
 			Guid.NewGuid(),
@@ -26,5 +36,14 @@ public sealed class RequestPasswordResetHandler(
 
 		await passwordResetTokenRepository.CreateAsync(token, cancellationToken);
 		await emailService.SendPasswordResetAsync(user.Email.Value, rawToken.Value, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.PasswordResetRequested,
+				user.UserId,
+				user.Email.Value,
+				targetId: null,
+				AuditOutcomes.Success),
+			cancellationToken);
 	}
 }

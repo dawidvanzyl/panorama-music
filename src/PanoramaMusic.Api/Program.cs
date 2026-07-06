@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using PanoramaMusic.Api.Authorization;
 using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
@@ -55,10 +56,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 	options.KnownProxies.Clear();
 });
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddAuditInfrastructure();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
+builder.Services.AddAuthorizationResultHandler<AuditingAuthorizationMiddlewareResultHandler>();
 builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddValidation();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();

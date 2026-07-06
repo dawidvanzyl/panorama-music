@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Requests.Auth;
@@ -18,17 +21,27 @@ public class CompleteRegistrationHandlerTests
 		InviteRepo = new Mock<IInviteTokenRepository>();
 		UserRepo = new Mock<IUserRepository>();
 		Hasher = new Mock<IPasswordHashService>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
 
 		Hasher
 			.Setup(h => h.Hash(It.IsAny<string>()))
 			.Returns(PasswordHash.Create("$argon2id$v=19$hashed"));
 
-		Handler = new CompleteRegistrationHandler(InviteRepo.Object, UserRepo.Object, Hasher.Object);
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
+
+		Handler = new CompleteRegistrationHandler(InviteRepo.Object, UserRepo.Object, Hasher.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IInviteTokenRepository> InviteRepo { get; }
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IPasswordHashService> Hasher { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public CompleteRegistrationHandler Handler { get; }
 
 	[Fact]

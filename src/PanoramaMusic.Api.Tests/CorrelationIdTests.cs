@@ -48,7 +48,9 @@ public sealed class CorrelationIdTests(ApiTestFixture fixture)
 	[Trait("AC", "M1.5UC2")]
 	public async Task PostLoginWith_correlationIdHeader_LoginFails_PropagatesIdToLogsAndErrorPayload()
 	{
-		const string suppliedCorrelationId = "caller-supplied-correlation-id";
+		// A GUID, not an arbitrary string: audit rows persist the correlation id as a
+		// UUID, so only caller-supplied values that already are one are honoured.
+		var suppliedCorrelationId = Guid.NewGuid().ToString();
 
 		var captureProvider = new CaptureLoggerProvider();
 		using var client = CreateClientWithCapture(captureProvider);
@@ -70,6 +72,31 @@ public sealed class CorrelationIdTests(ApiTestFixture fixture)
 
 		var handledEntry = captureProvider.Entries.Single(entry => entry.Category == typeof(ApiExceptionHandler).FullName);
 		handledEntry.Properties["CorrelationId"].ShouldBe(suppliedCorrelationId);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.5UC2")]
+	public async Task PostLoginWith_nonGuidCorrelationIdHeader_LoginFails_ReplacesItWithAGeneratedGuid()
+	{
+		const string suppliedCorrelationId = "caller-supplied-correlation-id";
+
+		var captureProvider = new CaptureLoggerProvider();
+		using var client = CreateClientWithCapture(captureProvider);
+
+		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
+		{
+			Content = JsonContent.Create(new { Email = "correlation-uc2b@example.com", Password = "WrongPassword123!" }),
+		};
+		request.Headers.Add(TestRemoteIpStartupFilter.HeaderName, "10.0.1.3");
+		request.Headers.Add(_correlationIdHeader, suppliedCorrelationId);
+
+		var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+		var headerValue = response.Headers.GetValues(_correlationIdHeader).Single();
+		headerValue.ShouldNotBe(suppliedCorrelationId);
+		Guid.TryParse(headerValue, out _).ShouldBeTrue();
 	}
 
 	/// <summary>

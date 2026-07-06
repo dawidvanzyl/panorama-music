@@ -1,4 +1,8 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
@@ -8,7 +12,9 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class CompleteRegistrationHandler(
 	IInviteTokenRepository inviteTokenRepository,
 	IUserRepository userRepository,
-	IPasswordHashService passwordHashService)
+	IPasswordHashService passwordHashService,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	public async Task HandleAsync(CompleteRegistrationCommand command, CancellationToken cancellationToken)
 	{
@@ -25,7 +31,21 @@ public sealed class CompleteRegistrationHandler(
 			?? throw new UnauthorizedException("User not found.");
 
 		var passwordHash = passwordHashService.Hash(command.Request.NewPassword);
-		await userRepository.UpdatePasswordAsync(user.UserId, passwordHash.Value, clearRequiresPasswordReset: false, cancellationToken);
+		await CompleteAsync(user, passwordHash.Value, cancellationToken);
+	}
+
+	private async Task CompleteAsync(User user, string passwordHash, CancellationToken cancellationToken)
+	{
+		await userRepository.UpdatePasswordAsync(user.UserId, passwordHash, clearRequiresPasswordReset: false, cancellationToken);
 		await userRepository.ActivateAsync(user.UserId, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.RegistrationCompleted,
+				user.UserId,
+				user.Email.Value,
+				targetId: null,
+				AuditOutcomes.Success),
+			cancellationToken);
 	}
 }

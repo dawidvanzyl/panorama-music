@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Sessions;
 using PanoramaMusic.Identity.Application.Handlers.Sessions;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -16,20 +19,32 @@ public class RevokeOwnOtherSessionsHandlerTests
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
 		UserContext = new Mock<IUserContext>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
 
 		UserId = Guid.NewGuid();
 		UserContext.SetupGet(c => c.UserId).Returns(UserId);
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
 		Handler = new RevokeOwnOtherSessionsHandler(
 			RefreshRepo.Object,
 			RevokedAccessTokenRepo.Object,
 			UserContext.Object,
-			new CurrentSessionResolver(RefreshRepo.Object));
+			new CurrentSessionResolver(RefreshRepo.Object),
+			AuditLogger.Object,
+			AuditEventFactory.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
 	public Mock<IUserContext> UserContext { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public Guid UserId { get; }
 	public RevokeOwnOtherSessionsHandler Handler { get; }
 

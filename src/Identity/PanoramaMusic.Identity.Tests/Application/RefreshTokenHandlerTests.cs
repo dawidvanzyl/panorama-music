@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -25,6 +28,8 @@ public class RefreshTokenHandlerTests
 		SessionOptions = new Mock<ISessionOptions>();
 		ClientContext = new Mock<IClientContext>();
 		UnitOfWork = new Mock<IUnitOfWork>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
 
 		SessionOptions.SetupGet(o => o.AbsoluteSessionLifetimeDays).Returns(30);
 
@@ -33,6 +38,12 @@ public class RefreshTokenHandlerTests
 		UnitOfWork
 			.Setup(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
 			.Returns<Func<Task>, CancellationToken>((work, _) => work());
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
 		RefreshRepo
 			.Setup(r => r.CreateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
@@ -50,7 +61,7 @@ public class RefreshTokenHandlerTests
 			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("new-access-token", DateTime.UtcNow, Guid.NewGuid()));
 
-		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object, UnitOfWork.Object);
+		Handler = new RefreshTokenHandler(RefreshRepo.Object, UserRepo.Object, RoleRepo.Object, Jwt.Object, SessionOptions.Object, ClientContext.Object, UnitOfWork.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
@@ -60,6 +71,8 @@ public class RefreshTokenHandlerTests
 	public Mock<ISessionOptions> SessionOptions { get; }
 	public Mock<IClientContext> ClientContext { get; }
 	public Mock<IUnitOfWork> UnitOfWork { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public RefreshTokenHandler Handler { get; }
 
 	private static RefreshToken CreateToken(string tokenHash, Guid userId, DateTime expiresAt, DateTime? sessionStartedAt = null, Guid? familyId = null)

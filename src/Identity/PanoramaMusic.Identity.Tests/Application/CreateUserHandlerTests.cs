@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -35,12 +38,28 @@ public class CreateUserHandlerTests
 
 		var appOptions = new Mock<IAppOptions>();
 		appOptions.Setup(o => o.AppBaseUrl).Returns(string.Empty);
-		Handler = new CreateUserHandler(UserRepo.Object, UserRoleRepo.Object, InviteRepo.Object, appOptions.Object);
+
+		UserContext = new Mock<IUserContext>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
+
+		UserContext.SetupGet(u => u.UserId).Returns(Guid.NewGuid());
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
+
+		Handler = new CreateUserHandler(UserRepo.Object, UserRoleRepo.Object, InviteRepo.Object, appOptions.Object, UserContext.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IUserRoleRepository> UserRoleRepo { get; }
 	public Mock<IInviteTokenRepository> InviteRepo { get; }
+	public Mock<IUserContext> UserContext { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public CreateUserHandler Handler { get; }
 
 	[Fact]
