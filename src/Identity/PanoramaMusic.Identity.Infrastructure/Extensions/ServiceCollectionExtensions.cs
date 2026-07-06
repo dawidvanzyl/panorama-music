@@ -143,7 +143,6 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		services.AddSingleton<IAppOptions>(sp => sp.GetRequiredService<IOptions<AppOptions>>().Value);
 		services.AddSingleton<ISessionOptions>(sp => sp.GetRequiredService<IOptions<JwtOptions>>().Value);
-		services.AddHttpContextAccessor();
 		services.AddScoped<IUserContext, UserContext>();
 		services.AddScoped<IAccessTokenContext, AccessTokenContext>();
 		services.AddScoped<IClientContext, ClientContext>();

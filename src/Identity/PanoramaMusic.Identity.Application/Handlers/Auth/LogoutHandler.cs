@@ -1,3 +1,6 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -9,7 +12,10 @@ namespace PanoramaMusic.Identity.Application.Handlers.Auth;
 public sealed class LogoutHandler(
 	IRefreshTokenRepository refreshTokenRepository,
 	IRevokedAccessTokenRepository revokedAccessTokenRepository,
-	IAccessTokenContext accessTokenContext)
+	IAccessTokenContext accessTokenContext,
+	IUserContext userContext,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	public async Task HandleAsync(LogoutCommand command, CancellationToken cancellationToken)
 	{
@@ -34,6 +40,7 @@ public sealed class LogoutHandler(
 				}
 
 				await refreshTokenRepository.RevokeAsync(token.TokenId, cancellationToken);
+				await AuditLoggedOutAsync(cancellationToken);
 				return;
 			}
 		}
@@ -42,5 +49,19 @@ public sealed class LogoutHandler(
 		// denylist still needs to happen on its own.
 		if (accessTokenToRevoke is not null)
 			await revokedAccessTokenRepository.CreateAsync(accessTokenToRevoke, cancellationToken);
+
+		await AuditLoggedOutAsync(cancellationToken);
 	}
+
+	// Actor is null-safe: a logout with an already-expired access token carries
+	// no authenticated principal.
+	private Task AuditLoggedOutAsync(CancellationToken cancellationToken) =>
+		auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.LoggedOut,
+				userContext.UserId,
+				userContext.Email,
+				targetId: null,
+				AuditOutcomes.Success),
+			cancellationToken);
 }

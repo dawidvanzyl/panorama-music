@@ -1,4 +1,10 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Extensions;
+using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 
@@ -6,7 +12,10 @@ namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 
 public sealed class RevokeSessionHandler(
 	IRefreshTokenRepository refreshTokenRepository,
-	IRevokedAccessTokenRepository revokedAccessTokenRepository)
+	IRevokedAccessTokenRepository revokedAccessTokenRepository,
+	IUserContext userContext,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	public async Task HandleAsync(RevokeSessionCommand command, CancellationToken cancellationToken)
 	{
@@ -14,12 +23,26 @@ public sealed class RevokeSessionHandler(
 		if (session is null || session.IsRevoked)
 			throw new EntityNotFoundException($"Session {command.TokenId} was not found.");
 
+		await RevokeAsync(session, cancellationToken);
+	}
+
+	private async Task RevokeAsync(RefreshToken session, CancellationToken cancellationToken)
+	{
 		if (session.LiveAccessTokenOrNull() is { } revokedAccessToken)
 		{
 			await revokedAccessTokenRepository.DeleteExpiredAsync(cancellationToken);
 			await revokedAccessTokenRepository.CreateAsync(revokedAccessToken, cancellationToken);
 		}
 
-		await refreshTokenRepository.RevokeAsync(command.TokenId, cancellationToken);
+		await refreshTokenRepository.RevokeAsync(session.TokenId, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.TokenRevoked,
+				userContext.GetRequiredUserId(),
+				userContext.Email,
+				session.UserId,
+				AuditOutcomes.Success),
+			cancellationToken);
 	}
 }

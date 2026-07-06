@@ -17,8 +17,8 @@ public sealed class GetUsersHandler(
 		foreach (var user in users)
 		{
 			var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
-			var isProtected = !string.IsNullOrEmpty(adminOptions.SeedAdminEmail) &&
-				string.Equals(user.Email.Value, adminOptions.SeedAdminEmail, StringComparison.OrdinalIgnoreCase);
+			var isProtected = !string.IsNullOrEmpty(adminOptions.SeedAdminEmail)
+				&& string.Equals(user.Email.Value, adminOptions.SeedAdminEmail, StringComparison.OrdinalIgnoreCase);
 			summaries.Add(new GetUserResult(user.UserId, user.Email.Value, roles, user.IsActive, isProtected, user.HasCompletedRegistration));
 		}
 

@@ -1,4 +1,5 @@
 using PanoramaMusic.Identity.Application.Commands.Sessions;
+using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Services.Sessions;
@@ -15,7 +16,7 @@ public sealed class GetOwnSessionsHandler(
 	{
 		var currentTokenId = await currentSessionResolver.ResolveAsync(command.CurrentRefreshToken, cancellationToken);
 
-		var sessions = await refreshTokenRepository.GetActiveByUserIdAsync(userContext.UserId, cancellationToken);
+		var sessions = await refreshTokenRepository.GetActiveByUserIdAsync(userContext.GetRequiredUserId(), cancellationToken);
 
 		return sessions
 			.Select(session => new SessionResult(

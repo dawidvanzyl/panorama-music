@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -8,6 +11,7 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Persistence.Transactions;
 using Shouldly;
 using Xunit;
 
@@ -24,6 +28,21 @@ public class LoginHandlerTests
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		PasswordResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
 		ClientContext = new Mock<IClientContext>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
+		UnitOfWork = new Mock<IUnitOfWork>();
+
+		// Run the isolated work inline so repository verifications still observe
+		// the calls made inside the isolated block.
+		UnitOfWork
+			.Setup(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+			.Returns<Func<Task>, CancellationToken>((work, _) => work());
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
 		RefreshRepo
 			.Setup(r => r.CreateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
@@ -37,7 +56,7 @@ public class LoginHandlerTests
 			.Setup(j => j.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IList<Role>>()))
 			.Returns(new JwtToken("access-token", DateTime.UtcNow, Guid.NewGuid()));
 
-		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object, PasswordResetTokenRepo.Object, ClientContext.Object);
+		Handler = new LoginHandler(UserRepo.Object, RoleRepo.Object, Hasher.Object, Jwt.Object, RefreshRepo.Object, PasswordResetTokenRepo.Object, ClientContext.Object, AuditLogger.Object, AuditEventFactory.Object, UnitOfWork.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
@@ -47,6 +66,9 @@ public class LoginHandlerTests
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public Mock<IClientContext> ClientContext { get; }
 	public Mock<IPasswordResetTokenRepository> PasswordResetTokenRepo { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
+	public Mock<IUnitOfWork> UnitOfWork { get; }
 	public LoginHandler Handler { get; }
 
 	private static User CreateActiveUser(string email = "user@test.com", string passwordHashValue = "$argon2id$v=19$valid")

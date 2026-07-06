@@ -1,4 +1,7 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
@@ -16,6 +19,15 @@ public class LogoutHandlerTests
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
 		AccessTokenContext = new Mock<IAccessTokenContext>();
+		UserContext = new Mock<IUserContext>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
+
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
 		RefreshRepo
 			.Setup(r => r.RevokeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -30,12 +42,15 @@ public class LogoutHandlerTests
 		AccessTokenContext.SetupGet(c => c.Jti).Returns(Jti);
 		AccessTokenContext.SetupGet(c => c.ExpiresAtUtc).Returns(AccessTokenExpiresAtUtc);
 
-		Handler = new LogoutHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object, AccessTokenContext.Object);
+		Handler = new LogoutHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object, AccessTokenContext.Object, UserContext.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
 	public Mock<IAccessTokenContext> AccessTokenContext { get; }
+	public Mock<IUserContext> UserContext { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public Guid Jti { get; }
 	public DateTime AccessTokenExpiresAtUtc { get; }
 	public LogoutHandler Handler { get; }

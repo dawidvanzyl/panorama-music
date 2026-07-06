@@ -1,3 +1,6 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
@@ -16,7 +19,9 @@ public sealed class RefreshTokenHandler(
 	IJwtService jwtService,
 	ISessionOptions sessionOptions,
 	IClientContext clientContext,
-	IUnitOfWork unitOfWork)
+	IUnitOfWork unitOfWork,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	private const int _refreshTokenExpiryDays = 7;
 
@@ -33,7 +38,7 @@ public sealed class RefreshTokenHandler(
 			// Isolated: this security write must persist even though the request
 			// fails and the middleware rolls back the ambient transaction.
 			await unitOfWork.ExecuteIsolatedAsync(
-				() => refreshTokenRepository.RevokeFamilyAsync(existing.FamilyId, cancellationToken),
+				() => RevokeFamilyAsync(existing.FamilyId, existing.UserId, cancellationToken),
 				cancellationToken);
 			throw new UnauthorizedException("Refresh token has been revoked.");
 		}
@@ -47,7 +52,7 @@ public sealed class RefreshTokenHandler(
 			// Isolated: the revocation must persist even though the request
 			// fails and the middleware rolls back the ambient transaction.
 			await unitOfWork.ExecuteIsolatedAsync(
-				() => refreshTokenRepository.RevokeAsync(existing.TokenId, cancellationToken),
+				() => RevokeExpiredSessionAsync(existing.TokenId, existing.UserId, cancellationToken),
 				cancellationToken);
 			throw new UnauthorizedException("Session has expired. Please log in again.");
 		}
@@ -55,9 +60,43 @@ public sealed class RefreshTokenHandler(
 		var user = await userRepository.GetByIdAsync(existing.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
-		if (!user.IsActive)
-			throw new UnauthorizedException("User account is not active.");
+		return !user.IsActive
+			? throw new UnauthorizedException("User account is not active.")
+			: await RotateAsync(existing, user, cancellationToken);
+	}
 
+	private async Task RevokeFamilyAsync(Guid familyId, Guid userId, CancellationToken cancellationToken)
+	{
+		await refreshTokenRepository.RevokeFamilyAsync(familyId, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.TokenReuseDetected,
+				userId,
+				actorEmail: null,
+				targetId: userId,
+				AuditOutcomes.Failure,
+				reason: "TokenReuse"),
+			cancellationToken);
+	}
+
+	private async Task RevokeExpiredSessionAsync(Guid tokenId, Guid userId, CancellationToken cancellationToken)
+	{
+		await refreshTokenRepository.RevokeAsync(tokenId, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.TokenRevoked,
+				userId,
+				actorEmail: null,
+				targetId: userId,
+				AuditOutcomes.Failure,
+				reason: "SessionExpired"),
+			cancellationToken);
+	}
+
+	private async Task<AuthResult> RotateAsync(RefreshToken existing, User user, CancellationToken cancellationToken)
+	{
 		var roles = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
 		var generatedToken = jwtService.GenerateToken(user.UserId, user.Email.Value, roles);
 
@@ -78,6 +117,15 @@ public sealed class RefreshTokenHandler(
 
 		await refreshTokenRepository.RevokeAsync(existing.TokenId, cancellationToken);
 		await refreshTokenRepository.CreateAsync(newRefreshToken, cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.TokenRefreshed,
+				user.UserId,
+				user.Email.Value,
+				targetId: null,
+				AuditOutcomes.Success),
+			cancellationToken);
 
 		return new AuthResult(generatedToken.Token, newRawToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt);
 	}
