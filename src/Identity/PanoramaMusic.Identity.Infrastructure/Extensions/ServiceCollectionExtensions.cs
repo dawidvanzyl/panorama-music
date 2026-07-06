@@ -18,7 +18,6 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Contexts;
-using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using System.IdentityModel.Tokens.Jwt;
@@ -30,7 +29,6 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddIdentityInfrastructure(
 		this IServiceCollection services,
-		string connectionString,
 		IConfiguration configuration)
 	{
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
@@ -38,7 +36,6 @@ public static class ServiceCollectionExtensions
 		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
 		services.Configure<HibpOptions>(configuration.GetSection(HibpOptions.SectionName));
 		services.Configure<AppOptions>(configuration);
-		services.AddDataAccess(connectionString);
 		services.AddRepositories();
 		services.AddServices();
 		services.AddHandlers();
@@ -115,14 +112,6 @@ public static class ServiceCollectionExtensions
 			.AddPolicy("AdminPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Admin)))
 			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Teacher)));
 
-		return services;
-	}
-
-	private static IServiceCollection AddDataAccess(
-		this IServiceCollection services,
-		string connectionString)
-	{
-		services.AddSingleton<IDbConnectionFactory>(_ => new NpgsqlConnectionFactory(connectionString));
 		return services;
 	}
 

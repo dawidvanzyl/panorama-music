@@ -20,7 +20,7 @@ public class RequestPasswordResetHandlerTests
 		EmailService = new Mock<IEmailService>();
 
 		ResetTokenRepo
-			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		EmailService
@@ -51,7 +51,7 @@ public class RequestPasswordResetHandlerTests
 			new RequestPasswordResetCommand(new RequestPasswordResetRequest("user@test.com")),
 			TestContext.Current.CancellationToken);
 
-		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
+		ResetTokenRepo.Verify(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
 		EmailService.Verify(e => e.SendPasswordResetAsync("user@test.com", It.IsAny<string>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
@@ -67,7 +67,7 @@ public class RequestPasswordResetHandlerTests
 			new RequestPasswordResetCommand(new RequestPasswordResetRequest("unknown@test.com")),
 			TestContext.Current.CancellationToken);
 
-		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
 		EmailService.Verify(e => e.SendPasswordResetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
@@ -85,7 +85,7 @@ public class RequestPasswordResetHandlerTests
 
 		PasswordResetToken? captured = null;
 		ResetTokenRepo
-			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
 			.Callback<PasswordResetToken, CancellationToken>((t, _) => captured = t)
 			.Returns(Task.CompletedTask);
 
@@ -115,6 +115,6 @@ public class RequestPasswordResetHandlerTests
 			TestContext.Current.CancellationToken);
 
 		UserRepo.Verify(r => r.GetByEmailAsync("user@test.com", TestContext.Current.CancellationToken), Times.Once);
-		ResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
+		ResetTokenRepo.Verify(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 }

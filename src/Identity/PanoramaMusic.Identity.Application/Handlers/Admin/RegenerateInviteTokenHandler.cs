@@ -20,7 +20,8 @@ public sealed class RegenerateInviteTokenHandler(
 
 		var token = RawToken.Generate();
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
-		await inviteTokenRepository.RevokeAndIssueAsync(user.UserId, inviteToken, cancellationToken);
+		await inviteTokenRepository.RevokeForUserAsync(user.UserId, cancellationToken);
+		await inviteTokenRepository.CreateAsync(inviteToken, cancellationToken);
 
 		return new RegenerateInviteTokenResult($"{appOptions.AppBaseUrl}/#/register?token={token.Value}");
 	}

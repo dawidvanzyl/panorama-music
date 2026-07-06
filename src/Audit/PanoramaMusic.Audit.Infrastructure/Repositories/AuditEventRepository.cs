@@ -1,17 +1,16 @@
 using Dapper;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain.Entities;
-using PanoramaMusic.Audit.Infrastructure.Factories;
 using PanoramaMusic.Audit.Infrastructure.Repositories.Bases;
+using PanoramaMusic.Persistence.Transactions;
 using System.Text.Json;
 
 namespace PanoramaMusic.Audit.Infrastructure.Repositories;
 
-public class AuditEventRepository(IDbConnectionFactory connectionFactory) : RepositoryBase(connectionFactory), IAuditLogger
+public class AuditEventRepository(IUnitOfWork unitOfWork) : RepositoryBase, IAuditLogger
 {
-	public async Task LogAsync(AuditEvent auditEvent, CancellationToken cancellationToken)
+	public async Task CreateAsync(AuditEvent auditEvent, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
 			"audit.create_audit_event",
 			new
@@ -29,7 +28,8 @@ public class AuditEventRepository(IDbConnectionFactory connectionFactory) : Repo
 				p_reason = auditEvent.Reason,
 				p_detail = JsonSerializer.Serialize(auditEvent.Detail),
 			},
+			unitOfWork.Transaction,
 			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await unitOfWork.Connection.ExecuteAsync(command);
 	}
 }

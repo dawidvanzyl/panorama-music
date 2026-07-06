@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace PanoramaMusic.Identity.Infrastructure.Factories;
+namespace PanoramaMusic.Persistence.Factories;
 
 public interface IDbConnectionFactory
 {

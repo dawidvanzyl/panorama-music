@@ -19,15 +19,13 @@ public sealed class CompleteRegistrationHandler(
 		if (inviteToken.IsExpired || inviteToken.IsUsed)
 			throw new UnauthorizedException("Invalid invite token.");
 
-		inviteToken.MarkUsed();
+		await inviteTokenRepository.UseAsync(inviteToken.TokenId, cancellationToken);
 
 		var user = await userRepository.GetByIdAsync(inviteToken.UserId, cancellationToken)
 			?? throw new UnauthorizedException("User not found.");
 
 		var passwordHash = passwordHashService.Hash(command.Request.NewPassword);
-		user.SetPassword(passwordHash);
-		user.Activate();
-
-		await userRepository.CompleteActivationAsync(user, inviteToken.TokenId, cancellationToken);
+		await userRepository.UpdatePasswordAsync(user.UserId, passwordHash.Value, clearRequiresPasswordReset: false, cancellationToken);
+		await userRepository.ActivateAsync(user.UserId, cancellationToken);
 	}
 }

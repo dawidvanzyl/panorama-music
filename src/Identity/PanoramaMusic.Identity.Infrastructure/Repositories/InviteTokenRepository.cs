@@ -3,28 +3,27 @@ using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
-using PanoramaMusic.Identity.Infrastructure.Factories;
 using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
+using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
-public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : RepositoryBase(connectionFactory), IInviteTokenRepository
+public class InviteTokenRepository(IUnitOfWork unitOfWork) : RepositoryBase(unitOfWork), IInviteTokenRepository
 {
 	public async Task<InviteToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
 			"identity.get_invite_token_by_hash",
 			new { p_token_hash = tokenHash },
+			Transaction,
 			cancellationToken);
-		var dto = await connection.QuerySingleOrDefaultAsync<InviteTokenDto>(command);
+		var dto = await Connection.QuerySingleOrDefaultAsync<InviteTokenDto>(command);
 
 		return dto?.MapToInviteToken();
 	}
 
-	public async Task AddAsync(InviteToken token, CancellationToken cancellationToken)
+	public async Task CreateAsync(InviteToken token, CancellationToken cancellationToken)
 	{
-		using var connection = CreateConnection();
 		var command = CreateCommandDefinition(
 			"identity.create_invite_token",
 			new
@@ -34,43 +33,28 @@ public class InviteTokenRepository(IDbConnectionFactory connectionFactory) : Rep
 				p_token_hash = token.TokenHash,
 				p_expires_at = token.ExpiresAt,
 			},
+			Transaction,
 			cancellationToken);
-		await connection.ExecuteAsync(command);
+		await Connection.ExecuteAsync(command);
 	}
 
-	public async Task RevokeAndIssueAsync(Guid userId, InviteToken newToken, CancellationToken cancellationToken)
+	public async Task UseAsync(Guid tokenId, CancellationToken cancellationToken)
 	{
-		var dbConnection = CreateConnection();
-		await dbConnection.OpenAsync(cancellationToken);
-		await using var transaction = await dbConnection.BeginTransactionAsync(cancellationToken);
-		try
-		{
-			var revokeCommand = CreateCommandDefinition(
-				"identity.update_revoke_invite_tokens_for_user",
-				new { p_user_id = userId },
-				transaction,
-				cancellationToken);
-			await dbConnection.ExecuteAsync(revokeCommand);
+		var command = CreateCommandDefinition(
+			"identity.update_use_invite_token",
+			new { p_token_id = tokenId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+	}
 
-			var createCommand = CreateCommandDefinition(
-				"identity.create_invite_token",
-				new
-				{
-					p_token_id = newToken.TokenId,
-					p_user_id = newToken.UserId,
-					p_token_hash = newToken.TokenHash,
-					p_expires_at = newToken.ExpiresAt,
-				},
-				transaction,
-				cancellationToken);
-			await dbConnection.ExecuteAsync(createCommand);
-
-			await transaction.CommitAsync(cancellationToken);
-		}
-		catch
-		{
-			await transaction.RollbackAsync(cancellationToken);
-			throw;
-		}
+	public async Task RevokeForUserAsync(Guid userId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"identity.update_revoke_invite_tokens_for_user",
+			new { p_user_id = userId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
 	}
 }

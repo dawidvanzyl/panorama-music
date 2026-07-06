@@ -39,7 +39,7 @@ public sealed class LoginHandler(
 				user.UserId,
 				rawResetToken.Hash,
 				DateTime.UtcNow.AddHours(TokenConstants.PasswordResetTokenExpiryHours));
-			await passwordResetTokenRepository.AddAsync(resetToken, cancellationToken);
+			await passwordResetTokenRepository.CreateAsync(resetToken, cancellationToken);
 
 			return LoginResult.RotationRequired(rawResetToken.Value);
 		}
@@ -64,7 +64,7 @@ public sealed class LoginHandler(
 			generatedToken.Jti,
 			generatedToken.ExpiresAt);
 
-		await refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
+		await refreshTokenRepository.CreateAsync(refreshToken, cancellationToken);
 
 		return LoginResult.Success(new AuthResult(generatedToken.Token, rawRefreshToken.Value, generatedToken.ExpiresAt, refreshTokenExpiresAt));
 	}

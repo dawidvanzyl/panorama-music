@@ -26,11 +26,11 @@ public class LoginHandlerTests
 		ClientContext = new Mock<IClientContext>();
 
 		RefreshRepo
-			.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		PasswordResetTokenRepo
-			.Setup(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		Jwt
@@ -82,7 +82,7 @@ public class LoginHandlerTests
 		result.Tokens.ShouldNotBeNull();
 		result.Tokens.AccessToken.ShouldBe("access-token");
 		result.Tokens.RefreshToken.ShouldNotBeNullOrEmpty();
-		RefreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.CreateAsync(It.IsAny<RefreshToken>(), TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -218,8 +218,8 @@ public class LoginHandlerTests
 		result.RequiresPasswordReset.ShouldBeTrue();
 		result.Tokens.ShouldBeNull();
 		result.PasswordResetToken.ShouldNotBeNullOrEmpty();
-		PasswordResetTokenRepo.Verify(r => r.AddAsync(It.Is<PasswordResetToken>(t => t.UserId == user.UserId), TestContext.Current.CancellationToken), Times.Once);
-		RefreshRepo.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+		PasswordResetTokenRepo.Verify(r => r.CreateAsync(It.Is<PasswordResetToken>(t => t.UserId == user.UserId), TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.CreateAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -244,6 +244,6 @@ public class LoginHandlerTests
 
 		result.RequiresPasswordReset.ShouldBeFalse();
 		result.Tokens.ShouldNotBeNull();
-		PasswordResetTokenRepo.Verify(r => r.AddAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
+		PasswordResetTokenRepo.Verify(r => r.CreateAsync(It.IsAny<PasswordResetToken>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

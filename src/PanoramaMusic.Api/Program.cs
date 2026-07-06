@@ -56,8 +56,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddInfrastructure(connectionString);
-builder.Services.AddAuditInfrastructure(connectionString);
-builder.Services.AddIdentityInfrastructure(connectionString, builder.Configuration);
+builder.Services.AddAuditInfrastructure();
+builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddValidation();
@@ -80,12 +80,24 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseExceptionHandler();
+
+// Scoped to API endpoints so static files and the SPA fallback don't open a
+// database transaction; /api/health is excluded so health checks stay
+// independent of database availability. Registered after UseExceptionHandler
+// (so the rollback happens before the exception is translated into a response)
+// and before RateLimitingMiddleware, whose token-to-account lookups already
+// need the active unit of work.
+app.UseWhen(
+	context => context.Request.Path.StartsWithSegments("/api")
+		&& !context.Request.Path.StartsWithSegments("/api/health"),
+	branch => branch.UseMiddleware<UnitOfWorkMiddleware>());
+
 app.UseMiddleware<RateLimitingMiddleware>();
 app.UseRateLimiter();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.UseExceptionHandler();
 
 app.UseAuthentication();
 app.UseAuthorization();

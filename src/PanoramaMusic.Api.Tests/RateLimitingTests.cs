@@ -4,6 +4,7 @@ using PanoramaMusic.Api.Tests.Middleware;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Persistence.Transactions;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;
@@ -136,15 +137,19 @@ public sealed class RateLimitingTests(ApiTestFixture fixture)
 		using var scope = fixture.Services.CreateScope();
 		var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 		var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
 		var user = new User(Guid.NewGuid(), Email.Create($"rate-limit-token-{Guid.NewGuid()}@example.com"), DateTime.UtcNow);
 		user.Activate();
-		await userRepository.AddAsync(user, TestContext.Current.CancellationToken);
 
 		var rawToken = RawToken.Generate();
 		var tokenId = Guid.NewGuid();
 		var refreshToken = new RefreshToken(tokenId, user.UserId, rawToken.Hash, DateTime.UtcNow.AddDays(7), tokenId, DateTime.UtcNow, null, null);
-		await refreshTokenRepository.AddAsync(refreshToken, TestContext.Current.CancellationToken);
+
+		await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+		await userRepository.CreateAsync(user, TestContext.Current.CancellationToken);
+		await refreshTokenRepository.CreateAsync(refreshToken, TestContext.Current.CancellationToken);
+		await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
 		return rawToken.Value;
 	}

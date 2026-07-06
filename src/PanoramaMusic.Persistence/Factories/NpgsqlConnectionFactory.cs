@@ -1,7 +1,7 @@
 using Npgsql;
 using System.Data;
 
-namespace PanoramaMusic.Identity.Infrastructure.Factories;
+namespace PanoramaMusic.Persistence.Factories;
 
 public class NpgsqlConnectionFactory(string connectionString) : IDbConnectionFactory
 {

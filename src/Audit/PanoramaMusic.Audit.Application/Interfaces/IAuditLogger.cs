@@ -4,5 +4,5 @@ namespace PanoramaMusic.Audit.Application.Interfaces;
 
 public interface IAuditLogger
 {
-	Task LogAsync(AuditEvent auditEvent, CancellationToken cancellationToken);
+	Task CreateAsync(AuditEvent auditEvent, CancellationToken cancellationToken);
 }

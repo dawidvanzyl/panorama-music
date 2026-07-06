@@ -7,6 +7,7 @@ using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
+using PanoramaMusic.Persistence.Transactions;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Headers;
@@ -238,8 +239,11 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 	{
 		using var scope = fixture.Services.CreateScope();
 		var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
 		var tokenHash = RawToken.From(refreshTokenCookie).Hash;
 		var token = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, TestContext.Current.CancellationToken);
+		await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 		return token!.TokenId;
 	}
 
@@ -249,15 +253,20 @@ public sealed class SessionManagementTests(ApiTestFixture fixture)
 		var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 		var userRoleRepository = scope.ServiceProvider.GetRequiredService<IUserRoleRepository>();
 		var passwordHashService = scope.ServiceProvider.GetRequiredService<IPasswordHashService>();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
 		var email = $"session-management-{Guid.NewGuid()}@example.com";
 		var user = new User(Guid.NewGuid(), Email.Create(email), DateTime.UtcNow);
 		user.SetPassword(passwordHashService.Hash(_password));
 		user.Activate();
-		await userRepository.AddAsync(user, TestContext.Current.CancellationToken);
+		await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+		await userRepository.CreateAsync(user, TestContext.Current.CancellationToken);
+		await userRepository.UpdatePasswordAsync(user.UserId, user.PasswordHash!.Value, clearRequiresPasswordReset: false, TestContext.Current.CancellationToken);
 
 		if (role.HasValue)
-			await userRoleRepository.AddAsync(new UserRole(user.UserId, role.Value), TestContext.Current.CancellationToken);
+			await userRoleRepository.CreateAsync(new UserRole(user.UserId, role.Value), TestContext.Current.CancellationToken);
+
+		await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
 		return (email, user.UserId);
 	}
