@@ -193,7 +193,6 @@ public class RefreshTokenHandlerTests
 		await Should.ThrowAsync<UnauthorizedException>(
 			() => Handler.HandleAsync(new RefreshTokenCommand(new RefreshTokenRequest(rawToken)), TestContext.Current.CancellationToken));
 
-		staleSession.IsRevoked.ShouldBeTrue();
 		RefreshRepo.Verify(r => r.RevokeAsync(staleSession.TokenId, TestContext.Current.CancellationToken), Times.Once);
 		UnitOfWork.Verify(u => u.ExecuteIsolatedAsync(It.IsAny<Func<Task>>(), TestContext.Current.CancellationToken), Times.Once);
 	}

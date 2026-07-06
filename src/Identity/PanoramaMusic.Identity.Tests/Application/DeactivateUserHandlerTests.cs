@@ -16,6 +16,7 @@ public class DeactivateUserHandlerTests
 	public DeactivateUserHandlerTests()
 	{
 		UserRepo = new Mock<IUserRepository>();
+		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		AdminOptions = new Mock<IAdminOptions>();
 		UserContext = new Mock<IUserContext>();
 
@@ -28,10 +29,11 @@ public class DeactivateUserHandlerTests
 		RequestingUserId = Guid.NewGuid();
 		UserContext.Setup(u => u.UserId).Returns(RequestingUserId);
 
-		Handler = new DeactivateUserHandler(UserRepo.Object, AdminOptions.Object, UserContext.Object);
+		Handler = new DeactivateUserHandler(UserRepo.Object, RefreshRepo.Object, AdminOptions.Object, UserContext.Object);
 	}
 
 	public Mock<IUserRepository> UserRepo { get; }
+	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public Mock<IAdminOptions> AdminOptions { get; }
 	public Mock<IUserContext> UserContext { get; }
 	public Guid RequestingUserId { get; }
@@ -51,6 +53,7 @@ public class DeactivateUserHandlerTests
 		await Handler.HandleAsync(new DeactivateUserCommand(userId), TestContext.Current.CancellationToken);
 
 		UserRepo.Verify(r => r.DeactivateAsync(userId, TestContext.Current.CancellationToken), Times.Once);
+		RefreshRepo.Verify(r => r.RevokeAllForUserAsync(userId, TestContext.Current.CancellationToken), Times.Once);
 	}
 
 	[Fact]
@@ -92,7 +95,7 @@ public class DeactivateUserHandlerTests
 
 		var seedAdminOptions = new Mock<IAdminOptions>();
 		seedAdminOptions.Setup(a => a.SeedAdminEmail).Returns("admin@panorama-music.com");
-		var handler = new DeactivateUserHandler(UserRepo.Object, seedAdminOptions.Object, UserContext.Object);
+		var handler = new DeactivateUserHandler(UserRepo.Object, RefreshRepo.Object, seedAdminOptions.Object, UserContext.Object);
 
 		await Should.ThrowAsync<DomainException>(
 			() => handler.HandleAsync(new DeactivateUserCommand(userId), TestContext.Current.CancellationToken));

@@ -7,6 +7,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 
 public sealed class DeactivateUserHandler(
 	IUserRepository userRepository,
+	IRefreshTokenRepository refreshTokenRepository,
 	IAdminOptions adminOptions,
 	IUserContext userContext)
 {
@@ -22,5 +23,9 @@ public sealed class DeactivateUserHandler(
 			throw new DomainException("The seed administrator account cannot be deactivated.");
 
 		await userRepository.DeactivateAsync(command.UserId, cancellationToken);
+
+		// Deactivation must end every live session immediately (ASVS 7.4.2);
+		// both writes share the ambient unit-of-work transaction.
+		await refreshTokenRepository.RevokeAllForUserAsync(command.UserId, cancellationToken);
 	}
 }

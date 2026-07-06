@@ -44,8 +44,6 @@ public sealed class RefreshTokenHandler(
 		var absoluteSessionLifetime = TimeSpan.FromDays(sessionOptions.AbsoluteSessionLifetimeDays);
 		if (existing.IsSessionExpired(absoluteSessionLifetime))
 		{
-			existing.Revoke();
-
 			// Isolated: the revocation must persist even though the request
 			// fails and the middleware rolls back the ambient transaction.
 			await unitOfWork.ExecuteIsolatedAsync(

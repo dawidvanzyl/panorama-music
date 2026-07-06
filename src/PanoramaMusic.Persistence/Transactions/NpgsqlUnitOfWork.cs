@@ -9,20 +9,73 @@ public sealed class NpgsqlUnitOfWork(IDbConnectionFactory connectionFactory) : I
 	private DbConnection? _connection;
 	private DbTransaction? _transaction;
 
-	public IDbConnection Connection => _connection
-		?? throw new InvalidOperationException("The unit of work has not been started. Call BeginAsync first.");
+	public IDbConnection Connection
+	{
+		get
+		{
+			EnsureStarted();
+			return _connection!;
+		}
+	}
 
-	public IDbTransaction Transaction => _transaction
-		?? throw new InvalidOperationException("The unit of work has no active transaction. Call BeginAsync first.");
+	public IDbTransaction Transaction
+	{
+		get
+		{
+			EnsureStarted();
+			return _transaction!;
+		}
+	}
 
 	public async Task BeginAsync(CancellationToken cancellationToken)
 	{
-		if (_transaction is not null)
+		if (_connection is not null || _transaction is not null)
 			throw new InvalidOperationException("The unit of work has already been started.");
 
-		_connection = (DbConnection)connectionFactory.CreateConnection();
-		await _connection.OpenAsync(cancellationToken);
-		_transaction = await _connection.BeginTransactionAsync(cancellationToken);
+		var connection = (DbConnection)connectionFactory.CreateConnection();
+		DbTransaction transaction;
+		try
+		{
+			await connection.OpenAsync(cancellationToken);
+			transaction = await connection.BeginTransactionAsync(cancellationToken);
+		}
+		catch
+		{
+			// Assign nothing on failure so the instance stays unstarted and the
+			// half-opened connection is not leaked.
+			await connection.DisposeAsync();
+			throw;
+		}
+
+		_connection = connection;
+		_transaction = transaction;
+	}
+
+	// Lazy fallback for code paths outside UnitOfWorkMiddleware's route filter
+	// (e.g. JWT revocation-check reads triggered by a Bearer token sent to a
+	// request the middleware does not cover). Nothing commits this transaction;
+	// it rolls back on scope disposal, which is safe because such paths only
+	// read.
+	private void EnsureStarted()
+	{
+		if (_transaction is not null)
+			return;
+
+		var connection = (DbConnection)connectionFactory.CreateConnection();
+		DbTransaction transaction;
+		try
+		{
+			connection.Open();
+			transaction = connection.BeginTransaction();
+		}
+		catch
+		{
+			connection.Dispose();
+			throw;
+		}
+
+		_connection = connection;
+		_transaction = transaction;
 	}
 
 	public async Task CommitAsync(CancellationToken cancellationToken)

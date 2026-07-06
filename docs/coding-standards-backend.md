@@ -371,32 +371,25 @@ The canonical transaction pattern is the shared Unit of Work in `PanoramaMusic.P
 
 The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back a transaction directly.
 
-A repository write method resolves `IUnitOfWork` from DI and executes its database function calls as straight commands on the shared connection and transaction:
+A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`) and executes its database function call as a straight command on the shared connection and transaction:
 
 ```csharp
-public class ExampleRepository(IDbConnectionFactory connectionFactory, IUnitOfWork unitOfWork)
-    : RepositoryBase(connectionFactory), IExampleRepository
+public class ExampleRepository(IUnitOfWork unitOfWork)
+    : RepositoryBase(unitOfWork), IExampleRepository
 {
     public async Task DoWriteAsync(/* args */, CancellationToken cancellationToken)
     {
-        var firstCommand = CreateCommandDefinition(
-            "identity.first_function",
+        var command = CreateCommandDefinition(
+            "identity.example_function",
             new { /* params */ },
-            unitOfWork.Transaction,
+            Transaction,
             cancellationToken);
-        await unitOfWork.Connection.ExecuteAsync(firstCommand);
-
-        var secondCommand = CreateCommandDefinition(
-            "identity.second_function",
-            new { /* params */ },
-            unitOfWork.Transaction,
-            cancellationToken);
-        await unitOfWork.Connection.ExecuteAsync(secondCommand);
+        await Connection.ExecuteAsync(command);
     }
 }
 ```
 
-See `RefreshTokenRepository.RotateAsync` and `UserRepository.UpdateAsync` for existing examples of this pattern.
+When several writes must succeed or fail together, the handler calls each single-purpose repository method in sequence — the ambient transaction makes them atomic. See `UserRepository.CreateAsync` and `DeactivateUserHandler` (deactivate + revoke sessions) for existing examples of this pattern.
 
 Read methods use the same shared connection and transaction — repositories resolve their database access exclusively from `IUnitOfWork`; bounded contexts do not own connection factories of their own.
 
