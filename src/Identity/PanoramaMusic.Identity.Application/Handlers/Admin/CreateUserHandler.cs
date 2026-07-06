@@ -54,7 +54,7 @@ public sealed class CreateUserHandler(
 				detail: new Dictionary<string, object?>
 				{
 					["email"] = user.Email.Value,
-					["roles"] = roles.Select(role => role.ToString()),
+					["roles"] = roles.Select(role => role.ToString()).ToArray(),
 				}),
 			cancellationToken);
 	}

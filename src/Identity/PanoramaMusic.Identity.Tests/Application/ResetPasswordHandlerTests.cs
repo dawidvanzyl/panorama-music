@@ -1,7 +1,9 @@
 using Moq;
 using PanoramaMusic.Audit.Application.Factories;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Audit.Domain.Entities;
+using PanoramaMusic.Identity.Application;
 using PanoramaMusic.Identity.Application.Commands.Auth;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Requests.Auth;
@@ -30,10 +32,6 @@ public class ResetPasswordHandlerTests
 			.Setup(h => h.Hash(It.IsAny<string>()))
 			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
 
-		UserRepo
-			.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync((User?)null);
-
 		AuditEventFactory
 			.Setup(f => f.Create(
 				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
@@ -56,10 +54,15 @@ public class ResetPasswordHandlerTests
 	{
 		var rawToken = "valid-raw-token";
 		var token = CreateValidToken(rawToken);
+		var user = new User(token.UserId, Email.Create("reset-user@test.com"), DateTime.UtcNow);
+		user.Activate();
 
 		ResetTokenRepo
 			.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
+		UserRepo
+			.Setup(r => r.GetByIdAsync(token.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
 
 		await Handler.HandleAsync(
 			new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
@@ -68,6 +71,42 @@ public class ResetPasswordHandlerTests
 		ResetTokenRepo.Verify(r => r.UseAsync(token.TokenId, TestContext.Current.CancellationToken), Times.Once);
 		UserRepo.Verify(r => r.UpdatePasswordAsync(token.UserId, It.IsAny<string>(), true, TestContext.Current.CancellationToken), Times.Once);
 		Hasher.Verify(h => h.Hash(_validPassword), Times.Once);
+
+		// Pins the fix: the audit event's actor email must come from the user
+		// fetched before the write, never a null post-write lookup.
+		AuditEventFactory.Verify(
+			f => f.Create(
+				IdentityAuditEventTypes.PasswordResetCompleted,
+				user.UserId,
+				user.Email.Value,
+				It.IsAny<Guid?>(),
+				AuditOutcomes.Success,
+				It.IsAny<string?>(),
+				It.IsAny<IReadOnlyDictionary<string, object?>?>()),
+			Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.1UC7")]
+	public async Task HandleAsync_TokenReferencesDeletedUser_ThrowsInvalidResetTokenException()
+	{
+		var rawToken = "orphaned-token";
+		var token = CreateValidToken(rawToken);
+
+		ResetTokenRepo
+			.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(token);
+		UserRepo
+			.Setup(r => r.GetByIdAsync(token.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		await Should.ThrowAsync<InvalidResetTokenException>(
+			() => Handler.HandleAsync(
+				new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
+				TestContext.Current.CancellationToken));
+
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]

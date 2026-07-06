@@ -40,6 +40,7 @@ public sealed class AuthorizationDeniedAuditTests(ApiTestFixture fixture)
 		var row = await FetchLatestAuthorizationDeniedRowAsync(userId, TestContext.Current.CancellationToken);
 
 		row.ShouldNotBeNull();
+		row.ActorEmail.ShouldBe(email);
 		row.Outcome.ShouldBe("failure");
 		row.Reason.ShouldBe("Forbidden");
 		row.Detail.ShouldContain("/api/auth/admin/sessions");
@@ -53,7 +54,7 @@ public sealed class AuthorizationDeniedAuditTests(ApiTestFixture fixture)
 		var row = await unitOfWork.Connection.QueryFirstOrDefaultAsync<AuditRow>(
 			new CommandDefinition(
 				"""
-				SELECT outcome AS "Outcome", reason AS "Reason", detail::text AS "Detail"
+				SELECT outcome AS "Outcome", reason AS "Reason", actor_email AS "ActorEmail", detail::text AS "Detail"
 				FROM audit.audit_events
 				WHERE event_type = 'identity.authorization.denied' AND actor_id = @actor_id
 				ORDER BY occurred_at DESC
@@ -66,7 +67,7 @@ public sealed class AuthorizationDeniedAuditTests(ApiTestFixture fixture)
 		return row;
 	}
 
-	private sealed record AuditRow(string Outcome, string? Reason, string Detail);
+	private sealed record AuditRow(string Outcome, string? Reason, string? ActorEmail, string Detail);
 
 	private async Task<(string Email, Guid UserId)> SeedActiveUserAsync()
 	{
