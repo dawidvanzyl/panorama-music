@@ -10,11 +10,12 @@ import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
 import './features/sessions/pages/pm-sessions-page';
 import './features/sessions/pages/pm-admin-sessions-page';
+import './features/admin/pages/pm-admin-activity-log-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
-const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions']);
+const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 const ROUTES: Record<string, () => string> = {
@@ -24,6 +25,7 @@ const ROUTES: Record<string, () => string> = {
   '/reset-password': () => '<pm-reset-password-page></pm-reset-password-page>',
   '/admin/users': () => '<pm-admin-users-page></pm-admin-users-page>',
   '/admin/sessions': () => '<pm-admin-sessions-page></pm-admin-sessions-page>',
+  '/admin/activity-log': () => '<pm-admin-activity-log-page></pm-admin-activity-log-page>',
   '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };

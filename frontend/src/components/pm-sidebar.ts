@@ -92,6 +92,10 @@ template.innerHTML = `
         <span class="sidebar__icon">history</span>
         <span>User Sessions</span>
       </a>
+      <a href="#/admin/activity-log" class="sidebar__link" id="activityLogLink" hidden>
+        <span class="sidebar__icon">receipt_long</span>
+        <span>Activity Log</span>
+      </a>
     </div>
     <div class="sidebar__bottom">
       <a href="#/sessions" class="sidebar__link" id="sessionsLink">
@@ -109,6 +113,7 @@ template.innerHTML = `
 export class PmSidebar extends HTMLElement {
   private userManagementLink: HTMLAnchorElement | null = null;
   private adminSessionsLink: HTMLAnchorElement | null = null;
+  private activityLogLink: HTMLAnchorElement | null = null;
   private sessionsLink: HTMLAnchorElement | null = null;
   private logoutBtn: HTMLButtonElement | null = null;
 
@@ -122,6 +127,7 @@ export class PmSidebar extends HTMLElement {
   connectedCallback(): void {
     this.userManagementLink = this.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
     this.adminSessionsLink = this.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
+    this.activityLogLink = this.shadowRoot!.getElementById('activityLogLink') as HTMLAnchorElement;
     this.sessionsLink = this.shadowRoot!.getElementById('sessionsLink') as HTMLAnchorElement;
     this.logoutBtn = this.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
 
@@ -142,9 +148,11 @@ export class PmSidebar extends HTMLElement {
     const showAdminLinks = isAuthenticated() && hasRole('Admin') && activeSection === 'admin';
     this.userManagementLink!.hidden = !showAdminLinks;
     this.adminSessionsLink!.hidden = !showAdminLinks;
+    this.activityLogLink!.hidden = !showAdminLinks;
 
     this.userManagementLink!.classList.toggle('sidebar__link--active', basePath === '/admin/users');
     this.adminSessionsLink!.classList.toggle('sidebar__link--active', basePath === '/admin/sessions');
+    this.activityLogLink!.classList.toggle('sidebar__link--active', basePath === '/admin/activity-log');
     this.sessionsLink!.classList.toggle('sidebar__link--active', basePath === '/sessions');
   };
 

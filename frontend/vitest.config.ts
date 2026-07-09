@@ -46,6 +46,9 @@ export default defineConfig({
       { name: 'M1.4UC9', description: 'Admin can revoke a specific session or every session except their own current one' },
       { name: 'M1.4UC11', description: 'Viewer own current session is distinguishable in the My Active Sessions and Global Session Management views' },
       { name: 'M1.4UC12', description: 'The sidebar appears alongside the top nav bar on every authenticated page' },
+      { name: 'M1.5UC15', description: 'Activity Log page loads and displays a paginated table of audit events, with an empty state when none match' },
+      { name: 'M1.5UC16', description: 'Applying filters on the Activity Log page updates results and resets pagination to page 1' },
+      { name: 'M1.5UC17', description: 'A non-admin user navigating to the Activity Log page is redirected to / and no audit data is rendered' },
     ],
   },
 })
