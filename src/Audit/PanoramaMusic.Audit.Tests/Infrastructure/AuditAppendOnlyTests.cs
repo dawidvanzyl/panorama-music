@@ -1,4 +1,5 @@
 using Npgsql;
+using PanoramaMusic.Audit.Tests.Fixtures;
 using Shouldly;
 using Xunit;
 

@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Identity.Application;
+namespace PanoramaMusic.Identity.Application.Constants;
 
 public static class TokenConstants
 {

@@ -25,5 +25,5 @@ public record AuditEvent(
 {
 	public DateTime OccurredAt { get; } = OccurredAt.Kind == DateTimeKind.Utc
 		? OccurredAt
-		: throw new ArgumentException("OccurredAt must be a UTC timestamp.", nameof(OccurredAt));
+		: throw new ArgumentException($"{nameof(OccurredAt)} must be a UTC timestamp.", nameof(OccurredAt));
 }

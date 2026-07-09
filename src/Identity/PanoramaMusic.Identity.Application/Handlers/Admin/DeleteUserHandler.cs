@@ -1,7 +1,8 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Exceptions;
@@ -44,7 +45,10 @@ public sealed class DeleteUserHandler(
 				userContext.Email,
 				userId,
 				AuditOutcomes.Success,
-				detail: new Dictionary<string, object?> { ["email"] = deletedUserEmail }),
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = deletedUserEmail
+				}),
 			cancellationToken);
 	}
 }

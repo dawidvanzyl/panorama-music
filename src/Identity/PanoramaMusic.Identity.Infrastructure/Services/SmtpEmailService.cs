@@ -3,7 +3,7 @@ using MailKit.Security;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 

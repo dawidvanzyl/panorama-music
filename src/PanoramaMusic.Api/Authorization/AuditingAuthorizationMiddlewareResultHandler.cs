@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
-using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Audit.Domain.Interfaces;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Interfaces;
 
 namespace PanoramaMusic.Api.Authorization;

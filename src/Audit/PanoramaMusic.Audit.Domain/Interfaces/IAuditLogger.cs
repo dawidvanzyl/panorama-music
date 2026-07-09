@@ -1,6 +1,6 @@
 using PanoramaMusic.Audit.Domain.Entities;
 
-namespace PanoramaMusic.Audit.Application.Interfaces;
+namespace PanoramaMusic.Audit.Domain.Interfaces;
 
 public interface IAuditLogger
 {

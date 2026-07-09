@@ -1,7 +1,8 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -115,10 +116,10 @@ public sealed class LoginHandler(
 					actorEmail: null,
 					targetId: null,
 					AuditOutcomes.Failure,
-					reason: "InvalidCredentials",
+					reason: AuditReasons.InvalidCredentials,
 					detail: new Dictionary<string, object?>
 					{
-						["attemptedEmail"] = attemptedEmail
+						[AuditEventDetailKeys.TargetDisplay] = attemptedEmail
 					}),
 				cancellationToken),
 			cancellationToken);
