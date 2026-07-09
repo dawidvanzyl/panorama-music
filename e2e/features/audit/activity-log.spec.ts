@@ -95,6 +95,11 @@ test.describe('Admin Activity Log — admin-only access', { tag: '@M1.5IT3' }, (
 });
 
 test.describe('Admin Activity Log — filtering and pagination', { tag: '@M1.5IT4' }, () => {
+  // Fixed, deterministic non-UTC offset (Johannesburg does not observe DST)
+  // so the date-range filter's local-to-UTC conversion below is asserted
+  // against a known offset regardless of the host machine's own timezone.
+  test.use({ timezoneId: 'Africa/Johannesburg' });
+
   test('filters by actor, event type, and date range, and paginates correctly', async ({ page, request }) => {
     test.setTimeout(60000);
 
@@ -142,8 +147,21 @@ test.describe('Admin Activity Log — filtering and pagination', { tag: '@M1.5IT
     await expect(activityLogPage.emptyState).toBeVisible();
 
     const today = new Date().toISOString().slice(0, 10);
-    await activityLogPage.applyFilters({ from: today, to: today });
+    const [auditRequest] = await Promise.all([
+      page.waitForRequest(req => req.url().includes('/api/audit') && req.url().includes('from=')),
+      activityLogPage.applyFilters({ from: today, to: today }),
+    ]);
     await expect(activityLogPage.rows).toHaveCount(25);
     await expect(activityLogPage.footerLabel).toHaveText('Showing 1-25 of 26');
+
+    // Proves the filter bar's conversion is timezone-aware, not just the
+    // table's display: with the browser forced to UTC+2, the outgoing
+    // request must carry local midnight/end-of-day for `today` converted to
+    // UTC — not a bare UTC calendar day.
+    const auditUrl = new URL(auditRequest.url());
+    const expectedFrom = new Date(`${today}T00:00:00+02:00`).toISOString();
+    const expectedTo = new Date(`${today}T23:59:59.999+02:00`).toISOString();
+    expect(auditUrl.searchParams.get('from')).toBe(expectedFrom);
+    expect(auditUrl.searchParams.get('to')).toBe(expectedTo);
   });
 });
