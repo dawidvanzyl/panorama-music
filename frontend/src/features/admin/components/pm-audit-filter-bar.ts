@@ -7,6 +7,22 @@ export interface AuditFilterValues {
   to: string;
 }
 
+// The <input type="date"> value is a bare "yyyy-mm-dd" with no timezone —
+// it names a day in the viewer's own local calendar. Converting it to the
+// UTC instant that begins/ends that local day (rather than sending the bare
+// string, which the server would otherwise treat as a UTC calendar day)
+// keeps filtering consistent with how the table displays timestamps: in
+// the viewer's local timezone.
+function localDayStartUtcIso(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+}
+
+function localDayEndUtcIso(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
@@ -163,11 +179,13 @@ export class PmAuditFilterBar extends HTMLElement {
   };
 
   private emitFilterChanged(): void {
+    const fromValue = this.fromInput!.value;
+    const toValue = this.toInput!.value;
     const detail: AuditFilterValues = {
       actor: this.actorInput!.value.trim(),
       eventType: this.eventTypeSelect!.value,
-      from: this.fromInput!.value,
-      to: this.toInput!.value,
+      from: fromValue ? localDayStartUtcIso(fromValue) : '',
+      to: toValue ? localDayEndUtcIso(toValue) : '',
     };
     this.dispatchEvent(new CustomEvent<AuditFilterValues>('audit-filter-changed', {
       bubbles: true,

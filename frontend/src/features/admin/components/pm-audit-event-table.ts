@@ -31,9 +31,14 @@ styles.replaceSync(`
       border-radius: var(--pm-radius);
       overflow: hidden;
     }
+    .audit-table__scroll {
+      overflow-x: auto;
+    }
     table {
       width: 100%;
+      min-width: 1140px;
       border-collapse: collapse;
+      table-layout: fixed;
     }
     th, td {
       text-align: left;
@@ -42,6 +47,10 @@ styles.replaceSync(`
       color: var(--pm-text);
       border-bottom: 1px solid var(--pm-border);
       white-space: nowrap;
+    }
+    .audit-table__truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     th {
       font-size: 11px;
@@ -107,20 +116,31 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
   <div class="audit-table__card">
-    <table>
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Actor</th>
-          <th>Target</th>
-          <th>Event Type</th>
-          <th>Outcome</th>
-          <th>Reason</th>
-          <th>Source IP</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
+    <div class="audit-table__scroll">
+      <table>
+        <colgroup>
+          <col style="width: 190px" />
+          <col style="width: 180px" />
+          <col style="width: 180px" />
+          <col style="width: 220px" />
+          <col style="width: 90px" />
+          <col style="width: 130px" />
+          <col style="width: 150px" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Actor</th>
+            <th>Target</th>
+            <th>Event Type</th>
+            <th>Outcome</th>
+            <th>Reason</th>
+            <th>Source IP</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
     <p class="audit-table__empty" id="empty" hidden>No audit events match the current filters.</p>
     <div class="audit-table__footer" id="footer" hidden>
       <span class="audit-table__footer-label" id="footerLabel"></span>
@@ -214,13 +234,19 @@ export class PmAuditEventTable extends HTMLElement {
     timestampCell.textContent = toLocalIso8601(item.occurredAt);
 
     const actorCell = document.createElement('td');
+    actorCell.classList.add('audit-table__truncate');
     actorCell.textContent = item.actorEmail ?? '—';
+    if (item.actorEmail) actorCell.title = item.actorEmail;
 
     const targetCell = document.createElement('td');
+    targetCell.classList.add('audit-table__truncate');
     targetCell.textContent = item.targetDisplay ?? '—';
+    if (item.targetDisplay) targetCell.title = item.targetDisplay;
 
     const eventTypeCell = document.createElement('td');
+    eventTypeCell.classList.add('audit-table__truncate');
     eventTypeCell.textContent = item.eventType;
+    eventTypeCell.title = item.eventType;
 
     const outcomeCell = document.createElement('td');
     const outcomeBadge = document.createElement('span');
