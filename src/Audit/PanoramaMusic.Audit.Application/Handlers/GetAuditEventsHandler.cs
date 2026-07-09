@@ -12,11 +12,12 @@ public sealed class GetAuditEventsHandler(IAuditEventReader auditEventReader)
 
 	public async Task<GetAuditEventsResult> HandleAsync(GetAuditEventsRequest request, CancellationToken cancellationToken)
 	{
+		AuditToDateResolver.TryResolveInclusiveUpperBound(request.To, out var resolvedTo);
 		var filter = new AuditEventFilter(
 			request.Actor,
 			request.EventType,
 			request.From,
-			request.To,
+			resolvedTo,
 			request.Page,
 			request.PageSize);
 

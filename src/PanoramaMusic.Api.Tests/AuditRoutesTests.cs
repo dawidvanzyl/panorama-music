@@ -134,6 +134,68 @@ public sealed class AuditRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "M1.5UC12")]
+	public async Task AdminGetsAuditEvents_WithBareDateToFilter_IncludesEventsForTheEntireNamedDay()
+	{
+		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
+		var adminClient = CreateIsolatedClient("10.0.31.1");
+		var (adminAccessToken, _) = await LoginAsync(adminClient, adminEmail);
+
+		// A bare date (no time component) — e.g. a direct API caller, or the
+		// UI falling back to the documented "ISO date" contract — must still
+		// be treated as inclusive of the entire UTC day it names.
+		var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+		var result = await GetAuditPageAsync(
+			adminClient, adminAccessToken, adminEmail, "identity.user.login_succeeded", page: 1, pageSize: 25, to: today);
+
+		result.Items.ShouldContain(i => i.ActorEmail == adminEmail);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.5UC12")]
+	public async Task AdminGetsAuditEvents_WithPreciseToTimestamp_ExcludesEventsAfterThatExactInstant()
+	{
+		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
+		var adminClient = CreateIsolatedClient("10.0.31.2");
+		var (adminAccessToken, _) = await LoginAsync(adminClient, adminEmail);
+
+		var firstLoginPage = await GetAuditPageAsync(adminClient, adminAccessToken, adminEmail, "identity.user.login_succeeded", page: 1, pageSize: 1);
+		var firstLoginAt = firstLoginPage.Items[0].OccurredAt;
+
+		await Task.Delay(50, TestContext.Current.CancellationToken);
+		await LoginAsync(adminClient, adminEmail);
+
+		// A precise (non-midnight) timestamp — e.g. the UI converting its own
+		// local day boundary to a UTC instant — must act as an exact
+		// inclusive upper bound rather than expanding to the whole day.
+		var cutoff = firstLoginAt.AddMilliseconds(25).ToString("o");
+		var result = await GetAuditPageAsync(
+			adminClient, adminAccessToken, adminEmail, "identity.user.login_succeeded", page: 1, pageSize: 25, to: cutoff);
+
+		result.TotalCount.ShouldBe(1);
+		result.Items[0].OccurredAt.ShouldBe(firstLoginAt);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.5UC12")]
+	public async Task AdminGetsAuditEvents_WithMalformedToFilter_Returns400()
+	{
+		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
+		var adminClient = CreateIsolatedClient("10.0.31.3");
+		var (adminAccessToken, _) = await LoginAsync(adminClient, adminEmail);
+
+		// "To" is now a raw string bound directly from the query string (so
+		// AuditToDateResolver can distinguish a bare date from a precise
+		// timestamp) — a malformed value is no longer rejected by ASP.NET
+		// Core's own model binding and must be caught by the validator instead.
+		var response = await adminClient.SendAsync(
+			AuthorizedGetRequest("/api/audit?to=not-a-date", adminAccessToken),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	[Trait("AC", "M1.5UC13")]
 	public async Task NonAdminGetsAuditEvents_Returns403AndDiscloseNoAuditData()
 	{
@@ -176,10 +238,11 @@ public sealed class AuditRoutesTests(ApiTestFixture fixture)
 	}
 
 	private async Task<GetAuditEventsResult> GetAuditPageAsync(
-		HttpClient client, string accessToken, string? actor, string eventType, int page, int pageSize)
+		HttpClient client, string accessToken, string? actor, string eventType, int page, int pageSize, string? to = null)
 	{
 		var actorQuery = actor is null ? string.Empty : $"actor={Uri.EscapeDataString(actor)}&";
-		var path = $"/api/audit?{actorQuery}eventType={Uri.EscapeDataString(eventType)}&page={page}&pageSize={pageSize}";
+		var toQuery = to is null ? string.Empty : $"to={Uri.EscapeDataString(to)}&";
+		var path = $"/api/audit?{actorQuery}{toQuery}eventType={Uri.EscapeDataString(eventType)}&page={page}&pageSize={pageSize}";
 		var response = await client.SendAsync(AuthorizedGetRequest(path, accessToken), TestContext.Current.CancellationToken);
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<GetAuditEventsResult>(TestContext.Current.CancellationToken))!;

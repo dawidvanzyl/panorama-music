@@ -3,10 +3,17 @@
 -- matching row count in a single call (COUNT(*) OVER()), avoiding a
 -- separate count query. actor_email is a partial, case-insensitive match
 -- against the denormalized top-level column; event_type is an exact match.
--- Any filter parameter left NULL is not applied. p_to is a date (per the API
--- contract) and is treated as inclusive of the entire day it names, since a
--- bare TIMESTAMPTZ comparison against midnight would otherwise exclude
--- almost every event that occurred that day.
+-- Any filter parameter left NULL is not applied. Ordering includes id as a
+-- stable tiebreaker so rows sharing an identical occurred_at (realistic —
+-- e.g. a single admin action can write more than one audit row) are never
+-- duplicated or skipped across a page boundary.
+--
+-- p_to is a precise, already-resolved inclusive upper bound: the Application
+-- layer (AuditToDateResolver) decides whether the caller's raw "to" string
+-- named a whole day or a precise instant, using the original string — a
+-- distinction that's lost by the time a value reaches this function. This
+-- function only ever sees the resolved instant, so a plain comparison here
+-- is correct in both cases.
 
 CREATE OR REPLACE FUNCTION audit.get_audit_events(
     p_actor_email TEXT,
@@ -53,13 +60,13 @@ BEGIN
 
     FROM audit.audit_events e
 
-    WHERE 
+    WHERE
         (p_actor_email IS NULL OR e.actor_email ILIKE '%' || p_actor_email || '%')
         AND (p_event_type IS NULL OR e.event_type = p_event_type)
         AND (p_from IS NULL OR e.occurred_at >= p_from)
-        AND (p_to IS NULL OR e.occurred_at < p_to + INTERVAL '1 day')
+        AND (p_to IS NULL OR e.occurred_at <= p_to)
 
-    ORDER BY e.occurred_at DESC
+    ORDER BY e.occurred_at DESC, e.id DESC
     LIMIT p_page_size
     OFFSET (p_page - 1) * p_page_size;
 END;

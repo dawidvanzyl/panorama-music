@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Audit.Application.Handlers;
 using PanoramaMusic.Audit.Application.Models;
@@ -21,6 +22,7 @@ public static class AuditRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<GetAuditEventsRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("GetAuditEvents")
 			.Produces<GetAuditEventsResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
