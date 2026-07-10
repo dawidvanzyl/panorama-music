@@ -1,5 +1,6 @@
 using PanoramaMusic.Audit.Application.Models;
 using PanoramaMusic.Audit.Application.Requests;
+using PanoramaMusic.Audit.Application.Resolvers;
 using PanoramaMusic.Audit.Domain.Entities;
 using PanoramaMusic.Audit.Domain.Interfaces;
 using System.Text.Json;

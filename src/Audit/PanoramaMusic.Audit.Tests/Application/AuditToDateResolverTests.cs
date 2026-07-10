@@ -1,4 +1,4 @@
-using PanoramaMusic.Audit.Application.Requests;
+using PanoramaMusic.Audit.Application.Resolvers;
 using Shouldly;
 using Xunit;
 

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace PanoramaMusic.Audit.Application.Requests;
+namespace PanoramaMusic.Audit.Application.Resolvers;
 
 // Resolves the "to" filter's inclusive upper bound from its raw string form,
 // distinguishing a bare date (e.g. "2026-07-08", from a direct API caller

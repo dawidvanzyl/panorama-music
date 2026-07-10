@@ -153,6 +153,31 @@ public sealed class AuditRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "M1.5UC12")]
+	public async Task AdminGetsAuditEvents_WithBareDateFromFilter_IncludesEventsFromThatDayOnward()
+	{
+		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
+		var adminClient = CreateIsolatedClient("10.0.31.4");
+		var (adminAccessToken, _) = await LoginAsync(adminClient, adminEmail);
+
+		// Unlike "to", a bare date "from" needs no day-expansion logic — its
+		// own UTC midnight is already the correct inclusive lower bound — but
+		// it still binds as DateTime.Kind=Unspecified, unlike "to" which now
+		// goes through AuditToDateResolver's explicit UTC resolution. Verified
+		// (by temporarily forcing the test container's session to a non-UTC
+		// zone) that this is correct independent of the database session's
+		// timezone: Npgsql treats a Kind=Unspecified DateTime written to a
+		// timestamptz column as already UTC on the client side, before the
+		// value ever reaches Postgres — the session's `timezone` GUC has no
+		// bearing on it.
+		var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+		var result = await GetAuditPageAsync(
+			adminClient, adminAccessToken, adminEmail, "identity.user.login_succeeded", page: 1, pageSize: 25, from: today);
+
+		result.Items.ShouldContain(i => i.ActorEmail == adminEmail);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.5UC12")]
 	public async Task AdminGetsAuditEvents_WithPreciseToTimestamp_ExcludesEventsAfterThatExactInstant()
 	{
 		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
@@ -238,11 +263,12 @@ public sealed class AuditRoutesTests(ApiTestFixture fixture)
 	}
 
 	private async Task<GetAuditEventsResult> GetAuditPageAsync(
-		HttpClient client, string accessToken, string? actor, string eventType, int page, int pageSize, string? to = null)
+		HttpClient client, string accessToken, string? actor, string eventType, int page, int pageSize, string? to = null, string? from = null)
 	{
 		var actorQuery = actor is null ? string.Empty : $"actor={Uri.EscapeDataString(actor)}&";
 		var toQuery = to is null ? string.Empty : $"to={Uri.EscapeDataString(to)}&";
-		var path = $"/api/audit?{actorQuery}{toQuery}eventType={Uri.EscapeDataString(eventType)}&page={page}&pageSize={pageSize}";
+		var fromQuery = from is null ? string.Empty : $"from={Uri.EscapeDataString(from)}&";
+		var path = $"/api/audit?{actorQuery}{fromQuery}{toQuery}eventType={Uri.EscapeDataString(eventType)}&page={page}&pageSize={pageSize}";
 		var response = await client.SendAsync(AuthorizedGetRequest(path, accessToken), TestContext.Current.CancellationToken);
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<GetAuditEventsResult>(TestContext.Current.CancellationToken))!;

@@ -1,5 +1,6 @@
 using FluentValidation;
 using PanoramaMusic.Audit.Application.Requests;
+using PanoramaMusic.Audit.Application.Resolvers;
 
 namespace PanoramaMusic.Audit.Application.Validators;
 
