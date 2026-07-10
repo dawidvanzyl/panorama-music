@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Api.Tests.Fixtures;
+using PanoramaMusic.Api.Tests.Middleware;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -67,7 +68,7 @@ public sealed class SecurityHeadersTests(ApiTestFixture fixture)
 	public async Task GetAudit_SensitiveEndpoint_CarriesCacheControlNoStore()
 	{
 		var (adminEmail, _) = await SeedActiveUserAsync(Role.Admin);
-		var client = fixture.CreateClient();
+		var client = CreateIsolatedClient("10.0.40.1");
 		var (accessToken, _) = await LoginAsync(client, adminEmail);
 
 		var request = new HttpRequestMessage(HttpMethod.Get, "/api/audit");
@@ -75,6 +76,13 @@ public sealed class SecurityHeadersTests(ApiTestFixture fixture)
 		var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
 		response.Headers.GetValues("Cache-Control").ShouldContain(value => value.Contains("no-store"));
+	}
+
+	private HttpClient CreateIsolatedClient(string simulatedIp)
+	{
+		var client = fixture.CreateClient();
+		client.DefaultRequestHeaders.Add(TestRemoteIpStartupFilter.HeaderName, simulatedIp);
+		return client;
 	}
 
 	private async Task<(string Email, Guid UserId)> SeedActiveUserAsync(Role? role = null)
