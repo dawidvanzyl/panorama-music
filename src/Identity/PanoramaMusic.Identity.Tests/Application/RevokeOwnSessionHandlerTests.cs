@@ -1,7 +1,7 @@
 using Moq;
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain.Entities;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Sessions;
 using PanoramaMusic.Identity.Application.Handlers.Sessions;
 using PanoramaMusic.Identity.Application.Interfaces;

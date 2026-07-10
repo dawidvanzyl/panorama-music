@@ -22,12 +22,32 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     INSERT INTO audit.audit_events (
-        id, occurred_at, event_type, actor_id, actor_email, target_id,
-        source_ip, user_agent, correlation_id, outcome, reason, detail
+        id,
+        occurred_at,
+        event_type,
+        actor_id,
+        actor_email,
+        target_id,
+        source_ip,
+        user_agent,
+        correlation_id,
+        outcome,
+        reason,
+        detail
     )
     VALUES (
-        p_id, p_occurred_at, p_event_type, p_actor_id, p_actor_email, p_target_id,
-        p_source_ip, p_user_agent, p_correlation_id, p_outcome, p_reason, p_detail::jsonb
+        p_id,
+        p_occurred_at,
+        p_event_type,
+        p_actor_id,
+        p_actor_email,
+        p_target_id,
+        p_source_ip,
+        p_user_agent,
+        p_correlation_id,
+        p_outcome,
+        p_reason,
+        p_detail::jsonb
     );
 END;
 $$;

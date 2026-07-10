@@ -1,9 +1,11 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 
@@ -28,39 +30,47 @@ public sealed class DeactivateUserHandler(
 		if (!string.IsNullOrEmpty(adminOptions.SeedAdminEmail) && string.Equals(user.Email.Value, adminOptions.SeedAdminEmail, StringComparison.OrdinalIgnoreCase))
 			throw new DomainException("The seed administrator account cannot be deactivated.");
 
-		await DeactivateAsync(command.UserId, cancellationToken);
+		await DeactivateAsync(user, cancellationToken);
 
 		// Deactivation must end every live session immediately (ASVS 7.4.2); this
 		// write shares the ambient unit-of-work transaction with the deactivation above.
-		await RevokeSessionsAsync(command.UserId, cancellationToken);
+		await RevokeSessionsAsync(user, cancellationToken);
 	}
 
-	private async Task DeactivateAsync(Guid userId, CancellationToken cancellationToken)
+	private async Task DeactivateAsync(User user, CancellationToken cancellationToken)
 	{
-		await userRepository.DeactivateAsync(userId, cancellationToken);
+		await userRepository.DeactivateAsync(user.UserId, cancellationToken);
 
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(
 				IdentityAuditEventTypes.UserDeactivated,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
-				userId,
-				AuditOutcomes.Success),
+				user.UserId,
+				AuditOutcomes.Success,
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value
+				}),
 			cancellationToken);
 	}
 
-	private async Task RevokeSessionsAsync(Guid userId, CancellationToken cancellationToken)
+	private async Task RevokeSessionsAsync(User user, CancellationToken cancellationToken)
 	{
-		await refreshTokenRepository.RevokeAllForUserAsync(userId, cancellationToken);
+		await refreshTokenRepository.RevokeAllForUserAsync(user.UserId, cancellationToken);
 
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(
 				IdentityAuditEventTypes.TokenRevoked,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
-				userId,
+				user.UserId,
 				AuditOutcomes.Success,
-				detail: new Dictionary<string, object?> { ["reason"] = "UserDeactivated" }),
+				reason: AuditReasons.UserDeactivated,
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value
+				}),
 			cancellationToken);
 	}
 }

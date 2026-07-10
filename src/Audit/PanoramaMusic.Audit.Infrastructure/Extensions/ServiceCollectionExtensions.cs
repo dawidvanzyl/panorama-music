@@ -1,6 +1,10 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Application.Handlers;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Application.Validators;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Audit.Infrastructure.Contexts;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
 
@@ -14,8 +18,11 @@ public static class ServiceCollectionExtensions
 		// registered by AddInfrastructure, so no context-owned connection
 		// factory is needed.
 		services.AddTransient<IAuditLogger, AuditEventRepository>();
+		services.AddTransient<IAuditEventReader, AuditEventRepository>();
 		services.AddTransient<IAuditContext, AuditContext>();
 		services.AddTransient<IAuditEventFactory, AuditEventFactory>();
+		services.AddTransient<GetAuditEventsHandler>();
+		services.AddValidatorsFromAssemblyContaining<GetAuditEventsRequestValidator>();
 		return services;
 	}
 }

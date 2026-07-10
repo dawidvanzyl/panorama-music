@@ -109,3 +109,33 @@ describe('main router — persistent sidebar', { tags: ['M1.4UC12'] }, () => {
     });
   });
 });
+
+describe('main router — Activity Log admin guard', { tags: ['M1.5UC17'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it('redirects a non-admin navigating directly to the Activity Log route to / and renders no audit data', async () => {
+    mockHasRole.mockReturnValue(false);
+    window.location.hash = '#/admin/activity-log';
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe('#/');
+    });
+
+    const app = document.getElementById('app')!;
+    expect(app.innerHTML).not.toContain('<pm-admin-activity-log-page>');
+  });
+
+  it('allows an admin to reach the Activity Log route', async () => {
+    mockHasRole.mockReturnValue(true);
+    window.location.hash = '#/admin/activity-log';
+
+    await vi.waitFor(() => {
+      const app = document.getElementById('app')!;
+      expect(app.innerHTML).toContain('<pm-admin-activity-log-page>');
+    });
+  });
+});

@@ -1,13 +1,16 @@
 using Moq;
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Audit.Domain.Entities;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Domain.ValueObjects;
 using Shouldly;
 using Xunit;
 
@@ -19,6 +22,7 @@ public class RevokeSessionHandlerTests
 	{
 		RefreshRepo = new Mock<IRefreshTokenRepository>();
 		RevokedAccessTokenRepo = new Mock<IRevokedAccessTokenRepository>();
+		UserRepo = new Mock<IUserRepository>();
 		UserContext = new Mock<IUserContext>();
 		UserContext.SetupGet(u => u.UserId).Returns(Guid.NewGuid());
 		AuditLogger = new Mock<IAuditLogger>();
@@ -30,11 +34,12 @@ public class RevokeSessionHandlerTests
 				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
 			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
-		Handler = new RevokeSessionHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object, UserContext.Object, AuditLogger.Object, AuditEventFactory.Object);
+		Handler = new RevokeSessionHandler(RefreshRepo.Object, RevokedAccessTokenRepo.Object, UserRepo.Object, UserContext.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IRefreshTokenRepository> RefreshRepo { get; }
 	public Mock<IRevokedAccessTokenRepository> RevokedAccessTokenRepo { get; }
+	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IUserContext> UserContext { get; }
 	public Mock<IAuditLogger> AuditLogger { get; }
 	public Mock<IAuditEventFactory> AuditEventFactory { get; }
@@ -84,5 +89,29 @@ public class RevokeSessionHandlerTests
 
 		await Should.ThrowAsync<EntityNotFoundException>(
 			() => Handler.HandleAsync(new RevokeSessionCommand(Guid.NewGuid()), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "M1.5UC12")]
+	public async Task HandleAsync_ExistingSession_RecordsTargetDisplayAsTheOwningUsersEmail()
+	{
+		var owner = new User(Guid.NewGuid(), Email.Create("owner@test.com"), DateTime.UtcNow);
+		var session = new RefreshToken(Guid.NewGuid(), owner.UserId, "hash", DateTime.UtcNow.AddDays(7), Guid.NewGuid(), DateTime.UtcNow, null, null);
+		RefreshRepo.Setup(r => r.GetByTokenIdAsync(session.TokenId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+		RefreshRepo.Setup(r => r.RevokeAsync(session.TokenId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+		UserRepo.Setup(r => r.GetByIdAsync(owner.UserId, It.IsAny<CancellationToken>())).ReturnsAsync(owner);
+
+		await Handler.HandleAsync(new RevokeSessionCommand(session.TokenId), TestContext.Current.CancellationToken);
+
+		AuditEventFactory.Verify(
+			f => f.Create(
+				IdentityAuditEventTypes.TokenRevoked,
+				It.IsAny<Guid?>(),
+				It.IsAny<string?>(),
+				owner.UserId,
+				AuditOutcomes.Success,
+				It.IsAny<string?>(),
+				It.Is<IReadOnlyDictionary<string, object?>?>(d => d != null && (string)d[AuditEventDetailKeys.TargetDisplay]! == "owner@test.com")),
+			Times.Once);
 	}
 }

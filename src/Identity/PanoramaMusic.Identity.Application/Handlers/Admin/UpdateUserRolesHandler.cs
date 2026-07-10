@@ -1,10 +1,12 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
+using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -30,27 +32,28 @@ public sealed class UpdateUserRolesHandler(
 		if (!string.IsNullOrEmpty(adminOptions.SeedAdminEmail) && string.Equals(user.Email.Value, adminOptions.SeedAdminEmail, StringComparison.OrdinalIgnoreCase))
 			throw new DomainException("The seed administrator account cannot be modified.");
 
-		await SetRolesAsync(command.UserId, command.Request.Roles, cancellationToken);
+		await SetRolesAsync(user, command.Request.Roles, cancellationToken);
 
 		return new UpdateUserRolesResult(user.UserId, user.Email.Value, command.Request.Roles, user.IsActive);
 	}
 
-	private async Task SetRolesAsync(Guid userId, IList<Role> newRoles, CancellationToken cancellationToken)
+	private async Task SetRolesAsync(User user, IList<Role> newRoles, CancellationToken cancellationToken)
 	{
-		var rolesBefore = await userRoleRepository.GetRolesAsync(userId, cancellationToken);
-		await userRoleRepository.SetRolesAsync(userId, newRoles, cancellationToken);
+		var rolesBefore = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
+		await userRoleRepository.SetRolesAsync(user.UserId, newRoles, cancellationToken);
 
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(
 				IdentityAuditEventTypes.RolesChanged,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
-				userId,
+				user.UserId,
 				AuditOutcomes.Success,
 				detail: new Dictionary<string, object?>
 				{
-					["rolesBefore"] = rolesBefore.Select(r => r.ToString()).ToArray(),
-					["rolesAfter"] = newRoles.Select(r => r.ToString()).ToArray(),
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value,
+					[AuditEventDetailKeys.RolesBefore] = rolesBefore.Select(r => r.ToString()).ToArray(),
+					[AuditEventDetailKeys.RolesAfter] = newRoles.Select(r => r.ToString()).ToArray(),
 				}),
 			cancellationToken);
 	}

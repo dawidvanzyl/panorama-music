@@ -3,6 +3,7 @@ using PanoramaMusic.Api.Authorization;
 using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
+using PanoramaMusic.Api.Routes.Audit;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -108,6 +109,7 @@ app.UseAuthorization();
 app.MapHealthRoutes();
 app.MapAuthRoutes();
 app.MapAdminRoutes();
+app.MapAuditRoutes();
 
 // Return 404 for unmatched /api/* routes so typos don't silently return the SPA
 app.MapFallback("/api/{**path}", () => Results.NotFound());

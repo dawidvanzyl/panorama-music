@@ -1,7 +1,8 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
@@ -25,30 +26,34 @@ public sealed class RegenerateInviteTokenHandler(
 		var user = await userRepository.GetByIdAsync(command.UserId, cancellationToken)
 			?? throw new DomainException("User not found.");
 
-		await RevokeExistingInviteAsync(user.UserId, cancellationToken);
-		var inviteUrl = await GenerateInviteAsync(user.UserId, cancellationToken);
+		await RevokeExistingInviteAsync(user, cancellationToken);
+		var inviteUrl = await GenerateInviteAsync(user, cancellationToken);
 
 		return new RegenerateInviteTokenResult(inviteUrl);
 	}
 
-	private async Task RevokeExistingInviteAsync(Guid userId, CancellationToken cancellationToken)
+	private async Task RevokeExistingInviteAsync(User user, CancellationToken cancellationToken)
 	{
-		await inviteTokenRepository.RevokeForUserAsync(userId, cancellationToken);
+		await inviteTokenRepository.RevokeForUserAsync(user.UserId, cancellationToken);
 
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(
 				IdentityAuditEventTypes.InviteRevoked,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
-				userId,
-				AuditOutcomes.Success),
+				user.UserId,
+				AuditOutcomes.Success,
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value
+				}),
 			cancellationToken);
 	}
 
-	private async Task<string> GenerateInviteAsync(Guid userId, CancellationToken cancellationToken)
+	private async Task<string> GenerateInviteAsync(User user, CancellationToken cancellationToken)
 	{
 		var token = RawToken.Generate();
-		var inviteToken = new InviteToken(Guid.NewGuid(), userId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
+		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
 		await inviteTokenRepository.CreateAsync(inviteToken, cancellationToken);
 
 		await auditLogger.CreateAsync(
@@ -56,8 +61,12 @@ public sealed class RegenerateInviteTokenHandler(
 				IdentityAuditEventTypes.InviteRegenerated,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
-				userId,
-				AuditOutcomes.Success),
+				user.UserId,
+				AuditOutcomes.Success,
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value
+				}),
 			cancellationToken);
 
 		return $"{appOptions.AppBaseUrl}/#/register?token={token.Value}";

@@ -1,7 +1,8 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
@@ -53,8 +54,8 @@ public sealed class CreateUserHandler(
 				AuditOutcomes.Success,
 				detail: new Dictionary<string, object?>
 				{
-					["email"] = user.Email.Value,
-					["roles"] = roles.Select(role => role.ToString()).ToArray(),
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value,
+					[AuditEventDetailKeys.Roles] = roles.Select(role => role.ToString()).ToArray(),
 				}),
 			cancellationToken);
 	}

@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Identity.Application;
+namespace PanoramaMusic.Identity.Application.Constants;
 
 /// <summary>
 /// Audit event types emitted by the Identity context, following the

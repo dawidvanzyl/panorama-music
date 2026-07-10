@@ -15,7 +15,9 @@ public static class AuthRoutes
 {
 	public static void MapAuthRoutes(this WebApplication app)
 	{
-		var group = app.MapGroup("/api/auth").WithTags("Auth");
+		var group = app
+			.MapGroup("/api/auth")
+			.WithTags("Auth");
 
 		group.MapPost("/login", async (LoginRequest request, LoginHandler handler, HttpResponse response, CancellationToken ct) =>
 		{
@@ -103,7 +105,9 @@ public static class AuthRoutes
 		// Mounted under /api/auth (not /api/sessions) so the browser sends the
 		// __Secure-refresh_token cookie, which is scoped to the /api/auth path and is how
 		// these endpoints identify the caller's own current session.
-		var sessions = group.MapGroup("/sessions").RequireAuthorization();
+		var sessions = group
+			.MapGroup("/sessions")
+			.RequireAuthorization();
 
 		sessions
 		.MapGet("/", async (HttpRequest request, GetOwnSessionsHandler handler, CancellationToken ct) =>

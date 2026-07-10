@@ -4,7 +4,7 @@ using PanoramaMusic.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
 
-namespace PanoramaMusic.Audit.Tests.Infrastructure;
+namespace PanoramaMusic.Audit.Tests.Fixtures;
 
 /// <summary>
 /// Starts a disposable Postgres, provisions the restricted panorama_app role,

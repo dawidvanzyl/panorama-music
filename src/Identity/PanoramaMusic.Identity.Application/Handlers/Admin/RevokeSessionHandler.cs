@@ -1,7 +1,8 @@
 using PanoramaMusic.Audit.Application.Factories;
-using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -13,6 +14,7 @@ namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 public sealed class RevokeSessionHandler(
 	IRefreshTokenRepository refreshTokenRepository,
 	IRevokedAccessTokenRepository revokedAccessTokenRepository,
+	IUserRepository userRepository,
 	IUserContext userContext,
 	IAuditLogger auditLogger,
 	IAuditEventFactory auditEventFactory)
@@ -36,13 +38,18 @@ public sealed class RevokeSessionHandler(
 
 		await refreshTokenRepository.RevokeAsync(session.TokenId, cancellationToken);
 
+		var targetUser = await userRepository.GetByIdAsync(session.UserId, cancellationToken);
+
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(
 				IdentityAuditEventTypes.TokenRevoked,
 				userContext.GetRequiredUserId(),
 				userContext.Email,
 				session.UserId,
-				AuditOutcomes.Success),
+				AuditOutcomes.Success,
+				detail: targetUser is not null
+					? new Dictionary<string, object?> { [AuditEventDetailKeys.TargetDisplay] = targetUser.Email.Value }
+					: null),
 			cancellationToken);
 	}
 }
