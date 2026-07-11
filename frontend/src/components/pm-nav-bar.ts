@@ -1,21 +1,30 @@
-import { isAuthenticated, logout } from '../services/auth';
-import { hasRole } from '../services/token-storage';
-import { clearUsersCache } from '../features/admin/services/admin';
+import { isAuthenticated } from '../services/auth';
+import { hasRole, getEmail } from '../services/token-storage';
+import { updateActiveNavSection } from '../services/nav-section';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
+      flex-shrink: 0;
+    }
+    [hidden] {
+      display: none !important;
     }
     nav {
+      box-sizing: border-box;
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0 24px;
       height: 60px;
-      background: var(--pm-surface);
+      background: var(--pm-bg);
       border-bottom: 1px solid var(--pm-border);
+    }
+    .nav-bar__left {
+      display: flex;
+      align-items: center;
+      gap: 32px;
     }
     .nav-bar__brand {
       font-weight: 700;
@@ -23,78 +32,104 @@ template.innerHTML = `
       letter-spacing: -0.02em;
       color: var(--pm-text);
     }
-    .nav-bar__btn {
-      padding: 8px 18px;
-      border: 1px solid var(--pm-border);
-      border-radius: var(--pm-radius);
-      background: var(--pm-surface-2);
-      color: var(--pm-text);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    .nav-bar__btn:hover {
-      background: var(--pm-border);
-    }
-    .nav-bar__links {
+    .nav-bar__sections {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 24px;
     }
-    .nav-bar__link {
+    .nav-bar__section-link {
       color: var(--pm-text-muted);
       font-size: 14px;
       font-weight: 600;
       text-decoration: none;
+      padding-bottom: 2px;
+      border-bottom: 2px solid transparent;
     }
-    .nav-bar__link:hover {
+    .nav-bar__section-link:hover {
       color: var(--pm-text);
     }
-  </style>
+    .nav-bar__section-link--active {
+      color: var(--pm-accent);
+      border-bottom-color: var(--pm-accent);
+    }
+    .nav-bar__account {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .nav-bar__account-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 20px;
+      color: var(--pm-accent);
+    }
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
   <nav>
-    <span class="nav-bar__brand">Panorama Music</span>
-    <div class="nav-bar__links">
-      <a href="#/admin/users" class="nav-bar__link" id="adminLink" hidden>Admin</a>
-      <button id="logoutBtn" class="nav-bar__btn" hidden>Sign Out</button>
+    <div class="nav-bar__left">
+      <span class="nav-bar__brand">Panorama Music</span>
+      <div class="nav-bar__sections" id="sections" hidden>
+        <a href="#/" class="nav-bar__section-link" id="dashboardLink">Dashboard</a>
+        <a href="#/admin/users" class="nav-bar__section-link" id="adminLink" hidden>Admin</a>
+      </div>
     </div>
+    <span class="nav-bar__account" id="accountChip" hidden>
+      <span class="nav-bar__account-icon">account_circle</span>
+      <span id="accountEmail"></span>
+    </span>
   </nav>
 `;
 
 export class PmNavBar extends HTMLElement {
-  private logoutBtn: HTMLButtonElement | null = null;
+  private sections: HTMLElement | null = null;
+  private dashboardLink: HTMLAnchorElement | null = null;
   private adminLink: HTMLAnchorElement | null = null;
+  private accountChip: HTMLElement | null = null;
+  private accountEmail: HTMLElement | null = null;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback(): void {
-    this.logoutBtn = this.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
+    this.sections = this.shadowRoot!.getElementById('sections') as HTMLElement;
+    this.dashboardLink = this.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
     this.adminLink = this.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
-    this.logoutBtn!.addEventListener('click', this.handleLogout);
+    this.accountChip = this.shadowRoot!.getElementById('accountChip') as HTMLElement;
+    this.accountEmail = this.shadowRoot!.getElementById('accountEmail') as HTMLElement;
     this.updateVisibility();
     window.addEventListener('hashchange', this.updateVisibility);
   }
 
   disconnectedCallback(): void {
-    this.logoutBtn?.removeEventListener('click', this.handleLogout);
     window.removeEventListener('hashchange', this.updateVisibility);
   }
 
   private updateVisibility = (): void => {
-    this.logoutBtn!.hidden = !isAuthenticated();
-    this.adminLink!.hidden = !isAuthenticated() || !hasRole('Admin');
-  };
+    const authed = isAuthenticated();
+    const isAdmin = authed && hasRole('Admin');
+    const basePath = window.location.hash.slice(1).split('?')[0];
+    const activeSection = updateActiveNavSection(basePath);
 
-  private handleLogout = async (): Promise<void> => {
-    clearUsersCache();
-    await logout();
-    this.updateVisibility();
-    window.location.hash = '#/login';
+    this.sections!.hidden = !authed;
+    this.adminLink!.hidden = !isAdmin;
+
+    this.dashboardLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'dashboard');
+    this.adminLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'admin');
+
+    this.accountChip!.hidden = !authed;
+    this.accountEmail!.textContent = authed ? getEmail() : '';
   };
 }
 

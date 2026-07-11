@@ -11,24 +11,18 @@ import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
 import type { PmUserCreatedBanner } from '../components/pm-user-created-banner';
 import type { PmReinviteBanner } from '../components/pm-reinvite-banner';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       display: block;
       flex: 1;
-      padding: 24px;
       font-family: 'Inter', system-ui, sans-serif;
-    }
-    .admin-users__container {
-      max-width: 960px;
-      margin: 0 auto;
     }
     .admin-users__title {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--pm-text);
-      margin-bottom: 24px;
+      margin: 0 0 24px;
     }
     .admin-users__error {
       margin-top: 16px;
@@ -43,7 +37,10 @@ template.innerHTML = `
     .admin-users__error--visible {
       display: block;
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="admin-users__container">
     <h1 class="admin-users__title">User Management</h1>
@@ -69,6 +66,7 @@ export class PmAdminUsersPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

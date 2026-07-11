@@ -5,4 +5,5 @@ internal sealed record UserDto(
 	string Email,
 	string? Password_Hash,
 	bool Is_Active,
-	DateTime Created_At);
+	DateTime Created_At,
+	bool Requires_Password_Reset);

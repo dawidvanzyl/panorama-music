@@ -1,5 +1,10 @@
 using Moq;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Entities;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Auth;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
@@ -18,21 +23,29 @@ public class ResetPasswordHandlerTests
 	public ResetPasswordHandlerTests()
 	{
 		ResetTokenRepo = new Mock<IPasswordResetTokenRepository>();
+		UserRepo = new Mock<IUserRepository>();
 		Hasher = new Mock<IPasswordHashService>();
+		AuditLogger = new Mock<IAuditLogger>();
+		AuditEventFactory = new Mock<IAuditEventFactory>();
 
 		Hasher
 			.Setup(h => h.Hash(It.IsAny<string>()))
 			.Returns(PasswordHash.Create("$argon2id$v=19$new-hash"));
 
-		ResetTokenRepo
-			.Setup(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-			.Returns(Task.CompletedTask);
+		AuditEventFactory
+			.Setup(f => f.Create(
+				It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(),
+				It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, object?>?>()))
+			.Returns(new AuditEvent(Guid.NewGuid(), DateTime.UtcNow, "test", null, null, null, "127.0.0.1", "test-agent", Guid.NewGuid(), "success", null, new Dictionary<string, object?>()));
 
-		Handler = new ResetPasswordHandler(ResetTokenRepo.Object, Hasher.Object);
+		Handler = new ResetPasswordHandler(ResetTokenRepo.Object, UserRepo.Object, Hasher.Object, AuditLogger.Object, AuditEventFactory.Object);
 	}
 
 	public Mock<IPasswordResetTokenRepository> ResetTokenRepo { get; }
+	public Mock<IUserRepository> UserRepo { get; }
 	public Mock<IPasswordHashService> Hasher { get; }
+	public Mock<IAuditLogger> AuditLogger { get; }
+	public Mock<IAuditEventFactory> AuditEventFactory { get; }
 	public ResetPasswordHandler Handler { get; }
 
 	[Fact]
@@ -41,30 +54,59 @@ public class ResetPasswordHandlerTests
 	{
 		var rawToken = "valid-raw-token";
 		var token = CreateValidToken(rawToken);
+		var user = new User(token.UserId, Email.Create("reset-user@test.com"), DateTime.UtcNow);
+		user.Activate();
 
 		ResetTokenRepo
 			.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(token);
+		UserRepo
+			.Setup(r => r.GetByIdAsync(token.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
 
 		await Handler.HandleAsync(
 			new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
 			TestContext.Current.CancellationToken);
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(token.UserId, It.IsAny<PasswordHash>(), token.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		ResetTokenRepo.Verify(r => r.UseAsync(token.TokenId, TestContext.Current.CancellationToken), Times.Once);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(token.UserId, It.IsAny<string>(), true, TestContext.Current.CancellationToken), Times.Once);
 		Hasher.Verify(h => h.Hash(_validPassword), Times.Once);
+
+		// Pins the fix: the audit event's actor email must come from the user
+		// fetched before the write, never a null post-write lookup.
+		AuditEventFactory.Verify(
+			f => f.Create(
+				IdentityAuditEventTypes.PasswordResetCompleted,
+				user.UserId,
+				user.Email.Value,
+				It.IsAny<Guid?>(),
+				AuditOutcomes.Success,
+				It.IsAny<string?>(),
+				It.IsAny<IReadOnlyDictionary<string, object?>?>()),
+			Times.Once);
 	}
 
 	[Fact]
-	[Trait("AC", "M1.1UC8")]
-	public async Task HandleAsync_WeakPassword_ThrowsPasswordPolicyExceptionWithoutConsumingToken()
+	[Trait("AC", "M1.1UC7")]
+	public async Task HandleAsync_TokenReferencesDeletedUser_ThrowsInvalidResetTokenException()
 	{
-		await Should.ThrowAsync<PasswordPolicyException>(
+		var rawToken = "orphaned-token";
+		var token = CreateValidToken(rawToken);
+
+		ResetTokenRepo
+			.Setup(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(token);
+		UserRepo
+			.Setup(r => r.GetByIdAsync(token.UserId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((User?)null);
+
+		await Should.ThrowAsync<InvalidResetTokenException>(
 			() => Handler.HandleAsync(
-				new ResetPasswordCommand(new ResetPasswordRequest("any-token", "weak")),
+				new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
 				TestContext.Current.CancellationToken));
 
-		ResetTokenRepo.Verify(r => r.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -80,7 +122,8 @@ public class ResetPasswordHandlerTests
 				new ResetPasswordCommand(new ResetPasswordRequest("unknown-token", _validPassword)),
 				TestContext.Current.CancellationToken));
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
@@ -99,7 +142,8 @@ public class ResetPasswordHandlerTests
 				new ResetPasswordCommand(new ResetPasswordRequest(rawToken, _validPassword)),
 				TestContext.Current.CancellationToken));
 
-		ResetTokenRepo.Verify(r => r.CompleteResetAsync(It.IsAny<Guid>(), It.IsAny<PasswordHash>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		ResetTokenRepo.Verify(r => r.UseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+		UserRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]

@@ -42,28 +42,43 @@ services:
       - ServerOptions__HostName=smtp4dev
 
   api:
+    image: panorama-music-api:qa
     build:
       context: .
       dockerfile: Dockerfile
     profiles: [qa]
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: QA
       ASPNETCORE_URLS: http://+:3000
+      # The application connects as the restricted panorama_app role (append-only
+      # audit access); migrations run over the privileged Migrations connection,
+      # which also provisions the panorama_app role on startup.
       ConnectionStrings__DefaultConnection: >-
+        Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=panorama_app;Password=${POSTGRES_APP_PASSWORD:-panorama_app_qa}
+      ConnectionStrings__Migrations: >-
         Host=db-qa;Port=5432;Database=${POSTGRES_DB_QA:-panorama_music_qa};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       # Set RESET_DB=true to wipe the QA database, re-run all migrations, and
       # re-apply seed data on the next container start.  Never set in production.
       RESET_DB: ${RESET_DB:-false}
       JWT__Secret: ${JWT__Secret}
+      JWT__Issuer: ${JWT__Issuer:-panorama-music-api}
+      JWT__Audience: ${JWT__Audience:-panorama-music-client}
+      JWT__AbsoluteSessionLifetimeDays: ${JWT__AbsoluteSessionLifetimeDays:-30}
       Admin__Email: ${Admin__Email}
       Admin__Password: ${Admin__Password}
-      Smtp__Host: smtp4dev
-      Smtp__Port: 25
-      Smtp__Username: ""
-      Smtp__Password: ""
+      Serilog__MinimumLevel__Default: ${Serilog__MinimumLevel__Default:-Information}
+      # Dot-free key so the same variable can be set on Render; Serilog overrides
+      # match by namespace prefix, so "Microsoft" covers Microsoft.AspNetCore too.
+      Serilog__MinimumLevel__Override__Microsoft: ${Serilog__MinimumLevel__Override__Microsoft:-Warning}
+      RateLimiting__Auth__IpPermitLimit: ${RateLimiting__Auth__IpPermitLimit:-1000}
+      RateLimiting__Auth__AccountPermitLimit: ${RateLimiting__Auth__AccountPermitLimit:-1000}
+      RateLimiting__Auth__WindowSeconds: ${RateLimiting__Auth__WindowSeconds:-60}
+      Smtp__Host: ${Smtp__Host:-smtp4dev}
+      Smtp__Port: ${Smtp__Port:-25}
       Smtp__From: ${Smtp__From:-noreply@panorama-music.qa}
       Smtp__FromDisplayName: ${Smtp__FromDisplayName:-Panorama Music (QA)}
       AppBaseUrl: ${AppBaseUrl:-http://localhost:3000}
+      Hibp__Enabled: ${Hibp__Enabled:-false}
     ports:
       - "3000:3000"
     depends_on:

@@ -16,6 +16,9 @@ internal static class UserDtoExtensions
 		if (dto.Is_Active)
 			user.Activate();
 
+		if (dto.Requires_Password_Reset)
+			user.RequirePasswordReset();
+
 		return user;
 	}
 }

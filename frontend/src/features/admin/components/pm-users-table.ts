@@ -1,9 +1,8 @@
 import { regenerateInvite, updateUserRoles, AdminError, type GetUserResult } from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
     }
@@ -22,14 +21,25 @@ template.innerHTML = `
     }
     table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
     }
     th, td {
+      box-sizing: border-box;
       text-align: left;
       padding: 10px 12px;
       font-size: 14px;
       color: var(--pm-text);
       border-bottom: 1px solid var(--pm-border);
+    }
+    .users-table__col-roles {
+      width: 220px;
+    }
+    .users-table__col-status {
+      width: 130px;
+    }
+    .users-table__col-actions {
+      width: 200px;
     }
     th {
       font-size: 12px;
@@ -231,7 +241,13 @@ template.innerHTML = `
     .users-table__filter-wrap {
       position: relative;
     }
-  </style>
+    .users-table__actions-header {
+      text-align: right;
+    }
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="users-table__card">
     <div class="users-table__header">
@@ -249,12 +265,18 @@ template.innerHTML = `
       </div>
     </div>
     <table>
+      <colgroup>
+        <col />
+        <col class="users-table__col-roles" />
+        <col class="users-table__col-status" />
+        <col class="users-table__col-actions" />
+      </colgroup>
       <thead>
         <tr>
           <th>Email</th>
           <th>Roles</th>
           <th>Status</th>
-          <th style="text-align:right">Actions</th>
+          <th class="users-table__actions-header">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -276,6 +298,7 @@ export class PmUsersTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

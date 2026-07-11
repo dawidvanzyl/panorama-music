@@ -300,6 +300,8 @@ Examples:
 * p_user_id
 * p_email
 
+Each function must perform exactly one create, update, or delete operation. Do not combine multiple write operations into a single function for the sake of atomicity — when several writes must succeed or fail together, keep each as its own single-purpose function and execute them within the shared ambient transaction (see Transactions).
+
 ---
 
 ## SQL Style
@@ -363,11 +365,39 @@ Prefer dedicated mapping extensions or components to embedding complex mapping l
 
 ## Transactions
 
-Transactions belong in Infrastructure.
+The canonical transaction pattern is the shared Unit of Work in `PanoramaMusic.Persistence`.
 
-When an operation must update multiple persistence resources atomically, Infrastructure should expose a dedicated method that owns the transaction boundary.
+`IUnitOfWork` exposes the active `IDbConnection` and `IDbTransaction` and is registered as **scoped**, so every repository resolved within one HTTP request shares the same connection and transaction — including repositories from different bounded contexts (e.g. an Identity write and its Audit record commit or roll back together).
 
-Application handlers should coordinate use cases rather than manage database transactions.
+The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back a transaction directly.
+
+A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`) and executes its database function call as a straight command on the shared connection and transaction:
+
+```csharp
+public class ExampleRepository(IUnitOfWork unitOfWork)
+    : RepositoryBase(unitOfWork), IExampleRepository
+{
+    public async Task DoWriteAsync(/* args */, CancellationToken cancellationToken)
+    {
+        var command = CreateCommandDefinition(
+            "identity.example_function",
+            new { /* params */ },
+            Transaction,
+            cancellationToken);
+        await Connection.ExecuteAsync(command);
+    }
+}
+```
+
+When several writes must succeed or fail together, the handler calls each single-purpose repository method in sequence — the ambient transaction makes them atomic. See `UserRepository.CreateAsync` and `DeactivateUserHandler` (deactivate + revoke sessions) for existing examples of this pattern.
+
+Read methods use the same shared connection and transaction — repositories resolve their database access exclusively from `IUnitOfWork`; bounded contexts do not own connection factories of their own.
+
+Code that runs outside the HTTP pipeline (hosted services, integration tests) creates its own scope and therefore owns the unit-of-work lifecycle itself: begin, perform the writes, then commit — see `AdminSeedService` for an example.
+
+**Isolated writes.** A deliberate security write that must persist even when the request fails (e.g. revoking a refresh-token family on replay detection before rejecting the request) is wrapped in `IUnitOfWork.ExecuteIsolatedAsync`. The delegate runs on a fresh connection and transaction that commits independently of the ambient request transaction; repositories participate unchanged. See `RefreshTokenHandler` for the two existing call sites. Use this sparingly — an isolated write is intentionally *not* atomic with the rest of the request.
+
+Application handlers coordinate use cases; they never manage database transactions.
 
 ---
 
@@ -385,17 +415,23 @@ Database scripts are separated by responsibility:
 * function definitions
 * seed data
 
-These concerns must remain separated.
+These concerns must remain separated, each tracked by its own DbUp journal table.
 
 ---
 
-## Versioning
+## Naming and Versioning
+
+Schema/table migration scripts use a per-domain counter (e.g. `01__create_x_table.sql`, `02__create_y_table.sql`), scoped to the bounded context's own `Migrations` folder. There is no shared counter across bounded contexts — each context numbers its own migrations independently.
 
 Migration scripts are immutable once applied.
 
 Never modify a migration that has already been executed in another environment.
 
 New behaviour requires a new script.
+
+Function scripts use a descriptive, unversioned name matching the function (e.g. `create_user.sql`). Because functions are deployed with `CREATE OR REPLACE` semantics, a behaviour change to an existing function is made by editing its file in place rather than adding a new versioned file.
+
+Function and seed scripts run on every deploy (`RunAlways`), not just once — only schema/table migrations are journal-gated to apply exactly once. Every seed script must therefore be safely re-runnable: use `ON CONFLICT DO NOTHING` or a `WHERE NOT EXISTS` guard so re-applying it on an already-seeded database is a no-op rather than a duplicate-insert error.
 
 ---
 
@@ -493,3 +529,15 @@ The following are prohibited unless explicitly justified:
 * duplication of business rules across layers
 
 When in doubt, prefer explicit domain modelling and clear separation of responsibilities.
+
+---
+
+# 10. Environment Configuration
+
+## QA-Environment Defaults
+
+QA-environment defaults must be expressed as `${VAR:-default}` entries in `docker-compose.yml`'s `api` service `environment:` block, not as a committed `appsettings.{Environment}.json` file.
+
+`docker-compose.yml` is the project's single source of truth for which environment variables the QA environment needs. It also serves as the reference for what to configure as environment variables on the actual QA deployment (Render). A second, parallel JSON-file mechanism duplicates that list and risks drifting from what the real deployment needs.
+
+Production and Development configuration are unaffected by this rule — they continue to use `appsettings.json` / `appsettings.Development.json` as already established.

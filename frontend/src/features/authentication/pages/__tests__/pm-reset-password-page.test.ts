@@ -5,7 +5,7 @@ const mockResetPassword = vi.fn();
 vi.mock('../../../../services/auth', () => ({
   resetPassword: (...args: unknown[]) => mockResetPassword(...args),
   AuthError: class AuthError extends Error {
-    constructor(message: string, public status: number, public hasPolicyRules: boolean = false) {
+    constructor(message: string, public status: number, public validationErrors: unknown[] = []) {
       super(message);
       this.name = 'AuthError';
     }
@@ -13,7 +13,7 @@ vi.mock('../../../../services/auth', () => ({
 }));
 
 vi.mock('../../../../services/password-policy', () => ({
-  evaluatePasswordPolicy: () => ({ minLength: false, mixedCase: false, hasDigit: false }),
+  evaluatePasswordPolicy: () => ({ minLength: false }),
 }));
 
 describe('pm-reset-password-page', () => {
@@ -58,9 +58,11 @@ describe('pm-reset-password-page', () => {
       });
     });
 
-    it('shows inline error when API returns 422 policy error', async () => {
+    it('shows inline error when API returns 400 policy error', async () => {
       const { AuthError } = await import('../../../../services/auth');
-      mockResetPassword.mockRejectedValueOnce(new AuthError('Password must be at least 8 characters.', 422, true));
+      mockResetPassword.mockRejectedValueOnce(new AuthError('Password must be at least 8 characters.', 400, [
+        { propertyName: 'NewPassword', errorMessage: 'Password must be at least 8 characters.' },
+      ]));
 
       const shadow = el.shadowRoot!;
       const form = shadow.getElementById('resetForm') as HTMLFormElement;
@@ -112,13 +114,13 @@ describe('pm-reset-password-page', () => {
       expect(formArea.classList.contains('reset__form-area--hidden')).toBe(true);
     });
 
-    it('shows invalid state when API returns 422 token error', async () => {
+    it('shows invalid state when API returns 401 token error', async () => {
       window.location.hash = '#/reset-password?token=expired-token';
       el = new PmResetPasswordPage();
       document.body.appendChild(el);
 
       const { AuthError } = await import('../../../../services/auth');
-      mockResetPassword.mockRejectedValueOnce(new AuthError('Password reset token is invalid or expired.', 422));
+      mockResetPassword.mockRejectedValueOnce(new AuthError('Password reset token is invalid or expired.', 401));
 
       const shadow = el.shadowRoot!;
       const form = shadow.getElementById('resetForm') as HTMLFormElement;

@@ -305,6 +305,7 @@ If code contains domain meaning, it does not belong in `shared/`.
   * resets
   * design tokens
   * typography rules
+  * app-shell layout regions (e.g. `.pm-app-shell`, `.pm-shell`, `.pm-shell main`) — the fixed-chrome layout (nav bar, sidebar, footer, and the content region between them) is a single, global structural concern with no per-component owner, so its sizing/spacing rules are scoped here rather than duplicated per page component
 
 ---
 

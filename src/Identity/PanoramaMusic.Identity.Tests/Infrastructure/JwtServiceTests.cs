@@ -12,9 +12,9 @@ namespace PanoramaMusic.Tests.Identity.Infrastructure;
 
 public class JwtServiceTests
 {
-	private static JwtService CreateService(string secret)
+	private static JwtService CreateService(string secret, string issuer = "panorama-music-api", string audience = "panorama-music-client")
 	{
-		var options = Options.Create(new JwtOptions { Secret = secret });
+		var options = Options.Create(new JwtOptions { Secret = secret, Issuer = issuer, Audience = audience });
 		return new JwtService(options);
 	}
 
@@ -26,7 +26,7 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var roles = new List<Role> { Role.Admin };
 
-		var result = service.GenerateToken(userId, roles);
+		var result = service.GenerateToken(userId, "admin@test.com", roles);
 
 		var handler = new JwtSecurityTokenHandler();
 		var token = result.Token;
@@ -34,8 +34,35 @@ public class JwtServiceTests
 
 		jwt.ShouldSatisfyAllConditions(
 			() => jwt.Subject.ShouldBe(userId.ToString()),
-			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin"))
+			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin")),
+			() => jwt.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Email && c.Value == "admin@test.com")
 		);
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC7")]
+	public void GenerateToken_WhenCalled_ContainsUniqueJtiAndConfiguredIssuerAndAudience()
+	{
+		var service = CreateService("test-secret-key-that-is-at-least-32-chars!!", issuer: "test-issuer", audience: "test-audience");
+
+		var first = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
+		var second = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
+
+		var handler = new JwtSecurityTokenHandler();
+		var firstJwt = handler.ReadJwtToken(first.Token);
+		var secondJwt = handler.ReadJwtToken(second.Token);
+
+		firstJwt.ShouldSatisfyAllConditions(
+			() => firstJwt.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Jti),
+			() => firstJwt.Issuer.ShouldBe("test-issuer"),
+			() => firstJwt.Audiences.ShouldContain("test-audience")
+		);
+		firstJwt.Id.ShouldNotBe(secondJwt.Id);
+
+		// The returned JwtToken.Jti must match the jti actually embedded in the token, so
+		// callers (session revocation) can denylist the exact access token that was issued.
+		first.Jti.ToString().ShouldBe(firstJwt.Id);
+		second.Jti.ToString().ShouldBe(secondJwt.Id);
 	}
 
 	[Fact]
@@ -43,10 +70,10 @@ public class JwtServiceTests
 	public void GenerateToken_WhenValidatedWithSameSecret_ValidatesSuccessfully()
 	{
 		const string secret = "test-secret-key-that-is-at-least-32-chars!!";
-		var service = CreateService(secret);
+		var service = CreateService(secret, issuer: "test-issuer", audience: "test-audience");
 		var userId = Guid.NewGuid();
 
-		var result = service.GenerateToken(userId, [Role.Admin]);
+		var result = service.GenerateToken(userId, "admin@test.com", [Role.Admin]);
 
 		var handler = new JwtSecurityTokenHandler();
 		var token = result.Token;
@@ -54,13 +81,70 @@ public class JwtServiceTests
 		{
 			ValidateIssuerSigningKey = true,
 			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-			ValidateIssuer = false,
-			ValidateAudience = false,
+			ValidateIssuer = true,
+			ValidIssuer = "test-issuer",
+			ValidateAudience = true,
+			ValidAudience = "test-audience",
+			ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
 			ClockSkew = TimeSpan.Zero,
 		};
 
 		var principal = handler.ValidateToken(token, parameters, out _);
 
 		principal.ShouldNotBeNull();
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC7")]
+	public void ValidateToken_WhenAudienceDoesNotMatch_ThrowsSecurityTokenException()
+	{
+		const string secret = "test-secret-key-that-is-at-least-32-chars!!";
+		var service = CreateService(secret, issuer: "test-issuer", audience: "test-audience");
+		var result = service.GenerateToken(Guid.NewGuid(), "admin@test.com", [Role.Admin]);
+
+		var handler = new JwtSecurityTokenHandler();
+		var parameters = new TokenValidationParameters
+		{
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+			ValidateIssuer = true,
+			ValidIssuer = "test-issuer",
+			ValidateAudience = true,
+			ValidAudience = "a-different-audience",
+			ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+		};
+
+		Should.Throw<SecurityTokenException>(() => handler.ValidateToken(result.Token, parameters, out _));
+	}
+
+	[Fact]
+	[Trait("AC", "M1.4UC7")]
+	public void ValidateToken_WhenTokenUsesNoneAlgorithmAndIsUnsigned_ThrowsSecurityTokenException()
+	{
+		const string secret = "test-secret-key-that-is-at-least-32-chars!!";
+		var unsignedToken = new JwtSecurityToken(
+			issuer: "test-issuer",
+			audience: "test-audience",
+			claims: [new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString())],
+			expires: DateTime.UtcNow.AddMinutes(15));
+
+		var handler = new JwtSecurityTokenHandler();
+		var rawToken = handler.WriteToken(unsignedToken);
+
+		// Mirrors the production TokenValidationParameters in ServiceCollectionExtensions —
+		// RequireSignedTokens defaults to true, so a none-alg, unsigned token is rejected for
+		// lacking a signature at all, never mind one that doesn't match the HMAC allowlist.
+		var parameters = new TokenValidationParameters
+		{
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+			ValidateIssuer = true,
+			ValidIssuer = "test-issuer",
+			ValidateAudience = true,
+			ValidAudience = "test-audience",
+			ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+		};
+
+		Should.Throw<SecurityTokenException>(() => handler.ValidateToken(rawToken, parameters, out _));
 	}
 }

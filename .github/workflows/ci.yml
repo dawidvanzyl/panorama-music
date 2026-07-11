@@ -73,3 +73,91 @@ jobs:
       - name: Test
         run: npm run test
         working-directory: frontend
+
+  e2e-ci:
+    name: E2E CI
+    runs-on: ubuntu-latest
+
+    env:
+      # CI-only placeholder values for the ephemeral `qa` Compose stack. The
+      # stack is local to this job and never exposed, so these are not
+      # GitHub Secrets — see M1.2 epic (#122) and #128.
+      POSTGRES_USER: ci_postgres
+      POSTGRES_PASSWORD: ci-only-placeholder-pg-password
+      POSTGRES_DB_QA: panorama_music_qa
+      RESET_DB: "true"
+      JWT__Secret: ci-only-placeholder-jwt-secret-do-not-use-outside-pipeline
+      Admin__Email: admin@panorama-music.ci
+      Admin__Password: CiOnlyPlaceholder123!
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: "npm"
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        run: npm ci
+        working-directory: e2e
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: e2e
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          tags: panorama-music-api:qa
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start qa Compose profile
+        run: docker compose --profile qa up -d
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 60); do
+            if curl --silent --fail http://localhost:3000/api/health > /dev/null; then
+              echo "API is healthy."
+              exit 0
+            fi
+            echo "Waiting for API health... ($i/60)"
+            sleep 5
+          done
+          echo "::error::API did not become healthy in time."
+          docker compose --profile qa logs
+          exit 1
+
+      - name: Run Playwright suite
+        run: npm run test:e2e
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
+
+      - name: Stop qa Compose profile
+        if: always()
+        run: docker compose --profile qa down -v

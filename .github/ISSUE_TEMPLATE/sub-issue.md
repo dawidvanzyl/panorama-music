@@ -101,6 +101,12 @@ sequenceDiagram
 
 - [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
 
+### E2E
+
+> Only for criteria that don't decompose into backend-only or frontend-only behaviour. Codes here are IT codes (not UC codes) — one IT code per spec file/`test.describe` block, repeated across every G/W/T line that spec covers — verified via the Playwright E2E suite instead of the unit-test runners.
+
+- [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
+
 ---
 
 ## Out of Scope

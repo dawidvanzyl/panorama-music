@@ -67,9 +67,10 @@ development) as defined in `coding-standards.md`.
 
 * Extract milestone number using regex:
 
-  * Primary match: `M(\d+)`
+  * Primary match: `M(\d+(?:\.\d+)?)`
   * Normalize the extracted number to lowercase form for all branch names
-  (e.g. `M3` → use `3`, branch is `milestone/m3`).
+  (e.g. `M3` → use `3`, branch is `milestone/m3`; `M1.1` → use `1.1`, branch
+  is `milestone/m1.1`).
   
 * If multiple matches exist or no match is found:
 
@@ -120,7 +121,9 @@ development) as defined in `coding-standards.md`.
 If confirmed:
 
 * `git fetch origin`
-* `git checkout milestone/m{number}`
+* `git switch milestone/m{number}` (not `git checkout` — `switch` refuses to
+  silently detach onto a same-named tag left behind by a prior
+  `close-milestone-watch` run; `checkout` would not)
 * If `origin/milestone/m{number}` exists:
   * `git reset --hard origin/milestone/m{number}`
 * If branch exists locally only (no remote counterpart):
@@ -143,8 +146,13 @@ Always base from remote master (not local):
 ```bash
 git fetch origin
 git checkout -B milestone/m{number} origin/master
-git push -u origin milestone/m{number}
+git push -u origin refs/heads/milestone/m{number}:refs/heads/milestone/m{number}
 ```
+
+Use the fully-qualified refspec for the push, not the short name. A prior
+closed milestone leaves behind a tag named `milestone/m{number}` (created by
+`close-milestone-watch`), and a short-name push fails with "src refspec ...
+matches more than one" once a same-named tag exists.
 
 ---
 

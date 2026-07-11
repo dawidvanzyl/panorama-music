@@ -1,8 +1,7 @@
 import { createUser, AdminError } from '../services/admin';
 
-const template = document.createElement('template');
-template.innerHTML = `
-  <style>
+const styles = new CSSStyleSheet();
+styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
     }
@@ -105,7 +104,10 @@ template.innerHTML = `
       border: 1px solid var(--pm-danger);
       color: var(--pm-danger);
     }
-  </style>
+  `);
+
+const template = document.createElement('template');
+template.innerHTML = `
 
   <div class="create-user__card">
     <h2 class="create-user__title">Create User</h2>
@@ -149,6 +151,7 @@ export class PmCreateUserForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

@@ -1,14 +1,15 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using PanoramaMusic.Identity.Application;
+using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
-public sealed class SmtpEmailService(IOptions<SmtpOptions> options, IAppOptions appOptions) : IEmailService
+public sealed class SmtpEmailService(IOptions<SmtpOptions> options, IAppOptions appOptions, IHostEnvironment hostEnvironment) : IEmailService
 {
 	private readonly SmtpOptions _options = options.Value;
 
@@ -31,10 +32,19 @@ public sealed class SmtpEmailService(IOptions<SmtpOptions> options, IAppOptions 
 		};
 
 		using var client = new SmtpClient();
-		await client.ConnectAsync(_options.Host, _options.Port, SecureSocketOptions.StartTlsWhenAvailable, cancellationToken);
+		await client.ConnectAsync(_options.Host, _options.Port, ResolveSecureSocketOptions(hostEnvironment), cancellationToken);
 		if (!string.IsNullOrEmpty(_options.Username))
 			await client.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
 		await client.SendAsync(message, cancellationToken);
 		await client.DisconnectAsync(quit: true, cancellationToken);
 	}
+
+	// Development and QA both run against a local docker mail catcher (smtp4dev)
+	// that isn't configured for TLS, so opportunistic STARTTLS is used there.
+	// Production must refuse to send over an unencrypted connection rather than
+	// silently falling back to plaintext.
+	public static SecureSocketOptions ResolveSecureSocketOptions(IHostEnvironment hostEnvironment) =>
+		hostEnvironment.IsProduction()
+			? SecureSocketOptions.StartTls
+			: SecureSocketOptions.StartTlsWhenAvailable;
 }

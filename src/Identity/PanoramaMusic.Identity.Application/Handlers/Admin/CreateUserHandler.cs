@@ -1,7 +1,13 @@
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Identity.Application.Commands.Admin;
+using PanoramaMusic.Identity.Application.Constants;
+using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Domain.ValueObjects;
@@ -12,7 +18,10 @@ public sealed class CreateUserHandler(
 	IUserRepository userRepository,
 	IUserRoleRepository userRoleRepository,
 	IInviteTokenRepository inviteTokenRepository,
-	IAppOptions appOptions)
+	IAppOptions appOptions,
+	IUserContext userContext,
+	IAuditLogger auditLogger,
+	IAuditEventFactory auditEventFactory)
 {
 	public async Task<CreateUserResult> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
 	{
@@ -22,18 +31,50 @@ public sealed class CreateUserHandler(
 		if (existing is not null)
 			throw new DomainException("A user with this email already exists.");
 
-		if (command.Request.Roles.Count == 0)
-			throw new ValidationException("At least one role must be assigned.");
-
 		var user = new User(Guid.NewGuid(), email, DateTime.UtcNow);
-		await userRepository.AddAsync(user, cancellationToken);
-		foreach (var role in command.Request.Roles)
-			await userRoleRepository.AddAsync(new UserRole(user.UserId, role), cancellationToken);
+		await CreateUserAsync(user, command.Request.Roles, cancellationToken);
 
+		var inviteUrl = await GenerateInviteAsync(user, cancellationToken);
+
+		return new CreateUserResult(user.UserId, inviteUrl);
+	}
+
+	private async Task CreateUserAsync(User user, IList<Role> roles, CancellationToken cancellationToken)
+	{
+		await userRepository.CreateAsync(user, cancellationToken);
+		foreach (var role in roles)
+			await userRoleRepository.CreateAsync(new UserRole(user.UserId, role), cancellationToken);
+
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.UserCreated,
+				userContext.GetRequiredUserId(),
+				userContext.Email,
+				user.UserId,
+				AuditOutcomes.Success,
+				detail: new Dictionary<string, object?>
+				{
+					[AuditEventDetailKeys.TargetDisplay] = user.Email.Value,
+					[AuditEventDetailKeys.Roles] = roles.Select(role => role.ToString()).ToArray(),
+				}),
+			cancellationToken);
+	}
+
+	private async Task<string> GenerateInviteAsync(User user, CancellationToken cancellationToken)
+	{
 		var token = RawToken.Generate();
 		var inviteToken = new InviteToken(Guid.NewGuid(), user.UserId, token.Hash, DateTime.UtcNow.AddDays(TokenConstants.InviteTokenExpiryDays));
-		await inviteTokenRepository.AddAsync(inviteToken, cancellationToken);
+		await inviteTokenRepository.CreateAsync(inviteToken, cancellationToken);
 
-		return new CreateUserResult(user.UserId, $"{appOptions.AppBaseUrl}/#/register?token={token.Value}");
+		await auditLogger.CreateAsync(
+			auditEventFactory.Create(
+				IdentityAuditEventTypes.InviteGenerated,
+				userContext.GetRequiredUserId(),
+				userContext.Email,
+				user.UserId,
+				AuditOutcomes.Success),
+			cancellationToken);
+
+		return $"{appOptions.AppBaseUrl}/#/register?token={token.Value}";
 	}
 }
