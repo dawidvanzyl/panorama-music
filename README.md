@@ -180,6 +180,9 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `JWT__Secret` | JWT signing secret (placeholder until M1) |
 | `Serilog__MinimumLevel__Default` | Optional minimum log level override (defaults to `Information` from `appsettings.json`) |
+| `Email__Provider` | `Maileroo` in Production — Render's free tier blocks outbound SMTP, so password-reset email is sent via the Maileroo HTTP API instead |
+| `Email__From` / `Email__ReplyTo` / `Email__FromDisplayName` | Sender/reply-to address and display name used for outbound email regardless of transport |
+| `Maileroo__ApiKey` | Maileroo API key (secret); sent as the `X-API-Key` header, required when `Email__Provider=Maileroo` |
 
 ### Logging
 
@@ -187,7 +190,9 @@ The API logs through Serilog behind the standard `Microsoft.Extensions.Logging` 
 
 On startup, DbUp automatically runs all pending migrations against the Neon database.
 
-In Production, the seeded admin account is created with a forced credential rotation: its first successful login is denied normal access and directed into the password-reset flow instead, so the documented seed password (`Admin__Password`) cannot remain valid indefinitely if left unchanged. Outbound email (e.g. password reset) also requires STARTTLS in Production — the send fails rather than falling back to plaintext if the SMTP server doesn't support it. Development and QA both run against a local docker mail catcher (smtp4dev) with no TLS configured, so they use opportunistic STARTTLS instead.
+In Production, the seeded admin account is created with a forced credential rotation: its first successful login is denied normal access and directed into the password-reset flow instead, so the documented seed password (`Admin__Password`) cannot remain valid indefinitely if left unchanged.
+
+Outbound email (e.g. password reset) goes through an injectable `IMailSender` transport selected by `Email__Provider`, chosen purely by configuration — no code change is required to switch transports. Production uses `Maileroo` (the Maileroo HTTP API), since Render's free tier blocks outbound SMTP on ports 25/587. Development and QA use `Smtp` against a local docker mail catcher (smtp4dev); if `Smtp` is ever selected in Production, the connection still requires mandatory STARTTLS — the send fails rather than falling back to plaintext if the SMTP server doesn't support it. Email content (subject, reset link, expiry copy) is built once in `EmailService` and is identical regardless of which transport sends it.
 
 #### Adding seed data
 

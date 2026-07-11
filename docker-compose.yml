@@ -73,10 +73,12 @@ services:
       RateLimiting__Auth__IpPermitLimit: ${RateLimiting__Auth__IpPermitLimit:-1000}
       RateLimiting__Auth__AccountPermitLimit: ${RateLimiting__Auth__AccountPermitLimit:-1000}
       RateLimiting__Auth__WindowSeconds: ${RateLimiting__Auth__WindowSeconds:-60}
+      Email__Provider: ${Email__Provider:-Smtp}
+      Email__From: ${Email__From:-noreply@panorama-music.qa}
+      Email__ReplyTo: ${Email__ReplyTo:-noreply@panorama-music.qa}
+      Email__FromDisplayName: ${Email__FromDisplayName:-Panorama Music (QA)}
       Smtp__Host: ${Smtp__Host:-smtp4dev}
       Smtp__Port: ${Smtp__Port:-25}
-      Smtp__From: ${Smtp__From:-noreply@panorama-music.qa}
-      Smtp__FromDisplayName: ${Smtp__FromDisplayName:-Panorama Music (QA)}
       AppBaseUrl: ${AppBaseUrl:-http://localhost:3000}
       Hibp__Enabled: ${Hibp__Enabled:-false}
     ports:
