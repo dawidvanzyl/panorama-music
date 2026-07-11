@@ -18,9 +18,11 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Contexts;
+using PanoramaMusic.Identity.Infrastructure.Enums;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -33,7 +35,9 @@ public static class ServiceCollectionExtensions
 	{
 		services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 		services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
+		services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
 		services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+		services.Configure<MailerooOptions>(configuration.GetSection(MailerooOptions.SectionName));
 		services.Configure<HibpOptions>(configuration.GetSection(HibpOptions.SectionName));
 		services.Configure<AppOptions>(configuration);
 		services.AddRepositories();
@@ -133,13 +137,14 @@ public static class ServiceCollectionExtensions
 			client.BaseAddress = new Uri("https://api.pwnedpasswords.com/");
 			client.Timeout = TimeSpan.FromSeconds(2);
 			client.DefaultRequestHeaders.Add("Add-Padding", "true");
-		});
+		}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddSingleton<IDenyListPasswordService, DenyListPasswordService>();
 		services.AddSingleton<ICommonPasswordService, CommonPasswordService>();
 		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
 		services.AddSingleton<IJwtService, JwtService>();
 		services.AddSingleton<IHostedService, AdminSeedService>();
-		services.AddTransient<IEmailService, SmtpEmailService>();
+		services.AddTransient<IEmailService, EmailService>();
+		services.AddMailSender();
 		services.AddSingleton<IAdminOptions>(sp => sp.GetRequiredService<IOptions<AdminOptions>>().Value);
 		services.AddSingleton<IAppOptions>(sp => sp.GetRequiredService<IOptions<AppOptions>>().Value);
 		services.AddSingleton<ISessionOptions>(sp => sp.GetRequiredService<IOptions<JwtOptions>>().Value);
@@ -148,6 +153,31 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IClientContext, ClientContext>();
 		services.AddTransient<AccessTokenValidationService>();
 		services.AddTransient<CurrentSessionResolver>();
+		return services;
+	}
+
+	private static IServiceCollection AddMailSender(this IServiceCollection services)
+	{
+		services.AddTransient<SmtpMailSender>();
+		services.AddHttpClient<MailerooMailSender>((sp, client) =>
+		{
+			var options = sp.GetRequiredService<IOptions<MailerooOptions>>().Value;
+			if (string.IsNullOrWhiteSpace(options.ApiKey))
+				throw new InvalidOperationException($"'{MailerooOptions.SectionName}:{nameof(MailerooOptions.ApiKey)}' is not configured.");
+
+			client.BaseAddress = new Uri(options.BaseUrl);
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+		}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+		services.AddTransient<IMailSender>(sp =>
+		{
+			var provider = sp.GetRequiredService<IOptions<EmailOptions>>().Value.Provider;
+			return provider switch
+			{
+				EmailProvider.Maileroo => sp.GetRequiredService<MailerooMailSender>(),
+				EmailProvider.Smtp => sp.GetRequiredService<SmtpMailSender>(),
+				_ => throw new InvalidOperationException($"'{EmailOptions.SectionName}:{nameof(EmailOptions.Provider)}' value '{provider}' is not supported."),
+			};
+		});
 		return services;
 	}
 
