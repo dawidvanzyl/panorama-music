@@ -1,6 +1,7 @@
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Application.Models;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
@@ -17,10 +18,20 @@ public sealed class MailerooMailSender(HttpClient httpClient) : IMailSender
 			message.Html);
 
 		using var response = await httpClient.PostAsJsonAsync("api/v2/emails", payload, cancellationToken);
-		var body = await response.Content.ReadFromJsonAsync<MailerooResponse>(cancellationToken);
+		var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+
+		MailerooResponse? body;
+		try
+		{
+			body = string.IsNullOrWhiteSpace(responseText) ? null : JsonSerializer.Deserialize<MailerooResponse>(responseText);
+		}
+		catch (JsonException)
+		{
+			body = null;
+		}
 
 		if (!response.IsSuccessStatusCode || body is null || !body.Success)
-			throw new InvalidOperationException($"Maileroo email send failed: {body?.Message ?? response.ReasonPhrase}");
+			throw new InvalidOperationException($"Maileroo email send failed ({(int)response.StatusCode} {response.ReasonPhrase}): {body?.Message ?? responseText}");
 	}
 
 	private sealed record MailerooRequest(

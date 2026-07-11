@@ -22,6 +22,7 @@ using PanoramaMusic.Identity.Infrastructure.Enums;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -136,7 +137,7 @@ public static class ServiceCollectionExtensions
 			client.BaseAddress = new Uri("https://api.pwnedpasswords.com/");
 			client.Timeout = TimeSpan.FromSeconds(2);
 			client.DefaultRequestHeaders.Add("Add-Padding", "true");
-		});
+		}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddSingleton<IDenyListPasswordService, DenyListPasswordService>();
 		services.AddSingleton<ICommonPasswordService, CommonPasswordService>();
 		services.AddSingleton<IPasswordHashService, Argon2PasswordHashService>();
@@ -165,8 +166,8 @@ public static class ServiceCollectionExtensions
 				throw new InvalidOperationException($"'{MailerooOptions.SectionName}:{nameof(MailerooOptions.ApiKey)}' is not configured.");
 
 			client.BaseAddress = new Uri(options.BaseUrl);
-			client.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
-		});
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+		}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddTransient<IMailSender>(sp =>
 		{
 			var provider = sp.GetRequiredService<IOptions<EmailOptions>>().Value.Provider;

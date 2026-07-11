@@ -4,6 +4,7 @@ using PanoramaMusic.Identity.Application.Models;
 using PanoramaMusic.Identity.Infrastructure.Services;
 using Shouldly;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Xunit;
 
@@ -27,7 +28,7 @@ public class MailerooMailSenderTests
 	public MailerooMailSenderTests()
 	{
 		var httpClient = new HttpClient(_handler.Object) { BaseAddress = _baseAddress };
-		httpClient.DefaultRequestHeaders.Add("X-API-Key", "test-api-key");
+		httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "test-api-key");
 		_mailerooMailSender = new MailerooMailSender(httpClient);
 	}
 
@@ -40,7 +41,7 @@ public class MailerooMailSenderTests
 
 	[Fact]
 	[Trait("AC", "181UC1")]
-	public async Task SendAsync_ProviderIsMaileroo_PostsToEmailsEndpointWithApiKeyHeaderAndCorrectBody()
+	public async Task SendAsync_ProviderIsMaileroo_PostsToEmailsEndpointWithBearerAuthAndCorrectBody()
 	{
 		HttpRequestMessage? capturedRequest = null;
 		_handler.Protected()
@@ -53,9 +54,9 @@ public class MailerooMailSenderTests
 		capturedRequest.ShouldNotBeNull();
 		capturedRequest!.Method.ShouldBe(HttpMethod.Post);
 		capturedRequest.RequestUri.ShouldBe(new Uri(_baseAddress, "api/v2/emails"));
-		capturedRequest.Headers.Authorization.ShouldBeNull();
-		capturedRequest.Headers.TryGetValues("X-API-Key", out var apiKeyValues).ShouldBeTrue();
-		apiKeyValues!.ShouldContain("test-api-key");
+		capturedRequest.Headers.Authorization.ShouldNotBeNull();
+		capturedRequest.Headers.Authorization!.Scheme.ShouldBe("Bearer");
+		capturedRequest.Headers.Authorization.Parameter.ShouldBe("test-api-key");
 
 		var body = await capturedRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
 		using var json = JsonDocument.Parse(body);

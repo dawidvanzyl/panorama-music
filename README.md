@@ -182,7 +182,7 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 | `Serilog__MinimumLevel__Default` | Optional minimum log level override (defaults to `Information` from `appsettings.json`) |
 | `Email__Provider` | `Maileroo` in Production — Render's free tier blocks outbound SMTP, so password-reset email is sent via the Maileroo HTTP API instead |
 | `Email__From` / `Email__ReplyTo` / `Email__FromDisplayName` | Sender/reply-to address and display name used for outbound email regardless of transport |
-| `Maileroo__ApiKey` | Maileroo API key (secret); sent as the `X-API-Key` header, required when `Email__Provider=Maileroo` |
+| `Maileroo__ApiKey` | Maileroo API key (secret); sent as an `Authorization: Bearer` header, required when `Email__Provider=Maileroo` |
 
 ### Logging
 
