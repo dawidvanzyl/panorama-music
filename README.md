@@ -192,7 +192,7 @@ On startup, DbUp automatically runs all pending migrations against the Neon data
 
 In Production, the seeded admin account is created with a forced credential rotation: its first successful login is denied normal access and directed into the password-reset flow instead, so the documented seed password (`Admin__Password`) cannot remain valid indefinitely if left unchanged.
 
-Outbound email (e.g. password reset) goes through an injectable `IMailSender` transport selected by `Email__Provider`, chosen purely by configuration — no code change is required to switch transports. Production uses `Maileroo` (the Maileroo HTTP API), since Render's free tier blocks outbound SMTP on ports 25/587. Development and QA use `Smtp` against a local docker mail catcher (smtp4dev); if `Smtp` is ever selected in Production, the connection still requires mandatory STARTTLS — the send fails rather than falling back to plaintext if the SMTP server doesn't support it. Email content (subject, reset link, expiry copy) is built once in `EmailService` and is identical regardless of which transport sends it.
+Outbound email (e.g. password reset) goes through an injectable `IMailSender` transport selected by `Email__Provider`, chosen purely by configuration — no code change is required to switch transports. Production uses `Maileroo` (the Maileroo HTTP API), since Render's free tier blocks outbound SMTP on ports 25/587. Development and QA use `Smtp` against a local docker mail catcher (smtp4dev). Email content (subject, reset link, expiry copy) is built once in `EmailService` and is identical regardless of which transport sends it.
 
 #### Adding seed data
 
