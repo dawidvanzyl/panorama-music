@@ -1,10 +1,13 @@
 ---
 name: Sub-Issue
 about: Story-level requirement brief for agent implementation
-title: '[M?] Short descriptive title'
-labels: ''
+title: '[Feature] Short descriptive title'
+labels: 'type: feature'
 assignees: dawidvanzyl
 ---
+
+> **Bug reports use this same template** — swap the title prefix to `[Bug]` and the label to
+> `type: bug` instead of `[Feature]`/`type: feature`. Everything else below is unchanged.
 
 ## Overview
 
@@ -14,11 +17,12 @@ One paragraph. What this story delivers from a **user or system value perspectiv
 
 ## Epic Reference
 
-- Milestone: [M? — Milestone Title](#issue-number)
+- Epic: #issue-number
 - Work Areas:
   - [ ] Exact checkbox text copied from epic
 - Acceptance Criteria Covered:
-  - [ ] `[IT_CODE]` Exact checkbox text copied from epic (e.g. `M1IT1`)
+  - [ ] `[IT_CODE]` Exact checkbox text **and code** copied verbatim from the epic (e.g. epic
+    #45 → `45IT1`) — IT codes are scoped to the **epic's** issue number, not this sub-issue's
 
 ---
 
@@ -27,7 +31,7 @@ One paragraph. What this story delivers from a **user or system value perspectiv
 > What the agent needs to know before writing a single line — prior decisions, patterns already established, things that must not change.
 
 - **Existing patterns to follow:** e.g. all service classes use X pattern; auth is handled via Y middleware
-- **Known constraints:** e.g. must remain backwards-compatible with M1 endpoint contract
+- **Known constraints:** e.g. must remain backwards-compatible with the existing endpoint contract
 - **Related issues:** Depends on #issue / Supersedes decision from #issue
 
 ---
@@ -92,6 +96,10 @@ sequenceDiagram
 ---
 
 ## Acceptance Criteria (G/W/T)
+
+> UC codes are scoped to **this sub-issue's own** number (`{issue_number}UC{n}`, e.g. `48UC1`
+> for issue #48) — invented fresh per sub-issue. IT codes below and under Epic Reference are
+> scoped to the **epic's** number and copied verbatim from it. Neither references a milestone.
 
 ### Backend
 

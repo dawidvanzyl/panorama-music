@@ -60,19 +60,24 @@ development) as defined in `coding-standards.md`.
 
 ### 1) Fetch epic issue and derive milestone number
 
-- Fetch issue using GitHub CLI:
+- Fetch issue using GitHub CLI, including its assigned milestone:
   ```bash
-  gh issue view {epic_issue_number} --json title
+  gh issue view {epic_issue_number} --json title,milestone
 ````
 
-* Extract milestone number using regex:
+* If the epic has no milestone assigned, stop and ask the user to assign one
+  on GitHub first. Do not proceed until confirmed, and do not fall back to
+  parsing the epic issue's own title text.
+
+* Extract milestone number using regex against the assigned milestone's
+  **title** (`.milestone.title`), never the epic issue's own title:
 
   * Primary match: `M(\d+(?:\.\d+)?)`
   * Normalize the extracted number to lowercase form for all branch names
   (e.g. `M3` → use `3`, branch is `milestone/m3`; `M1.1` → use `1.1`, branch
   is `milestone/m1.1`).
   
-* If multiple matches exist or no match is found:
+* If multiple matches exist or no match is found in the milestone title:
 
   * Ask user to provide milestone number manually
   * Stop execution

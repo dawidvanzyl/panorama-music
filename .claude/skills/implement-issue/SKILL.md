@@ -69,9 +69,12 @@ Ignore completely:
 Extract and internalize the following before writing any code:
 
 - `issue_title`
-- `milestone_number` — from the issue milestone (e.g. `M1` → `1`)
-- IT codes — from `## Epic Reference > Acceptance Criteria Covered` (e.g. `M1IT1`)
-- UC codes — from `## Acceptance Criteria (G/W/T)` (e.g. `M1UC1`)
+- `milestone_title` — from the issue's assigned GitHub milestone, if any.
+  Used only for the PR `--milestone` flag in step 6; omit that flag entirely
+  if the issue has no milestone assigned (expected for `[Bug]` and
+  `[Tech Debt]` issues).
+- IT codes — from `## Epic Reference > Acceptance Criteria Covered` (e.g. `48IT1`)
+- UC codes — from `## Acceptance Criteria (G/W/T)` (e.g. `48UC1`)
 - **Constraints** — read `## Context & Constraints` in full. Note every
   pattern, convention, and restriction listed. These are non-negotiable during
   implementation; do not deviate without raising it with the user first.
@@ -132,8 +135,11 @@ requirement will land, without having written a single line yet.
 
 ### 3) Create feature branch
 
-- Create feature branch from current HEAD following branch naming conventions
-  in `docs/coding-standards.md`.
+- Determine the branch prefix from the issue's labels: `type: feature` →
+  `feature/`, `type: bug` → `bug/`, `type: tech-debt` → `tech-debt/`.
+- Create branch `{prefix}/{issue_number}-{slug}` from current HEAD, per the
+  slug rule in `docs/coding-standards.md` (kebab-case, derived from the issue
+  title, max 5 words). No milestone number in the branch name.
 
 ### 4) Implement
 
@@ -142,12 +148,16 @@ requirement will land, without having written a single line yet.
   from `## Out of Scope`, and the contracts from `## API / Interface Contract`.
 - For each UC code: write the corresponding test — one test per UC, named to
   reflect the G/W/T behaviour it verifies.
-  - Backend UC codes: xUnit tests tagged `[Trait("AC", "M1UCx")]`
+  - Backend UC codes: xUnit tests tagged `[Trait("AC", "{code}")]` using the
+    exact code as it appears in the issue body (e.g. `[Trait("AC", "48UC1")]`).
   - Frontend UC codes: vitest service tests (mock fetch, no DOM) in
     `frontend/src/services/__tests__/`. Install vitest if not present
-    (`npm install -D vitest`).
+    (`npm install -D vitest`). Register any new tag in `frontend/vitest.config.ts`'s
+    `tags` array (name + description), same as every existing tag.
 - For each IT code: write an xUnit integration test tagged
-  `[Trait("AC", "M1ITx")]`.
+  `[Trait("AC", "{code}")]` using the exact code as it appears in the issue
+  body (e.g. `[Trait("AC", "45IT1")]`) — IT codes carry the **epic's** issue
+  number, already resolved in the text; do not recompute it.
 - If `## Acceptance Criteria (G/W/T)` has no entries, no unit/frontend tests are required for this story. IT code coverage from `## Epic Reference > Acceptance Criteria Covered` is independent of this and still applies if present.
 - Update `README.md` if behaviour, setup, usage, or documentation are affected.
 - Build: `dotnet build src/PanoramaMusic.sln`
@@ -174,16 +184,17 @@ requirement will land, without having written a single line yet.
 - If no: stop and wait.
 - Commit and format the PR following conventions in `docs/coding-standards.md`.
 - Push feature branch.
-- Retrieve the milestone title from the issue milestone extracted in step 1.
-- Create PR using `gh pr create` with **all** of the following flags explicitly
-  set:
+- Use `milestone_title` extracted in step 1, if any.
+- Create PR using `gh pr create` with:
   - `--base base_branch`
   - `--title "{issue_title} (#{issue_number})"`
-  - `--milestone "{milestone_title}"`
+  - `--milestone "{milestone_title}"` — **omit this flag entirely** if the
+    issue has no milestone assigned (expected for `[Bug]`/`[Tech Debt]`
+    issues). Never invent a milestone.
   - `--body` including:
     - brief overview of what changed
     - `Closes #{issue_number}`
-    - milestone name as a readable line
+    - milestone name as a readable line, if one is assigned
 - Do not rely on post-creation edits — set milestone and issue reference at
   creation time.
 
