@@ -63,8 +63,8 @@ git branch --show-current
 - Determine base branch:
   - With PR: `gh pr view #{pr_number} --json baseRefName,headRefName` → save
     `base_branch`, `feature_branch`.
-  - Without PR: if branch starts with `feature/`, base is `master`. If
-    `milestone/`, the milestone branch is the base.
+  - Without PR: if branch starts with `feature/`, `bug/`, or `tech-debt/`,
+    base is `master`. If `milestone/`, the milestone branch is the base.
 
 ### 2) Read the issue
 

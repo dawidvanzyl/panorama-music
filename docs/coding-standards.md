@@ -5,22 +5,51 @@ It applies across backend and frontend unless explicitly constrained by stack-sp
 
 ---
 
+## 0. Issue Conventions
+
+Every issue kind has a required title prefix and label. Both are enforced by the
+matching `.github/ISSUE_TEMPLATE/*.md` file — do not deviate from either.
+
+| Issue kind | Title prefix | Label | Template |
+|---|---|---|---|
+| Epic | `[Backlog]` | `epic: backlog` | `epic-issue.md` |
+| Feature sub-issue | `[Feature]` | `type: feature` | `sub-issue.md` |
+| Bug | `[Bug]` | `type: bug` | `sub-issue.md` (same shape, swap prefix/label) |
+| Tech debt | `[Tech Debt]` | `type: tech-debt` | `tech-debt-issue.md` |
+
+**Milestone references are derived purely from the GitHub milestone field
+attached to an issue — never from the issue's own title text.** An epic's
+milestone tag/number (e.g. `1.1`, used for branch/tag naming) is read from the
+**assigned milestone's own title** (`gh issue view {n} --json milestone`), not
+parsed out of the epic issue's title. Epic and sub-issue titles never encode a
+milestone tag.
+
+---
+
 ## 1. Branching Model
 
 ### 1.1 Branch Types
 
-Only two branch types exist:
+Two branch categories exist:
 
-### Feature / Bug branches
+### Feature / Bug / Tech-Debt branches
 
 ```text id="g8v2kq"
-feature/M{milestone_number}-{issue_number}-{slug}
+{feature|bug|tech-debt}/{issue_number}-{slug}
 ```
+
+The prefix is chosen from the issue's label:
+
+| Label | Prefix |
+|---|---|
+| `type: feature` | `feature/` |
+| `type: bug` | `bug/` |
+| `type: tech-debt` | `tech-debt/` |
 
 Example:
 
 ```text id="0m6c2s"
-feature/M0-55-coding-standards-backend-cleanup
+feature/55-coding-standards-backend-cleanup
 ```
 
 Rules:
@@ -30,20 +59,25 @@ Rules:
 * Must always be merged via PR
 * Must be short-lived
 * Slug must be kebab-case, derived from the issue title, max 5 words
+* No milestone number in the branch name — milestone membership (Mode A) is
+  tracked via the issue's GitHub milestone field, not the branch name
 
 ---
 
 ### Milestone branches
 
 ```text id="m3v9qp"
-milestone/M{milestone_number}
+milestone/m{milestone_number}
 ```
 
 Example:
 
 ```text id="z1n8xd"
-milestone/M0
+milestone/m0
 ```
+
+`milestone_number` is derived from the **epic's assigned milestone title**
+(see `## 0. Issue Conventions`), never from the epic issue's own title.
 
 Rules:
 
@@ -62,14 +96,14 @@ The system operates in two explicit modes.
 ### Mode A — Milestone-driven development (pre-v1.0 and major release cycles)
 
 * Work is organised into milestones
-* Every change must be developed in a feature/bug branch
+* Every change must be developed in a feature/bug/tech-debt branch
 * Feature branches belong to exactly one milestone
 * Milestone is the integration boundary
 
 Workflow:
 
 ```text id="a7p3lm"
-feature/* → milestone/Mx → master
+{feature|bug|tech-debt}/* → milestone/m{n} → master
 ```
 
 Rules:
@@ -81,7 +115,7 @@ Rules:
 
 ### Mode B — Direct-to-master development (post-v1.0)
 
-* All changes still use feature/bug branches
+* All changes still use feature/bug/tech-debt branches
 * All changes go through PRs
 * Feature branches merge directly into `master`
 * Milestones are not required for normal work
@@ -89,7 +123,7 @@ Rules:
 Workflow:
 
 ```text id="r2c9zw"
-feature/* → master
+{feature|bug|tech-debt}/* → master
 ```
 
 Rules:
@@ -203,15 +237,15 @@ feat!: redesign authentication flow
 
 ### 3.2 Allowed Targets
 
-* `milestone/M{n}` (Mode A only)
+* `milestone/m{n}` (Mode A only)
 * `master`
 
 ---
 
 ### 3.3 PR Flow Rules
 
-* Feature → milestone (Mode A only)
-* Feature → master (Mode B only)
+* Feature/bug/tech-debt → milestone (Mode A only)
+* Feature/bug/tech-debt → master (Mode B only)
 * milestone → master (final integration step in Mode A)
 * No workflow bypassing allowed
 
@@ -242,7 +276,7 @@ A PR is not ready to be merged unless:
 ### 3.5 Merge Rules
 
 * No direct commits on `master`
-* feature/* and fix/* branches are always squash-merged into their target
+* feature/*, bug/*, and tech-debt/* branches are always squash-merged into their target
 * milestone/* branches are always merge-committed into master (no squash — history must be preserved)
 * No other merge strategies are permitted
 ---
@@ -322,3 +356,35 @@ No backend or frontend rule may introduce:
 * exceptions to commit structure
 
 These are global invariants.
+
+---
+
+## 6. Acceptance Criteria Test Codes
+
+### 6.1 Format
+
+* Unit tests (backend and frontend): `{issue_number}UC{n}`
+* Playwright E2E: `{issue_number}IT{n}`
+
+Codes are scoped to an issue's own number — never a milestone. Two issue
+numbers can appear in a sub-issue's body: UC codes use **that sub-issue's**
+own number; IT codes (both under `## Epic Reference` and `## Acceptance
+Criteria (G/W/T) > ### E2E`) are copied verbatim from the **epic's** own
+Acceptance Criteria and so carry the epic's number instead.
+
+### 6.2 Rules
+
+* One IT code per Playwright spec file/`describe` block, repeated across
+  every G/W/T line that block covers.
+* Never use `NFC` as a code — assign a real `UC`/`IT` code.
+* Codes are opaque matching strings to test runners (`dotnet test --filter
+  "AC=CODE"`, vitest `--tags-filter="AC=CODE"`, `playwright test --grep
+  "@CODE"`) — the format itself carries no special meaning to tooling beyond
+  being a literal string.
+
+### 6.3 Not retroactive
+
+This format applies to all **new** issues going forward. It does **not**
+apply retroactively — existing milestone-prefixed codes (e.g. `M1UC12`,
+`@M1.2IT3`) on already-created issues and tests remain valid and unchanged.
+Do not rename or migrate them.

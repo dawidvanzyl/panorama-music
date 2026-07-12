@@ -119,11 +119,13 @@ Fetch:
 
 Extract:
 
-* `milestone_tag`: the short milestone identifier, e.g. `M0`, `M1`, `M0.2`.
-  Derived from the epic title (e.g. `[Backlog] M1 — Identity & Auth` → `M1`).
-* Extract using pattern `M\d+(\.\d+)?` against the epic title.
-  * If multiple matches exist or no match is found, ask the user to provide
-    `milestone_tag` manually. Do not proceed until confirmed.
+* `milestone_title`: fetch the epic's assigned GitHub milestone via
+  `gh issue view {epic_issue_number} --json title,body,milestone`. Used only
+  for the `--milestone` flag when creating sub-issues in Step 4 — sub-issue
+  titles never carry a milestone tag.
+  * If the epic has no milestone assigned, stop and ask the user to assign
+    one on GitHub first. Do not proceed until confirmed, and do not fall
+    back to parsing a tag out of the epic's own title text.
 
 Store into manifest.
 
@@ -201,11 +203,19 @@ It contains:
 * UC codes
 * GIVEN / WHEN / THEN
 
-Derive one or more `[UC_CODE]` criteria (e.g. `M1UC1`, `M1UC2`) per epic AC
-this sub-issue contributes to. Each criterion maps to exactly one verifiable
-behaviour. When a sub-issue spans both backend and frontend, group entries
-under `backend` and `frontend`. If the sub-issue was flagged as having no
-testable behaviour, this file contains an empty criteria set.
+Derive one or more `[UC_CODE]` criteria using the placeholder form
+`{ISSUE}UC{n}` (e.g. `{ISSUE}UC1`, `{ISSUE}UC2`) per epic AC this sub-issue
+contributes to — `{ISSUE}` is resolved to this sub-issue's real issue number
+in Step 4, once the issue exists. Each criterion maps to exactly one
+verifiable behaviour. When a sub-issue spans both backend and frontend, group
+entries under `backend` and `frontend`. If the sub-issue was flagged as
+having no testable behaviour, this file contains an empty criteria set.
+
+IT codes are not invented here — record which of the epic's own
+`## Acceptance Criteria` codes (already `{epic_issue_number}IT{n}`, fixed at
+epic-authoring time) this sub-issue covers, and copy them verbatim (code and
+checkbox text). IT codes never use the `{ISSUE}` placeholder and never need
+resolution in Step 4.
 
 Test Intent Maps are IMMUTABLE after Step 2 completes.
 
@@ -353,7 +363,7 @@ follows:
 
 | Template section | Source |
 |---|---|
-| Title | `[{milestone_tag}] {title}` from `00-skeleton.md` |
+| Title | `[Feature] {title}` from `00-skeleton.md` |
 | Overview | Authored from the sub-issue's behaviour grouping in `00-skeleton.md` |
 | Epic Reference | `#{epic_issue_number}`; Work Areas copied verbatim from epic AWA; Acceptance Criteria Covered = selective `[IT_CODE]` list from `test-intents.json` |
 | Context & Constraints | Coding standards + prior session decisions; known constraints; related issues |
@@ -385,7 +395,7 @@ Wait for the user's response, then proceed according to one of:
 
 * promote current draft to final.md
 * mark approved in manifest
-* confirm: "Draft for [{milestone_tag}] {title} approved and stored."
+* confirm: "Draft for [Feature] {title} approved and stored."
 * move to the next sub-issue
 
 ### MODIFY
@@ -422,10 +432,19 @@ Only after ALL approved:
     `gh label create "<name>"`
 * Create issues via `gh issue create` — iterate over the `final.md` bodies in
   order:
-  * Run `gh issue create` with `--title`, `--milestone`, `--label`, `--body`.
+  * Run `gh issue create` with `--title`, `--milestone "{milestone_title}"`
+    (from Step 1 — omit the flag entirely if the epic has none), `--label`,
+    `--body-file`.
   * Verify the exit code. If creation fails, notify the user with the error
     output and stop.
   * On success, capture the created issue number.
+  * **Resolve placeholders:** substitute every `{ISSUE}` occurrence in the
+    just-created body with the real issue number (this only ever affects UC
+    codes — IT codes already carry the epic's real number and need no
+    substitution), then run `gh issue edit {number} --body-file` with the
+    patched body. Verify the exit code; if the edit fails, notify the user
+    with the error output and stop — never leave an issue with an unresolved
+    `{ISSUE}` placeholder in its body.
   * Confirm to the user: "Created #{number}: {title}"
 * Store issue number + URL in manifest
 
@@ -488,7 +507,7 @@ Fallback:
 ## 6.3 Entry format
 
 ```
-- [ ] [{milestone_tag}] Title (#{number})
+- [ ] [Feature] Title (#{number})
 ```
 
 ---

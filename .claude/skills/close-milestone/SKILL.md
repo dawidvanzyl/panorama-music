@@ -48,15 +48,19 @@ Close out a completed milestone by:
 
 ### 1) Read context
 
-- Fetch the epic issue `#{epic_issue_number}`.
-- Extract `milestone_number` using pattern `M(\d+(?:\.\d+)?)` against the epic
-  title (consistent with `plan-milestone.md`'s extraction rule). For example,
-  `[Backlog] M1 — Identity & Auth` yields milestone number `1`; `[Backlog]
-  M1.1 — Identity Hardening & QA` yields `1.1`.
-- If multiple matches exist or no match is found, notify and ask for the
-  milestone number manually. Do not proceed until confirmed.
+- Fetch the epic issue `#{epic_issue_number}` including its assigned
+  milestone: `gh issue view {epic_issue_number} --json title,body,milestone`.
+- Derive `milestone_title` directly from the epic's assigned milestone field
+  (`.milestone.title`). If the epic has no milestone assigned, stop and ask
+  the user to assign one on GitHub first — never fall back to parsing the
+  epic issue's own title text.
+- Extract `milestone_number` using pattern `M(\d+(?:\.\d+)?)` against
+  `milestone_title` (not the epic issue's title). For example, a milestone
+  titled `M1 — Identity & Auth` yields milestone number `1`; one titled
+  `M1.1 — Identity Hardening & QA` yields `1.1`.
+- If multiple matches exist or no match is found in `milestone_title`, notify
+  and ask for the milestone number manually. Do not proceed until confirmed.
 - Derive `milestone_branch` = `milestone/m{milestone_number}`.
-- Derive `milestone_title` from the epic's milestone field.
 - Parse the epic's `## Acceptance Criteria` section for all `[IT_CODE]` markers
   and their checkbox text. Save as a list of `{code, checkbox_line}`.
 - Determine `OWNER`/`REPO` from `git remote get-url origin`.
@@ -82,13 +86,22 @@ Close out a completed milestone by:
 - Using the sub-issue data fetched in step 2, determine scope per IT code:
   if the corresponding sub-issue has a `layer: frontend` label, the IT code
   is `frontend` scope; if it has a `layer: backend` label, it is `backend`
-  scope; otherwise `e2e` scope (full-stack E2E sub-issues, e.g. M1.2 onward,
-  carry no `layer: backend`/`layer: frontend` label by convention).
+  scope; otherwise `e2e` scope (full-stack E2E sub-issues carry no
+  `layer: backend`/`layer: frontend` label by convention).
+
+> IT codes are issue-scoped (`{issue_number}IT{n}`), not milestone-scoped, so
+> there is no shared prefix to wildcard-match across a milestone's sub-issues
+> in one run. Verify each code individually, the same way `close-issue` does
+> — one filtered test execution per code, never a bulk milestone-wide filter.
+> This also still works unchanged for any pre-existing milestone-prefixed
+> code (e.g. `M1IT3`) encountered on older, not-yet-migrated issues, since
+> each code is matched as a literal string either way.
 
 #### Backend IT codes
 
-- Run: `dotnet test --filter "AC~M{milestone_number}IT" --no-restore`
-- Map each backend-scoped `[IT_CODE]` to its result:
+- For each backend-scoped `[IT_CODE]`, run:
+  `dotnet test --filter "AC=CODE" --no-restore`
+- Map each code to its result:
   - ✅ PASS — test ran and passed
   - ❌ FAIL — test ran and failed, or no test found matching this AC code
 
@@ -97,7 +110,7 @@ Close out a completed milestone by:
 - If any IT codes are frontend-scoped:
   - Read `frontend/package.json` to confirm a test runner is configured.
   - For each frontend-scoped `[IT_CODE]`, run:
-    `npx vitest run --reporter=verbose --tags-filter="AC=M{milestone_number}IT{n}"`
+    `npx vitest run --reporter=verbose --tags-filter="AC=CODE"`
   - Map each code to its result:
     - ✅ PASS — tests matched and passed
     - ❌ FAIL — tests matched and failed, or no test found matching this AC code
