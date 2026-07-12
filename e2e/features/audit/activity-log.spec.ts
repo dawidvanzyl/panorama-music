@@ -94,7 +94,7 @@ test.describe('Admin Activity Log — admin-only access', { tag: '@M1.5IT3' }, (
   });
 });
 
-test.describe('Admin Activity Log — filtering and pagination', { tag: '@M1.5IT4' }, () => {
+test.describe('Admin Activity Log — filtering and pagination', { tag: ['@M1.5IT4', '@184IT1'] }, () => {
   // Fixed, deterministic non-UTC offset (Johannesburg does not observe DST)
   // so the date-range filter's local-to-UTC conversion below is asserted
   // against a known offset regardless of the host machine's own timezone.
@@ -146,7 +146,10 @@ test.describe('Admin Activity Log — filtering and pagination', { tag: '@M1.5IT
     await activityLogPage.applyFilters({ actor: email, eventType: 'identity.user.login_succeeded', from: yesterday, to: yesterday });
     await expect(activityLogPage.emptyState).toBeVisible();
 
-    const today = new Date().toISOString().slice(0, 10);
+    // Johannesburg-local calendar day (fixed UTC+2, see test.use above), not the UTC
+    // calendar day — the two diverge daily between 22:00-24:00 UTC, when Johannesburg's
+    // local date has already rolled to the next day.
+    const today = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const [auditRequest] = await Promise.all([
       page.waitForRequest(req => req.url().includes('/api/audit') && req.url().includes('from=')),
       activityLogPage.applyFilters({ from: today, to: today }),
