@@ -253,6 +253,24 @@ Domain services should be used sparingly.
 
 ---
 
+## Domain Events and the Shared Kernel
+
+Aggregate roots record significant state transitions as **domain events** — immutable facts describing what happened, raised by the behaviour that caused them. Domain events let cross-cutting consumers (auditing today; projections or notifications later) observe the domain without the domain depending on them.
+
+The event primitives live in a dedicated, dependency-free shared-kernel project, **`PanoramaMusic.Domain`**:
+
+* `IDomainEvent` — marker for a domain event.
+* `AggregateRoot` — base type that holds an aggregate's pending events, raises them, and lets infrastructure drain them.
+
+Rules:
+
+* `PanoramaMusic.Domain` is a pure leaf — no DI, no package references, no dependency on any bounded context. Every context's Domain layer may reference it; it references nothing.
+* Dependencies point **toward** the kernel, never toward a consumer. A producing context's Domain layer references `PanoramaMusic.Domain`; it must never reference the Audit context, or any other event consumer. This keeps Domain layers free of audit and infrastructure concerns.
+* Aggregates follow a **pull model**: an aggregate raises an event into its own pending-events list and never calls a collector, dispatcher, or logger. Infrastructure drains the pending events when the aggregate is persisted (see §6, Auditing). The pull model is what keeps the kernel dependency-free.
+* Events are self-describing — an event carries every value a consumer needs (identifiers, before/after values, display text) captured when it is raised, so consumers never re-query to enrich them.
+
+---
+
 # 5. PostgreSQL Conventions
 
 PostgreSQL is the authoritative persistence technology for the project.
@@ -398,6 +416,27 @@ Code that runs outside the HTTP pipeline (hosted services, integration tests) cr
 **Isolated writes.** A deliberate security write that must persist even when the request fails (e.g. revoking a refresh-token family on replay detection before rejecting the request) is wrapped in `IUnitOfWork.ExecuteIsolatedAsync`. The delegate runs on a fresh connection and transaction that commits independently of the ambient request transaction; repositories participate unchanged. See `RefreshTokenHandler` for the two existing call sites. Use this sparingly — an isolated write is intentionally *not* atomic with the rest of the request.
 
 Application handlers coordinate use cases; they never manage database transactions.
+
+---
+
+## Auditing
+
+Audit records are produced by observing domain events, not by calling an audit logger from application handlers. A handler contains no audit code; an aggregate raising a domain event (see §4, Domain Events and the Shared Kernel) is what ultimately produces an audit record.
+
+The Audit context is a **transaction-scoped listener** over domain events:
+
+* A request-scoped **collector** accumulates the domain events drained from aggregates as they are persisted.
+* An audit-owned **translator** maps each domain event to an `AuditEvent`, enriching it with ambient request context (actor, source IP, correlation id). The producing context never constructs an `AuditEvent`.
+* A **flush** drains the collector and writes the records on the shared `IUnitOfWork` connection **immediately before `CommitAsync`**, so each audit record commits in the same transaction as the business write that caused it.
+
+No `IAuditLogger` or audit factory is injected into a handler.
+
+**Two lanes.**
+
+* **Transactional (default).** Flushed before commit on the ambient transaction; if the request rolls back, the audit record rolls back with it — an action that did not persist is not audited.
+* **Durable.** A security event that must be recorded even when the request is rejected (e.g. a failed login or a detected token replay) is written on an independent connection that commits regardless of the request outcome, using the `ExecuteIsolatedAsync` mechanism described under Transactions. Use it sparingly — only where a security record must survive a rollback.
+
+> The Identity context predates this pattern and still injects `IAuditLogger` directly into its handlers; it will be migrated. New contexts follow the domain-event model from the outset.
 
 ---
 
