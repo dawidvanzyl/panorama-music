@@ -255,7 +255,7 @@ Domain services should be used sparingly.
 
 ## Domain Events and the Shared Kernel
 
-Aggregate roots record significant state transitions as **domain events** — immutable facts describing what happened, raised by the behaviour that caused them. Domain events let cross-cutting consumers (auditing today; projections or notifications later) observe the domain without the domain depending on them.
+An **aggregate root** is the entity that owns a cluster of related state and the transactional boundary around it — the single entry point through which that state is read and changed. Aggregate roots record significant state transitions as **domain events** — immutable facts describing what happened, raised by the behaviour that caused them. Domain events let cross-cutting consumers (auditing today; projections or notifications later) observe the domain without the domain depending on them.
 
 The event primitives live in a dedicated, dependency-free shared-kernel project, **`PanoramaMusic.Domain`**:
 
@@ -266,7 +266,7 @@ Rules:
 
 * `PanoramaMusic.Domain` is a pure leaf — no DI, no package references, no dependency on any bounded context. Every context's Domain layer may reference it; it references nothing.
 * Dependencies point **toward** the kernel, never toward a consumer. A producing context's Domain layer references `PanoramaMusic.Domain`; it must never reference the Audit context, or any other event consumer. This keeps Domain layers free of audit and infrastructure concerns.
-* Aggregates follow a **pull model**: an aggregate raises an event into its own pending-events list and never calls a collector, dispatcher, or logger. Infrastructure drains the pending events when the aggregate is persisted (see §6, Auditing). The pull model is what keeps the kernel dependency-free.
+* Aggregates follow a **pull model**: an aggregate raises an event into its own pending-events list and never calls a collector, dispatcher, or logger. Infrastructure drains the pending events when the aggregate is persisted (see Auditing). The pull model is what keeps the kernel dependency-free.
 * Events are self-describing — an event carries every value a consumer needs (identifiers, before/after values, display text) captured when it is raised, so consumers never re-query to enrich them.
 
 ---
@@ -421,7 +421,7 @@ Application handlers coordinate use cases; they never manage database transactio
 
 ## Auditing
 
-Audit records are produced by observing domain events, not by calling an audit logger from application handlers. A handler contains no audit code; an aggregate raising a domain event (see §4, Domain Events and the Shared Kernel) is what ultimately produces an audit record.
+Audit records are produced by observing domain events, not by calling an audit logger from application handlers. A handler contains no audit code; an aggregate raising a domain event (see Domain Events and the Shared Kernel) is what ultimately produces an audit record.
 
 The Audit context is a **transaction-scoped listener** over domain events:
 
