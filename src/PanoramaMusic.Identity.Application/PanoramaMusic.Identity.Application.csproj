@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+  </ItemGroup>
+</Project>

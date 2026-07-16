@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PanoramaMusic.Api.Middleware;
-using PanoramaMusic.Api.Tests.Logging;
+using PanoramaMusic.Api.Tests.Providers;
 using PanoramaMusic.Identity.Domain.Exceptions;
 using Shouldly;
 using System.Text.Json;
@@ -11,14 +11,16 @@ namespace PanoramaMusic.Api.Tests;
 
 public sealed class ApiExceptionHandlerTests
 {
-	private const string _correlationId = "test-correlation-id";
+	public const string _correlationId = "test-correlation-id";
 
-	private readonly CaptureLoggerProvider _captureProvider = new();
 	private readonly ApiExceptionHandler _handler;
+	private readonly CaptureLoggerProvider _captureProvider;
 
 	public ApiExceptionHandlerTests()
 	{
+		_captureProvider = new CaptureLoggerProvider();
 		var loggerFactory = new LoggerFactory([_captureProvider]);
+
 		_handler = new ApiExceptionHandler(loggerFactory.CreateLogger<ApiExceptionHandler>());
 	}
 
@@ -42,8 +44,7 @@ public sealed class ApiExceptionHandlerTests
 		var body = JsonDocument.Parse(ReadBody(httpContext));
 		body.RootElement.GetProperty("error").GetString().ShouldBe("Invalid credentials.");
 		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
-		body.RootElement.EnumerateObject().Select(property => property.Name)
-			.ShouldBe(["error", "correlationId"], ignoreOrder: true);
+		body.RootElement.EnumerateObject().Select(property => property.Name).ShouldBe(["error", "correlationId"], ignoreOrder: true);
 	}
 
 	[Fact]
@@ -85,7 +86,7 @@ public sealed class ApiExceptionHandlerTests
 		ReadBody(httpContext).ShouldBeEmpty();
 	}
 
-	private static DefaultHttpContext CreateHttpContext()
+	public static DefaultHttpContext CreateHttpContext()
 	{
 		var httpContext = new DefaultHttpContext();
 		httpContext.Items[CorrelationIdMiddleware.ItemKey] = _correlationId;
@@ -93,7 +94,7 @@ public sealed class ApiExceptionHandlerTests
 		return httpContext;
 	}
 
-	private static string ReadBody(HttpContext httpContext)
+	public static string ReadBody(HttpContext httpContext)
 	{
 		httpContext.Response.Body.Position = 0;
 		using var reader = new StreamReader(httpContext.Response.Body);

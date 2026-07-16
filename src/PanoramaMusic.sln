@@ -5,46 +5,60 @@ VisualStudioVersion = 18.5.11801.241
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Api", "PanoramaMusic.Api\PanoramaMusic.Api.csproj", "{D39AD31F-1090-4529-B9E7-E969E2F3A9C3}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{A4EED927-2790-417C-AC41-98337D6C6AFE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Domain", "PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj", "{BB351BD2-8E8A-4061-A997-F93530BAFD8C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Domain", "Identity\PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj", "{BB351BD2-8E8A-4061-A997-F93530BAFD8C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Application", "PanoramaMusic.Identity.Application\PanoramaMusic.Identity.Application.csproj", "{454E5E88-8560-4F9D-9B50-CD11C9FE13F0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Application", "Identity\PanoramaMusic.Identity.Application\PanoramaMusic.Identity.Application.csproj", "{454E5E88-8560-4F9D-9B50-CD11C9FE13F0}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Infrastructure", "Identity\PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj", "{99324E16-AE4D-45C1-B953-3264DD1FB614}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PanoramaMusic.Identity.Infrastructure", "PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj", "{99324E16-AE4D-45C1-B953-3264DD1FB614}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{096E6E0E-5455-4835-8760-1E6AD0875C45}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Tests", "Identity\PanoramaMusic.Identity.Tests\PanoramaMusic.Identity.Tests.csproj", "{ABB986C3-EA51-9248-F1CD-0F82B54F9170}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Tests", "PanoramaMusic.Identity.Tests\PanoramaMusic.Identity.Tests.csproj", "{ABB986C3-EA51-9248-F1CD-0F82B54F9170}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Api.Tests", "PanoramaMusic.Api.Tests\PanoramaMusic.Api.Tests.csproj", "{62F953F3-1BBE-45A3-9312-6EC10102AF94}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Persistence", "PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj", "{3DE05157-1098-49B7-AFF5-541F67E9AC01}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Students", "Students", "{76D871E0-283A-4737-354D-38A062579225}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Domain", "PanoramaMusic.Students.Domain\PanoramaMusic.Students.Domain.csproj", "{6DAB2BE0-93CC-4241-B60C-74D87EEB8304}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Domain", "Students\PanoramaMusic.Students.Domain\PanoramaMusic.Students.Domain.csproj", "{6DAB2BE0-93CC-4241-B60C-74D87EEB8304}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Application", "PanoramaMusic.Students.Application\PanoramaMusic.Students.Application.csproj", "{68B58EB3-385E-476B-83D2-2193DA0497C2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Application", "Students\PanoramaMusic.Students.Application\PanoramaMusic.Students.Application.csproj", "{68B58EB3-385E-476B-83D2-2193DA0497C2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Infrastructure", "PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj", "{0849A1B1-6782-4068-9668-39376AC256DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Infrastructure", "Students\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj", "{0849A1B1-6782-4068-9668-39376AC256DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Domain", "PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj", "{67843891-028B-4F8D-9CD0-F4B40A4EA908}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Students.Tests", "Students\PanoramaMusic.Students.Tests\PanoramaMusic.Students.Tests.csproj", "{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Application", "PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj", "{D243BC94-A76B-4562-8C84-FCE200C3D1FD}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Audit", "Audit", "{5AF5E119-0254-E62C-C4FA-63518A9A6B58}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Infrastructure", "PanoramaMusic.Audit.Infrastructure\PanoramaMusic.Audit.Infrastructure.csproj", "{9715E83F-BF8C-4D95-BA87-EAA315B3D362}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Domain", "Audit\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj", "{67843891-028B-4F8D-9CD0-F4B40A4EA908}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Application", "Audit\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj", "{D243BC94-A76B-4562-8C84-FCE200C3D1FD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Infrastructure", "Audit\PanoramaMusic.Audit.Infrastructure\PanoramaMusic.Audit.Infrastructure.csproj", "{9715E83F-BF8C-4D95-BA87-EAA315B3D362}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Tests", "Audit\PanoramaMusic.Audit.Tests\PanoramaMusic.Audit.Tests.csproj", "{993BD54C-FED5-4B6C-8017-1283ECA3B596}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Audit.Tests", "PanoramaMusic.Audit.Tests\PanoramaMusic.Audit.Tests.csproj", "{993BD54C-FED5-4B6C-8017-1283ECA3B596}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Persistence.Tests", "PanoramaMusic.Persistence.Tests\PanoramaMusic.Persistence.Tests.csproj", "{85737735-44BB-4E23-8CE0-1356AAB1A3B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Domain.Tests", "PanoramaMusic.Identity.Domain.Tests\PanoramaMusic.Identity.Domain.Tests.csproj", "{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Application.Tests", "PanoramaMusic.Identity.Application.Tests\PanoramaMusic.Identity.Application.Tests.csproj", "{B791EB41-6193-414C-814F-BF50E3F729D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PanoramaMusic.Identity.Infrastructure.Tests", "PanoramaMusic.Identity.Infrastructure.Tests\PanoramaMusic.Identity.Infrastructure.Tests.csproj", "{4261798C-EDA9-4518-95D3-9403EDB88855}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domains", "Domains", "{BBFB66A4-18C2-4080-BCC6-0B35FE49B131}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DAD0061F-210C-4C3E-9AE8-4281C7855263}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Audit", "Audit", "{AD06C71F-EBB1-48EF-99DB-F745DC145059}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{51477DC8-0283-4DAE-886C-6BD16C6B5205}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Students", "Students", "{378CD765-BDE7-41D6-8390-77FB60BF9A9F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domains", "Domains", "{8FC7757D-F1BF-496A-80AE-8AE4A59AFC0C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Audit", "Audit", "{83F1318A-E323-419B-BB38-3DAB61EE8076}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{CFD5283D-6648-4E55-B6BD-9E7108F554A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -176,18 +190,6 @@ Global
 		{0849A1B1-6782-4068-9668-39376AC256DD}.Release|x64.Build.0 = Release|Any CPU
 		{0849A1B1-6782-4068-9668-39376AC256DD}.Release|x86.ActiveCfg = Release|Any CPU
 		{0849A1B1-6782-4068-9668-39376AC256DD}.Release|x86.Build.0 = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|x64.Build.0 = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Debug|x86.Build.0 = Debug|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|x64.ActiveCfg = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|x64.Build.0 = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|x86.ActiveCfg = Release|Any CPU
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6}.Release|x86.Build.0 = Release|Any CPU
 		{67843891-028B-4F8D-9CD0-F4B40A4EA908}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{67843891-028B-4F8D-9CD0-F4B40A4EA908}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67843891-028B-4F8D-9CD0-F4B40A4EA908}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -248,23 +250,69 @@ Global
 		{85737735-44BB-4E23-8CE0-1356AAB1A3B1}.Release|x64.Build.0 = Release|Any CPU
 		{85737735-44BB-4E23-8CE0-1356AAB1A3B1}.Release|x86.ActiveCfg = Release|Any CPU
 		{85737735-44BB-4E23-8CE0-1356AAB1A3B1}.Release|x86.Build.0 = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|x64.Build.0 = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Debug|x86.Build.0 = Debug|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|x64.ActiveCfg = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|x64.Build.0 = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|x86.ActiveCfg = Release|Any CPU
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82}.Release|x86.Build.0 = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|x64.Build.0 = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Debug|x86.Build.0 = Debug|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|x64.ActiveCfg = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|x64.Build.0 = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|x86.ActiveCfg = Release|Any CPU
+		{B791EB41-6193-414C-814F-BF50E3F729D4}.Release|x86.Build.0 = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|x64.Build.0 = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Debug|x86.Build.0 = Debug|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|x64.ActiveCfg = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|x64.Build.0 = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|x86.ActiveCfg = Release|Any CPU
+		{4261798C-EDA9-4518-95D3-9403EDB88855}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{BB351BD2-8E8A-4061-A997-F93530BAFD8C} = {A4EED927-2790-417C-AC41-98337D6C6AFE}
-		{454E5E88-8560-4F9D-9B50-CD11C9FE13F0} = {A4EED927-2790-417C-AC41-98337D6C6AFE}
-		{99324E16-AE4D-45C1-B953-3264DD1FB614} = {A4EED927-2790-417C-AC41-98337D6C6AFE}
-		{ABB986C3-EA51-9248-F1CD-0F82B54F9170} = {A4EED927-2790-417C-AC41-98337D6C6AFE}
-		{6DAB2BE0-93CC-4241-B60C-74D87EEB8304} = {76D871E0-283A-4737-354D-38A062579225}
-		{68B58EB3-385E-476B-83D2-2193DA0497C2} = {76D871E0-283A-4737-354D-38A062579225}
-		{0849A1B1-6782-4068-9668-39376AC256DD} = {76D871E0-283A-4737-354D-38A062579225}
-		{5C725E47-2F38-47F6-9E21-6DB605D6D7E6} = {76D871E0-283A-4737-354D-38A062579225}
-		{67843891-028B-4F8D-9CD0-F4B40A4EA908} = {5AF5E119-0254-E62C-C4FA-63518A9A6B58}
-		{D243BC94-A76B-4562-8C84-FCE200C3D1FD} = {5AF5E119-0254-E62C-C4FA-63518A9A6B58}
-		{9715E83F-BF8C-4D95-BA87-EAA315B3D362} = {5AF5E119-0254-E62C-C4FA-63518A9A6B58}
-		{993BD54C-FED5-4B6C-8017-1283ECA3B596} = {5AF5E119-0254-E62C-C4FA-63518A9A6B58}
+		{BB351BD2-8E8A-4061-A997-F93530BAFD8C} = {51477DC8-0283-4DAE-886C-6BD16C6B5205}
+		{454E5E88-8560-4F9D-9B50-CD11C9FE13F0} = {51477DC8-0283-4DAE-886C-6BD16C6B5205}
+		{99324E16-AE4D-45C1-B953-3264DD1FB614} = {51477DC8-0283-4DAE-886C-6BD16C6B5205}
+		{ABB986C3-EA51-9248-F1CD-0F82B54F9170} = {CFD5283D-6648-4E55-B6BD-9E7108F554A5}
+		{62F953F3-1BBE-45A3-9312-6EC10102AF94} = {DAD0061F-210C-4C3E-9AE8-4281C7855263}
+		{6DAB2BE0-93CC-4241-B60C-74D87EEB8304} = {378CD765-BDE7-41D6-8390-77FB60BF9A9F}
+		{68B58EB3-385E-476B-83D2-2193DA0497C2} = {378CD765-BDE7-41D6-8390-77FB60BF9A9F}
+		{0849A1B1-6782-4068-9668-39376AC256DD} = {378CD765-BDE7-41D6-8390-77FB60BF9A9F}
+		{67843891-028B-4F8D-9CD0-F4B40A4EA908} = {AD06C71F-EBB1-48EF-99DB-F745DC145059}
+		{D243BC94-A76B-4562-8C84-FCE200C3D1FD} = {AD06C71F-EBB1-48EF-99DB-F745DC145059}
+		{9715E83F-BF8C-4D95-BA87-EAA315B3D362} = {AD06C71F-EBB1-48EF-99DB-F745DC145059}
+		{993BD54C-FED5-4B6C-8017-1283ECA3B596} = {83F1318A-E323-419B-BB38-3DAB61EE8076}
+		{85737735-44BB-4E23-8CE0-1356AAB1A3B1} = {DAD0061F-210C-4C3E-9AE8-4281C7855263}
+		{484E5B7A-4D78-452A-A9BE-F495A5CFBF82} = {CFD5283D-6648-4E55-B6BD-9E7108F554A5}
+		{B791EB41-6193-414C-814F-BF50E3F729D4} = {CFD5283D-6648-4E55-B6BD-9E7108F554A5}
+		{4261798C-EDA9-4518-95D3-9403EDB88855} = {CFD5283D-6648-4E55-B6BD-9E7108F554A5}
+		{AD06C71F-EBB1-48EF-99DB-F745DC145059} = {BBFB66A4-18C2-4080-BCC6-0B35FE49B131}
+		{51477DC8-0283-4DAE-886C-6BD16C6B5205} = {BBFB66A4-18C2-4080-BCC6-0B35FE49B131}
+		{378CD765-BDE7-41D6-8390-77FB60BF9A9F} = {BBFB66A4-18C2-4080-BCC6-0B35FE49B131}
+		{8FC7757D-F1BF-496A-80AE-8AE4A59AFC0C} = {DAD0061F-210C-4C3E-9AE8-4281C7855263}
+		{83F1318A-E323-419B-BB38-3DAB61EE8076} = {8FC7757D-F1BF-496A-80AE-8AE4A59AFC0C}
+		{CFD5283D-6648-4E55-B6BD-9E7108F554A5} = {8FC7757D-F1BF-496A-80AE-8AE4A59AFC0C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49E9BA8D-46CA-4AC8-AD4C-DE5A08006689}
