@@ -1,6 +1,7 @@
 using Dapper;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
 using PanoramaMusic.Persistence.Transactions;
 
@@ -38,8 +39,7 @@ public class RevokedAccessTokenRepository(IUnitOfWork unitOfWork) : RepositoryBa
 			"identity.create_revoked_access_tokens",
 			new
 			{
-				p_jtis = tokens.Select(t => t.Jti).ToArray(),
-				p_expires_ats = tokens.Select(t => t.ExpiresAt).ToArray(),
+				p_tokens = tokens.Select(t => new RevokedAccessTokenInputDto(t.Jti, t.ExpiresAt)).ToArray(),
 			},
 			Transaction,
 			cancellationToken);

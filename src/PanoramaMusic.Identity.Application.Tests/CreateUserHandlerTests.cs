@@ -27,7 +27,7 @@ public class CreateUserHandlerTests : IClassFixture<IdentityTestFixture>
 			.Returns(Task.CompletedTask);
 
 		_context.Repositories.UserRoleRepositoryMock
-			.Setup(r => r.CreateAsync(It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.CreateManyAsync(It.IsAny<Guid>(), It.IsAny<IList<Role>>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
 
 		_context.Repositories.InviteTokenRepositoryMock
@@ -66,7 +66,12 @@ public class CreateUserHandlerTests : IClassFixture<IdentityTestFixture>
 						result => result.UserId.ShouldNotBe(Guid.Empty),
 						result => result.InviteUrl.ShouldNotBeNullOrEmpty()),
 			() => _context.Repositories.UserRepositoryMock.Verify(r => r.CreateAsync(It.IsAny<User>(), TestContext.Current.CancellationToken), Times.Once),
-			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.CreateAsync(It.Is<UserRole>(ur => ur.Role == Role.Teacher), TestContext.Current.CancellationToken), Times.Once),
+			() => _context.Repositories.UserRoleRepositoryMock.Verify(
+				r => r.CreateManyAsync(
+					It.IsAny<Guid>(),
+					It.Is<IList<Role>>(roles => roles.Count == 1 && roles.Contains(Role.Teacher)),
+					TestContext.Current.CancellationToken),
+				Times.Once),
 			() => _context.Repositories.InviteTokenRepositoryMock.Verify(r => r.CreateAsync(It.IsAny<InviteToken>(), TestContext.Current.CancellationToken), Times.Once));
 	}
 
@@ -91,6 +96,7 @@ public class CreateUserHandlerTests : IClassFixture<IdentityTestFixture>
 
 	[Fact]
 	[Trait("AC", "M1.1UC23")]
+	[Trait("AC", "164UC3")]
 	public async Task HandleAsync_MultipleRoles_AssignsAllRoles()
 	{
 		var userEmail = "multi@test.com";
@@ -102,8 +108,12 @@ public class CreateUserHandlerTests : IClassFixture<IdentityTestFixture>
 			new CreateUserCommand(new CreateUserRequest(userEmail, [Role.Teacher, Role.Admin])),
 			TestContext.Current.CancellationToken);
 
-		ShouldlyHelpers.Satisfy(
-			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.CreateAsync(It.Is<UserRole>(ur => ur.Role == Role.Teacher), TestContext.Current.CancellationToken), Times.Once),
-			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.CreateAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), TestContext.Current.CancellationToken), Times.Once));
+		// A single batched CreateManyAsync call, not one CreateAsync call per role — see #164.
+		_context.Repositories.UserRoleRepositoryMock.Verify(
+			r => r.CreateManyAsync(
+				It.IsAny<Guid>(),
+				It.Is<IList<Role>>(roles => roles.Count == 2 && roles.Contains(Role.Teacher) && roles.Contains(Role.Admin)),
+				TestContext.Current.CancellationToken),
+			Times.Once);
 	}
 }

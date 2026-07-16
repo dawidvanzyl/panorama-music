@@ -1,5 +1,4 @@
 using Dapper;
-using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
@@ -9,14 +8,14 @@ namespace PanoramaMusic.Identity.Infrastructure.Repositories;
 
 public class UserRoleRepository(IUnitOfWork unitOfWork) : RepositoryBase(unitOfWork), IUserRoleRepository
 {
-	public async Task CreateAsync(UserRole userRole, CancellationToken cancellationToken)
+	public async Task CreateManyAsync(Guid userId, IList<Role> roles, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
-			"identity.create_user_role",
+			"identity.create_user_roles",
 			new
 			{
-				p_user_id = userRole.UserId,
-				p_role = userRole.Role.ToString()
+				p_user_id = userId,
+				p_roles = roles.Select(r => r.ToString()).ToArray()
 			},
 			Transaction,
 			cancellationToken);

@@ -58,7 +58,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddInfrastructure(connectionString, PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes);
 builder.Services.AddAuditInfrastructure();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);

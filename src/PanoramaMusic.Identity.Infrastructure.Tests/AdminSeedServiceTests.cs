@@ -43,7 +43,12 @@ public class AdminSeedServiceTests : IClassFixture<IdentityTestFixture>
 		await _service.StartAsync(TestContext.Current.CancellationToken);
 
 		_context.Repositories.UserRepositoryMock.Verify(r => r.CreateAsync(It.Is<User>(u => u.Email.Value == "admin@test.com"), TestContext.Current.CancellationToken), Times.Once);
-		_context.Repositories.UserRoleRepositoryMock.Verify(r => r.CreateAsync(It.Is<UserRole>(ur => ur.Role == Role.Admin), TestContext.Current.CancellationToken), Times.Once);
+		_context.Repositories.UserRoleRepositoryMock.Verify(
+			r => r.CreateManyAsync(
+				It.IsAny<Guid>(),
+				It.Is<IList<Role>>(roles => roles.Count == 1 && roles.Contains(Role.Admin)),
+				TestContext.Current.CancellationToken),
+			Times.Once);
 	}
 
 	[Fact]
