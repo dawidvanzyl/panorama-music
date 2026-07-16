@@ -467,9 +467,74 @@ Testing exists to validate behaviour, not implementation details.
 
 ## Test Ownership
 
-Each bounded context must have its own isolated test suite covering unit and integration concerns appropriate to that context.
+Each bounded context must have its own isolated test suite covering unit and integration concerns
+appropriate to that context.
 
-Test projects should mirror bounded-context boundaries rather than technical layers.
+Start with a single test project per bounded context (e.g. `PanoramaMusic.Audit.Tests`). Split
+further into one project per architectural layer — `{Context}.Domain.Tests`,
+`{Context}.Application.Tests`, `{Context}.Infrastructure.Tests` — once that context's test suite
+has grown large enough that a single project mixes concerns across layers in practice (see
+`PanoramaMusic.Identity.*.Tests` for the split form). A handful of files testing one or two classes
+does not warrant the split; a few dozen files spanning entities, handlers, and infrastructure
+services does.
+
+---
+
+## Shared Test Infrastructure
+
+When a bounded context's test suite is split by layer, code shared across those projects —
+composition-root fixtures, entity-builder factories, assertion helpers — lives in the context's
+original, unsplit test project (e.g. `PanoramaMusic.Identity.Tests`), which the layer-specific
+projects reference via `ProjectReference`. That project owns no `[Fact]`/`[Theory]` methods itself
+once the split is complete; it exists purely as shared test infrastructure.
+
+Anything in that shared project consumed by another project must be `public` — `internal` members
+are invisible across assembly boundaries, and a `ProjectReference` does not change that.
+
+Two distinct fixture shapes are used, depending on what the tests behind them need:
+
+**Composition-root fixture** — for a bounded context where many test classes resolve real
+handlers/services wired against mocked dependencies. A `{Context}TestFixture` class exposes a
+`CreateContext()` method that builds a fresh `IServiceCollection`, registers every handler/service/
+repository the context's test classes need, and returns it wrapped in a `{Context}TestContext`.
+The context groups its mocks by concern (`Repositories`, `Services`, `Options`, `Contexts`, ...) as
+nested classes, each mock exposed as an auto-property (`public Mock<T> XMock { get; } = new();`) —
+never as a `get { return new Mock<T>(...); }` block, which would silently hand out a fresh,
+unconfigured mock instance on every access instead of the one the test configured. `CreateContext()`
+must be called fresh in every test class's constructor — never cached across test classes — since
+xUnit does not guarantee isolation of a fixture instance's mutable state across `[Fact]`s otherwise.
+See `IdentityTestFixture`/`IdentityTestContext` (mocked, for fast unit tests of Application/
+Infrastructure) and `UnitOfWorkDatabaseFixture`/`UnitOfWorkDatabaseContext` (same shape, but wired
+against a real Testcontainers-backed Postgres instance for cross-context transaction integration
+tests) for the two variants of this pattern.
+
+**Simple lifecycle fixture** — for a test class that just needs a live resource (a Postgres
+container, an `HttpClient`) and no shared DI graph. Implement `IAsyncLifetime`, start/stop the
+resource in `InitializeAsync`/`DisposeAsync`, and expose what tests need as plain properties.
+Place this under the project's `Fixtures/` folder and consume it via `IClassFixture<T>`. See
+`AuditDatabaseFixture` and `ApiTestFixture`.
+
+Per-test helper objects that aren't fixtures in either sense above — e.g. a wrapper that bundles an
+authenticated `HttpClient` with request-building convenience methods — belong in their own
+responsibility folder (e.g. `ValueObjects/`), not forced into `Fixtures/`. See `IsolatedHttpClient`.
+
+A private helper method may stay directly on a test class only when it is Moq.Protected()-style
+setup inherently specific to that one class's mocked `HttpMessageHandler` (e.g. `SetupResponse`/
+`SetupThrows` in `HibpPasswordServiceTests`) — there is nothing to share, since no other test class
+mocks the same handler the same way. Anything reusable across test classes does not qualify for
+this exception and must move to a fixture.
+
+---
+
+## Entity Factories
+
+When multiple test classes need a domain entity built into a specific, reusable state (an active
+user, a revoked refresh token, an expired invite), extract that construction into a static factory
+class under the shared test project's `Factories/` folder (e.g. `UserFactory.CreateActive(...)`,
+`RefreshTokenFactory.CreateRevoked(...)`). Always use the factory instead of constructing the entity
+inline — this keeps entity-shape changes (a new constructor parameter, a new invariant) to one
+place instead of every test file that builds that entity. Factory methods are `public static` for
+the same cross-project reason as fixtures.
 
 ---
 
@@ -495,7 +560,10 @@ Integration tests should focus on:
 * infrastructure implementations
 * application wiring
 
-Integration tests should verify collaboration between components rather than individual business rules.
+Integration tests should verify collaboration between components rather than individual business
+rules. A test class consuming a Testcontainers-backed fixture (composition-root or simple lifecycle)
+must not alter that fixture's database-lifecycle wiring — only the fixture owns starting, migrating,
+and disposing the container.
 
 ---
 
@@ -503,16 +571,32 @@ Integration tests should verify collaboration between components rather than ind
 
 Tests should follow Arrange / Act / Assert structure.
 
-Use 
-* xUnit as the test framework 
+Use
+
+* xUnit as the test framework
 * Shouldly for assertions
 * Moq for mocking framework
 
-Prefer behaviour-oriented test names that describe:
+Name test methods `MethodUnderTest_Scenario_ExpectedOutcome` (e.g.
+`HandleAsync_UserNotFound_ThrowsEntityNotFoundException`), describing the scenario, the condition,
+and the expected outcome.
 
-* the scenario
-* the condition
-* the expected outcome
+Tag every test with `[Trait("AC", "<code>")]` mapping it to the acceptance criterion it verifies.
+
+When a test needs to assert more than one independent condition, group them with
+`ShouldlyHelpers.Satisfy(() => ..., () => ...)` (wraps `Shouldly.ShouldSatisfyAllConditions`)
+rather than a sequence of bare assertions — this ensures every condition is evaluated and reported
+on failure, instead of the test stopping at the first one that fails.
+
+---
+
+## Test Project Setup
+
+Test projects use `xunit.v3`, not `xunit`/`xunit.v2`. Set `TreatWarningsAsErrors` to `true` and
+`IsTestProject` to `true`, matching the project's production-code counterpart's `TargetFramework`
+and nullable/implicit-usings settings. Reference only the production projects and shared test
+project(s) the tests actually need — do not reference a bounded context's own Api or another
+bounded context's test project.
 
 ---
 
