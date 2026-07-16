@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using PanoramaMusic.Identity.Application.Enums;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
@@ -18,6 +19,7 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Contexts;
+using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Enums;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
@@ -29,6 +31,18 @@ namespace PanoramaMusic.Identity.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+	/// <summary>
+	/// Registers this context's Npgsql composite-type mappings on the shared connection
+	/// factory's NpgsqlDataSourceBuilder (see PanoramaMusic.Persistence.Extensions.
+	/// ServiceCollectionExtensions.AddInfrastructure's configureDataSource parameter).
+	/// Must run before the data source is built, so the caller passes this as a
+	/// delegate rather than this context resolving anything from DI.
+	/// </summary>
+	public static void ConfigureCompositeTypes(NpgsqlDataSourceBuilder dataSourceBuilder)
+	{
+		dataSourceBuilder.MapComposite<RevokedAccessTokenInputDto>("identity.revoked_access_token_input");
+	}
+
 	public static IServiceCollection AddIdentityInfrastructure(
 		this IServiceCollection services,
 		IConfiguration configuration)

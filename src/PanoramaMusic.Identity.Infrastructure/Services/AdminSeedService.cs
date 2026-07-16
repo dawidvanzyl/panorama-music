@@ -76,7 +76,7 @@ public class AdminSeedService(
 		if (user.PasswordHash is not null)
 			await userRepo.UpdatePasswordAsync(user.UserId, user.PasswordHash.Value, clearRequiresPasswordReset: false, cancellationToken);
 
-		await userRoleRepo.CreateAsync(new UserRole(user.UserId, Role.Admin), cancellationToken);
+		await userRoleRepo.CreateManyAsync(user.UserId, [Role.Admin], cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
 		logger.LogInformation("Admin user {Email} created successfully.", email);

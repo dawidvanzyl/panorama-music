@@ -42,8 +42,7 @@ public sealed class CreateUserHandler(
 	private async Task CreateUserAsync(User user, IList<Role> roles, CancellationToken cancellationToken)
 	{
 		await userRepository.CreateAsync(user, cancellationToken);
-		foreach (var role in roles)
-			await userRoleRepository.CreateAsync(new UserRole(user.UserId, role), cancellationToken);
+		await userRoleRepository.CreateManyAsync(user.UserId, roles, cancellationToken);
 
 		await auditLogger.CreateAsync(
 			auditEventFactory.Create(

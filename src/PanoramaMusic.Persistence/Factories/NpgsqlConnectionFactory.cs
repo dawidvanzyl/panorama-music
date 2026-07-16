@@ -3,7 +3,7 @@ using System.Data;
 
 namespace PanoramaMusic.Persistence.Factories;
 
-public class NpgsqlConnectionFactory(string connectionString) : IDbConnectionFactory
+public class NpgsqlConnectionFactory(NpgsqlDataSource dataSource) : IDbConnectionFactory
 {
-	public IDbConnection CreateConnection() => new NpgsqlConnection(connectionString);
+	public IDbConnection CreateConnection() => dataSource.CreateConnection();
 }

@@ -83,7 +83,7 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifet
 		await userRepository.UpdatePasswordAsync(user.UserId, user.PasswordHash!.Value, clearRequiresPasswordReset: false, TestContext.Current.CancellationToken);
 
 		if (role.HasValue)
-			await userRoleRepository.CreateAsync(new UserRole(user.UserId, role.Value), TestContext.Current.CancellationToken);
+			await userRoleRepository.CreateManyAsync(user.UserId, [role.Value], TestContext.Current.CancellationToken);
 
 		await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 

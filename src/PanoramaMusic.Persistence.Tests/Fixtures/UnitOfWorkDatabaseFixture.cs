@@ -56,7 +56,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		{
 			var services = new ServiceCollection();
 
-			services.AddInfrastructure(_applicationConnectionString);
+			services.AddInfrastructure(_applicationConnectionString, PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes);
 			services.AddAuditInfrastructure();
 			RegisterOptions(services, context);
 			RegisterContexts(services, context);
@@ -99,6 +99,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 	private void RegisterRepositories(ServiceCollection services, UnitOfWorkDatabaseContext context)
 	{
 		services.AddTransient(sp => new IdentityAuditTrailTestReader(_applicationConnectionString));
+		services.AddTransient(sp => new RevokedAccessTokenTestReader(_applicationConnectionString));
 		services.AddTransient(sp => context.Repositories.UserRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRoleRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.RefreshTokenRepositoryMock.Object);
@@ -106,6 +107,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 
 		services.AddTransient<UserRepository>();
 		services.AddTransient<AuditEventRepository>();
+		services.AddTransient<RevokedAccessTokenRepository>();
 	}
 
 	public async ValueTask DisposeAsync()
