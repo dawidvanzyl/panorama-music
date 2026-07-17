@@ -121,7 +121,7 @@ export class PmAdminUsersPage extends HTMLElement {
     this.clearError();
     try {
       await activateUser(userId);
-      void this.loadUsers();
+      await this.loadUsers();
     } catch (err) {
       this.showError(err);
     } finally {

@@ -73,7 +73,7 @@ beforeEach(() => {
   vi.mocked(deleteUser).mockResolvedValue(undefined);
 });
 
-describe('pm-admin-users-page — owns the deactivate API call', { tags: ['161UC2'] }, () => {
+describe('pm-admin-users-page — owns the deactivate API call', { tags: ['161UC2', 'M1.1UC19'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -155,7 +155,7 @@ describe('pm-admin-users-page — surfaces deactivate failures', { tags: ['161UC
   });
 });
 
-describe('pm-admin-users-page — owns the delete API call', { tags: ['161UC5'] }, () => {
+describe('pm-admin-users-page — owns the delete API call', { tags: ['161UC5', 'M1.1UC30'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
