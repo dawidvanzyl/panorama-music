@@ -52,6 +52,13 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
+		if (exception is FlushDurableException flushDurable)
+		{
+			LogHandled(exception, StatusCodes.Status500InternalServerError, correlationId);
+			await WriteAsync(httpContext, StatusCodes.Status500InternalServerError, new { error = $"{flushDurable.Message}. Inner exception: {flushDurable.InnerException?.Message}", correlationId }, cancellationToken);
+			return true;
+		}
+
 		logger.LogError(
 			exception,
 			"Unhandled {ExceptionType} while processing request (CorrelationId: {CorrelationId})",

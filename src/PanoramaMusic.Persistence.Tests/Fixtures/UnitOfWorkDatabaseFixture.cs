@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using Npgsql;
+using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Audit.Infrastructure.Persistence;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
@@ -9,6 +10,7 @@ using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Infrastructure.Persistence;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Persistence.Extensions;
+using PanoramaMusic.Persistence.Tests.DomainEvents;
 using PanoramaMusic.Persistence.Tests.Repository;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -63,6 +65,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 			RegisterHandlers(services);
 			RegisterServices(services, context);
 			RegisterRepositories(services, context);
+			RegisterDomainEventTranslators(services);
 
 			return services.BuildServiceProvider();
 		});
@@ -108,6 +111,12 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		services.AddTransient<UserRepository>();
 		services.AddTransient<AuditEventRepository>();
 		services.AddTransient<RevokedAccessTokenRepository>();
+	}
+
+	private void RegisterDomainEventTranslators(ServiceCollection services)
+	{
+		services.AddTransient<IAuditEventTranslator, TestOrderPlacedTranslator>();
+		services.AddTransient<IAuditEventTranslator, TestSecurityRejectedTranslator>();
 	}
 
 	public async ValueTask DisposeAsync()
