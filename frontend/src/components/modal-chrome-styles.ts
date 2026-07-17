@@ -45,10 +45,7 @@ modalChromeStyles.replaceSync(`
       font-size: 14px;
       line-height: 1.6;
       color: var(--pm-text-muted, #9194a6);
-    }
-    .modal__email {
-      color: var(--pm-text, #e2e1ed);
-      font-weight: 500;
+      margin-bottom: var(--pm-modal-body-gap, 16px);
     }
     .modal__actions {
       display: flex;

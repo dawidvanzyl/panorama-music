@@ -1,10 +1,14 @@
 import { deactivateUser, AdminError } from '../services/admin';
-import { modalChromeStyles } from '../../../components/pm-modal-chrome-styles';
+import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    .modal__body {
-      margin-bottom: 32px;
+    :host {
+      --pm-modal-body-gap: 32px;
+    }
+    .modal__email {
+      color: var(--pm-text, #e2e1ed);
+      font-weight: 500;
     }
     .modal__btn--deactivate {
       background: var(--pm-danger, #e05252);

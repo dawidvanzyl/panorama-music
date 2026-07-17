@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { modalChromeStyles } from '../pm-modal-chrome-styles';
+import { modalChromeStyles } from '../modal-chrome-styles';
 import { PmDeactivateUserModal } from '../../features/admin/components/pm-deactivate-user-modal';
 import { PmDeleteUserModal } from '../../features/admin/components/pm-delete-user-modal';
 import { PmRevokeAllSessionsModal } from '../../features/sessions/components/pm-revoke-all-sessions-modal';
 
-const EXTRACTED_SELECTORS = ['.modal__backdrop', '.modal__card', '.modal__header', '.modal__icon', '.modal__title', '.modal__email', '.modal__actions', '.modal__btn'];
+const EXTRACTED_SELECTORS = ['.modal__backdrop', '.modal__card', '.modal__header', '.modal__icon', '.modal__title', '.modal__body', '.modal__actions', '.modal__btn'];
 
 function localStyleSheetFor(shadowRoot: ShadowRoot): CSSStyleSheet {
   const [, localSheet] = shadowRoot.adoptedStyleSheets;

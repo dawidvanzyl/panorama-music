@@ -1,10 +1,11 @@
 import { deleteUser, AdminError } from '../services/admin';
-import { modalChromeStyles } from '../../../components/pm-modal-chrome-styles';
+import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    .modal__body {
-      margin-bottom: 16px;
+    .modal__email {
+      color: var(--pm-text, #e2e1ed);
+      font-weight: 500;
     }
     .modal__confirm-label {
       font-size: 13px;
