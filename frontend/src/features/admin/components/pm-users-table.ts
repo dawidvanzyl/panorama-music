@@ -333,8 +333,8 @@ export class PmUsersTable extends HTMLElement {
 
   private get filteredUsers(): GetUserResult[] {
     if (this._statusFilter === 'all') return this._users;
-    if (this._statusFilter === 'active') return this._users.filter(u => u.isActive);
-    return this._users.filter(u => !u.isActive && !u.hasCompletedRegistration);
+    if (this._statusFilter === 'active') return this._users.filter((u) => u.isActive);
+    return this._users.filter((u) => !u.isActive && !u.hasCompletedRegistration);
   }
 
   private render(): void {
@@ -363,7 +363,7 @@ export class PmUsersTable extends HTMLElement {
     this._statusFilter = value;
     const labels: Record<string, string> = { all: 'Status', active: 'Active', pending: 'Pending' };
     this.filterLabel!.textContent = labels[value];
-    this.filterDropdown!.querySelectorAll('.users-table__dropdown-item').forEach(item => {
+    this.filterDropdown!.querySelectorAll('.users-table__dropdown-item').forEach((item) => {
       item.classList.toggle('users-table__dropdown-item--active', (item as HTMLElement).dataset['value'] === value);
     });
     this.filterDropdown!.classList.remove('users-table__dropdown--open');
@@ -503,12 +503,13 @@ export class PmUsersTable extends HTMLElement {
   }
 
   private getCheckedRoles(rolesCell: HTMLElement): string[] {
-    return Array.from(rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
-      .map(cb => cb.value);
+    return Array.from(rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map(
+      (cb) => cb.value,
+    );
   }
 
   removeUser(userId: string): void {
-    this._users = this._users.filter(u => u.userId !== userId);
+    this._users = this._users.filter((u) => u.userId !== userId);
     this.render();
   }
 
@@ -518,27 +519,33 @@ export class PmUsersTable extends HTMLElement {
   }
 
   private handleDeactivate(userId: string, email: string): void {
-    this.dispatchEvent(new CustomEvent('user-deactivate-requested', {
-      bubbles: true,
-      composed: true,
-      detail: { userId, email },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('user-deactivate-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { userId, email },
+      }),
+    );
   }
 
   private handleActivate(userId: string): void {
-    this.dispatchEvent(new CustomEvent('user-activate-requested', {
-      bubbles: true,
-      composed: true,
-      detail: { userId },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('user-activate-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { userId },
+      }),
+    );
   }
 
   private handleDelete(userId: string, email: string): void {
-    this.dispatchEvent(new CustomEvent('user-delete-requested', {
-      bubbles: true,
-      composed: true,
-      detail: { userId, email },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('user-delete-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { userId, email },
+      }),
+    );
   }
 
   private handleCancel(): void {
@@ -568,7 +575,7 @@ export class PmUsersTable extends HTMLElement {
 
     try {
       const updated = await updateUserRoles(userId, roles);
-      const userIndex = this._users.findIndex(u => u.userId === userId);
+      const userIndex = this._users.findIndex((u) => u.userId === userId);
       if (userIndex !== -1) {
         this._users[userIndex] = { ...this._users[userIndex], roles: updated.roles };
       }
@@ -584,17 +591,23 @@ export class PmUsersTable extends HTMLElement {
     }
   };
 
-  private handleRegenerate = async (userId: string, actionsCell: HTMLElement, button: HTMLButtonElement): Promise<void> => {
+  private handleRegenerate = async (
+    userId: string,
+    actionsCell: HTMLElement,
+    button: HTMLButtonElement,
+  ): Promise<void> => {
     button.disabled = true;
     actionsCell.querySelector('.users-table__error')?.remove();
 
     try {
       const result = await regenerateInvite(userId);
-      this.dispatchEvent(new CustomEvent('invite-regenerated', {
-        bubbles: true,
-        composed: true,
-        detail: { inviteUrl: result.inviteUrl },
-      }));
+      this.dispatchEvent(
+        new CustomEvent('invite-regenerated', {
+          bubbles: true,
+          composed: true,
+          detail: { inviteUrl: result.inviteUrl },
+        }),
+      );
     } catch (err) {
       const error = document.createElement('span');
       error.classList.add('users-table__error');

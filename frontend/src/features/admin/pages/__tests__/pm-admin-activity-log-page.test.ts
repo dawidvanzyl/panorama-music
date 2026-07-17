@@ -98,14 +98,18 @@ describe('pm-admin-activity-log-page — applying filters', { tags: ['M1.5UC16']
     expect(mockGetAuditEvents).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 }));
 
     const filterBar = el.shadowRoot!.getElementById('filterBar') as unknown as PmAuditFilterBar;
-    filterBar.dispatchEvent(new CustomEvent('audit-filter-changed', {
-      bubbles: true,
-      composed: true,
-      detail: { actor: 'teacher@test.com', eventType: '', from: '', to: '' },
-    }));
+    filterBar.dispatchEvent(
+      new CustomEvent('audit-filter-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { actor: 'teacher@test.com', eventType: '', from: '', to: '' },
+      }),
+    );
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(mockGetAuditEvents).toHaveBeenLastCalledWith(expect.objectContaining({ actor: 'teacher@test.com', page: 1 }));
+    expect(mockGetAuditEvents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ actor: 'teacher@test.com', page: 1 }),
+    );
   });
 });

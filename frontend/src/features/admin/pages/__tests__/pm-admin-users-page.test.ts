@@ -36,7 +36,7 @@ const users: GetUserResult[] = [
   },
 ];
 
-const flush = (): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, 0));
+const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 async function mountPage(): Promise<HTMLElement> {
   const el = document.createElement('pm-admin-users-page');
@@ -66,7 +66,7 @@ function errorBannerOf(el: HTMLElement): HTMLElement {
 
 beforeEach(() => {
   mockGetUsers.mockReset();
-  mockGetUsers.mockImplementation(() => Promise.resolve(users.map(u => ({ ...u }))));
+  mockGetUsers.mockImplementation(() => Promise.resolve(users.map((u) => ({ ...u }))));
   vi.mocked(deactivateUser).mockReset();
   vi.mocked(deactivateUser).mockResolvedValue(undefined);
   vi.mocked(deleteUser).mockReset();
@@ -99,7 +99,11 @@ describe('pm-admin-users-page — owns the deactivate API call', { tags: ['161UC
 
   it('ignores a second confirm for the same user while the first deactivate is still in flight', async () => {
     let resolveDeactivate: () => void = () => {};
-    vi.mocked(deactivateUser).mockReturnValue(new Promise<void>(resolve => { resolveDeactivate = resolve; }));
+    vi.mocked(deactivateUser).mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDeactivate = resolve;
+      }),
+    );
 
     const dispatchConfirm = (): void => {
       el.shadowRoot!.dispatchEvent(
@@ -168,7 +172,7 @@ describe('pm-admin-users-page — owns the delete API call', { tags: ['161UC5', 
 
   it('handling user-delete-confirmed calls deleteUser and removes the row from pm-users-table on success', async () => {
     const table = el.shadowRoot!.getElementById('usersTable') as unknown as PmUsersTable;
-    expect(table.users.map(u => u.userId)).toEqual(['u1', 'u2']);
+    expect(table.users.map((u) => u.userId)).toEqual(['u1', 'u2']);
 
     const modal = deleteModalOf(el);
     modal.show('u2', 'bob@example.com');
@@ -176,13 +180,17 @@ describe('pm-admin-users-page — owns the delete API call', { tags: ['161UC5', 
     await flush();
 
     expect(vi.mocked(deleteUser)).toHaveBeenCalledWith('u2');
-    expect(table.users.map(u => u.userId)).toEqual(['u1']);
+    expect(table.users.map((u) => u.userId)).toEqual(['u1']);
     expect(errorBannerOf(el).classList.contains('admin-users__error--visible')).toBe(false);
   });
 
   it('ignores a second confirm for the same user while the first delete is still in flight', async () => {
     let resolveDelete: () => void = () => {};
-    vi.mocked(deleteUser).mockReturnValue(new Promise<void>(resolve => { resolveDelete = resolve; }));
+    vi.mocked(deleteUser).mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDelete = resolve;
+      }),
+    );
 
     const dispatchConfirm = (): void => {
       el.shadowRoot!.dispatchEvent(
@@ -225,7 +233,7 @@ describe('pm-admin-users-page — surfaces delete failures', { tags: ['161UC6'] 
     expect(banner.textContent).toBe('User still has active sessions');
     expect(banner.classList.contains('admin-users__error--visible')).toBe(true);
     expect(modal.hasAttribute('open')).toBe(false);
-    expect(table.users.map(u => u.userId)).toEqual(['u1', 'u2']);
+    expect(table.users.map((u) => u.userId)).toEqual(['u1', 'u2']);
   });
 
   it('displays the generic fallback message when deleteUser rejects with a non-AdminError', async () => {

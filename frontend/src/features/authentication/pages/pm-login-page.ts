@@ -412,9 +412,10 @@ export class PmLoginPage extends HTMLElement {
 
     try {
       const outcome = await login(this.emailInput!.value, this.passwordInput!.value);
-      window.location.hash = outcome.status === 'passwordResetRequired'
-        ? `#/reset-password?token=${encodeURIComponent(outcome.resetToken)}`
-        : '#/';
+      window.location.hash =
+        outcome.status === 'passwordResetRequired'
+          ? `#/reset-password?token=${encodeURIComponent(outcome.resetToken)}`
+          : '#/';
     } catch (err) {
       if (err instanceof AuthError) {
         this.errorText!.textContent = 'Invalid email or password';

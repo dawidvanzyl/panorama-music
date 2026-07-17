@@ -102,10 +102,7 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function completeRegistration(
-  inviteToken: string,
-  newPassword: string,
-): Promise<void> {
+export async function completeRegistration(inviteToken: string, newPassword: string): Promise<void> {
   const response = await fetch(`${API_BASE}/complete-registration`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

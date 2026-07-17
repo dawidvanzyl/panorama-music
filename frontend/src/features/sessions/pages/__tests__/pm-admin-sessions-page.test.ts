@@ -133,7 +133,7 @@ describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { 
     input.dispatchEvent(new Event('input'));
     modal.shadowRoot!.getElementById('revokeAllBtn')!.click();
 
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledTimes(1);
     expect(modal.hasAttribute('open')).toBe(false);

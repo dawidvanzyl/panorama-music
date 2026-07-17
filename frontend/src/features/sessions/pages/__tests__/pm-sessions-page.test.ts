@@ -58,7 +58,7 @@ describe('pm-sessions-page', { tags: ['M1.4UC11'] }, () => {
     document.body.removeChild(el);
   });
 
-  it('loads and renders the current user\'s own sessions', () => {
+  it("loads and renders the current user's own sessions", () => {
     const table = el.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
     expect(table.sessions).toEqual(sessions);
   });
@@ -67,25 +67,29 @@ describe('pm-sessions-page', { tags: ['M1.4UC11'] }, () => {
     mockRevokeOwnSession.mockResolvedValue(undefined);
     const table = el.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
 
-    table.dispatchEvent(new CustomEvent('session-revoke-requested', {
-      detail: { tokenId: 'other' },
-      bubbles: true,
-    }));
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    table.dispatchEvent(
+      new CustomEvent('session-revoke-requested', {
+        detail: { tokenId: 'other' },
+        bubbles: true,
+      }),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     expect(mockRevokeOwnSession).toHaveBeenCalledWith('other');
-    expect(table.sessions.some(s => s.tokenId === 'other')).toBe(false);
+    expect(table.sessions.some((s) => s.tokenId === 'other')).toBe(false);
   });
 
   it('shows an error banner when revoking a session fails', async () => {
     mockRevokeOwnSession.mockRejectedValue(new SessionError('Cannot revoke current session', 400));
     const table = el.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
 
-    table.dispatchEvent(new CustomEvent('session-revoke-requested', {
-      detail: { tokenId: 'current' },
-      bubbles: true,
-    }));
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    table.dispatchEvent(
+      new CustomEvent('session-revoke-requested', {
+        detail: { tokenId: 'current' },
+        bubbles: true,
+      }),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     const errorBanner = el.shadowRoot!.getElementById('error') as HTMLElement;
     expect(errorBanner.textContent).toBe('Cannot revoke current session');
@@ -98,7 +102,7 @@ describe('pm-sessions-page', { tags: ['M1.4UC11'] }, () => {
 
     const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     revokeAllBtn.click();
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     expect(mockRevokeOwnOtherSessions).toHaveBeenCalledTimes(1);
     const table = el.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
@@ -110,7 +114,7 @@ describe('pm-sessions-page', { tags: ['M1.4UC11'] }, () => {
 
     const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     revokeAllBtn.click();
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     const errorBanner = el.shadowRoot!.getElementById('error') as HTMLElement;
     expect(errorBanner.textContent).toBe('Something went wrong');

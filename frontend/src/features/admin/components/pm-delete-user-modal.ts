@@ -96,11 +96,13 @@ export class PmDeleteUserModal extends HTMLElement {
   }
 
   private handleDelete(): void {
-    this.dispatchEvent(new CustomEvent('user-delete-confirmed', {
-      bubbles: true,
-      composed: true,
-      detail: { userId: this._userId },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('user-delete-confirmed', {
+        bubbles: true,
+        composed: true,
+        detail: { userId: this._userId },
+      }),
+    );
     this.close();
   }
 }

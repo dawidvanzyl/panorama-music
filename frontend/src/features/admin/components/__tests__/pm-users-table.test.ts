@@ -45,8 +45,8 @@ describe('pm-users-table — deactivated user row', { tags: ['M1.1UC38', 'M1.1UC
 
     const actionsCell = el.shadowRoot!.querySelector('.users-table__actions')!;
     const buttons = actionsCell.querySelectorAll('button');
-    const activateIndex = [...buttons].findIndex(b => b.classList.contains('users-table__btn--activate'));
-    const deleteIndex = [...buttons].findIndex(b => b.classList.contains('users-table__btn--delete'));
+    const activateIndex = [...buttons].findIndex((b) => b.classList.contains('users-table__btn--activate'));
+    const deleteIndex = [...buttons].findIndex((b) => b.classList.contains('users-table__btn--delete'));
     expect(activateIndex).toBeLessThan(deleteIndex);
   });
 
@@ -93,8 +93,8 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     const checkboxes = el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     expect(checkboxes).toHaveLength(2);
 
-    const teacherBox = [...checkboxes].find(cb => cb.value === 'Teacher')!;
-    const adminBox = [...checkboxes].find(cb => cb.value === 'Admin')!;
+    const teacherBox = [...checkboxes].find((cb) => cb.value === 'Teacher')!;
+    const adminBox = [...checkboxes].find((cb) => cb.value === 'Admin')!;
     expect(teacherBox.checked).toBe(true);
     expect(adminBox.checked).toBe(false);
   });
@@ -136,7 +136,7 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
   it('protected user row shows no Edit button', () => {
     el.users = [{ ...activeUser, isProtected: true }];
     const editBtns = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.users-table__btn--edit')];
-    expect(editBtns.every(btn => btn.style.visibility === 'hidden')).toBe(true);
+    expect(editBtns.every((btn) => btn.style.visibility === 'hidden')).toBe(true);
     expect(el.shadowRoot!.querySelector('.users-table__regenerate')).toBeNull();
   });
 
@@ -147,7 +147,7 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
 
     el.users = [activeUser];
     const editBtns = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.users-table__btn--edit')];
-    expect(editBtns.every(btn => btn.style.visibility === 'hidden')).toBe(true);
+    expect(editBtns.every((btn) => btn.style.visibility === 'hidden')).toBe(true);
   });
 });
 

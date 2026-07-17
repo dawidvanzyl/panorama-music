@@ -40,17 +40,22 @@ describe('pm-sessions-table — current session distinguishability', { tags: ['M
     const rows = el.shadowRoot!.querySelectorAll('tbody tr');
     expect(rows.length).toBe(2);
 
-    const currentRow = [...rows].find(r => r.classList.contains('sessions-table__row--current'))!;
+    const currentRow = [...rows].find((r) => r.classList.contains('sessions-table__row--current'))!;
     expect(currentRow.textContent).toContain('Current Session');
     expect(currentRow.querySelector('button')!.disabled).toBe(true);
 
-    const otherRow = [...rows].find(r => !r.classList.contains('sessions-table__row--current'))!;
+    const otherRow = [...rows].find((r) => !r.classList.contains('sessions-table__row--current'))!;
     expect(otherRow.textContent).not.toContain('Current Session');
     expect(otherRow.querySelector('button')!.disabled).toBe(false);
   });
 
   it('shows the owning user column when showOwner is enabled, for the admin global view', () => {
-    const adminSession: AdminSessionResult = { ...currentSession, userId: 'u1', userEmail: 'admin@test.com', userRoles: ['Admin'] };
+    const adminSession: AdminSessionResult = {
+      ...currentSession,
+      userId: 'u1',
+      userEmail: 'admin@test.com',
+      userRoles: ['Admin'],
+    };
     el.showOwner = true;
     el.sessions = [adminSession];
 

@@ -139,7 +139,7 @@ export class PmSessionsTable extends HTMLElement {
   }
 
   removeSession(tokenId: string): void {
-    this._sessions = this._sessions.filter(s => s.tokenId !== tokenId);
+    this._sessions = this._sessions.filter((s) => s.tokenId !== tokenId);
     this.render();
   }
 
@@ -210,11 +210,13 @@ export class PmSessionsTable extends HTMLElement {
   }
 
   private handleRevoke(tokenId: string): void {
-    this.dispatchEvent(new CustomEvent('session-revoke-requested', {
-      bubbles: true,
-      composed: true,
-      detail: { tokenId },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('session-revoke-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { tokenId },
+      }),
+    );
   }
 }
 

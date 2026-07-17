@@ -187,11 +187,13 @@ export class PmAuditFilterBar extends HTMLElement {
       from: fromValue ? localDayStartUtcIso(fromValue) : '',
       to: toValue ? localDayEndUtcIso(toValue) : '',
     };
-    this.dispatchEvent(new CustomEvent<AuditFilterValues>('audit-filter-changed', {
-      bubbles: true,
-      composed: true,
-      detail,
-    }));
+    this.dispatchEvent(
+      new CustomEvent<AuditFilterValues>('audit-filter-changed', {
+        bubbles: true,
+        composed: true,
+        detail,
+      }),
+    );
   }
 }
 

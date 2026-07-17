@@ -5,7 +5,10 @@ const mockForgotPassword = vi.fn();
 vi.mock('../../../../services/auth', () => ({
   forgotPassword: (...args: unknown[]) => mockForgotPassword(...args),
   AuthError: class AuthError extends Error {
-    constructor(message: string, public status: number) {
+    constructor(
+      message: string,
+      public status: number,
+    ) {
       super(message);
       this.name = 'AuthError';
     }

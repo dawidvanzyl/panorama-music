@@ -24,7 +24,9 @@ describe('pm-password-strength-indicator', { tags: ['M1.1UC3'] }, () => {
     const shadow = el.shadowRoot!;
 
     expect(shadow.getElementById('icon-min-length')?.textContent).toBe('check_circle');
-    expect(shadow.getElementById('icon-min-length')?.className).toBe('material-symbols-outlined strength-rule__icon--satisfied');
+    expect(shadow.getElementById('icon-min-length')?.className).toBe(
+      'material-symbols-outlined strength-rule__icon--satisfied',
+    );
     expect(shadow.getElementById('label-min-length')?.className).toBe('strength-rule__label--satisfied');
   });
 

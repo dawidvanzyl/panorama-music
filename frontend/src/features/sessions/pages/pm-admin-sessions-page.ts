@@ -1,6 +1,12 @@
 import '../components/pm-sessions-table';
 import '../components/pm-revoke-all-sessions-modal';
-import { getAllSessions, revokeSession, revokeAllSessions, SessionError, type AdminSessionResult } from '../services/sessions';
+import {
+  getAllSessions,
+  revokeSession,
+  revokeAllSessions,
+  SessionError,
+  type AdminSessionResult,
+} from '../services/sessions';
 import type { PmSessionsTable } from '../components/pm-sessions-table';
 import type { PmRevokeAllSessionsModal } from '../components/pm-revoke-all-sessions-modal';
 
@@ -156,7 +162,7 @@ export class PmAdminSessionsPage extends HTMLElement {
   private applyFilter = (): void => {
     const query = this.filterInput!.value.trim().toLowerCase();
     this.sessionsTable!.sessions = query
-      ? this.allSessions.filter(s => s.userEmail.toLowerCase().includes(query))
+      ? this.allSessions.filter((s) => s.userEmail.toLowerCase().includes(query))
       : this.allSessions;
   };
 
@@ -165,7 +171,7 @@ export class PmAdminSessionsPage extends HTMLElement {
     this.clearError();
     try {
       await revokeSession(tokenId);
-      this.allSessions = this.allSessions.filter(s => s.tokenId !== tokenId);
+      this.allSessions = this.allSessions.filter((s) => s.tokenId !== tokenId);
       this.applyFilter();
     } catch (err) {
       this.showError(err);

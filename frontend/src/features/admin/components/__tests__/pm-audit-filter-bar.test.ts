@@ -15,7 +15,7 @@ describe('pm-audit-filter-bar — date range conversion', { tags: ['M1.5UC16'] }
 
   it('converts the picked from/to dates to local start-of-day/end-of-day UTC instants on Apply', () => {
     const events: CustomEvent<AuditFilterValues>[] = [];
-    bar.addEventListener('audit-filter-changed', e => events.push(e as CustomEvent<AuditFilterValues>));
+    bar.addEventListener('audit-filter-changed', (e) => events.push(e as CustomEvent<AuditFilterValues>));
 
     const fromInput = bar.shadowRoot!.getElementById('from') as HTMLInputElement;
     const toInput = bar.shadowRoot!.getElementById('to') as HTMLInputElement;
@@ -35,7 +35,7 @@ describe('pm-audit-filter-bar — date range conversion', { tags: ['M1.5UC16'] }
 
   it('emits empty from/to (not an invalid date conversion) when the date fields are blank', () => {
     const events: CustomEvent<AuditFilterValues>[] = [];
-    bar.addEventListener('audit-filter-changed', e => events.push(e as CustomEvent<AuditFilterValues>));
+    bar.addEventListener('audit-filter-changed', (e) => events.push(e as CustomEvent<AuditFilterValues>));
 
     bar.shadowRoot!.getElementById('applyBtn')!.dispatchEvent(new Event('click'));
 
@@ -46,7 +46,7 @@ describe('pm-audit-filter-bar — date range conversion', { tags: ['M1.5UC16'] }
 
   it('Clear resets the date fields and emits empty from/to', () => {
     const events: CustomEvent<AuditFilterValues>[] = [];
-    bar.addEventListener('audit-filter-changed', e => events.push(e as CustomEvent<AuditFilterValues>));
+    bar.addEventListener('audit-filter-changed', (e) => events.push(e as CustomEvent<AuditFilterValues>));
 
     const fromInput = bar.shadowRoot!.getElementById('from') as HTMLInputElement;
     fromInput.value = '2026-03-05';
