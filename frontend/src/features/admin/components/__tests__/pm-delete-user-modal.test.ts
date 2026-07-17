@@ -124,7 +124,6 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] },
   beforeEach(() => {
     modal = new PmDeleteUserModal();
     document.body.appendChild(modal);
-    vi.mocked(deleteUser).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -132,9 +131,9 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] },
     vi.clearAllMocks();
   });
 
-  it('clicking Delete calls deleteUser, closes modal, and emits user-deleted event', async () => {
+  it('clicking Delete closes the modal and emits user-delete-confirmed for the page to act on', () => {
     const events: CustomEvent[] = [];
-    modal.addEventListener('user-deleted', (e) => events.push(e as CustomEvent));
+    modal.addEventListener('user-delete-confirmed', (e) => events.push(e as CustomEvent));
 
     modal.show('user-id-1', 'teacher@test.com');
     const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
@@ -142,12 +141,53 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] },
     input.dispatchEvent(new Event('input'));
     modal.shadowRoot!.getElementById('deleteBtn')!.click();
 
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
-
-    expect(vi.mocked(deleteUser)).toHaveBeenCalledWith('user-id-1');
     expect(modal.hasAttribute('open')).toBe(false);
     expect(events).toHaveLength(1);
     expect(events[0].detail.userId).toBe('user-id-1');
+  });
+});
+
+describe('pm-delete-user-modal — dispatches instead of calling the API', { tags: ['161UC4'] }, () => {
+  let modal: PmDeleteUserModal;
+
+  beforeEach(() => {
+    modal = new PmDeleteUserModal();
+    document.body.appendChild(modal);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(modal);
+    vi.clearAllMocks();
+  });
+
+  it('clicking Delete after typing the matching email dispatches user-delete-confirmed with the userId and does not call deleteUser itself', () => {
+    const events: CustomEvent<{ userId: string }>[] = [];
+    modal.addEventListener('user-delete-confirmed', (e) => events.push(e as CustomEvent<{ userId: string }>));
+
+    modal.show('user-id-1', 'teacher@test.com');
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'teacher@test.com';
+    input.dispatchEvent(new Event('input'));
+    modal.shadowRoot!.getElementById('deleteBtn')!.click();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].detail).toEqual({ userId: 'user-id-1' });
+    expect(vi.mocked(deleteUser)).not.toHaveBeenCalled();
+  });
+
+  it('dispatches a bubbling, composed event so the owning page can listen at its shadow root', () => {
+    modal.show('user-id-1', 'teacher@test.com');
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'teacher@test.com';
+    input.dispatchEvent(new Event('input'));
+
+    const events: CustomEvent[] = [];
+    document.body.addEventListener('user-delete-confirmed', (e) => events.push(e as CustomEvent), { once: true });
+    modal.shadowRoot!.getElementById('deleteBtn')!.click();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].bubbles).toBe(true);
+    expect(events[0].composed).toBe(true);
   });
 });
 

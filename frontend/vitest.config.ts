@@ -50,6 +50,12 @@ export default defineConfig({
       { name: 'M1.5UC16', description: 'Applying filters on the Activity Log page updates results and resets pagination to page 1' },
       { name: 'M1.5UC17', description: 'A non-admin user navigating to the Activity Log page is redirected to / and no audit data is rendered' },
       { name: '162UC1', description: 'Each confirmation modal adopts the shared modal-chrome stylesheet and no longer declares the extracted selectors locally' },
+      { name: '161UC1', description: 'Deactivate modal dispatches user-deactivate-confirmed with the userId instead of calling deactivateUser itself' },
+      { name: '161UC2', description: 'Admin users page handles user-deactivate-confirmed by calling deactivateUser and refreshing the list on success' },
+      { name: '161UC3', description: 'Admin users page displays the AdminError message (or generic fallback) when deactivateUser rejects' },
+      { name: '161UC4', description: 'Delete modal dispatches user-delete-confirmed with the userId instead of calling deleteUser itself' },
+      { name: '161UC5', description: 'Admin users page handles user-delete-confirmed by calling deleteUser and removing the row on success' },
+      { name: '161UC6', description: 'Admin users page displays the AdminError message (or generic fallback) when deleteUser rejects' },
     ],
   },
 })

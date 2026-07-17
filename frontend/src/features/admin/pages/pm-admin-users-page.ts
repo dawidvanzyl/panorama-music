@@ -4,7 +4,7 @@ import '../components/pm-deactivate-user-modal';
 import '../components/pm-delete-user-modal';
 import '../components/pm-user-created-banner';
 import '../components/pm-reinvite-banner';
-import { getUsers, activateUser, clearUsersCache, AdminError } from '../services/admin';
+import { getUsers, activateUser, deactivateUser, deleteUser, clearUsersCache, AdminError } from '../services/admin';
 import type { PmUsersTable } from '../components/pm-users-table';
 import type { PmDeactivateUserModal } from '../components/pm-deactivate-user-modal';
 import type { PmDeleteUserModal } from '../components/pm-delete-user-modal';
@@ -62,6 +62,8 @@ export class PmAdminUsersPage extends HTMLElement {
   private reinviteBanner: PmReinviteBanner | null = null;
   private errorBanner: HTMLElement | null = null;
   private _activatingUserId: string | null = null;
+  private _deactivatingUserId: string | null = null;
+  private _deletingUserId: string | null = null;
 
   constructor() {
     super();
@@ -82,9 +84,9 @@ export class PmAdminUsersPage extends HTMLElement {
     this.shadowRoot!.addEventListener('invite-regenerated', this.handleInviteRegenerated);
     this.shadowRoot!.addEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.addEventListener('user-deactivate-requested', this.handleDeactivateRequested);
-    this.shadowRoot!.addEventListener('user-deactivated', this.handleUserDeactivated);
+    this.shadowRoot!.addEventListener('user-deactivate-confirmed', this.handleDeactivateConfirmed);
     this.shadowRoot!.addEventListener('user-delete-requested', this.handleDeleteRequested);
-    this.shadowRoot!.addEventListener('user-deleted', this.handleUserDeleted);
+    this.shadowRoot!.addEventListener('user-delete-confirmed', this.handleDeleteConfirmed);
     clearUsersCache();
     void this.loadUsers();
   }
@@ -94,9 +96,9 @@ export class PmAdminUsersPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('invite-regenerated', this.handleInviteRegenerated);
     this.shadowRoot!.removeEventListener('user-activate-requested', this.handleActivateRequested);
     this.shadowRoot!.removeEventListener('user-deactivate-requested', this.handleDeactivateRequested);
-    this.shadowRoot!.removeEventListener('user-deactivated', this.handleUserDeactivated);
+    this.shadowRoot!.removeEventListener('user-deactivate-confirmed', this.handleDeactivateConfirmed);
     this.shadowRoot!.removeEventListener('user-delete-requested', this.handleDeleteRequested);
-    this.shadowRoot!.removeEventListener('user-deleted', this.handleUserDeleted);
+    this.shadowRoot!.removeEventListener('user-delete-confirmed', this.handleDeleteConfirmed);
   }
 
   private handleUserCreated = (event: Event): void => {
@@ -116,13 +118,12 @@ export class PmAdminUsersPage extends HTMLElement {
     const { userId } = (event as CustomEvent<{ userId: string }>).detail;
     if (this._activatingUserId === userId) return;
     this._activatingUserId = userId;
-    this.errorBanner!.classList.remove('admin-users__error--visible');
+    this.clearError();
     try {
       await activateUser(userId);
       void this.loadUsers();
     } catch (err) {
-      this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      this.errorBanner!.classList.add('admin-users__error--visible');
+      this.showError(err);
     } finally {
       this._activatingUserId = null;
     }
@@ -133,8 +134,19 @@ export class PmAdminUsersPage extends HTMLElement {
     this.deactivateModal!.show(userId, email);
   };
 
-  private handleUserDeactivated = (): void => {
-    void this.loadUsers();
+  private handleDeactivateConfirmed = async (event: Event): Promise<void> => {
+    const { userId } = (event as CustomEvent<{ userId: string }>).detail;
+    if (this._deactivatingUserId === userId) return;
+    this._deactivatingUserId = userId;
+    this.clearError();
+    try {
+      await deactivateUser(userId);
+      await this.loadUsers();
+    } catch (err) {
+      this.showError(err);
+    } finally {
+      this._deactivatingUserId = null;
+    }
   };
 
   private handleDeleteRequested = (event: Event): void => {
@@ -142,21 +154,39 @@ export class PmAdminUsersPage extends HTMLElement {
     this.deleteModal!.show(userId, email);
   };
 
-  private handleUserDeleted = (event: Event): void => {
+  private handleDeleteConfirmed = async (event: Event): Promise<void> => {
     const { userId } = (event as CustomEvent<{ userId: string }>).detail;
-    this.usersTable!.removeUser(userId);
+    if (this._deletingUserId === userId) return;
+    this._deletingUserId = userId;
+    this.clearError();
+    try {
+      await deleteUser(userId);
+      this.usersTable!.removeUser(userId);
+    } catch (err) {
+      this.showError(err);
+    } finally {
+      this._deletingUserId = null;
+    }
   };
 
   private loadUsers = async (): Promise<void> => {
-    this.errorBanner!.classList.remove('admin-users__error--visible');
+    this.clearError();
 
     try {
       this.usersTable!.users = await getUsers();
     } catch (err) {
-      this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      this.errorBanner!.classList.add('admin-users__error--visible');
+      this.showError(err);
     }
   };
+
+  private showError(err: unknown): void {
+    this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
+    this.errorBanner!.classList.add('admin-users__error--visible');
+  }
+
+  private clearError(): void {
+    this.errorBanner!.classList.remove('admin-users__error--visible');
+  }
 }
 
 customElements.define('pm-admin-users-page', PmAdminUsersPage);
