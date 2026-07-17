@@ -7,6 +7,8 @@ using PanoramaMusic.Audit.Application.Validators;
 using PanoramaMusic.Audit.Domain.Interfaces;
 using PanoramaMusic.Audit.Infrastructure.Contexts;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
+using PanoramaMusic.Audit.Infrastructure.Services;
+using PanoramaMusic.Persistence.Interfaces;
 
 namespace PanoramaMusic.Audit.Infrastructure.Extensions;
 
@@ -23,6 +25,12 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventFactory, AuditEventFactory>();
 		services.AddTransient<GetAuditEventsHandler>();
 		services.AddValidatorsFromAssemblyContaining<GetAuditEventsRequestValidator>();
+
+		// Request-scoped so every repository/handler resolved in one request
+		// shares the same collector, and the flush drains everything
+		// collected during that request.
+		services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+		services.AddScoped<IAuditFlushService, AuditFlushService>();
 		return services;
 	}
 }

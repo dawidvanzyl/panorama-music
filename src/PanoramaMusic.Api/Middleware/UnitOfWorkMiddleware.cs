@@ -1,3 +1,4 @@
+using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Api.Middleware;
@@ -11,20 +12,27 @@ namespace PanoramaMusic.Api.Middleware;
 /// </summary>
 public sealed class UnitOfWorkMiddleware(RequestDelegate next)
 {
-	public async Task InvokeAsync(HttpContext context, IUnitOfWork unitOfWork)
+	public async Task InvokeAsync(HttpContext context, IUnitOfWork unitOfWork, IAuditFlushService auditFlushService)
 	{
 		await unitOfWork.BeginAsync(context.RequestAborted);
 
 		try
 		{
 			await next(context);
+			await auditFlushService.FlushAsync(context.RequestAborted);
 			await unitOfWork.CommitAsync(context.RequestAborted);
 		}
 		catch
 		{
-			// CancellationToken.None: an aborted request must not prevent the
-			// rollback from completing.
-			await unitOfWork.RollbackAsync(CancellationToken.None);
+			try
+			{
+				await auditFlushService.FlushDurableAsync(CancellationToken.None);
+			}
+			finally
+			{
+				await unitOfWork.RollbackAsync(CancellationToken.None);
+			}
+
 			throw;
 		}
 	}
