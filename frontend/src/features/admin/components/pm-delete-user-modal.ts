@@ -1,4 +1,3 @@
-import { deleteUser, AdminError } from '../services/admin';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 
 const styles = new CSSStyleSheet();
@@ -36,15 +35,6 @@ styles.replaceSync(`
     .modal__btn--delete:hover:not(:disabled) {
       opacity: 0.9;
     }
-    .modal__error {
-      font-size: 12px;
-      color: var(--pm-danger, #e05252);
-      margin-bottom: 12px;
-      display: none;
-    }
-    .modal__error--visible {
-      display: block;
-    }
   `);
 
 const template = document.createElement('template');
@@ -61,7 +51,6 @@ template.innerHTML = `
       </p>
       <label class="modal__confirm-label" for="confirmInput">Type the user's email to confirm</label>
       <input class="modal__confirm-input" id="confirmInput" type="text" autocomplete="off" />
-      <p class="modal__error" id="modalError"></p>
       <div class="modal__actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
         <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button" disabled>Delete</button>
@@ -93,7 +82,6 @@ export class PmDeleteUserModal extends HTMLElement {
     this.shadowRoot!.getElementById('modalEmail')!.textContent = email;
     (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).value = '';
     (this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled = true;
-    this.clearError();
     this.setAttribute('open', '');
   }
 
@@ -107,36 +95,14 @@ export class PmDeleteUserModal extends HTMLElement {
     deleteBtn.disabled = input.value !== this._email;
   }
 
-  private clearError(): void {
-    const error = this.shadowRoot!.getElementById('modalError')!;
-    error.textContent = '';
-    error.classList.remove('modal__error--visible');
+  private handleDelete(): void {
+    this.dispatchEvent(new CustomEvent('user-delete-confirmed', {
+      bubbles: true,
+      composed: true,
+      detail: { userId: this._userId },
+    }));
+    this.close();
   }
-
-  private handleDelete = async (): Promise<void> => {
-    const cancelBtn = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
-    const deleteBtn = this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
-
-    cancelBtn.disabled = true;
-    deleteBtn.disabled = true;
-    this.clearError();
-
-    try {
-      await deleteUser(this._userId);
-      this.dispatchEvent(new CustomEvent('user-deleted', {
-        bubbles: true,
-        composed: true,
-        detail: { userId: this._userId },
-      }));
-      this.close();
-    } catch (err) {
-      const error = this.shadowRoot!.getElementById('modalError')!;
-      error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      error.classList.add('modal__error--visible');
-      cancelBtn.disabled = false;
-      deleteBtn.disabled = false;
-    }
-  };
 }
 
 customElements.define('pm-delete-user-modal', PmDeleteUserModal);
