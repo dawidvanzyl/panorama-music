@@ -107,10 +107,12 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
   }
 
   private handleConfirm(): void {
-    this.dispatchEvent(new CustomEvent('revoke-all-sessions-confirmed', {
-      bubbles: true,
-      composed: true,
-    }));
+    this.dispatchEvent(
+      new CustomEvent('revoke-all-sessions-confirmed', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
     this.close();
   }
 }

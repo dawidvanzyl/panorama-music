@@ -5,7 +5,11 @@ const mockResetPassword = vi.fn();
 vi.mock('../../../../services/auth', () => ({
   resetPassword: (...args: unknown[]) => mockResetPassword(...args),
   AuthError: class AuthError extends Error {
-    constructor(message: string, public status: number, public validationErrors: unknown[] = []) {
+    constructor(
+      message: string,
+      public status: number,
+      public validationErrors: unknown[] = [],
+    ) {
       super(message);
       this.name = 'AuthError';
     }
@@ -60,9 +64,11 @@ describe('pm-reset-password-page', () => {
 
     it('shows inline error when API returns 400 policy error', async () => {
       const { AuthError } = await import('../../../../services/auth');
-      mockResetPassword.mockRejectedValueOnce(new AuthError('Password must be at least 8 characters.', 400, [
-        { propertyName: 'NewPassword', errorMessage: 'Password must be at least 8 characters.' },
-      ]));
+      mockResetPassword.mockRejectedValueOnce(
+        new AuthError('Password must be at least 8 characters.', 400, [
+          { propertyName: 'NewPassword', errorMessage: 'Password must be at least 8 characters.' },
+        ]),
+      );
 
       const shadow = el.shadowRoot!;
       const form = shadow.getElementById('resetForm') as HTMLFormElement;

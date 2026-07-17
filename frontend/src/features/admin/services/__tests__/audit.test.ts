@@ -21,9 +21,12 @@ describe('getAuditEvents', { tags: ['M1.5UC15'] }, () => {
     const result = await getAuditEvents();
 
     expect(result).toEqual(page);
-    expect(mockFetch).toHaveBeenCalledWith('/api/audit?page=1&pageSize=25', expect.objectContaining({
-      headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-    }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/audit?page=1&pageSize=25',
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+      }),
+    );
   });
 
   it('throws AuditError on a failed request', async () => {
@@ -46,7 +49,12 @@ describe('getAuditEvents — filter query params', { tags: ['M1.5UC16'] }, () =>
       json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 25 }),
     });
 
-    await getAuditEvents({ actor: 'teacher@test.com', eventType: 'identity.user.login_succeeded', page: 2, pageSize: 10 });
+    await getAuditEvents({
+      actor: 'teacher@test.com',
+      eventType: 'identity.user.login_succeeded',
+      page: 2,
+      pageSize: 10,
+    });
 
     const requestedUrl = mockFetch.mock.calls[0][0] as string;
     const params = new URL(requestedUrl, 'http://localhost').searchParams;

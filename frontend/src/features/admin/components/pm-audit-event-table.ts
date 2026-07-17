@@ -203,7 +203,8 @@ export class PmAuditEventTable extends HTMLElement {
   }
 
   private render(): void {
-    if (!this.rowsBody || !this.emptyMessage || !this.footer || !this.footerLabel || !this.prevBtn || !this.nextBtn) return;
+    if (!this.rowsBody || !this.emptyMessage || !this.footer || !this.footerLabel || !this.prevBtn || !this.nextBtn)
+      return;
 
     this.rowsBody.innerHTML = '';
     const hasItems = this._items.length > 0;
@@ -269,20 +270,24 @@ export class PmAuditEventTable extends HTMLElement {
 
   private handlePrev = (): void => {
     if (this._page <= 1) return;
-    this.dispatchEvent(new CustomEvent<{ page: number }>('audit-page-changed', {
-      bubbles: true,
-      composed: true,
-      detail: { page: this._page - 1 },
-    }));
+    this.dispatchEvent(
+      new CustomEvent<{ page: number }>('audit-page-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { page: this._page - 1 },
+      }),
+    );
   };
 
   private handleNext = (): void => {
     if (this._page >= this.totalPages) return;
-    this.dispatchEvent(new CustomEvent<{ page: number }>('audit-page-changed', {
-      bubbles: true,
-      composed: true,
-      detail: { page: this._page + 1 },
-    }));
+    this.dispatchEvent(
+      new CustomEvent<{ page: number }>('audit-page-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { page: this._page + 1 },
+      }),
+    );
   };
 }
 

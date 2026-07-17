@@ -66,12 +66,12 @@ async function render(): Promise<void> {
     return;
   }
 
-  const route = Object.hasOwn(ROUTES, basePath)
-    ? ROUTES[basePath]
-    : (() => '<pm-login-page></pm-login-page>');
+  const route = Object.hasOwn(ROUTES, basePath) ? ROUTES[basePath] : () => '<pm-login-page></pm-login-page>';
   app.innerHTML = isPublicPage
     ? '<main>' + route() + '</main>'
-    : '<div class="pm-app-shell"><pm-nav-bar></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' + route() + '</main></div><pm-app-footer></pm-app-footer></div>';
+    : '<div class="pm-app-shell"><pm-nav-bar></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
+      route() +
+      '</main></div><pm-app-footer></pm-app-footer></div>';
 }
 
 window.addEventListener('hashchange', () => void render());

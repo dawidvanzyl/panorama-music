@@ -28,9 +28,12 @@ describe('login', { tags: ['M1UC35'] }, () => {
     expect(result).toMatchObject({ accessToken: 'jwt-token-123' });
     expect(localStorage.getItem('pm_access_token')).toBe('jwt-token-123');
     expect(localStorage.getItem('pm_refresh_token')).toBeNull();
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
-      credentials: 'include',
-    }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        credentials: 'include',
+      }),
+    );
   });
 
   it('throws AuthError on 401', async () => {
@@ -83,10 +86,13 @@ describe('refreshToken', { tags: ['M1UC37'] }, () => {
 
     expect(result.accessToken).toBe('new-jwt-token');
     expect(localStorage.getItem('pm_access_token')).toBe('new-jwt-token');
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/refresh', expect.objectContaining({
-      method: 'POST',
-      credentials: 'include',
-    }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/auth/refresh',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    );
   });
 
   it('throws AuthError when the server has no valid refresh-token cookie', async () => {
@@ -111,11 +117,14 @@ describe('logout', { tags: ['M1UC38'] }, () => {
 
     await logout();
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({
-      method: 'POST',
-      credentials: 'include',
-      headers: { Authorization: 'Bearer some-access' },
-    }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        headers: { Authorization: 'Bearer some-access' },
+      }),
+    );
     expect(localStorage.getItem('pm_access_token')).toBeNull();
   });
 
@@ -139,10 +148,13 @@ describe('completeRegistration', { tags: ['M1UC36'] }, () => {
 
     await completeRegistration('invite-token-abc', 'StrongPass1!');
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/complete-registration', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ inviteToken: 'invite-token-abc', newPassword: 'StrongPass1!' }),
-    }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/auth/complete-registration',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ inviteToken: 'invite-token-abc', newPassword: 'StrongPass1!' }),
+      }),
+    );
     expect(localStorage.getItem('pm_access_token')).toBeNull();
   });
 

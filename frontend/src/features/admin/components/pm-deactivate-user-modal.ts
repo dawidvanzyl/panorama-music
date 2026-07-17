@@ -65,11 +65,13 @@ export class PmDeactivateUserModal extends HTMLElement {
   }
 
   private handleDeactivate(): void {
-    this.dispatchEvent(new CustomEvent('user-deactivate-confirmed', {
-      bubbles: true,
-      composed: true,
-      detail: { userId: this._userId },
-    }));
+    this.dispatchEvent(
+      new CustomEvent('user-deactivate-confirmed', {
+        bubbles: true,
+        composed: true,
+        detail: { userId: this._userId },
+      }),
+    );
     this.close();
   }
 }

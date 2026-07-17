@@ -195,11 +195,13 @@ export class PmCreateUserForm extends HTMLElement {
       const result = await createUser(this.emailInput!.value, roles);
       this.form!.reset();
       this.roleTeacher!.checked = true;
-      this.dispatchEvent(new CustomEvent('user-created', {
-        bubbles: true,
-        composed: true,
-        detail: { inviteUrl: result.inviteUrl },
-      }));
+      this.dispatchEvent(
+        new CustomEvent('user-created', {
+          bubbles: true,
+          composed: true,
+          detail: { inviteUrl: result.inviteUrl },
+        }),
+      );
     } catch (err) {
       this.messageText!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
       this.message!.classList.add('create-user__message--error');
