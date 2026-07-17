@@ -49,6 +49,7 @@ export default defineConfig({
       { name: 'M1.5UC15', description: 'Activity Log page loads and displays a paginated table of audit events, with an empty state when none match' },
       { name: 'M1.5UC16', description: 'Applying filters on the Activity Log page updates results and resets pagination to page 1' },
       { name: 'M1.5UC17', description: 'A non-admin user navigating to the Activity Log page is redirected to / and no audit data is rendered' },
+      { name: '162UC1', description: 'Each confirmation modal adopts the shared modal-chrome stylesheet and no longer declares the extracted selectors locally' },
     ],
   },
 })
