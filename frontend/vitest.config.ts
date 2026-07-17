@@ -25,7 +25,7 @@ export default defineConfig({
       { name: 'M1.1UC23', description: 'Admin creates user with multiple roles; all roles are persisted' },
       { name: 'M1.1UC24', description: 'Admin selects multiple roles in create-user form; all role badges appear for new user' },
       { name: 'M1.1UC18', description: 'Deactivate button opens confirmation modal showing user email; Cancel dismisses with no action' },
-      { name: 'M1.1UC19', description: 'Confirming deactivation calls DELETE endpoint; modal closes and row is removed from User Directory table' },
+      { name: 'M1.1UC19', description: 'Confirming deactivation calls DELETE endpoint; modal closes and the User Directory list refreshes' },
       { name: 'M1.1UC27', description: 'Deactivated user row renders a Delete button' },
       { name: 'M1.1UC28', description: 'Permanent-delete modal Delete button is disabled until email is entered' },
       { name: 'M1.1UC29', description: 'Typing the correct email in permanent-delete modal enables the Delete button' },
