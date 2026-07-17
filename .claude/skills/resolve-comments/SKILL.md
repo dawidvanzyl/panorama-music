@@ -80,7 +80,7 @@ Do not proceed until the user confirms.
 
 - Implement fixes for **all valid** comments together.
 - Run the relevant checks for the affected scope before committing:
-  - Backend changes: `dotnet build src/PanoramaMusic.sln` and
+  - Backend changes: `dotnet build src/PanoramaMusic.slnx` and
     `dotnet test src/PanoramaMusic.Tests`
   - Frontend changes: `npm run lint`, `npm run typecheck`, and
     `npm run test` (or `npx vitest run` if no `test` script)

@@ -160,8 +160,8 @@ requirement will land, without having written a single line yet.
   number, already resolved in the text; do not recompute it.
 - If `## Acceptance Criteria (G/W/T)` has no entries, no unit/frontend tests are required for this story. IT code coverage from `## Epic Reference > Acceptance Criteria Covered` is independent of this and still applies if present.
 - Update `README.md` if behaviour, setup, usage, or documentation are affected.
-- Build: `dotnet build src/PanoramaMusic.sln`
-- Format check: `dotnet format src/PanoramaMusic.sln --verify-no-changes`
+- Build: `dotnet build src/PanoramaMusic.slnx`
+- Format check: `dotnet format src/PanoramaMusic.slnx --verify-no-changes`
 - Test: `dotnet test src/PanoramaMusic.Tests`
 - Run frontend checks (lint, typecheck, vitest) if story has frontend scope.
 - Fix all failures before proceeding.

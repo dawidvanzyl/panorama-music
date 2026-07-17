@@ -1,0 +1,44 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Domains/" />
+  <Folder Name="/Domains/Audit/">
+    <Project Path="PanoramaMusic.Audit.Application/PanoramaMusic.Audit.Application.csproj" />
+    <Project Path="PanoramaMusic.Audit.Domain/PanoramaMusic.Audit.Domain.csproj" />
+    <Project Path="PanoramaMusic.Audit.Infrastructure/PanoramaMusic.Audit.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Domains/Identity/">
+    <Project Path="PanoramaMusic.Identity.Application/PanoramaMusic.Identity.Application.csproj" />
+    <Project Path="PanoramaMusic.Identity.Domain/PanoramaMusic.Identity.Domain.csproj" />
+    <Project Path="PanoramaMusic.Identity.Infrastructure/PanoramaMusic.Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Domains/Students/">
+    <Project Path="PanoramaMusic.Students.Application/PanoramaMusic.Students.Application.csproj" />
+    <Project Path="PanoramaMusic.Students.Domain/PanoramaMusic.Students.Domain.csproj" />
+    <Project Path="PanoramaMusic.Students.Infrastructure/PanoramaMusic.Students.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="PanoramaMusic.Api.Tests/PanoramaMusic.Api.Tests.csproj" />
+    <Project Path="PanoramaMusic.Domain.Tests/PanoramaMusic.Domain.Tests.csproj" />
+    <Project Path="PanoramaMusic.Persistence.Tests/PanoramaMusic.Persistence.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Domains/" />
+  <Folder Name="/Tests/Domains/Audit/">
+    <Project Path="PanoramaMusic.Audit.Tests/PanoramaMusic.Audit.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Domains/Identity/">
+    <Project Path="PanoramaMusic.Identity.Application.Tests/PanoramaMusic.Identity.Application.Tests.csproj" />
+    <Project Path="PanoramaMusic.Identity.Domain.Tests/PanoramaMusic.Identity.Domain.Tests.csproj" />
+    <Project Path="PanoramaMusic.Identity.Infrastructure.Tests/PanoramaMusic.Identity.Infrastructure.Tests.csproj" />
+    <Project Path="PanoramaMusic.Identity.Tests/PanoramaMusic.Identity.Tests.csproj" />
+  </Folder>
+  <Project Path="PanoramaMusic.Api/PanoramaMusic.Api.csproj" />
+  <Project Path="PanoramaMusic.Domain/PanoramaMusic.Domain.csproj" />
+  <Project Path="PanoramaMusic.Persistence/PanoramaMusic.Persistence.csproj" />
+</Solution>
