@@ -28,16 +28,16 @@ jobs:
           global-json-file: global.json
 
       - name: Restore dependencies
-        run: dotnet restore src/PanoramaMusic.sln
+        run: dotnet restore src/PanoramaMusic.slnx
 
       - name: Build
-        run: dotnet build src/PanoramaMusic.sln --no-restore --configuration Release /warnaserror
+        run: dotnet build src/PanoramaMusic.slnx --no-restore --configuration Release /warnaserror
 
       - name: Test
-        run: dotnet test src/PanoramaMusic.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test src/PanoramaMusic.slnx --no-build --configuration Release --verbosity normal
 
       - name: Format check
-        run: dotnet format src/PanoramaMusic.sln --verify-no-changes
+        run: dotnet format src/PanoramaMusic.slnx --verify-no-changes
 
   frontend-ci:
     name: Frontend CI

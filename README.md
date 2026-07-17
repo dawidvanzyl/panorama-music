@@ -57,7 +57,7 @@ ConnectionStrings__Migrations=<privileged connection string>
 
 ```bash
 # Build the backend
-dotnet build src/PanoramaMusic.sln
+dotnet build src/PanoramaMusic.slnx
 
 # Run the API (requires PostgreSQL to be available)
 dotnet run --project src/PanoramaMusic.Api

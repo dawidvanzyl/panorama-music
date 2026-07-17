@@ -11,7 +11,7 @@ public class AdminConfigurationBaselineTests
 	public AdminConfigurationBaselineTests()
 	{
 		var directory = new DirectoryInfo(AppContext.BaseDirectory);
-		while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PanoramaMusic.sln")))
+		while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PanoramaMusic.slnx")))
 			directory = directory.Parent;
 
 		_appSettingsPath = directory is null

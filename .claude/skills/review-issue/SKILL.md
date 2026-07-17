@@ -97,8 +97,8 @@ git fetch origin {base_branch} && git diff origin/{base_branch}...HEAD   # other
 Backend checks (always run when `src/` is changed):
 
 ```bash
-dotnet build src/PanoramaMusic.sln 2>&1
-dotnet format src/PanoramaMusic.sln --verify-no-changes 2>&1
+dotnet build src/PanoramaMusic.slnx 2>&1
+dotnet format src/PanoramaMusic.slnx --verify-no-changes 2>&1
 find src -iname "*Tests*.csproj" -o -iname "*Test*.csproj" | sort -u | while read -r proj; do
   echo "--- Testing: $proj ---"
   dotnet test "$proj" 2>&1
