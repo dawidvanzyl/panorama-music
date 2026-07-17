@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Exceptions;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 
@@ -22,11 +23,15 @@ public sealed class UnitOfWorkMiddleware(RequestDelegate next)
 			await auditFlushService.FlushAsync(context.RequestAborted);
 			await unitOfWork.CommitAsync(context.RequestAborted);
 		}
-		catch
+		catch (Exception ex)
 		{
 			try
 			{
 				await auditFlushService.FlushDurableAsync(CancellationToken.None);
+			}
+			catch (AggregateException aex)
+			{
+				throw new FlushDurableException(aex.Message, ex);
 			}
 			finally
 			{
