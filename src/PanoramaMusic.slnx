@@ -38,6 +38,9 @@
     <Project Path="PanoramaMusic.Identity.Infrastructure.Tests/PanoramaMusic.Identity.Infrastructure.Tests.csproj" />
     <Project Path="PanoramaMusic.Identity.Tests/PanoramaMusic.Identity.Tests.csproj" />
   </Folder>
+  <Folder Name="/Tests/Domains/Students/">
+    <Project Path="PanoramaMusic.Students.Tests/PanoramaMusic.Students.Tests.csproj" />
+  </Folder>
   <Project Path="PanoramaMusic.Api/PanoramaMusic.Api.csproj" />
   <Project Path="PanoramaMusic.Domain/PanoramaMusic.Domain.csproj" />
   <Project Path="PanoramaMusic.Persistence/PanoramaMusic.Persistence.csproj" />
