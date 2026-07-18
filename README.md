@@ -196,4 +196,4 @@ Outbound email (e.g. password reset) goes through an injectable `IMailSender` tr
 
 #### Adding seed data
 
-Add numbered SQL files to the owning bounded context's `Persistence/Seeds/` folder (e.g. `src/Identity/PanoramaMusic.Identity.Infrastructure/Persistence/Seeds/` or `src/Students/PanoramaMusic.Students.Infrastructure/Persistence/Seeds/`), following the same `S001__description.sql` convention. They are embedded in the context's assembly at build time and executed in alphabetical order after every reset.
+Add SQL files to the owning bounded context's `Persistence/Seeds/` folder (e.g. `src/PanoramaMusic.Identity.Infrastructure/Persistence/Seeds/` or `src/PanoramaMusic.Students.Infrastructure/Persistence/Seeds/`), using a descriptive, unversioned name matching the data being seeded (e.g. `seed_guardian_relationships.sql`), the same convention used for `Persistence/Functions/` scripts. They are embedded in the context's assembly at build time and run on every deploy (`RunAlways`), so every seed script must be idempotent — guard inserts with `ON CONFLICT DO NOTHING` or a `WHERE NOT EXISTS` check.
