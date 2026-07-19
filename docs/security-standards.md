@@ -382,7 +382,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-16.2.3` The application must only store or broadcast logs to the files/services documented in the log inventory (14.1).
 * `[L2]` `ASVS 5.0.0-16.2.4` Logs must be readable and correlatable by the log processor in use, preferably via a common logging format.
 * `[L2]` `ASVS 5.0.0-16.2.5` Logging of sensitive data must respect that data's protection level — credentials/payment details must never be logged; tokens may only be logged hashed or masked.
-* `[L1]` **Project rule (supplements 16.2.5; ties to ASVS 14.1.2 / 14.2.4):** Passwords, raw tokens, and full hashes must never appear in any log entry or audit record — in any field, including message text, structured properties, and the audit `detail` payload. Email is the only PII recorded in audit events, and deliberately so: it is the identifier needed to investigate authentication and delegated-administration activity. Because logs and audit records therefore contain email addresses, access to them falls under the access-control requirement for sensitive data in logs defined by ASVS 14.1.2 / 14.2.4 (see §12.1 / §12.2) and the log-protection controls in §14.4.
+* `[L1]` **Project rule (supplements 16.2.5; ties to ASVS 14.1.2 / 14.2.4):** Passwords, raw tokens, and full hashes must never appear in any log entry or audit record — in any field, including message text, structured properties, and the audit `detail` payload. Email is the primary PII recorded in audit events, and deliberately so: it is the identifier needed to investigate authentication and delegated-administration activity. The Students context (§14.3) is the one documented exception: its `detail.targetDisplay` records a student's full name rather than an email, since students are minors with no account/email of their own — name is the only human-readable identifier available for a Teacher/Admin reviewing that audit trail. This carries no more exposure than the Students roster already grants: it is visible only through `GET /api/audit`, gated by `AdminPolicy`, to the same Teacher/Admin population that can already see every student's name via the roster itself. Because logs and audit records contain this PII (email or, for Students events, name), access to them falls under the access-control requirement for sensitive data in logs defined by ASVS 14.1.2 / 14.2.4 (see §12.1 / §12.2) and the log-protection controls in §14.4.
 
 ## 14.3 Security Events
 
@@ -393,7 +393,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ### Audit Event Catalog
 
-The concrete set of security- and business-significant events this application is required to emit, satisfying the "events defined in documentation" requirement of 16.3.3. This catalog is informational documentation supplementing 16.3.3, not a new ASVS control. The event fields recorded must respect the never-log rule in §14.2 — outcome captures a reason *category*, never sensitive detail; email is the only PII recorded.
+The concrete set of security- and business-significant events this application is required to emit, satisfying the "events defined in documentation" requirement of 16.3.3. This catalog is informational documentation supplementing 16.3.3, not a new ASVS control. The event fields recorded must respect the never-log rule in §14.2 — outcome captures a reason *category*, never sensitive detail; email is the primary PII recorded, with one documented exception (Students events record a student's full name instead — see §14.2).
 
 | Event | Trigger | Actor → Target |
 |---|---|---|
@@ -408,6 +408,7 @@ The concrete set of security- and business-significant events this application i
 | User activated / deactivated | `PATCH …/activate`, `DELETE /api/users/{id}` | admin → user |
 | User permanently deleted | `DELETE …/permanent` | admin → user |
 | Authorization denied (403) | any admin endpoint | user → resource |
+| Student created / updated (diff) / deleted | `POST`/`PUT`/`DELETE /api/students` | teacher-or-admin → student (name, not email) |
 
 ## 14.4 Log Protection
 

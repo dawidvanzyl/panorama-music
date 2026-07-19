@@ -93,7 +93,7 @@ export async function createStudent(input: StudentInput): Promise<StudentResult>
 
 export async function updateStudent(studentId: string, input: StudentInput): Promise<StudentResult> {
   const response = await fetch(`${API_BASE}/${studentId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(input),
   });

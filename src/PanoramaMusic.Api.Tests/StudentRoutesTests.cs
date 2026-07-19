@@ -77,6 +77,37 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "200UC6")]
+	public async Task UpdateStudent_GradeOutsideDefinedEnumeration_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-invalid-enum-update", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.11");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createResponse = await CreateStudentAsync(client, "Zola", "Mabaso", GradeType.Grade2, ClassType.A1, PhaseType.Junior);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var request = new HttpRequestMessage(HttpMethod.Put, $"/api/students/{created!.StudentId}")
+		{
+			Content = JsonContent.Create(new
+			{
+				FirstName = "Zola",
+				LastName = "Mabaso",
+				DateOfBirth = "2014-05-12",
+				Grade = "NotARealGrade",
+				Class = "A1",
+				Phase = "Junior",
+				Language = "English",
+			}),
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+		var response = await client.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	[Trait("AC", "200UC7")]
 	public async Task GetStudents_UnauthenticatedRequest_IsRejected()
 	{
@@ -101,6 +132,32 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 		var getResponse = await client.Client.SendAsync(
 			client.AuthorizedGetRequest($"/api/students/{created!.StudentId}"), TestContext.Current.CancellationToken);
 		getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+	}
+
+	[Fact]
+	[Trait("AC", "200UC3")]
+	public async Task UpdateStudent_ValidRequest_PersistsChangesViaApi()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-update-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.12");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createResponse = await CreateStudentAsync(client, "Thandiwe", "Nkosi", GradeType.Grade3, ClassType.A1, PhaseType.Junior);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var updateRequest = new UpdateStudentRequest(
+			created!.FirstName, created.LastName, created.DateOfBirth, GradeType.Grade4, created.Class, created.Phase, created.Language);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest($"/api/students/{created.StudentId}", updateRequest), TestContext.Current.CancellationToken);
+
+		updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var updated = await updateResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		updated!.Grade.ShouldBe(GradeType.Grade4);
+
+		var getResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{created.StudentId}"), TestContext.Current.CancellationToken);
+		var fetched = await getResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		fetched!.Grade.ShouldBe(GradeType.Grade4);
 	}
 
 	[Fact]

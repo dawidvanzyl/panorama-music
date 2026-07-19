@@ -53,7 +53,7 @@ public static class StudentRoutes
 			.Produces(StatusCodes.Status403Forbidden);
 
 		group
-			.MapPatch("/{studentId:guid}", async (Guid studentId, UpdateStudentRequest request, UpdateStudentHandler handler, CancellationToken ct) =>
+			.MapPut("/{studentId:guid}", async (Guid studentId, UpdateStudentRequest request, UpdateStudentHandler handler, CancellationToken ct) =>
 			{
 				var command = new UpdateStudentCommand(studentId, request);
 				var result = await handler.HandleAsync(command, ct);

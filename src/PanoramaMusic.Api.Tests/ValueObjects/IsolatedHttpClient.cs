@@ -71,9 +71,9 @@ internal class IsolatedHttpClient(HttpClient client)
 		return request;
 	}
 
-	internal HttpRequestMessage AuthorizedPatchRequest<T>(string path, T body)
+	internal HttpRequestMessage AuthorizedPutRequest<T>(string path, T body)
 	{
-		var request = AuthorizedRequest(HttpMethod.Patch, path, AccessToken);
+		var request = AuthorizedRequest(HttpMethod.Put, path, AccessToken);
 		request.Content = JsonContent.Create(body);
 		return request;
 	}

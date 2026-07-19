@@ -110,7 +110,7 @@ describe('createStudent', { tags: ['200UC10'] }, () => {
 });
 
 describe('updateStudent', { tags: ['200UC11'] }, () => {
-  it('sends a PATCH request and invalidates the students cache', async () => {
+  it('sends a PUT request and invalidates the students cache', async () => {
     const updated = { ...alice, grade: 'Grade5' as const };
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => updated });
 
@@ -125,7 +125,7 @@ describe('updateStudent', { tags: ['200UC11'] }, () => {
     });
 
     expect(result.grade).toBe('Grade5');
-    expect(mockFetch).toHaveBeenCalledWith('/api/students/s1', expect.objectContaining({ method: 'PATCH' }));
+    expect(mockFetch).toHaveBeenCalledWith('/api/students/s1', expect.objectContaining({ method: 'PUT' }));
   });
 });
 
