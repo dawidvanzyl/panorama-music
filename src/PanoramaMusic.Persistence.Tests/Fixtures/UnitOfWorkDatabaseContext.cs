@@ -33,7 +33,7 @@ public sealed class UnitOfWorkDatabaseContext
 		internal Mock<IdentityIUserContext> IdentityIUserContextMock { get; } = new Mock<IdentityIUserContext>();
 		internal Mock<StudentIUserContext> StudentUserContextMock { get; } = new Mock<StudentIUserContext>();
 		internal Mock<IClientContext> ClientContextMock { get; } = new Mock<IClientContext>();
-		internal Mock<IAuditContext> AuditContextMock { get; } = new Mock<IAuditContext>();		
+		internal Mock<IAuditContext> AuditContextMock { get; } = new Mock<IAuditContext>();
 	}
 
 	internal class ServiceMocks
