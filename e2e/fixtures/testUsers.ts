@@ -4,6 +4,7 @@ import { extractTokenFromUrl } from './url';
 import { LoginPage } from '../pages/identity/auth/LoginPage';
 import { RegistrationPage } from '../pages/identity/auth/RegistrationPage';
 import { AdminUsersPage, type UserRole } from '../pages/identity/admin/AdminUsersPage';
+import { StudentsPage } from '../pages/students/StudentsPage';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -21,6 +22,17 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
   const adminUsersPage = new AdminUsersPage(page);
   await adminUsersPage.gotoAdminUsers();
   return adminUsersPage;
+}
+
+export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
+  const loginPage = new LoginPage(page);
+  await loginPage.gotoLogin();
+  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+  await expect(page).toHaveURL(/#\/$/);
+
+  const studentsPage = new StudentsPage(page);
+  await studentsPage.gotoStudents();
+  return studentsPage;
 }
 
 export async function inviteUser(page: Page, email: string, roles: UserRole[] = ['Teacher']): Promise<string> {

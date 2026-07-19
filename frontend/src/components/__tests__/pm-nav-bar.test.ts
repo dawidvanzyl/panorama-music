@@ -9,6 +9,7 @@ vi.mock('../../services/auth', () => ({
 const mockHasRole = vi.fn();
 vi.mock('../../services/token-storage', () => ({
   hasRole: () => mockHasRole(),
+  hasAnyRole: () => mockHasRole(),
   getEmail: () => 'admin@panorama-music.com',
 }));
 

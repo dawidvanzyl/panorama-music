@@ -56,6 +56,12 @@ export default defineConfig({
       { name: '161UC4', description: 'Delete modal dispatches user-delete-confirmed with the userId instead of calling deleteUser itself' },
       { name: '161UC5', description: 'Admin users page handles user-delete-confirmed by calling deleteUser and removing the row on success' },
       { name: '161UC6', description: 'Admin users page displays the AdminError message (or generic fallback) when deleteUser rejects' },
+      { name: '200UC5', description: 'Roster is filterable by grade, phase, and class, individually or in combination, client-side against the cached list' },
+      { name: '200UC8', description: 'Students page loads and displays the current list of students' },
+      { name: '200UC9', description: 'Applying a grade, phase, or class filter displays only matching students' },
+      { name: '200UC10', description: 'Submitting the create student form adds the new student to the list' },
+      { name: '200UC11', description: 'Submitting the edit student form reflects the updated data in the list' },
+      { name: '200UC12', description: 'Confirming student deletion removes the student from the list' },
     ],
   },
 })

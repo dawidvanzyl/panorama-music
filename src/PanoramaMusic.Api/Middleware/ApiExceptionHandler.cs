@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Diagnostics;
 using PanoramaMusic.Api.Exceptions;
 using PanoramaMusic.Api.Extensions;
-using PanoramaMusic.Identity.Domain.Exceptions;
 using System.Text.Json;
+using IdentityExceptions = PanoramaMusic.Identity.Domain.Exceptions;
+using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Middleware;
 
@@ -31,24 +32,36 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is UnauthorizedException or InvalidResetTokenException)
+		// Thrown by ASP.NET Core's own request-body JSON binding (e.g. a string
+		// outside a strict enum's defined members) before the endpoint delegate —
+		// and therefore FluentValidation — ever runs. UseExceptionHandler intercepts
+		// it ahead of the framework's own default 400 translation, so it must be
+		// handled explicitly here or it falls through to the generic 500 below.
+		if (exception is BadHttpRequestException badRequest)
+		{
+			LogHandled(exception, badRequest.StatusCode, correlationId);
+			await WriteAsync(httpContext, badRequest.StatusCode, new { error = badRequest.Message, correlationId }, cancellationToken);
+			return true;
+		}
+
+		if (exception is IdentityExceptions.UnauthorizedException or IdentityExceptions.InvalidResetTokenException)
 		{
 			LogHandled(exception, StatusCodes.Status401Unauthorized, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status401Unauthorized, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 
-		if (exception is EntityNotFoundException notFound)
+		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException)
 		{
 			LogHandled(exception, StatusCodes.Status404NotFound, correlationId);
-			await WriteAsync(httpContext, StatusCodes.Status404NotFound, new { error = notFound.Message, correlationId }, cancellationToken);
+			await WriteAsync(httpContext, StatusCodes.Status404NotFound, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 
-		if (exception is DomainException domain)
+		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException)
 		{
 			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);
-			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = domain.Message, correlationId }, cancellationToken);
+			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 

@@ -5,5 +5,7 @@ public enum ClassType
 	A1,
 	A2,
 	E1,
-	E2
+	E2,
+	E3,
+	E4
 }

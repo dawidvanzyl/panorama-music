@@ -12,15 +12,19 @@ using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Persistence.Extensions;
 using PanoramaMusic.Persistence.Tests.DomainEvents;
 using PanoramaMusic.Persistence.Tests.Repository;
+using PanoramaMusic.Students.Infrastructure.Extensions;
+using PanoramaMusic.Students.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace PanoramaMusic.Persistence.Tests.Fixtures;
 
 /// <summary>
-/// Starts a disposable Postgres, provisions the restricted panorama_app role,
-/// and runs the Audit and Identity context migrations — the two contexts whose
-/// writes the shared unit of work must commit and roll back atomically.
+/// Starts a disposable Postgres, provisions the restricted panorama_app role, and
+/// runs the Audit, Identity, and Students context migrations. Originally scoped to
+/// the two contexts whose writes the shared unit of work must commit and roll back
+/// atomically; now doubles as the shared harness for any bounded context's
+/// audit-trail tests that need a real Postgres-backed IUnitOfWork.
 /// </summary>
 public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 {
@@ -50,6 +54,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		DatabaseMigrator.EnsureApplicationRole(_migrationConnectionString, _applicationConnectionString);
 		AuditMigrator.Run(_migrationConnectionString);
 		IdentityMigrator.Run(_migrationConnectionString);
+		StudentMigrator.Run(_migrationConnectionString);
 	}
 
 	public UnitOfWorkDatabaseContext CreateContext()
@@ -58,8 +63,20 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		{
 			var services = new ServiceCollection();
 
-			services.AddInfrastructure(_applicationConnectionString, PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes);
+			services.AddInfrastructure(_applicationConnectionString, dataSourceBuilder =>
+			{
+				PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
+				PanoramaMusic.Students.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
+			});
 			services.AddAuditInfrastructure();
+
+			// Registers the real IStudentRepository, Students handlers, and the real
+			// Students audit translators — the same call Program.cs makes, so this
+			// harness stays in sync with production wiring. The real IUserContext it
+			// also registers (which needs an HTTP context that doesn't exist here) is
+			// overridden by a mock in RegisterContexts below.
+			services.AddStudentsInfrastructure();
+
 			RegisterOptions(services, context);
 			RegisterContexts(services, context);
 			RegisterHandlers(services);
@@ -80,7 +97,8 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 	{
 		services.AddScoped(sp => context.Contexts.AuditContextMock.Object);
 		services.AddScoped(sp => context.Contexts.ClientContextMock.Object);
-		services.AddScoped(sp => context.Contexts.UserContextMock.Object);
+		services.AddScoped(sp => context.Contexts.IdentityIUserContextMock.Object);
+		services.AddScoped(sp => context.Contexts.StudentUserContextMock.Object);
 
 		context.Contexts.AuditContextMock.SetupGet(m => m.SourceIp).Returns("127.0.0.1");
 		context.Contexts.AuditContextMock.SetupGet(m => m.UserAgent).Returns("xunit");
@@ -101,7 +119,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 
 	private void RegisterRepositories(ServiceCollection services, UnitOfWorkDatabaseContext context)
 	{
-		services.AddTransient(sp => new IdentityAuditTrailTestReader(_applicationConnectionString));
+		services.AddTransient(sp => new AuditTrailTestReader(_applicationConnectionString));
 		services.AddTransient(sp => new RevokedAccessTokenTestReader(_applicationConnectionString));
 		services.AddTransient(sp => context.Repositories.UserRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRoleRepositoryMock.Object);
