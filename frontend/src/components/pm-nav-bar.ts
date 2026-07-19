@@ -1,5 +1,5 @@
 import { isAuthenticated } from '../services/auth';
-import { hasRole, getEmail } from '../services/token-storage';
+import { hasRole, hasAnyRole, getEmail } from '../services/token-storage';
 import { updateActiveNavSection } from '../services/nav-section';
 
 const styles = new CSSStyleSheet();
@@ -78,6 +78,7 @@ template.innerHTML = `
       <span class="nav-bar__brand">Panorama Music</span>
       <div class="nav-bar__sections" id="sections" hidden>
         <a href="#/" class="nav-bar__section-link" id="dashboardLink">Dashboard</a>
+        <a href="#/students" class="nav-bar__section-link" id="studentsLink" hidden>Students</a>
         <a href="#/admin/users" class="nav-bar__section-link" id="adminLink" hidden>Admin</a>
       </div>
     </div>
@@ -91,6 +92,7 @@ template.innerHTML = `
 export class PmNavBar extends HTMLElement {
   private sections: HTMLElement | null = null;
   private dashboardLink: HTMLAnchorElement | null = null;
+  private studentsLink: HTMLAnchorElement | null = null;
   private adminLink: HTMLAnchorElement | null = null;
   private accountChip: HTMLElement | null = null;
   private accountEmail: HTMLElement | null = null;
@@ -105,6 +107,7 @@ export class PmNavBar extends HTMLElement {
   connectedCallback(): void {
     this.sections = this.shadowRoot!.getElementById('sections') as HTMLElement;
     this.dashboardLink = this.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
+    this.studentsLink = this.shadowRoot!.getElementById('studentsLink') as HTMLAnchorElement;
     this.adminLink = this.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
     this.accountChip = this.shadowRoot!.getElementById('accountChip') as HTMLElement;
     this.accountEmail = this.shadowRoot!.getElementById('accountEmail') as HTMLElement;
@@ -119,13 +122,16 @@ export class PmNavBar extends HTMLElement {
   private updateVisibility = (): void => {
     const authed = isAuthenticated();
     const isAdmin = authed && hasRole('Admin');
+    const isTeacherOrAdmin = authed && hasAnyRole(['Teacher', 'Admin']);
     const basePath = window.location.hash.slice(1).split('?')[0];
     const activeSection = updateActiveNavSection(basePath);
 
     this.sections!.hidden = !authed;
+    this.studentsLink!.hidden = !isTeacherOrAdmin;
     this.adminLink!.hidden = !isAdmin;
 
     this.dashboardLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'dashboard');
+    this.studentsLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'students');
     this.adminLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'admin');
 
     this.accountChip!.hidden = !authed;

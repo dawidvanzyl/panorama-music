@@ -8,6 +8,14 @@
   <ItemGroup>
     <ProjectReference Include="..\PanoramaMusic.Students.Application\PanoramaMusic.Students.Application.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Persistence\Migrations\*.sql" />

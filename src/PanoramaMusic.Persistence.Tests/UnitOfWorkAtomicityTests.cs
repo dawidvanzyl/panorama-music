@@ -19,14 +19,14 @@ public class UnitOfWorkAtomicityTests : IClassFixture<UnitOfWorkDatabaseFixture>
 {
 	private readonly UnitOfWorkDatabaseFixture _fixture;
 	private readonly UnitOfWorkDatabaseContext _context;
-	private readonly IdentityAuditTrailTestReader _identityAuditTrailTestReader;
+	private readonly AuditTrailTestReader _reader;
 
 	public UnitOfWorkAtomicityTests(UnitOfWorkDatabaseFixture fixture)
 	{
 		_fixture = fixture;
 		_context = fixture.CreateContext();
 
-		_identityAuditTrailTestReader = _context.ServiceProvider.GetRequiredService<IdentityAuditTrailTestReader>();
+		_reader = _context.ServiceProvider.GetRequiredService<AuditTrailTestReader>();
 	}
 
 	[Fact]
@@ -50,8 +50,8 @@ public class UnitOfWorkAtomicityTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		await unitOfWork.CommitAsync(cancellationToken);
 
 		// Assert
-		var userCount = await _identityAuditTrailTestReader.CountAsync("identity.users", "user_id", user.UserId, cancellationToken);
-		var auditEventCount = await _identityAuditTrailTestReader.CountAsync("audit.audit_events", "id", auditEvent.Id, cancellationToken);
+		var userCount = await _reader.CountAsync("identity.users", "user_id", user.UserId, cancellationToken);
+		var auditEventCount = await _reader.CountAsync("audit.audit_events", "id", auditEvent.Id, cancellationToken);
 
 		userCount.ShouldBe(1);
 		auditEventCount.ShouldBe(1);
@@ -84,8 +84,8 @@ public class UnitOfWorkAtomicityTests : IClassFixture<UnitOfWorkDatabaseFixture>
 			await unitOfWork.RollbackAsync(cancellationToken);
 		}
 
-		var userCount = await _identityAuditTrailTestReader.CountAsync("identity.users", "user_id", user.UserId, cancellationToken);
-		var auditEventCount = await _identityAuditTrailTestReader.CountAsync("audit.audit_events", "id", auditEvent.Id, cancellationToken);
+		var userCount = await _reader.CountAsync("identity.users", "user_id", user.UserId, cancellationToken);
+		var auditEventCount = await _reader.CountAsync("audit.audit_events", "id", auditEvent.Id, cancellationToken);
 
 		userCount.ShouldBe(0);
 		auditEventCount.ShouldBe(0);

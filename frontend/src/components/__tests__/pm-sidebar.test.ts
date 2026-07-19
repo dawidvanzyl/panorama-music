@@ -9,10 +9,15 @@ vi.mock('../../services/auth', () => ({
 const mockHasRole = vi.fn();
 vi.mock('../../services/token-storage', () => ({
   hasRole: () => mockHasRole(),
+  hasAnyRole: () => mockHasRole(),
 }));
 
 vi.mock('../../features/admin/services/admin', () => ({
   clearUsersCache: vi.fn(),
+}));
+
+vi.mock('../../features/students/services/students', () => ({
+  clearStudentsCache: vi.fn(),
 }));
 
 import '../pm-sidebar';
@@ -124,5 +129,31 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
 
     expect(userManagementLink.classList.contains('sidebar__link--active')).toBe(false);
     expect(sessionsLink.classList.contains('sidebar__link--active')).toBe(true);
+  });
+
+  it('hides Student Management while on the Dashboard section, even for a teacher or admin', () => {
+    window.location.hash = '#/';
+    window.dispatchEvent(new Event('hashchange'));
+
+    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
+    expect(studentManagementLink.hidden).toBe(true);
+  });
+
+  it('shows Student Management once inside the Students section for a teacher or admin', () => {
+    window.location.hash = '#/students';
+    window.dispatchEvent(new Event('hashchange'));
+
+    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
+    expect(studentManagementLink.hidden).toBe(false);
+    expect(studentManagementLink.classList.contains('sidebar__link--active')).toBe(true);
+  });
+
+  it('never shows Student Management for a user without Teacher or Admin, even inside the Students section', () => {
+    mockHasRole.mockReturnValue(false);
+    window.location.hash = '#/students';
+    window.dispatchEvent(new Event('hashchange'));
+
+    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
+    expect(studentManagementLink.hidden).toBe(true);
   });
 });

@@ -1,7 +1,9 @@
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Persistence.Factories;
 using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Persistence.TypeHandlers;
 
 namespace PanoramaMusic.Persistence.Extensions;
 
@@ -19,6 +21,10 @@ public static class ServiceCollectionExtensions
 		string connectionString,
 		Action<NpgsqlDataSourceBuilder>? configureDataSource = null)
 	{
+		// Dapper has no built-in DateOnly<->DbType mapping; process-global and
+		// idempotent, so registering it here on every AddInfrastructure call is safe.
+		SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+
 		var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
 		configureDataSource?.Invoke(dataSourceBuilder);
 		var dataSource = dataSourceBuilder.Build();
