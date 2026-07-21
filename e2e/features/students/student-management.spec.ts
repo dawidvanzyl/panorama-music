@@ -5,7 +5,7 @@ function uniqueName(label: string): { firstName: string; lastName: string } {
   return { firstName: `E2E-${label}`, lastName: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
 }
 
-test.describe('Student Profile Management', { tag: '@5IT1' }, () => {
+test.describe('Student Profile Management', { tag: ['@5IT1', '@5IT3'] }, () => {
   test('creates, reads, updates, filters, and deletes a student profile', async ({ page }) => {
     const { firstName, lastName } = uniqueName('crud');
     const fullName = `${firstName} ${lastName}`;
