@@ -11,6 +11,6 @@ internal sealed record StudentInputDto(
 	string LastName,
 	DateOnly DateOfBirth,
 	string Grade,
-	string Class,
-	string Phase,
+	string? Class,
+	string? Phase,
 	string Language);

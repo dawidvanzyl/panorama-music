@@ -108,6 +108,94 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "206UC1")]
+	public async Task CreateStudent_PrivateGradeWithoutClassOrPhase_PersistsSuccessfully()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-private-create", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.30");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var request = new CreateStudentRequest("Zanele", "Mokoena", new DateOnly(2014, 5, 12), GradeType.Private, null, null, Language.English);
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/students", request), TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var created = await response.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		created!.Class.ShouldBeNull();
+		created.Phase.ShouldBeNull();
+	}
+
+	[Fact]
+	[Trait("AC", "206UC2")]
+	public async Task CreateStudent_PrivateGradeWithClassOrPhase_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-private-create-invalid", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.31");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var request = new CreateStudentRequest("Zanele", "Mokoena", new DateOnly(2014, 5, 12), GradeType.Private, ClassType.A1, PhaseType.Junior, Language.English);
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/students", request), TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "206UC3")]
+	public async Task CreateStudent_NonPrivateGradeWithoutClassOrPhase_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-nonprivate-create-invalid", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.32");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var request = new CreateStudentRequest("Zanele", "Mokoena", new DateOnly(2014, 5, 12), GradeType.Grade4, null, null, Language.English);
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/students", request), TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "206UC4")]
+	public async Task UpdateStudent_ExistingPrivateGradeStudentWithClassOrPhase_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-private-update-invalid", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.33");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createRequest = new CreateStudentRequest("Karabo", "Sithole", new DateOnly(2014, 5, 12), GradeType.Private, null, null, Language.English);
+		var createResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/students", createRequest), TestContext.Current.CancellationToken);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var updateRequest = new UpdateStudentRequest(
+			created!.FirstName, created.LastName, created.DateOfBirth, GradeType.Private, ClassType.A1, PhaseType.Junior, created.Language);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest($"/api/students/{created.StudentId}", updateRequest), TestContext.Current.CancellationToken);
+
+		updateResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "206UC5")]
+	public async Task UpdateStudent_ExistingNonPrivateGradeStudentWithoutClassOrPhase_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-nonprivate-update-invalid", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.34");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createResponse = await CreateStudentAsync(client, "Karabo", "Sithole", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var updateRequest = new UpdateStudentRequest(
+			created!.FirstName, created.LastName, created.DateOfBirth, GradeType.Grade4, null, null, created.Language);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest($"/api/students/{created.StudentId}", updateRequest), TestContext.Current.CancellationToken);
+
+		updateResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	[Trait("AC", "200UC7")]
 	public async Task GetStudents_UnauthenticatedRequest_IsRejected()
 	{

@@ -12,8 +12,8 @@ public sealed class Student : AggregateRoot
 		string lastName,
 		DateOnly dateOfBirth,
 		GradeType grade,
-		ClassType @class,
-		PhaseType phase,
+		ClassType? @class,
+		PhaseType? phase,
 		Language language)
 	{
 		StudentId = studentId;
@@ -36,9 +36,9 @@ public sealed class Student : AggregateRoot
 
 	public GradeType Grade { get; private set; }
 
-	public ClassType Class { get; private set; }
+	public ClassType? Class { get; private set; }
 
-	public PhaseType Phase { get; private set; }
+	public PhaseType? Phase { get; private set; }
 
 	public Language Language { get; private set; }
 
@@ -48,8 +48,8 @@ public sealed class Student : AggregateRoot
 		string lastName,
 		DateOnly dateOfBirth,
 		GradeType grade,
-		ClassType @class,
-		PhaseType phase,
+		ClassType? @class,
+		PhaseType? phase,
 		Language language)
 	{
 		var student = new Student(studentId, firstName, lastName, dateOfBirth, grade, @class, phase, language);
@@ -67,8 +67,8 @@ public sealed class Student : AggregateRoot
 		string lastName,
 		DateOnly dateOfBirth,
 		GradeType grade,
-		ClassType @class,
-		PhaseType phase,
+		ClassType? @class,
+		PhaseType? phase,
 		Language language)
 	{
 		var before = new Student(StudentId, FirstName, LastName, DateOfBirth, Grade, Class, Phase, Language);

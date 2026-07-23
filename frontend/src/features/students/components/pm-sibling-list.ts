@@ -109,7 +109,7 @@ export class PmSiblingList extends HTMLElement {
     gradeCell.textContent = gradeLabel(sibling.grade);
 
     const classCell = document.createElement('td');
-    classCell.textContent = sibling.class;
+    classCell.textContent = sibling.class ?? '—';
 
     const actionsCell = document.createElement('td');
     actionsCell.classList.add('sibling-list__actions');

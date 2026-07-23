@@ -102,6 +102,25 @@ test.describe('Student Endpoint Authorization', { tag: ['@5IT5'] }, () => {
   });
 });
 
+test.describe('Private Grade Students', { tag: ['@5IT6'] }, () => {
+  test('a Private-grade student does not require or accept a class or phase', async ({ page }) => {
+    const { firstName, lastName } = uniqueName('private');
+    const fullName = `${firstName} ${lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName,
+      lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Private',
+      language: 'English',
+    });
+
+    await expect(studentsPage.row(fullName)).toBeVisible();
+    await expect(studentsPage.row(fullName)).toContainText('Private');
+  });
+});
+
 test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
   test('rejects a request with a student field value outside its defined enumeration', async ({
     page,

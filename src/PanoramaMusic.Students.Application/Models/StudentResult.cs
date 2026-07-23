@@ -8,6 +8,6 @@ public sealed record StudentResult(
 	string LastName,
 	DateOnly DateOfBirth,
 	GradeType Grade,
-	ClassType Class,
-	PhaseType Phase,
+	ClassType? Class,
+	PhaseType? Phase,
 	Language Language);

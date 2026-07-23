@@ -59,7 +59,7 @@ public sealed class StudentUpdatedTranslator(IAuditContext auditContext, IUserCo
 		return changes;
 	}
 
-	private static void AddIfChanged(Dictionary<string, object?> changes, string field, string beforeValue, string afterValue)
+	private static void AddIfChanged(Dictionary<string, object?> changes, string field, string? beforeValue, string? afterValue)
 	{
 		if (beforeValue == afterValue)
 			return;

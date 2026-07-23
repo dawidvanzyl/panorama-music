@@ -13,7 +13,7 @@ internal static class StudentDtoExtensions
 			dto.Last_Name,
 			dto.Date_Of_Birth,
 			Enum.Parse<GradeType>(dto.Grade),
-			Enum.Parse<ClassType>(dto.Class),
-			Enum.Parse<PhaseType>(dto.Phase),
+			dto.Class is null ? null : Enum.Parse<ClassType>(dto.Class),
+			dto.Phase is null ? null : Enum.Parse<PhaseType>(dto.Phase),
 			Enum.Parse<Language>(dto.Language));
 }
