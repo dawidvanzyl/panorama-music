@@ -18,6 +18,8 @@
   --pm-text-muted: #8a8fa8;
   --pm-radius: 10px;
   --pm-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --pm-sidebar-width: 240px;
+  --pm-content-padding: 1cm;
 
   font-family: 'Inter', system-ui, sans-serif;
   line-height: 1.5;
@@ -60,7 +62,7 @@ main {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 1cm;
+  padding: var(--pm-content-padding);
   box-sizing: border-box;
 }
 

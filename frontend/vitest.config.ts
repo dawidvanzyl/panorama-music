@@ -62,6 +62,9 @@ export default defineConfig({
       { name: '200UC10', description: 'Submitting the create student form adds the new student to the list' },
       { name: '200UC11', description: 'Submitting the edit student form reflects the updated data in the list' },
       { name: '200UC12', description: 'Confirming student deletion removes the student from the list' },
+      { name: '201UC7', description: 'getSiblings returns the students currently linked as siblings of a student' },
+      { name: '201UC8', description: 'addSibling posts the sibling id; the new sibling is reflected by a subsequent getSiblings call' },
+      { name: '201UC9', description: 'removeSibling sends a DELETE request; the removed sibling no longer appears in a subsequent getSiblings call' },
     ],
   },
 })

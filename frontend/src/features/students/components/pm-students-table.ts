@@ -1,4 +1,7 @@
+import './pm-student-siblings-summary';
 import type { StudentResult } from '../services/students';
+import type { PmStudentSiblingsSummary } from './pm-student-siblings-summary';
+import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -30,6 +33,9 @@ styles.replaceSync(`
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--pm-text-muted);
+    }
+    .students-table__col-chevron {
+      width: 40px;
     }
     .students-table__col-name {
       width: 220px;
@@ -73,6 +79,22 @@ styles.replaceSync(`
     .students-table__btn--delete:hover {
       opacity: 0.9;
     }
+    .students-table__chevron-btn {
+      background: transparent;
+      border: none;
+      color: var(--pm-text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      width: 100%;
+    }
+    .students-table__summary-row td {
+      padding: 0;
+      background: var(--pm-surface-2);
+    }
+    .students-table__summary-row[hidden] {
+      display: none;
+    }
     .students-table__empty {
       color: var(--pm-text-muted);
       font-size: 14px;
@@ -85,6 +107,7 @@ template.innerHTML = `
   <div class="students-table__card">
     <table>
       <colgroup>
+        <col class="students-table__col-chevron" />
         <col class="students-table__col-name" />
         <col />
         <col />
@@ -95,6 +118,7 @@ template.innerHTML = `
       </colgroup>
       <thead>
         <tr>
+          <th></th>
           <th>Name</th>
           <th>Grade</th>
           <th>Phase</th>
@@ -114,6 +138,16 @@ export class PmStudentsTable extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
   private _students: StudentResult[] = [];
+  private _expandedIds = new Set<string>();
+  private _summaryComponents = new Map<string, PmStudentSiblingsSummary>();
+  /**
+   * Last-known siblings per student, kept across re-renders. `render()` tears down
+   * and recreates every row's `pm-student-siblings-summary` (even ones already
+   * expanded and populated) whenever any row is toggled or the roster changes —
+   * without this, that rebuild would wipe an already-fetched sibling list for
+   * every OTHER still-expanded row.
+   */
+  private _siblingsCache = new Map<string, StudentResult[]>();
 
   constructor() {
     super();
@@ -142,19 +176,38 @@ export class PmStudentsTable extends HTMLElement {
     this.render();
   }
 
+  setSiblingsSummary(studentId: string, siblings: StudentResult[]): void {
+    this._siblingsCache.set(studentId, siblings);
+    const component = this._summaryComponents.get(studentId);
+    if (component) component.siblings = siblings;
+  }
+
   private render(): void {
     if (!this.rowsBody || !this.emptyMessage) return;
 
     this.rowsBody.innerHTML = '';
+    this._summaryComponents.clear();
     this.emptyMessage.hidden = this._students.length > 0;
 
     for (const student of this._students) {
-      this.rowsBody.appendChild(this.buildRow(student));
+      const { mainRow, summaryRow } = this.buildRowPair(student);
+      this.rowsBody.appendChild(mainRow);
+      this.rowsBody.appendChild(summaryRow);
     }
   }
 
-  private buildRow(student: StudentResult): HTMLTableRowElement {
+  private buildRowPair(student: StudentResult): { mainRow: HTMLTableRowElement; summaryRow: HTMLTableRowElement } {
     const row = document.createElement('tr');
+
+    const chevronCell = document.createElement('td');
+    const chevronBtn = document.createElement('button');
+    chevronBtn.type = 'button';
+    chevronBtn.classList.add('students-table__chevron-btn');
+    const isExpanded = this._expandedIds.has(student.studentId);
+    chevronBtn.textContent = isExpanded ? '▾' : '▸';
+    chevronBtn.setAttribute('aria-label', 'Toggle siblings summary');
+    chevronBtn.addEventListener('click', () => this.toggleExpanded(student.studentId));
+    chevronCell.appendChild(chevronBtn);
 
     const nameCell = document.createElement('td');
     const nameSpan = document.createElement('span');
@@ -164,7 +217,7 @@ export class PmStudentsTable extends HTMLElement {
     nameCell.appendChild(nameSpan);
 
     const gradeCell = document.createElement('td');
-    gradeCell.textContent = student.grade;
+    gradeCell.textContent = gradeLabel(student.grade);
 
     const phaseCell = document.createElement('td');
     phaseCell.textContent = student.phase;
@@ -195,8 +248,40 @@ export class PmStudentsTable extends HTMLElement {
     deleteBtn.addEventListener('click', () => this.handleDelete(student));
     actionsCell.appendChild(deleteBtn);
 
-    row.append(nameCell, gradeCell, phaseCell, classCell, languageCell, dobCell, actionsCell);
-    return row;
+    row.append(chevronCell, nameCell, gradeCell, phaseCell, classCell, languageCell, dobCell, actionsCell);
+
+    const summaryRow = document.createElement('tr');
+    summaryRow.classList.add('students-table__summary-row');
+    summaryRow.hidden = !isExpanded;
+    summaryRow.dataset.studentId = student.studentId;
+    const summaryCell = document.createElement('td');
+    summaryCell.colSpan = 8;
+    const summary = document.createElement('pm-student-siblings-summary') as PmStudentSiblingsSummary;
+    summary.siblings = this._siblingsCache.get(student.studentId) ?? [];
+    this._summaryComponents.set(student.studentId, summary);
+    summaryCell.appendChild(summary);
+    summaryRow.appendChild(summaryCell);
+
+    return { mainRow: row, summaryRow };
+  }
+
+  private toggleExpanded(studentId: string): void {
+    if (this._expandedIds.has(studentId)) {
+      this._expandedIds.delete(studentId);
+      this.render();
+      return;
+    }
+
+    this._expandedIds.add(studentId);
+    this.render();
+
+    this.dispatchEvent(
+      new CustomEvent('student-row-expanded', {
+        bubbles: true,
+        composed: true,
+        detail: { studentId },
+      }),
+    );
   }
 
   private handleEdit(student: StudentResult): void {

@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
 		SqlMapper.AddTypeHandler(new StudentInputTypeHandler());
 
 		services.AddTransient<IStudentRepository, StudentRepository>();
+		services.AddTransient<ISiblingRepository, SiblingRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -43,12 +44,17 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetStudentsHandler>();
 		services.AddTransient<UpdateStudentHandler>();
 		services.AddTransient<DeleteStudentHandler>();
+		services.AddTransient<AddSiblingHandler>();
+		services.AddTransient<GetSiblingsHandler>();
+		services.AddTransient<RemoveSiblingHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
 		services.AddTransient<IAuditEventTranslator, StudentCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentDeletedTranslator>();
+		services.AddTransient<IAuditEventTranslator, SiblingAddedTranslator>();
+		services.AddTransient<IAuditEventTranslator, SiblingRemovedTranslator>();
 
 		return services;
 	}

@@ -79,5 +79,45 @@ public static class StudentRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapPost("/{studentId:guid}/siblings", async (Guid studentId, AddSiblingRequest request, AddSiblingHandler handler, CancellationToken ct) =>
+			{
+				var command = new AddSiblingCommand(studentId, request.SiblingId);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Created($"/api/students/{studentId}/siblings/{request.SiblingId}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<AddSiblingRequest>>()
+			.WithName("AddSibling")
+			.Produces<StudentResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapGet("/{studentId:guid}/siblings", async (Guid studentId, GetSiblingsHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(studentId, ct);
+				return Results.Ok(result);
+			})
+			.WithName("GetSiblings")
+			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapDelete("/{studentId:guid}/siblings/{siblingId:guid}", async (Guid studentId, Guid siblingId, RemoveSiblingHandler handler, CancellationToken ct) =>
+			{
+				var command = new RemoveSiblingCommand(studentId, siblingId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("RemoveSibling")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

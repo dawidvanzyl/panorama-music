@@ -18,5 +18,7 @@ public sealed class StudentsTestContext
 	public class RepositoryMocks
 	{
 		public Mock<IStudentRepository> StudentRepositoryMock { get; } = new Mock<IStudentRepository>();
+
+		public Mock<ISiblingRepository> SiblingRepositoryMock { get; } = new Mock<ISiblingRepository>();
 	}
 }
