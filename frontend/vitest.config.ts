@@ -65,6 +65,8 @@ export default defineConfig({
       { name: '201UC7', description: 'getSiblings returns the students currently linked as siblings of a student' },
       { name: '201UC8', description: 'addSibling posts the sibling id; the new sibling is reflected by a subsequent getSiblings call' },
       { name: '201UC9', description: 'removeSibling sends a DELETE request; the removed sibling no longer appears in a subsequent getSiblings call' },
+      { name: '206UC6', description: 'Selecting grade Private hides the class and phase fields and lifts their required constraint' },
+      { name: '206UC7', description: 'Selecting a non-Private grade shows the class and phase fields and requires them' },
     ],
   },
 })

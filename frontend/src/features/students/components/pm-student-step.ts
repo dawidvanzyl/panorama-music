@@ -25,6 +25,9 @@ styles.replaceSync(`
       flex-direction: column;
       gap: 6px;
     }
+    .student-step__field[hidden] {
+      display: none;
+    }
     .student-step__label {
       font-size: 13px;
       font-weight: 500;
@@ -77,11 +80,11 @@ template.innerHTML = `
         <label class="student-step__label" for="grade">Grade</label>
         <select class="student-step__select" id="grade" required></select>
       </div>
-      <div class="student-step__field">
+      <div class="student-step__field" id="classField">
         <label class="student-step__label" for="class">Class</label>
         <select class="student-step__select" id="class" required></select>
       </div>
-      <div class="student-step__field">
+      <div class="student-step__field" id="phaseField">
         <label class="student-step__label" for="phase">Phase</label>
         <select class="student-step__select" id="phase" required></select>
       </div>
@@ -100,7 +103,9 @@ export class PmStudentStep extends HTMLElement {
   private lastNameInput: HTMLInputElement | null = null;
   private dateOfBirthInput: HTMLInputElement | null = null;
   private gradeSelect: HTMLSelectElement | null = null;
+  private classField: HTMLElement | null = null;
   private classSelect: HTMLSelectElement | null = null;
+  private phaseField: HTMLElement | null = null;
   private phaseSelect: HTMLSelectElement | null = null;
   private languageSelect: HTMLSelectElement | null = null;
   private message: HTMLElement | null = null;
@@ -118,7 +123,9 @@ export class PmStudentStep extends HTMLElement {
     this.lastNameInput = this.shadowRoot!.getElementById('lastName') as HTMLInputElement;
     this.dateOfBirthInput = this.shadowRoot!.getElementById('dateOfBirth') as HTMLInputElement;
     this.gradeSelect = this.shadowRoot!.getElementById('grade') as HTMLSelectElement;
+    this.classField = this.shadowRoot!.getElementById('classField') as HTMLElement;
     this.classSelect = this.shadowRoot!.getElementById('class') as HTMLSelectElement;
+    this.phaseField = this.shadowRoot!.getElementById('phaseField') as HTMLElement;
     this.phaseSelect = this.shadowRoot!.getElementById('phase') as HTMLSelectElement;
     this.languageSelect = this.shadowRoot!.getElementById('language') as HTMLSelectElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
@@ -127,6 +134,9 @@ export class PmStudentStep extends HTMLElement {
     populateSelectOptions(this.classSelect, CLASSES);
     populateSelectOptions(this.phaseSelect, PHASES);
     populateSelectOptions(this.languageSelect, LANGUAGES);
+
+    this.gradeSelect.addEventListener('change', () => this.updateClassPhaseVisibility());
+    this.updateClassPhaseVisibility();
   }
 
   reset(): void {
@@ -136,6 +146,7 @@ export class PmStudentStep extends HTMLElement {
       addPlaceholderOption(select, label);
       select.value = '';
     }
+    this.updateClassPhaseVisibility();
   }
 
   setValues(student: StudentResult): void {
@@ -147,9 +158,24 @@ export class PmStudentStep extends HTMLElement {
       removePlaceholderOption(select);
     }
     this.gradeSelect!.value = student.grade;
-    this.classSelect!.value = student.class;
-    this.phaseSelect!.value = student.phase;
+    this.classSelect!.value = student.class ?? '';
+    this.phaseSelect!.value = student.phase ?? '';
     this.languageSelect!.value = student.language;
+    this.updateClassPhaseVisibility();
+  }
+
+  /** Grade Private carries no class or phase: hides both fields, clears their
+   * value, and lifts their required constraint; every other grade requires them. */
+  private updateClassPhaseVisibility(): void {
+    const isPrivate = this.gradeSelect!.value === 'Private';
+    this.classField!.hidden = isPrivate;
+    this.phaseField!.hidden = isPrivate;
+    this.classSelect!.required = !isPrivate;
+    this.phaseSelect!.required = !isPrivate;
+    if (isPrivate) {
+      this.classSelect!.value = '';
+      this.phaseSelect!.value = '';
+    }
   }
 
   private selectFields(): Array<{ select: HTMLSelectElement; label: string }> {
@@ -162,13 +188,14 @@ export class PmStudentStep extends HTMLElement {
   }
 
   getValues(): StudentInput {
+    const isPrivate = this.gradeSelect!.value === 'Private';
     return {
       firstName: this.firstNameInput!.value,
       lastName: this.lastNameInput!.value,
       dateOfBirth: this.dateOfBirthInput!.value,
       grade: this.gradeSelect!.value as StudentInput['grade'],
-      class: this.classSelect!.value as StudentInput['class'],
-      phase: this.phaseSelect!.value as StudentInput['phase'],
+      class: isPrivate ? null : (this.classSelect!.value as NonNullable<StudentInput['class']>),
+      phase: isPrivate ? null : (this.phaseSelect!.value as NonNullable<StudentInput['phase']>),
       language: this.languageSelect!.value as StudentInput['language'],
     };
   }

@@ -86,7 +86,7 @@ public class StudentRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 			student.LastName,
 			student.DateOfBirth,
 			student.Grade.ToString(),
-			student.Class.ToString(),
-			student.Phase.ToString(),
+			student.Class?.ToString(),
+			student.Phase?.ToString(),
 			student.Language.ToString());
 }

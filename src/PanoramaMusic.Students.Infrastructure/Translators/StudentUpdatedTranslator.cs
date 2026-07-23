@@ -52,14 +52,14 @@ public sealed class StudentUpdatedTranslator(IAuditContext auditContext, IUserCo
 		AddIfChanged(changes, "lastName", before.LastName, after.LastName);
 		AddIfChanged(changes, "dateOfBirth", before.DateOfBirth.ToString("O"), after.DateOfBirth.ToString("O"));
 		AddIfChanged(changes, "grade", before.Grade.ToString(), after.Grade.ToString());
-		AddIfChanged(changes, "class", before.Class.ToString(), after.Class.ToString());
-		AddIfChanged(changes, "phase", before.Phase.ToString(), after.Phase.ToString());
+		AddIfChanged(changes, "class", before.Class?.ToString(), after.Class?.ToString());
+		AddIfChanged(changes, "phase", before.Phase?.ToString(), after.Phase?.ToString());
 		AddIfChanged(changes, "language", before.Language.ToString(), after.Language.ToString());
 
 		return changes;
 	}
 
-	private static void AddIfChanged(Dictionary<string, object?> changes, string field, string beforeValue, string afterValue)
+	private static void AddIfChanged(Dictionary<string, object?> changes, string field, string? beforeValue, string? afterValue)
 	{
 		if (beforeValue == afterValue)
 			return;
