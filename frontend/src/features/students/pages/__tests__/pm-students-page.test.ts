@@ -3,6 +3,7 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  addSibling,
   StudentsError,
   type StudentResult,
 } from '../../services/students';
@@ -16,13 +17,13 @@ vi.mock('../../services/students', async () => {
     createStudent: vi.fn(),
     updateStudent: vi.fn(),
     deleteStudent: vi.fn(),
+    addSibling: vi.fn(),
   };
 });
 
 import '../pm-students-page';
 import type { PmStudentsTable } from '../../components/pm-students-table';
-import type { PmCreateStudentForm } from '../../components/pm-create-student-form';
-import type { PmEditStudentForm } from '../../components/pm-edit-student-form';
+import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../../components/pm-delete-student-modal';
 
 const alice: StudentResult = {
@@ -60,12 +61,13 @@ function tableOf(el: HTMLElement): PmStudentsTable {
   return el.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable;
 }
 
-function createFormOf(el: HTMLElement): PmCreateStudentForm {
-  return el.shadowRoot!.getElementById('createForm') as unknown as PmCreateStudentForm;
+function wizardModalOf(el: HTMLElement): PmStudentWizardModal {
+  return el.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
 }
 
-function editFormOf(el: HTMLElement): PmEditStudentForm {
-  return el.shadowRoot!.getElementById('editForm') as unknown as PmEditStudentForm;
+function studentStepMessageOf(wizard: PmStudentWizardModal): HTMLElement {
+  const studentStep = wizard.shadowRoot!.getElementById('studentStep')!;
+  return studentStep.shadowRoot!.getElementById('message') as HTMLElement;
 }
 
 function deleteModalOf(el: HTMLElement): PmDeleteStudentModal {
@@ -79,6 +81,7 @@ beforeEach(() => {
   vi.mocked(updateStudent).mockReset();
   vi.mocked(deleteStudent).mockReset();
   vi.mocked(deleteStudent).mockResolvedValue(undefined);
+  vi.mocked(addSibling).mockReset();
 });
 
 describe('pm-students-page — loads the roster on page load', { tags: ['200UC8'] }, () => {
@@ -132,7 +135,7 @@ describe(
   },
 );
 
-describe('pm-students-page — creates a student from the create form', { tags: ['200UC10'] }, () => {
+describe('pm-students-page — creates a student from the wizard modal', { tags: ['200UC10'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -158,16 +161,63 @@ describe('pm-students-page — creates a student from the create form', { tags: 
       language: 'English' as const,
     };
     el.shadowRoot!.dispatchEvent(
-      new CustomEvent('student-create-requested', { bubbles: true, composed: true, detail: { input } }),
+      new CustomEvent('student-create-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { input, pendingSiblingIds: [] },
+      }),
     );
     await flush();
 
     expect(vi.mocked(createStudent)).toHaveBeenCalledWith(input);
     expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1', 's2', 's3']);
-    expect(createFormOf(el).hasAttribute('open')).toBe(false);
+    expect(wizardModalOf(el).hasAttribute('open')).toBe(false);
   });
 
-  it('re-enables the submit button when the form is reopened after a successful create', async () => {
+  it('adds the siblings picked during creation once the new student is saved', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    vi.mocked(addSibling).mockResolvedValue(alice);
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
+
+    const createBtn = el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
+    createBtn.click();
+
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    const stepShadow = wizardShadow.getElementById('studentStep')!.shadowRoot!;
+    (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+    (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+    (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+    (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+    (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
+    (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+    const searchSelectShadow = wizardShadow
+      .getElementById('siblingsStep')!
+      .shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+    const searchQuery = searchSelectShadow.getElementById('query') as HTMLInputElement;
+    searchQuery.value = alice.firstName;
+    searchQuery.dispatchEvent(new Event('input'));
+    const aliceResult = searchSelectShadow.querySelector<HTMLButtonElement>(
+      `.search-select__result[data-student-id="${alice.studentId}"]`,
+    )!;
+    aliceResult.click();
+    (searchSelectShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(createStudent)).toHaveBeenCalledWith(
+      expect.objectContaining({ firstName: 'Nadia', lastName: 'Vance' }),
+    );
+    expect(vi.mocked(addSibling)).toHaveBeenCalledWith('s3', alice.studentId);
+    expect(wizard.hasAttribute('open')).toBe(false);
+  });
+
+  it('re-enables the Save button when the wizard is reopened after a successful create', async () => {
     const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
     vi.mocked(createStudent).mockResolvedValue(created);
     mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
@@ -175,22 +225,30 @@ describe('pm-students-page — creates a student from the create form', { tags: 
     const createBtn = el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     createBtn.click();
 
-    const form = createFormOf(el);
-    const shadow = form.shadowRoot!;
-    (shadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
-    (shadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
-    (shadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
-    (shadow.getElementById('submitBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    const studentStep = wizardShadow.getElementById('studentStep')!;
+    const stepShadow = studentStep.shadowRoot!;
+    (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+    (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+    (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+    (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+    (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
+    (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
 
-    expect(form.hasAttribute('open')).toBe(false);
+    expect(wizard.hasAttribute('open')).toBe(false);
 
     createBtn.click();
 
-    expect((shadow.getElementById('submitBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((wizardShadow.getElementById('saveBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('shows the createStudent error on the form and keeps it open when the request fails', async () => {
+  it('shows the createStudent error on the wizard and keeps it open when the request fails', async () => {
     vi.mocked(createStudent).mockRejectedValue(new StudentsError('First name is required', 400));
 
     const input = {
@@ -203,17 +261,20 @@ describe('pm-students-page — creates a student from the create form', { tags: 
       language: 'English' as const,
     };
     el.shadowRoot!.dispatchEvent(
-      new CustomEvent('student-create-requested', { bubbles: true, composed: true, detail: { input } }),
+      new CustomEvent('student-create-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { input, pendingSiblingIds: [] },
+      }),
     );
     await flush();
 
-    const form = createFormOf(el);
-    const message = form.shadowRoot!.getElementById('message') as HTMLElement;
+    const message = studentStepMessageOf(wizardModalOf(el));
     expect(message.textContent).toBe('First name is required');
   });
 });
 
-describe('pm-students-page — updates a student from the edit form', { tags: ['200UC11'] }, () => {
+describe('pm-students-page — updates a student from the wizard modal', { tags: ['200UC11'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -249,25 +310,25 @@ describe('pm-students-page — updates a student from the edit form', { tags: ['
 
     expect(vi.mocked(updateStudent)).toHaveBeenCalledWith('s1', input);
     expect(tableOf(el).students.find((s) => s.studentId === 's1')?.grade).toBe('Grade5');
-    expect(editFormOf(el).hasAttribute('open')).toBe(false);
+    expect(wizardModalOf(el).hasAttribute('open')).toBe(false);
   });
 
-  it('re-enables the submit button when the form is reopened after a successful update', async () => {
+  it('re-enables the Save button when the wizard is reopened after a successful update', async () => {
     const updated: StudentResult = { ...alice, grade: 'Grade5' };
     vi.mocked(updateStudent).mockResolvedValue(updated);
     mockGetStudents.mockImplementation(() => Promise.resolve([updated, julian]));
 
-    const form = editFormOf(el);
-    const shadow = form.shadowRoot!;
-    form.open(alice);
-    (shadow.getElementById('submitBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    wizard.openForEdit(alice);
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
 
-    expect(form.hasAttribute('open')).toBe(false);
+    expect(wizard.hasAttribute('open')).toBe(false);
 
-    form.open(alice);
+    wizard.openForEdit(alice);
 
-    expect((shadow.getElementById('submitBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((wizardShadow.getElementById('saveBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 });
 

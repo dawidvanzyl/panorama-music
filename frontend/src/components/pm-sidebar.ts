@@ -9,7 +9,7 @@ styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
       display: block;
-      width: 240px;
+      width: var(--pm-sidebar-width, 240px);
       flex-shrink: 0;
       height: 100%;
       background: var(--pm-surface);

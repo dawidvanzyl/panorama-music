@@ -110,3 +110,31 @@ export async function deleteStudent(studentId: string): Promise<void> {
   await assertOk(response);
   clearStudentsCache();
 }
+
+/**
+ * Siblings are per-student and change frequently within a single wizard
+ * session (add/remove refreshes the list immediately), so unlike getStudents
+ * this is a plain, uncached fetch — caching would just risk staleness for
+ * little benefit here.
+ */
+export async function getSiblings(studentId: string): Promise<StudentResult[]> {
+  const response = await fetch(`${API_BASE}/${studentId}/siblings`, { headers: authHeaders() });
+  return handleResponse<StudentResult[]>(response);
+}
+
+export async function addSibling(studentId: string, siblingId: string): Promise<StudentResult> {
+  const response = await fetch(`${API_BASE}/${studentId}/siblings`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ siblingId }),
+  });
+  return handleResponse<StudentResult>(response);
+}
+
+export async function removeSibling(studentId: string, siblingId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${studentId}/siblings/${siblingId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+}

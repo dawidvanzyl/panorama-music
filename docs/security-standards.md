@@ -409,6 +409,7 @@ The concrete set of security- and business-significant events this application i
 | User permanently deleted | `DELETE …/permanent` | admin → user |
 | Authorization denied (403) | any admin endpoint | user → resource |
 | Student created / updated (diff) / deleted | `POST`/`PUT`/`DELETE /api/students` | teacher-or-admin → student (name, not email) |
+| Sibling linked / unlinked | `POST`/`DELETE /api/students/{id}/siblings` | teacher-or-admin → student (name, not email) |
 
 ## 14.4 Log Protection
 

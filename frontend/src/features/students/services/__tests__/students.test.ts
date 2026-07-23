@@ -4,6 +4,9 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  getSiblings,
+  addSibling,
+  removeSibling,
   clearStudentsCache,
   StudentsError,
   type StudentResult,
@@ -142,5 +145,105 @@ describe('deleteStudent', { tags: ['200UC12'] }, () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: 'Student not found.' }) });
 
     await expect(deleteStudent('unknown-id')).rejects.toThrow('Student not found.');
+  });
+});
+
+const julian: StudentResult = {
+  studentId: 's2',
+  firstName: 'Julian',
+  lastName: 'Thorne',
+  dateOfBirth: '2013-09-05',
+  grade: 'Grade5',
+  class: 'E1',
+  phase: 'Senior',
+  language: 'Afrikaans',
+};
+
+describe('getSiblings', { tags: ['201UC7'] }, () => {
+  it('returns the students currently linked as siblings', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => [julian] });
+
+    const result = await getSiblings('s1');
+
+    expect(result).toEqual([julian]);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/students/s1/siblings',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
+  it('re-fetches on every call rather than caching', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => [julian] });
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] });
+
+    const first = await getSiblings('s1');
+    const second = await getSiblings('s1');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(first).toEqual([julian]);
+    expect(second).toEqual([]);
+  });
+
+  it('throws StudentsError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: 'Student not found.' }) });
+
+    await expect(getSiblings('unknown-id')).rejects.toThrow(StudentsError);
+  });
+});
+
+describe('addSibling', { tags: ['201UC8'] }, () => {
+  it('posts the sibling id and the new sibling is reflected on the next getSiblings call', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => julian })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [julian] });
+
+    const result = await addSibling('s1', 's2');
+    const siblings = await getSiblings('s1');
+
+    expect(result).toEqual(julian);
+    expect(siblings).toEqual([julian]);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/students/s1/siblings',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ siblingId: 's2' }) }),
+    );
+  });
+
+  it('throws StudentsError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'A student cannot be linked as their own sibling.' }),
+    });
+
+    await expect(addSibling('s1', 's1')).rejects.toThrow('A student cannot be linked as their own sibling.');
+  });
+});
+
+describe('removeSibling', { tags: ['201UC9'] }, () => {
+  it('sends a DELETE request and the sibling no longer appears on the next getSiblings call', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] });
+
+    await removeSibling('s1', 's2');
+    const siblings = await getSiblings('s1');
+
+    expect(siblings).toEqual([]);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/students/s1/siblings/s2',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('throws StudentsError on failure', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Sibling link not found.' }),
+    });
+
+    await expect(removeSibling('s1', 'unknown-id')).rejects.toThrow('Sibling link not found.');
   });
 });

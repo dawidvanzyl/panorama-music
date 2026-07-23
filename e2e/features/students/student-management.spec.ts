@@ -2,7 +2,10 @@ import { test, expect } from '../../fixtures/base';
 import { goToStudentsPage } from '../../fixtures/testUsers';
 
 function uniqueName(label: string): { firstName: string; lastName: string } {
-  return { firstName: `E2E-${label}`, lastName: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
+  return {
+    firstName: `E2E-${label}`,
+    lastName: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  };
 }
 
 test.describe('Student Profile Management', { tag: ['@5IT1', '@5IT3'] }, () => {
@@ -22,11 +25,11 @@ test.describe('Student Profile Management', { tag: ['@5IT1', '@5IT3'] }, () => {
     });
 
     await expect(studentsPage.row(fullName)).toBeVisible();
-    await expect(studentsPage.row(fullName)).toContainText('Grade4');
+    await expect(studentsPage.row(fullName)).toContainText('Grade 4');
 
     await studentsPage.editStudent(fullName, { grade: 'Grade5', phase: 'Senior' });
 
-    await expect(studentsPage.row(fullName)).toContainText('Grade5');
+    await expect(studentsPage.row(fullName)).toContainText('Grade 5');
     await expect(studentsPage.row(fullName)).toContainText('Senior');
 
     await studentsPage.filterByGrade('Grade5');
@@ -47,5 +50,78 @@ test.describe('Student Profile Management', { tag: ['@5IT1', '@5IT3'] }, () => {
 
     await studentsPage.deleteStudent(fullName);
     await expect(studentsPage.row(fullName)).toHaveCount(0);
+  });
+});
+
+test.describe('Sibling Relationships', { tag: ['@5IT2'] }, () => {
+  test('adding a sibling from one student is visible from the other student', async ({ page }) => {
+    const studentA = uniqueName('sibling-a');
+    const studentB = uniqueName('sibling-b');
+    const fullNameA = `${studentA.firstName} ${studentA.lastName}`;
+    const fullNameB = `${studentB.firstName} ${studentB.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: studentA.firstName,
+      lastName: studentA.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+    await studentsPage.createStudent({
+      firstName: studentB.firstName,
+      lastName: studentB.lastName,
+      dateOfBirth: '2013-09-05',
+      grade: 'Grade5',
+      class: 'E1',
+      phase: 'Senior',
+      language: 'Afrikaans',
+    });
+
+    await studentsPage.openSiblingsTab(fullNameA);
+    await studentsPage.addSibling(fullNameB);
+    await expect(studentsPage.siblingListRow(fullNameB)).toBeVisible();
+    await studentsPage.closeWizard();
+
+    await studentsPage.toggleRowExpanded(fullNameA);
+    await expect(studentsPage.visibleSiblingsSummary()).toContainText(fullNameB);
+    await studentsPage.toggleRowExpanded(fullNameA);
+
+    await studentsPage.toggleRowExpanded(fullNameB);
+    await expect(studentsPage.visibleSiblingsSummary()).toContainText(fullNameA);
+  });
+});
+
+test.describe('Student Endpoint Authorization', { tag: ['@5IT5'] }, () => {
+  test('rejects an unauthenticated request to a student endpoint', async ({ page }) => {
+    const response = await page.request.get('/api/students');
+
+    expect(response.status()).toBe(401);
+  });
+});
+
+test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
+  test('rejects a request with a student field value outside its defined enumeration', async ({
+    page,
+  }) => {
+    await goToStudentsPage(page);
+    const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+
+    const response = await page.request.post('/api/students', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      data: {
+        firstName: 'Invalid',
+        lastName: 'Enum',
+        dateOfBirth: '2014-05-12',
+        grade: 'NotARealGrade',
+        class: 'A1',
+        phase: 'Junior',
+        language: 'English',
+      },
+    });
+
+    expect(response.status()).toBe(400);
   });
 });

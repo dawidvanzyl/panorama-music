@@ -50,7 +50,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC6")]
-	[Trait("AC", "5IT4")]
 	public async Task CreateStudent_GradeOutsideDefinedEnumeration_IsRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-invalid-enum", Role.Teacher);
@@ -79,7 +78,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC6")]
-	[Trait("AC", "5IT4")]
 	public async Task UpdateStudent_GradeOutsideDefinedEnumeration_IsRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-invalid-enum-update", Role.Teacher);
@@ -111,7 +109,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC7")]
-	[Trait("AC", "5IT5")]
 	public async Task GetStudents_UnauthenticatedRequest_IsRejected()
 	{
 		var response = await fixture.CreateClient().GetAsync("/api/students", TestContext.Current.CancellationToken);
@@ -181,6 +178,142 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 		var getResponse = await client.Client.SendAsync(
 			client.AuthorizedGetRequest($"/api/students/{created.StudentId}"), TestContext.Current.CancellationToken);
 		getResponse.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	[Trait("AC", "201UC1")]
+	[Trait("AC", "201UC2")]
+	public async Task AddSibling_TwoDistinctStudents_RecordsBidirectionally()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "siblings-add-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.20");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var aliceResponse = await CreateStudentAsync(client, "Kagiso", "Dlamini", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var alice = await aliceResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		var julianResponse = await CreateStudentAsync(client, "Ruth", "Ferreira", GradeType.Grade5, ClassType.E1, PhaseType.Senior);
+		var julian = await julianResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var addResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{alice!.StudentId}/siblings", new { SiblingId = julian!.StudentId }),
+			TestContext.Current.CancellationToken);
+		addResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+		var aliceSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{alice.StudentId}/siblings"), TestContext.Current.CancellationToken);
+		var aliceSiblings = await aliceSiblingsResponse.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var julianSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{julian.StudentId}/siblings"), TestContext.Current.CancellationToken);
+		var julianSiblings = await julianSiblingsResponse.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		aliceSiblings.ShouldNotBeNull();
+		julianSiblings.ShouldNotBeNull();
+		aliceSiblings.ShouldContain(s => s.StudentId == julian.StudentId);
+		julianSiblings.ShouldContain(s => s.StudentId == alice.StudentId);
+	}
+
+	[Fact]
+	[Trait("AC", "201UC3")]
+	public async Task RemoveSibling_ExistingLink_RemovesLinkInBothDirections()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "siblings-remove-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.21");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var aliceResponse = await CreateStudentAsync(client, "Sipho", "Ndlovu", GradeType.Grade3, ClassType.A2, PhaseType.Junior);
+		var alice = await aliceResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		var julianResponse = await CreateStudentAsync(client, "Amara", "Botha", GradeType.Grade3, ClassType.A2, PhaseType.Junior);
+		var julian = await julianResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{alice!.StudentId}/siblings", new { SiblingId = julian!.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		var removeResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{alice.StudentId}/siblings/{julian.StudentId}"), TestContext.Current.CancellationToken);
+		removeResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+		var aliceSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{alice.StudentId}/siblings"), TestContext.Current.CancellationToken);
+		var aliceSiblings = await aliceSiblingsResponse.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var julianSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{julian.StudentId}/siblings"), TestContext.Current.CancellationToken);
+		var julianSiblings = await julianSiblingsResponse.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		aliceSiblings.ShouldNotBeNull();
+		julianSiblings.ShouldNotBeNull();
+		aliceSiblings.ShouldNotContain(s => s.StudentId == julian.StudentId);
+		julianSiblings.ShouldNotContain(s => s.StudentId == alice.StudentId);
+	}
+
+	[Fact]
+	[Trait("AC", "201UC4")]
+	public async Task AddSibling_SameStudentAsSibling_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "siblings-self-link-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.22");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createResponse = await CreateStudentAsync(client, "Lerato", "Khumalo", GradeType.Grade3, ClassType.A2, PhaseType.Junior);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var addResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{created!.StudentId}/siblings", new { SiblingId = created.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		addResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	public async Task AddSibling_AlreadyLinkedPair_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "siblings-duplicate-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.24");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var aliceResponse = await CreateStudentAsync(client, "Naledi", "Radebe", GradeType.Grade3, ClassType.A1, PhaseType.Junior);
+		var alice = await aliceResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		var julianResponse = await CreateStudentAsync(client, "Thabo", "Zulu", GradeType.Grade3, ClassType.A1, PhaseType.Junior);
+		var julian = await julianResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{alice!.StudentId}/siblings", new { SiblingId = julian!.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		var secondAddResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{alice.StudentId}/siblings", new { SiblingId = julian.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		secondAddResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	[Trait("AC", "201UC5")]
+	public async Task AddSibling_NonExistentSiblingId_IsRejected()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "siblings-unknown-id-api", Role.Teacher);
+		var client = fixture.CreateIsolatedClient("10.0.40.23");
+		await client.LoginAsync(teacherEmail, _password);
+
+		var createResponse = await CreateStudentAsync(client, "Kabelo", "Molefe", GradeType.Grade3, ClassType.A1, PhaseType.Junior);
+		var created = await createResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var addResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{created!.StudentId}/siblings", new { SiblingId = Guid.NewGuid() }),
+			TestContext.Current.CancellationToken);
+
+		addResponse.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	[Trait("AC", "201UC6")]
+	public async Task GetSiblings_UnauthenticatedRequest_IsRejected()
+	{
+		var response = await fixture.CreateClient().GetAsync($"/api/students/{Guid.NewGuid()}/siblings", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 	}
 
 	private static Task<HttpResponseMessage> CreateStudentAsync(

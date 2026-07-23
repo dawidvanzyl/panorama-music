@@ -122,6 +122,7 @@ test.describe('Global Session Management', () => {
       const adminSessionsPage = new AdminSessionsPage(page);
       await adminSessionsPage.gotoAdminSessions();
       await adminSessionsPage.revokeAllGlobal();
+      await expect(adminSessionsPage.rowByEmail(email)).toHaveCount(0);
 
       const userResponse = await userPage.request.get('/api/users', {
         headers: { Authorization: `Bearer ${userAccessToken}` },

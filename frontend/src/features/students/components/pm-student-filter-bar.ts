@@ -1,4 +1,4 @@
-import { GRADES, PHASES, CLASSES, populateSelectOptions } from './student-options';
+import { GRADES, PHASES, CLASSES, populateSelectOptions, gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -73,7 +73,7 @@ export class PmStudentFilterBar extends HTMLElement {
     this.phaseSelect = this.shadowRoot!.getElementById('phase') as HTMLSelectElement;
     this.classSelect = this.shadowRoot!.getElementById('class') as HTMLSelectElement;
 
-    populateSelectOptions(this.gradeSelect, GRADES);
+    populateSelectOptions(this.gradeSelect, GRADES, gradeLabel);
     populateSelectOptions(this.phaseSelect, PHASES);
     populateSelectOptions(this.classSelect, CLASSES);
 
