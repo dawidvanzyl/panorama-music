@@ -102,6 +102,64 @@ test.describe('Student Endpoint Authorization', { tag: ['@5IT5'] }, () => {
   });
 });
 
+test.describe('Student Wizard Modal Fixed Size', { tag: ['@5IT7'] }, () => {
+  test('modal stays a fixed size while switching steps and the sibling list scrolls internally', async ({
+    page,
+  }) => {
+    const primary = uniqueName('modal-fixed');
+    const fullNamePrimary = `${primary.firstName} ${primary.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: primary.firstName,
+      lastName: primary.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+
+    const siblingNames: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      const sibling = uniqueName(`modal-fixed-sib-${i}`);
+      await studentsPage.createStudent({
+        firstName: sibling.firstName,
+        lastName: sibling.lastName,
+        dateOfBirth: '2013-09-05',
+        grade: 'Grade5',
+        class: 'E1',
+        phase: 'Senior',
+        language: 'Afrikaans',
+      });
+      siblingNames.push(`${sibling.firstName} ${sibling.lastName}`);
+    }
+
+    await studentsPage.row(fullNamePrimary).locator('.students-table__btn--edit').click();
+    const cardBoxOnStudentStep = await studentsPage.wizardCard().boundingBox();
+
+    await studentsPage.wizardModal.locator('#tabSiblings').click();
+    const cardBoxOnSiblingsStep = await studentsPage.wizardCard().boundingBox();
+    expect(cardBoxOnSiblingsStep).toEqual(cardBoxOnStudentStep);
+
+    for (const siblingName of siblingNames) {
+      await studentsPage.addSibling(siblingName);
+    }
+
+    const cardBoxAfterSiblingsAdded = await studentsPage.wizardCard().boundingBox();
+    expect(cardBoxAfterSiblingsAdded).toEqual(cardBoxOnStudentStep);
+
+    await expect(studentsPage.siblingsSearchSelect()).toBeVisible();
+
+    const scrollEl = studentsPage.siblingListScrollElement();
+    const scrollHeight = await scrollEl.evaluate((el) => el.scrollHeight);
+    const clientHeight = await scrollEl.evaluate((el) => el.clientHeight);
+    expect(scrollHeight).toBeGreaterThan(clientHeight);
+
+    await studentsPage.closeWizard();
+  });
+});
+
 test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
   test('rejects a request with a student field value outside its defined enumeration', async ({
     page,
