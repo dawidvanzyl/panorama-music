@@ -50,7 +50,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC6")]
-	[Trait("AC", "5IT4")]
 	public async Task CreateStudent_GradeOutsideDefinedEnumeration_IsRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-invalid-enum", Role.Teacher);
@@ -79,7 +78,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC6")]
-	[Trait("AC", "5IT4")]
 	public async Task UpdateStudent_GradeOutsideDefinedEnumeration_IsRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-invalid-enum-update", Role.Teacher);
@@ -111,7 +109,6 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "200UC7")]
-	[Trait("AC", "5IT5")]
 	public async Task GetStudents_UnauthenticatedRequest_IsRejected()
 	{
 		var response = await fixture.CreateClient().GetAsync("/api/students", TestContext.Current.CancellationToken);

@@ -93,3 +93,35 @@ test.describe('Sibling Relationships', { tag: ['@5IT2'] }, () => {
     await expect(studentsPage.visibleSiblingsSummary()).toContainText(fullNameA);
   });
 });
+
+test.describe('Student Endpoint Authorization', { tag: ['@5IT5'] }, () => {
+  test('rejects an unauthenticated request to a student endpoint', async ({ page }) => {
+    const response = await page.request.get('/api/students');
+
+    expect(response.status()).toBe(401);
+  });
+});
+
+test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
+  test('rejects a request with a student field value outside its defined enumeration', async ({
+    page,
+  }) => {
+    await goToStudentsPage(page);
+    const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+
+    const response = await page.request.post('/api/students', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      data: {
+        firstName: 'Invalid',
+        lastName: 'Enum',
+        dateOfBirth: '2014-05-12',
+        grade: 'NotARealGrade',
+        class: 'A1',
+        phase: 'Junior',
+        language: 'English',
+      },
+    });
+
+    expect(response.status()).toBe(400);
+  });
+});
