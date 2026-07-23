@@ -103,7 +103,9 @@ test.describe('Student Endpoint Authorization', { tag: ['@5IT5'] }, () => {
 });
 
 test.describe('Private Grade Students', { tag: ['@5IT6'] }, () => {
-  test('a Private-grade student does not require or accept a class or phase', async ({ page }) => {
+  test('a Private-grade student does not require a class or phase, and the roster reflects that', async ({
+    page,
+  }) => {
     const { firstName, lastName } = uniqueName('private');
     const fullName = `${firstName} ${lastName}`;
     const studentsPage = await goToStudentsPage(page);
@@ -118,6 +120,8 @@ test.describe('Private Grade Students', { tag: ['@5IT6'] }, () => {
 
     await expect(studentsPage.row(fullName)).toBeVisible();
     await expect(studentsPage.row(fullName)).toContainText('Private');
+    await expect(studentsPage.row(fullName)).toContainText('—');
+    await expect(studentsPage.row(fullName)).not.toContainText('null');
   });
 });
 
