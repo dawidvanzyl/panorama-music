@@ -48,7 +48,6 @@ styles.replaceSync(`
     }
     .wizard__step {
       display: none;
-      min-height: 0;
     }
     .wizard__step--visible {
       display: flex;

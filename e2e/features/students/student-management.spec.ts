@@ -158,6 +158,33 @@ test.describe('Student Wizard Modal Fixed Size', { tag: ['@5IT7'] }, () => {
 
     await studentsPage.closeWizard();
   });
+
+  test('modal stays a fixed size across create-mode Next/Previous transitions', async ({ page }) => {
+    const student = uniqueName('modal-fixed-create');
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createButton.click();
+    const cardBoxOnStudentStep = await studentsPage.wizardCard().boundingBox();
+
+    const step = studentsPage.wizardModal.locator('#studentStep');
+    await step.locator('#firstName').fill(student.firstName);
+    await step.locator('#lastName').fill(student.lastName);
+    await step.locator('#dateOfBirth').fill('2014-05-12');
+    await step.locator('#grade').selectOption('Grade4');
+    await step.locator('#class').selectOption('A1');
+    await step.locator('#phase').selectOption('Junior');
+    await step.locator('#language').selectOption('English');
+
+    await studentsPage.wizardModal.locator('#nextBtn').click();
+    const cardBoxOnSiblingsStep = await studentsPage.wizardCard().boundingBox();
+    expect(cardBoxOnSiblingsStep).toEqual(cardBoxOnStudentStep);
+
+    await studentsPage.wizardModal.locator('#previousBtn').click();
+    const cardBoxAfterPrevious = await studentsPage.wizardCard().boundingBox();
+    expect(cardBoxAfterPrevious).toEqual(cardBoxOnStudentStep);
+
+    await studentsPage.closeWizard();
+  });
 });
 
 test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
