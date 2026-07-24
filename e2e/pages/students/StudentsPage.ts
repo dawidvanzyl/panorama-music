@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 
 export type Grade =
@@ -107,6 +107,10 @@ export class StudentsPage extends BasePage {
     await searchSelect.locator('#query').fill(siblingName);
     await searchSelect.locator('#results').getByRole('button', { name: siblingName }).click();
     await searchSelect.locator('#addBtn').click();
+    // Wait for the add round trip (candidates refresh clears/re-renders #results) to settle
+    // before a caller starts the next add — otherwise a rapid second fill/click can race the
+    // re-render and hit a detached node.
+    await expect(this.siblingListRow(siblingName)).toBeVisible();
   }
 
   async removeSibling(siblingName: string): Promise<void> {
