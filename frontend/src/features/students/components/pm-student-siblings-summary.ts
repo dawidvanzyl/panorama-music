@@ -83,7 +83,7 @@ export class PmStudentSiblingsSummary extends HTMLElement {
     for (const sibling of this._siblings) {
       const item = document.createElement('li');
       item.classList.add('summary__item');
-      item.textContent = `${sibling.firstName} ${sibling.lastName} ${gradeNumber(sibling.grade)}${sibling.class}`;
+      item.textContent = `${sibling.firstName} ${sibling.lastName} ${gradeNumber(sibling.grade)}${sibling.class ?? ''}`;
       this.list.appendChild(item);
     }
   }

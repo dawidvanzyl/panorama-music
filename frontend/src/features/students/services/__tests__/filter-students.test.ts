@@ -24,7 +24,18 @@ const julian: StudentResult = {
   language: 'Afrikaans',
 };
 
-const students = [alice, julian];
+const zola: StudentResult = {
+  studentId: 's3',
+  firstName: 'Zola',
+  lastName: 'Ngwenya',
+  dateOfBirth: '2012-01-20',
+  grade: 'Private',
+  class: null,
+  phase: null,
+  language: 'English',
+};
+
+const students = [alice, julian, zola];
 
 describe('filterStudents', { tags: ['200UC5', '200UC9'] }, () => {
   it('returns every student when no filters are set', () => {
@@ -56,5 +67,12 @@ describe('filterStudents', { tags: ['200UC5', '200UC9'] }, () => {
   it('combines the name filter with grade/phase/class filters', () => {
     expect(filterStudents(students, { name: 'julian', grade: 'Grade4' })).toEqual([]);
     expect(filterStudents(students, { name: 'julian', grade: 'Grade5' })).toEqual([julian]);
+  });
+
+  it('excludes a Private-grade student (no class or phase) from any class or phase filter, but includes them otherwise', () => {
+    expect(filterStudents(students, { class: 'A1' })).toEqual([alice]);
+    expect(filterStudents(students, { phase: 'Senior' })).toEqual([julian]);
+    expect(filterStudents(students, { grade: 'Private' })).toEqual([zola]);
+    expect(filterStudents(students, {})).toContainEqual(zola);
   });
 });

@@ -19,8 +19,8 @@ export interface StudentInput {
   lastName: string;
   dateOfBirth: string;
   grade: Grade;
-  class: StudentClass;
-  phase: Phase;
+  class?: StudentClass;
+  phase?: Phase;
   language: StudentLanguage;
 }
 

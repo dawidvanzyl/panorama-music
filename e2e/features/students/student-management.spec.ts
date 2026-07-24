@@ -187,6 +187,29 @@ test.describe('Student Wizard Modal Fixed Size', { tag: ['@5IT7'] }, () => {
   });
 });
 
+test.describe('Private Grade Students', { tag: ['@5IT6'] }, () => {
+  test('a Private-grade student does not require a class or phase, and the roster reflects that', async ({
+    page,
+  }) => {
+    const { firstName, lastName } = uniqueName('private');
+    const fullName = `${firstName} ${lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName,
+      lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Private',
+      language: 'English',
+    });
+
+    await expect(studentsPage.row(fullName)).toBeVisible();
+    await expect(studentsPage.row(fullName)).toContainText('Private');
+    await expect(studentsPage.row(fullName)).toContainText('—');
+    await expect(studentsPage.row(fullName)).not.toContainText('null');
+  });
+});
+
 test.describe('Student Enumeration Validation', { tag: ['@5IT4'] }, () => {
   test('rejects a request with a student field value outside its defined enumeration', async ({
     page,

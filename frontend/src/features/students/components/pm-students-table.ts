@@ -220,10 +220,10 @@ export class PmStudentsTable extends HTMLElement {
     gradeCell.textContent = gradeLabel(student.grade);
 
     const phaseCell = document.createElement('td');
-    phaseCell.textContent = student.phase;
+    phaseCell.textContent = student.phase ?? '—';
 
     const classCell = document.createElement('td');
-    classCell.textContent = student.class;
+    classCell.textContent = student.class ?? '—';
 
     const languageCell = document.createElement('td');
     languageCell.textContent = student.language;

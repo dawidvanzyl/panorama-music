@@ -14,8 +14,8 @@ export interface StudentResult {
   lastName: string;
   dateOfBirth: string;
   grade: Grade;
-  class: StudentClass;
-  phase: Phase;
+  class: StudentClass | null;
+  phase: Phase | null;
   language: StudentLanguage;
 }
 
@@ -24,8 +24,8 @@ export interface StudentInput {
   lastName: string;
   dateOfBirth: string;
   grade: Grade;
-  class: StudentClass;
-  phase: Phase;
+  class: StudentClass | null;
+  phase: Phase | null;
   language: StudentLanguage;
 }
 

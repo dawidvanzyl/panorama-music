@@ -6,6 +6,6 @@ internal sealed record StudentDto(
 	string Last_Name,
 	DateOnly Date_Of_Birth,
 	string Grade,
-	string Class,
-	string Phase,
+	string? Class,
+	string? Phase,
 	string Language);
