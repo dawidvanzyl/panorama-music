@@ -1,6 +1,7 @@
 import { isAuthenticated, logout } from '../services/auth';
-import { hasRole } from '../services/token-storage';
+import { hasRole, hasAnyRole } from '../services/token-storage';
 import { clearUsersCache } from '../features/admin/services/admin';
+import { clearStudentsCache } from '../features/students/services/students';
 import { updateActiveNavSection } from '../services/nav-section';
 
 const styles = new CSSStyleSheet();
@@ -8,7 +9,7 @@ styles.replaceSync(`
     :host {
       font-family: 'Inter', system-ui, sans-serif;
       display: block;
-      width: 240px;
+      width: var(--pm-sidebar-width, 240px);
       flex-shrink: 0;
       height: 100%;
       background: var(--pm-surface);
@@ -84,6 +85,10 @@ const template = document.createElement('template');
 template.innerHTML = `
   <nav>
     <div class="sidebar__links">
+      <a href="#/students" class="sidebar__link" id="studentManagementLink" hidden>
+        <span class="sidebar__icon">group</span>
+        <span>Student Management</span>
+      </a>
       <a href="#/admin/users" class="sidebar__link" id="userManagementLink" hidden>
         <span class="sidebar__icon">group</span>
         <span>User Management</span>
@@ -111,6 +116,7 @@ template.innerHTML = `
 `;
 
 export class PmSidebar extends HTMLElement {
+  private studentManagementLink: HTMLAnchorElement | null = null;
   private userManagementLink: HTMLAnchorElement | null = null;
   private adminSessionsLink: HTMLAnchorElement | null = null;
   private activityLogLink: HTMLAnchorElement | null = null;
@@ -125,6 +131,7 @@ export class PmSidebar extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.studentManagementLink = this.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
     this.userManagementLink = this.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
     this.adminSessionsLink = this.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
     this.activityLogLink = this.shadowRoot!.getElementById('activityLogLink') as HTMLAnchorElement;
@@ -146,10 +153,13 @@ export class PmSidebar extends HTMLElement {
     const activeSection = updateActiveNavSection(basePath);
 
     const showAdminLinks = isAuthenticated() && hasRole('Admin') && activeSection === 'admin';
+    const showStudentLinks = isAuthenticated() && hasAnyRole(['Teacher', 'Admin']) && activeSection === 'students';
+    this.studentManagementLink!.hidden = !showStudentLinks;
     this.userManagementLink!.hidden = !showAdminLinks;
     this.adminSessionsLink!.hidden = !showAdminLinks;
     this.activityLogLink!.hidden = !showAdminLinks;
 
+    this.studentManagementLink!.classList.toggle('sidebar__link--active', basePath === '/students');
     this.userManagementLink!.classList.toggle('sidebar__link--active', basePath === '/admin/users');
     this.adminSessionsLink!.classList.toggle('sidebar__link--active', basePath === '/admin/sessions');
     this.activityLogLink!.classList.toggle('sidebar__link--active', basePath === '/admin/activity-log');
@@ -158,6 +168,7 @@ export class PmSidebar extends HTMLElement {
 
   private handleLogout = async (): Promise<void> => {
     clearUsersCache();
+    clearStudentsCache();
     await logout();
     this.updateVisibility();
     window.location.hash = '#/login';

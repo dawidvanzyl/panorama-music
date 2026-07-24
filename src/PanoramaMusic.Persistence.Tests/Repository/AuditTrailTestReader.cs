@@ -3,7 +3,7 @@ using PanoramaMusic.Persistence.Tests.Models;
 
 namespace PanoramaMusic.Persistence.Tests.Repository;
 
-public sealed class IdentityAuditTrailTestReader(string connectionString)
+public sealed class AuditTrailTestReader(string connectionString)
 {
 	public async Task<AuditEventRow?> FetchByTargetAsync(string eventType, Guid targetId, CancellationToken cancellationToken) =>
 		await QuerySingleAsync(

@@ -128,7 +128,9 @@ public static class ServiceCollectionExtensions
 		services
 			.AddAuthorizationBuilder()
 			.AddPolicy("AdminPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Admin)))
-			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Teacher)));
+			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Teacher)))
+			.AddPolicy("TeacherOrAdminPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Admin)));
 
 		return services;
 	}

@@ -19,12 +19,12 @@ namespace PanoramaMusic.Persistence.Tests;
 public class DomainEventAuditPipelineTests : IClassFixture<UnitOfWorkDatabaseFixture>
 {
 	private readonly UnitOfWorkDatabaseContext _context;
-	private readonly IdentityAuditTrailTestReader _reader;
+	private readonly AuditTrailTestReader _reader;
 
 	public DomainEventAuditPipelineTests(UnitOfWorkDatabaseFixture fixture)
 	{
 		_context = fixture.CreateContext();
-		_reader = _context.ServiceProvider.GetRequiredService<IdentityAuditTrailTestReader>();
+		_reader = _context.ServiceProvider.GetRequiredService<AuditTrailTestReader>();
 	}
 
 	[Fact]

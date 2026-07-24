@@ -5,9 +5,11 @@ using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Routes;
 using PanoramaMusic.Api.Routes.Audit;
 using PanoramaMusic.Api.Routes.Identity;
+using PanoramaMusic.Api.Routes.Students;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Persistence.Extensions;
+using PanoramaMusic.Students.Infrastructure.Extensions;
 using Serilog;
 using Serilog.Formatting.Compact;
 using System.Text.Json.Serialization;
@@ -58,10 +60,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddInfrastructure(connectionString, PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes);
+builder.Services.AddInfrastructure(connectionString, dataSourceBuilder =>
+{
+	PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
+	PanoramaMusic.Students.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
+});
 builder.Services.AddAuditInfrastructure();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
+builder.Services.AddStudentsInfrastructure();
 builder.Services.AddAuthorizationResultHandler<AuditingAuthorizationMiddlewareResultHandler>();
 builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddValidation();
@@ -110,6 +117,7 @@ app.MapHealthRoutes();
 app.MapAuthRoutes();
 app.MapAdminRoutes();
 app.MapAuditRoutes();
+app.MapStudentRoutes();
 
 // Return 404 for unmatched /api/* routes so typos don't silently return the SPA
 app.MapFallback("/api/{**path}", () => Results.NotFound());

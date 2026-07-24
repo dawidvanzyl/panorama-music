@@ -31,7 +31,7 @@ namespace PanoramaMusic.Persistence.Tests;
 public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 {
 	private readonly UnitOfWorkDatabaseContext _context;
-	private readonly IdentityAuditTrailTestReader _identityAuditTrailTestReader;
+	private readonly AuditTrailTestReader _reader;
 	private readonly IAuditContext _auditContext;
 
 	public IdentityAuditTrailTests(UnitOfWorkDatabaseFixture fixture)
@@ -43,7 +43,7 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 			.SetupGet(m => m.CorrelationId)
 			.Returns(correlationId);
 
-		_identityAuditTrailTestReader = _context.ServiceProvider.GetRequiredService<IdentityAuditTrailTestReader>();
+		_reader = _context.ServiceProvider.GetRequiredService<AuditTrailTestReader>();
 		_auditContext = _context.Contexts.AuditContextMock.Object;
 	}
 
@@ -63,8 +63,8 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		_context.Repositories.UserRepositoryMock
 			.Setup(r => r.ActivateAsync(targetUserId, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-		_context.Contexts.UserContextMock.SetupGet(m => m.UserId).Returns(actorId);
-		_context.Contexts.UserContextMock.SetupGet(m => m.Email).Returns(actorEmail);
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.UserId).Returns(actorId);
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.Email).Returns(actorEmail);
 
 		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
 		var handler = _context.ServiceProvider.GetRequiredService<ActivateUserHandler>();
@@ -73,7 +73,7 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		await handler.HandleAsync(new ActivateUserCommand(targetUserId), cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
-		var row = await _identityAuditTrailTestReader.FetchByTargetAsync(IdentityAuditEventTypes.UserActivated, targetUserId, cancellationToken);
+		var row = await _reader.FetchByTargetAsync(IdentityAuditEventTypes.UserActivated, targetUserId, cancellationToken);
 
 		row.ShouldNotBeNull();
 		row.OccurredAt.Kind.ShouldBe(DateTimeKind.Utc);
@@ -108,14 +108,14 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
 		var handler = _context.ServiceProvider.GetRequiredService<ActivateUserHandler>();
 
-		_context.Contexts.UserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
-		_context.Contexts.UserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
 
 		await unitOfWork.BeginAsync(cancellationToken);
 		await handler.HandleAsync(new ActivateUserCommand(committedTargetId), cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
-		var countByTarget = await _identityAuditTrailTestReader.CountByTargetAsync(IdentityAuditEventTypes.UserActivated, committedTargetId, cancellationToken);
+		var countByTarget = await _reader.CountByTargetAsync(IdentityAuditEventTypes.UserActivated, committedTargetId, cancellationToken);
 		countByTarget.ShouldBe(1);
 	}
 
@@ -140,14 +140,14 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
 		var handler = _context.ServiceProvider.GetRequiredService<ActivateUserHandler>();
 
-		_context.Contexts.UserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
-		_context.Contexts.UserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
 
 		await unitOfWork.BeginAsync(cancellationToken);
 		await handler.HandleAsync(new ActivateUserCommand(rolledBackTargetId), cancellationToken);
 		await unitOfWork.RollbackAsync(cancellationToken);
 
-		var countByTarget = await _identityAuditTrailTestReader.CountByTargetAsync(IdentityAuditEventTypes.UserActivated, rolledBackTargetId, cancellationToken);
+		var countByTarget = await _reader.CountByTargetAsync(IdentityAuditEventTypes.UserActivated, rolledBackTargetId, cancellationToken);
 		countByTarget.ShouldBe(0);
 	}
 
@@ -182,7 +182,7 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		// exception — the failure audit row must still survive via the isolated write.
 		await unitOfWork.RollbackAsync(cancellationToken);
 
-		var row = await _identityAuditTrailTestReader.FetchLatestByDetailContainsAsync(IdentityAuditEventTypes.LoginFailed, attemptedEmail, cancellationToken);
+		var row = await _reader.FetchLatestByDetailContainsAsync(IdentityAuditEventTypes.LoginFailed, attemptedEmail, cancellationToken);
 
 		row.ShouldNotBeNull();
 		row.ActorId.ShouldBeNull();
@@ -217,8 +217,8 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 			.Setup(a => a.SeedAdminEmail)
 			.Returns(string.Empty);
 
-		_context.Contexts.UserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
-		_context.Contexts.UserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
+		_context.Contexts.IdentityIUserContextMock.SetupGet(m => m.Email).Returns("admin-uc6a@test.com");
 
 		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
 		var handler = _context.ServiceProvider.GetRequiredService<UpdateUserRolesHandler>();
@@ -227,7 +227,7 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		await handler.HandleAsync(new UpdateUserRolesCommand(targetUserId, new UpdateUserRolesRequest([Role.Teacher, Role.Admin])), cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
-		var row = await _identityAuditTrailTestReader.FetchByTargetAsync(IdentityAuditEventTypes.RolesChanged, targetUserId, cancellationToken);
+		var row = await _reader.FetchByTargetAsync(IdentityAuditEventTypes.RolesChanged, targetUserId, cancellationToken);
 
 		row.ShouldNotBeNull();
 		using var detail = JsonDocument.Parse(row.Detail);
@@ -276,7 +276,7 @@ public class IdentityAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		var result = await handler.HandleAsync(new LoginCommand(new LoginRequest(user.Email.Value, plainTextPassword)), cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
-		var row = await _identityAuditTrailTestReader.FetchByActorAsync(IdentityAuditEventTypes.LoginSucceeded, user.UserId, cancellationToken);
+		var row = await _reader.FetchByActorAsync(IdentityAuditEventTypes.LoginSucceeded, user.UserId, cancellationToken);
 
 		row.ShouldNotBeNull();
 		row.ActorEmail.ShouldBe(user.Email.Value);

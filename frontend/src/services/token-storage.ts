@@ -43,6 +43,10 @@ export function hasRole(role: string): boolean {
   return getRoles().includes(role);
 }
 
+export function hasAnyRole(roles: string[]): boolean {
+  return roles.some((role) => hasRole(role));
+}
+
 export function getUserId(): string | null {
   const token = getAccessToken();
   if (!token) return null;

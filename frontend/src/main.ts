@@ -11,11 +11,13 @@ import './features/authentication/pages/pm-reset-password-page';
 import './features/sessions/pages/pm-sessions-page';
 import './features/sessions/pages/pm-admin-sessions-page';
 import './features/admin/pages/pm-admin-activity-log-page';
+import './features/students/pages/pm-students-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
-import { hasRole } from './services/token-storage';
+import { hasRole, hasAnyRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
+const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 const ROUTES: Record<string, () => string> = {
@@ -27,6 +29,7 @@ const ROUTES: Record<string, () => string> = {
   '/admin/sessions': () => '<pm-admin-sessions-page></pm-admin-sessions-page>',
   '/admin/activity-log': () => '<pm-admin-activity-log-page></pm-admin-activity-log-page>',
   '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
+  '/students': () => '<pm-students-page></pm-students-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
@@ -62,6 +65,11 @@ async function render(): Promise<void> {
   }
 
   if (ADMIN_ONLY_PATHS.has(basePath) && !hasRole('Admin')) {
+    window.location.hash = '#/';
+    return;
+  }
+
+  if (TEACHER_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Admin'])) {
     window.location.hash = '#/';
     return;
   }
