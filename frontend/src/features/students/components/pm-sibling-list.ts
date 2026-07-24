@@ -4,7 +4,16 @@ import { gradeLabel } from './student-options';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
       font-family: 'Inter', system-ui, sans-serif;
+    }
+    .sibling-list__scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
     }
     table {
       width: 100%;
@@ -47,18 +56,20 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Grade</th>
-        <th>Class</th>
-        <th class="sibling-list__actions">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
-  <p class="sibling-list__empty" id="empty" hidden>No siblings linked.</p>
+  <div class="sibling-list__scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Grade</th>
+          <th>Class</th>
+          <th class="sibling-list__actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="sibling-list__empty" id="empty" hidden>No siblings linked.</p>
+  </div>
 `;
 
 export class PmSiblingList extends HTMLElement {

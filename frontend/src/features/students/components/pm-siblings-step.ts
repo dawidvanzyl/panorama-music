@@ -9,7 +9,10 @@ type Mode = 'inactive' | 'create' | 'edit';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
       font-family: 'Inter', system-ui, sans-serif;
     }
     .siblings-step__placeholder {
@@ -23,8 +26,18 @@ styles.replaceSync(`
     }
     .siblings-step__section--visible {
       display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    pm-student-search-select {
+      flex-shrink: 0;
+    }
+    pm-sibling-list {
+      flex: 1;
+      min-height: 0;
     }
     .siblings-step__message {
+      flex-shrink: 0;
       padding: 12px 16px;
       border-radius: var(--pm-radius);
       font-size: 13px;

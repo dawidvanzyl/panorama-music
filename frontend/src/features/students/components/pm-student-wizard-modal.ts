@@ -14,9 +14,16 @@ styles.replaceSync(`
       box-sizing: border-box;
       max-width: none;
       width: calc(100% - var(--pm-sidebar-width, 240px) - (2 * var(--pm-content-padding, 1cm)));
+      height: 600px;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal__header {
+      flex-shrink: 0;
     }
     .wizard__tabs {
       display: flex;
+      flex-shrink: 0;
       gap: 4px;
       border-bottom: 1px solid var(--pm-border, #2e3250);
       margin-bottom: 20px;
@@ -43,10 +50,18 @@ styles.replaceSync(`
       display: none;
     }
     .wizard__step--visible {
-      display: block;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .wizard__step--visible > * {
+      flex: 1;
+      min-height: 0;
     }
     .wizard__actions {
       display: flex;
+      flex-shrink: 0;
       justify-content: flex-end;
       gap: 12px;
       margin-top: 24px;

@@ -67,6 +67,10 @@ export default defineConfig({
       { name: '201UC9', description: 'removeSibling sends a DELETE request; the removed sibling no longer appears in a subsequent getSiblings call' },
       { name: '206UC6', description: 'Selecting grade Private hides the class and phase fields and lifts their required constraint' },
       { name: '206UC7', description: 'Selecting a non-Private grade shows the class and phase fields and requires them' },
+      { name: '207UC1', description: 'Edit wizard modal card has an unconditional fixed height that does not depend on the active step' },
+      { name: '207UC2', description: 'Create wizard step area flexes within the fixed card while header/tabs/actions stay pinned' },
+      { name: '207UC3', description: 'Sibling list gets its own internal scroll container instead of growing the modal unbounded' },
+      { name: '207UC4', description: 'Sibling search input and Add button are marked non-shrinking so they stay pinned above the scrolling list' },
     ],
   },
 })

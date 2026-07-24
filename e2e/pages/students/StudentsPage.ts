@@ -125,6 +125,23 @@ export class StudentsPage extends BasePage {
     await this.wizardModal.locator('#cancelBtn').click();
   }
 
+  /** The wizard modal's outer card element, whose fixed dimensions must not change between steps. */
+  wizardCard(): Locator {
+    return this.wizardModal.locator('.modal__card');
+  }
+
+  siblingsSearchSelect(): Locator {
+    return this.wizardModal.locator('#siblingsStep').locator('#searchSelect');
+  }
+
+  /** The internal scroll container for the sibling list, several shadow roots deep. */
+  siblingListScrollElement(): Locator {
+    return this.wizardModal
+      .locator('#siblingsStep')
+      .locator('#siblingList')
+      .locator('.sibling-list__scroll');
+  }
+
   /** Toggles the expand chevron for `name`'s row (shows/hides its siblings summary). */
   async toggleRowExpanded(name: string): Promise<void> {
     await this.row(name).locator('.students-table__chevron-btn').click();
