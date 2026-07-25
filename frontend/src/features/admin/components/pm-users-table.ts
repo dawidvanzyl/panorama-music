@@ -1,4 +1,11 @@
-import { regenerateInvite, updateUserRoles, AdminError, ALL_ROLES, type GetUserResult, type UserRole } from '../services/admin';
+import {
+  regenerateInvite,
+  updateUserRoles,
+  AdminError,
+  ALL_ROLES,
+  type GetUserResult,
+  type UserRole,
+} from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
 
 const styles = new CSSStyleSheet();

@@ -43,7 +43,10 @@ describe('pm-create-user-form — role selection', { tags: ['213UC4'] }, () => {
     shadow.getElementById('createUserForm')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     await vi.waitFor(() => {
-      expect(mockCreateUser).toHaveBeenCalledWith('coordinator@test.com', expect.arrayContaining(['Teacher', 'Coordinator']));
+      expect(mockCreateUser).toHaveBeenCalledWith(
+        'coordinator@test.com',
+        expect.arrayContaining(['Teacher', 'Coordinator']),
+      );
     });
   });
 });
