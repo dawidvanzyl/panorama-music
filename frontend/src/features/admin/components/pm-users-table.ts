@@ -486,7 +486,7 @@ export class PmUsersTable extends HTMLElement {
     const wrap = document.createElement('div');
     wrap.classList.add('users-table__role-checkboxes');
 
-    for (const role of ['Teacher', 'Admin']) {
+    for (const role of ['Teacher', 'Coordinator', 'Admin']) {
       const label = document.createElement('label');
       label.classList.add('users-table__role-option');
 

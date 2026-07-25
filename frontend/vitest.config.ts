@@ -71,6 +71,9 @@ export default defineConfig({
       { name: '207UC2', description: 'Create wizard step area flexes within the fixed card while header/tabs/actions stay pinned' },
       { name: '207UC3', description: 'Sibling list gets its own internal scroll container instead of growing the modal unbounded' },
       { name: '207UC4', description: 'Sibling search input and Add button are marked non-shrinking so they stay pinned above the scrolling list' },
+      { name: '213UC4', description: 'Coordinator is an assignable role alongside Teacher and Admin in the create-user request' },
+      { name: '213UC5', description: 'Admin assigns the Coordinator role and saves; the user is shown with the Coordinator role' },
+      { name: '213UC6', description: 'Admin removes the Coordinator role and saves; the user no longer shows the Coordinator role' },
     ],
   },
 })

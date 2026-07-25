@@ -125,6 +125,10 @@ template.innerHTML = `
               Teacher
             </label>
             <label class="create-user__role-option">
+              <input type="checkbox" id="roleCoordinator" value="Coordinator" />
+              Coordinator
+            </label>
+            <label class="create-user__role-option">
               <input type="checkbox" id="roleAdmin" value="Admin" />
               Admin
             </label>
@@ -143,6 +147,7 @@ export class PmCreateUserForm extends HTMLElement {
   private form: HTMLFormElement | null = null;
   private emailInput: HTMLInputElement | null = null;
   private roleTeacher: HTMLInputElement | null = null;
+  private roleCoordinator: HTMLInputElement | null = null;
   private roleAdmin: HTMLInputElement | null = null;
   private submitBtn: HTMLButtonElement | null = null;
   private message: HTMLElement | null = null;
@@ -159,6 +164,7 @@ export class PmCreateUserForm extends HTMLElement {
     this.form = this.shadowRoot!.getElementById('createUserForm') as HTMLFormElement;
     this.emailInput = this.shadowRoot!.getElementById('email') as HTMLInputElement;
     this.roleTeacher = this.shadowRoot!.getElementById('roleTeacher') as HTMLInputElement;
+    this.roleCoordinator = this.shadowRoot!.getElementById('roleCoordinator') as HTMLInputElement;
     this.roleAdmin = this.shadowRoot!.getElementById('roleAdmin') as HTMLInputElement;
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
@@ -174,6 +180,7 @@ export class PmCreateUserForm extends HTMLElement {
   private getSelectedRoles(): string[] {
     const roles: string[] = [];
     if (this.roleTeacher?.checked) roles.push('Teacher');
+    if (this.roleCoordinator?.checked) roles.push('Coordinator');
     if (this.roleAdmin?.checked) roles.push('Admin');
     return roles;
   }

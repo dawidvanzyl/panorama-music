@@ -177,6 +177,78 @@ describe('createUser multi-role', { tags: ['M1.1UC24'] }, () => {
   });
 });
 
+describe('createUser with Coordinator role', { tags: ['213UC4'] }, () => {
+  it('sends Coordinator as an assignable role alongside Teacher and Admin', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({ userId: 'new-user-id', inviteUrl: '/#/register?token=coord' }),
+    });
+
+    const result = await createUser('coordinator@test.com', ['Coordinator']);
+
+    expect(result.inviteUrl).toBe('/#/register?token=coord');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/users',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'coordinator@test.com', roles: ['Coordinator'] }),
+      }),
+    );
+  });
+});
+
+describe('updateUserRoles assigns Coordinator', { tags: ['213UC5'] }, () => {
+  it('sends Coordinator in the roles list and the user is shown with the Coordinator role', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const updated = { userId: 'u1', email: 'teacher@test.com', roles: ['Teacher', 'Coordinator'], isActive: true };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => updated,
+    });
+
+    const result = await updateUserRoles('u1', ['Teacher', 'Coordinator']);
+
+    expect(result.roles).toEqual(['Teacher', 'Coordinator']);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/users/u1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ roles: ['Teacher', 'Coordinator'] }),
+      }),
+    );
+  });
+});
+
+describe('updateUserRoles removes Coordinator', { tags: ['213UC6'] }, () => {
+  it('sends roles without Coordinator and the user no longer shows the Coordinator role', async () => {
+    localStorage.setItem('pm_access_token', 'admin-token');
+
+    const updated = { userId: 'u1', email: 'teacher@test.com', roles: ['Teacher'], isActive: true };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => updated,
+    });
+
+    const result = await updateUserRoles('u1', ['Teacher']);
+
+    expect(result.roles).toEqual(['Teacher']);
+    expect(result.roles).not.toContain('Coordinator');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/users/u1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ roles: ['Teacher'] }),
+      }),
+    );
+  });
+});
+
 describe('updateUserRoles', { tags: ['M1.1UC15'] }, () => {
   it('sends updated roles to PATCH endpoint and returns updated user', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');

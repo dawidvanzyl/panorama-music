@@ -91,11 +91,13 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
 
     const checkboxes = el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes).toHaveLength(3);
 
     const teacherBox = [...checkboxes].find((cb) => cb.value === 'Teacher')!;
+    const coordinatorBox = [...checkboxes].find((cb) => cb.value === 'Coordinator')!;
     const adminBox = [...checkboxes].find((cb) => cb.value === 'Admin')!;
     expect(teacherBox.checked).toBe(true);
+    expect(coordinatorBox.checked).toBe(false);
     expect(adminBox.checked).toBe(false);
   });
 
