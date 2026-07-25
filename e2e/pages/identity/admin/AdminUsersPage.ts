@@ -1,13 +1,14 @@
 import type { Locator, Page } from '@playwright/test';
 import { BasePage } from '../../BasePage';
 
-export type UserRole = 'Teacher' | 'Admin';
+export type UserRole = 'Teacher' | 'Coordinator' | 'Admin';
 
-const ALL_ROLES: UserRole[] = ['Teacher', 'Admin'];
+const ALL_ROLES: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
 
 export class AdminUsersPage extends BasePage {
   readonly emailInput: Locator;
   readonly roleTeacherCheckbox: Locator;
+  readonly roleCoordinatorCheckbox: Locator;
   readonly roleAdminCheckbox: Locator;
   readonly submitButton: Locator;
   readonly userCreatedInviteUrl: Locator;
@@ -20,6 +21,7 @@ export class AdminUsersPage extends BasePage {
     super(page);
     this.emailInput = page.locator('#email');
     this.roleTeacherCheckbox = page.locator('#roleTeacher');
+    this.roleCoordinatorCheckbox = page.locator('#roleCoordinator');
     this.roleAdminCheckbox = page.locator('#roleAdmin');
     this.submitButton = page.locator('#submitBtn');
     this.userCreatedInviteUrl = page.locator('#userCreatedBanner').locator('#inviteUrl');
@@ -38,6 +40,9 @@ export class AdminUsersPage extends BasePage {
 
     if (roles.includes('Teacher') !== (await this.roleTeacherCheckbox.isChecked())) {
       await this.roleTeacherCheckbox.click();
+    }
+    if (roles.includes('Coordinator') !== (await this.roleCoordinatorCheckbox.isChecked())) {
+      await this.roleCoordinatorCheckbox.click();
     }
     if (roles.includes('Admin') !== (await this.roleAdminCheckbox.isChecked())) {
       await this.roleAdminCheckbox.click();
