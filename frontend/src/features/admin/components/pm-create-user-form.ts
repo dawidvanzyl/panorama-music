@@ -1,4 +1,4 @@
-import { createUser, AdminError } from '../services/admin';
+import { createUser, AdminError, ALL_ROLES, type UserRole } from '../services/admin';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -106,6 +106,14 @@ styles.replaceSync(`
     }
   `);
 
+const rolesMarkup = ALL_ROLES.map(
+  (role) => `
+            <label class="create-user__role-option">
+              <input type="checkbox" id="role${role}" value="${role}" ${role === 'Teacher' ? 'checked' : ''} />
+              ${role}
+            </label>`,
+).join('');
+
 const template = document.createElement('template');
 template.innerHTML = `
 
@@ -119,19 +127,7 @@ template.innerHTML = `
         </div>
         <div class="create-user__field">
           <label class="create-user__label">Roles</label>
-          <div class="create-user__roles">
-            <label class="create-user__role-option">
-              <input type="checkbox" id="roleTeacher" value="Teacher" checked />
-              Teacher
-            </label>
-            <label class="create-user__role-option">
-              <input type="checkbox" id="roleCoordinator" value="Coordinator" />
-              Coordinator
-            </label>
-            <label class="create-user__role-option">
-              <input type="checkbox" id="roleAdmin" value="Admin" />
-              Admin
-            </label>
+          <div class="create-user__roles">${rolesMarkup}
           </div>
         </div>
         <button type="submit" class="create-user__submit" id="submitBtn">Create User</button>
@@ -146,9 +142,7 @@ template.innerHTML = `
 export class PmCreateUserForm extends HTMLElement {
   private form: HTMLFormElement | null = null;
   private emailInput: HTMLInputElement | null = null;
-  private roleTeacher: HTMLInputElement | null = null;
-  private roleCoordinator: HTMLInputElement | null = null;
-  private roleAdmin: HTMLInputElement | null = null;
+  private roleCheckboxes = new Map<UserRole, HTMLInputElement>();
   private submitBtn: HTMLButtonElement | null = null;
   private message: HTMLElement | null = null;
   private messageText: HTMLElement | null = null;
@@ -163,9 +157,9 @@ export class PmCreateUserForm extends HTMLElement {
   connectedCallback(): void {
     this.form = this.shadowRoot!.getElementById('createUserForm') as HTMLFormElement;
     this.emailInput = this.shadowRoot!.getElementById('email') as HTMLInputElement;
-    this.roleTeacher = this.shadowRoot!.getElementById('roleTeacher') as HTMLInputElement;
-    this.roleCoordinator = this.shadowRoot!.getElementById('roleCoordinator') as HTMLInputElement;
-    this.roleAdmin = this.shadowRoot!.getElementById('roleAdmin') as HTMLInputElement;
+    for (const role of ALL_ROLES) {
+      this.roleCheckboxes.set(role, this.shadowRoot!.getElementById(`role${role}`) as HTMLInputElement);
+    }
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
     this.messageText = this.shadowRoot!.getElementById('messageText') as HTMLElement;
@@ -177,12 +171,8 @@ export class PmCreateUserForm extends HTMLElement {
     this.form?.removeEventListener('submit', this.handleSubmit);
   }
 
-  private getSelectedRoles(): string[] {
-    const roles: string[] = [];
-    if (this.roleTeacher?.checked) roles.push('Teacher');
-    if (this.roleCoordinator?.checked) roles.push('Coordinator');
-    if (this.roleAdmin?.checked) roles.push('Admin');
-    return roles;
+  private getSelectedRoles(): UserRole[] {
+    return ALL_ROLES.filter((role) => this.roleCheckboxes.get(role)?.checked);
   }
 
   private handleSubmit = async (e: Event): Promise<void> => {
@@ -201,7 +191,7 @@ export class PmCreateUserForm extends HTMLElement {
     try {
       const result = await createUser(this.emailInput!.value, roles);
       this.form!.reset();
-      this.roleTeacher!.checked = true;
+      this.roleCheckboxes.get('Teacher')!.checked = true;
       this.dispatchEvent(
         new CustomEvent('user-created', {
           bubbles: true,

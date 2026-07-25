@@ -10,5 +10,9 @@ public sealed class UpdateUserRolesRequestValidator : AbstractValidator<UpdateUs
 		RuleFor(x => x.Roles)
 			.NotEmpty()
 				.WithMessage("At least one role must be assigned.");
+
+		RuleForEach(x => x.Roles)
+			.IsInEnum()
+				.WithMessage("Roles must be one of the defined role values.");
 	}
 }

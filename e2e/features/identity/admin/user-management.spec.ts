@@ -27,17 +27,10 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
     await expect(adminUsersPage.row(email)).toContainText('Admin');
     await expect(adminUsersPage.row(email)).toContainText('Teacher');
 
-    await adminUsersPage.editRoles(email, ['Teacher', 'Coordinator']);
-
-    await expect(adminUsersPage.row(email)).toContainText('Teacher');
-    await expect(adminUsersPage.row(email)).toContainText('Coordinator');
-    await expect(adminUsersPage.row(email)).not.toContainText('Admin');
-
     await adminUsersPage.editRoles(email, ['Admin']);
 
     await expect(adminUsersPage.row(email)).toContainText('Admin');
     await expect(adminUsersPage.row(email)).not.toContainText('Teacher');
-    await expect(adminUsersPage.row(email)).not.toContainText('Coordinator');
   });
 
   test('deactivates an active user, who can no longer log in', async ({ page }) => {

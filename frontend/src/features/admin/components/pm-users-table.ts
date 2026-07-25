@@ -1,4 +1,4 @@
-import { regenerateInvite, updateUserRoles, AdminError, type GetUserResult } from '../services/admin';
+import { regenerateInvite, updateUserRoles, AdminError, ALL_ROLES, type GetUserResult, type UserRole } from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
 
 const styles = new CSSStyleSheet();
@@ -486,7 +486,7 @@ export class PmUsersTable extends HTMLElement {
     const wrap = document.createElement('div');
     wrap.classList.add('users-table__role-checkboxes');
 
-    for (const role of ['Teacher', 'Coordinator', 'Admin']) {
+    for (const role of ALL_ROLES) {
       const label = document.createElement('label');
       label.classList.add('users-table__role-option');
 
@@ -502,9 +502,9 @@ export class PmUsersTable extends HTMLElement {
     return wrap;
   }
 
-  private getCheckedRoles(rolesCell: HTMLElement): string[] {
+  private getCheckedRoles(rolesCell: HTMLElement): UserRole[] {
     return Array.from(rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map(
-      (cb) => cb.value,
+      (cb) => cb.value as UserRole,
     );
   }
 

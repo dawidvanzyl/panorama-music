@@ -3,6 +3,10 @@ import { handleUnauthorized } from '../../../services/auth';
 
 const API_BASE = '/api/users';
 
+export type UserRole = 'Teacher' | 'Coordinator' | 'Admin';
+
+export const ALL_ROLES: readonly UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
+
 export interface GetUserResult {
   userId: string;
   email: string;
@@ -76,7 +80,7 @@ export async function getUsers(): Promise<GetUserResult[]> {
   return _usersCache;
 }
 
-export async function createUser(email: string, roles: string[]): Promise<CreateUserResult> {
+export async function createUser(email: string, roles: UserRole[]): Promise<CreateUserResult> {
   const response = await fetch(API_BASE, {
     method: 'POST',
     headers: authHeaders(),
@@ -87,7 +91,7 @@ export async function createUser(email: string, roles: string[]): Promise<Create
   return result;
 }
 
-export async function updateUserRoles(userId: string, roles: string[]): Promise<UpdateUserRolesResult> {
+export async function updateUserRoles(userId: string, roles: UserRole[]): Promise<UpdateUserRolesResult> {
   const response = await fetch(`${API_BASE}/${userId}`, {
     method: 'PATCH',
     headers: authHeaders(),

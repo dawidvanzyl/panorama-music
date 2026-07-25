@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PmUsersTable } from '../pm-users-table';
 import type { GetUserResult } from '../../services/admin';
+
+const mockUpdateUserRoles = vi.fn();
+vi.mock('../../services/admin', async () => {
+  const actual = await vi.importActual<typeof import('../../services/admin')>('../../services/admin');
+  return {
+    ...actual,
+    updateUserRoles: (userId: string, roles: string[]) => mockUpdateUserRoles(userId, roles),
+  };
+});
 
 const activeUser: GetUserResult = {
   userId: 'user-active',
@@ -65,7 +74,7 @@ describe('pm-users-table — deactivated user row', { tags: ['M1.1UC38', 'M1.1UC
   });
 });
 
-describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
+describe('pm-users-table — inline role edit', { tags: ['M1.1UC14', '213UC4'] }, () => {
   let el: PmUsersTable;
 
   beforeEach(() => {
@@ -150,6 +159,57 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14'] }, () => {
     el.users = [activeUser];
     const editBtns = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.users-table__btn--edit')];
     expect(editBtns.every((btn) => btn.style.visibility === 'hidden')).toBe(true);
+  });
+});
+
+describe('pm-users-table — saving Coordinator role edits reflects on the row', { tags: ['213UC5', '213UC6'] }, () => {
+  let el: PmUsersTable;
+
+  beforeEach(() => {
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+    mockUpdateUserRoles.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('saving with the Coordinator checkbox ticked shows the Coordinator badge on the row (213UC5)', async () => {
+    mockUpdateUserRoles.mockResolvedValueOnce({
+      userId: activeUser.userId,
+      email: activeUser.email,
+      roles: ['Teacher', 'Coordinator'],
+      isActive: true,
+    });
+
+    el.users = [activeUser];
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
+    el.shadowRoot!.querySelector<HTMLInputElement>('input[type="checkbox"][value="Coordinator"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+
+    await vi.waitFor(() => {
+      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).toContain('Coordinator');
+    });
+  });
+
+  it('saving with the Coordinator checkbox unticked no longer shows the Coordinator badge on the row (213UC6)', async () => {
+    const coordinatorUser: GetUserResult = { ...activeUser, roles: ['Teacher', 'Coordinator'] };
+    mockUpdateUserRoles.mockResolvedValueOnce({
+      userId: coordinatorUser.userId,
+      email: coordinatorUser.email,
+      roles: ['Teacher'],
+      isActive: true,
+    });
+
+    el.users = [coordinatorUser];
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
+    el.shadowRoot!.querySelector<HTMLInputElement>('input[type="checkbox"][value="Coordinator"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+
+    await vi.waitFor(() => {
+      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).not.toContain('Coordinator');
+    });
   });
 });
 
