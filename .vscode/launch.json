@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch API + Frontend (F5)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "dev: full stack",
+      "program": "${workspaceFolder}/src/PanoramaMusic.Api/bin/Debug/net10.0/PanoramaMusic.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/PanoramaMusic.Api",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "serverReadyAction": {
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "http://localhost:5173",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Launch API only",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/PanoramaMusic.Api/bin/Debug/net10.0/PanoramaMusic.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/PanoramaMusic.Api",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Debug Frontend (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend",
+      "preLaunchTask": "frontend: dev",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Everything (API + Frontend breakpoints)",
+      "configurations": ["Launch API only", "Debug Frontend (Chrome)"],
+      "stopAll": true
+    }
+  ]
+}

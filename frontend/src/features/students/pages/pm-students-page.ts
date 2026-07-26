@@ -2,6 +2,7 @@ import '../components/pm-student-filter-bar';
 import '../components/pm-students-table';
 import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-student-modal';
+import '../components/pm-delete-guardian-modal';
 import {
   getStudents,
   createStudent,
@@ -15,10 +16,26 @@ import {
   type StudentInput,
   type StudentResult,
 } from '../services/students';
+import {
+  getGuardians,
+  addGuardian,
+  updateGuardian,
+  unlinkGuardian,
+  deleteGuardian,
+  isGuardianShared,
+  syncGuardians,
+  getGuardianRelationships,
+  getMissingSiblingGuardians,
+  peekCachedGuardianRelationships,
+  GuardiansError,
+  type GuardianInput,
+  type GuardianResult,
+} from '../services/guardians';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
+import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -84,12 +101,14 @@ template.innerHTML = `
   </div>
   <pm-student-wizard-modal id="wizardModal"></pm-student-wizard-modal>
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
+  <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
 `;
 
 export class PmStudentsPage extends HTMLElement {
   private studentsTable: PmStudentsTable | null = null;
   private wizardModal: PmStudentWizardModal | null = null;
   private deleteModal: PmDeleteStudentModal | null = null;
+  private deleteGuardianModal: PmDeleteGuardianModal | null = null;
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
   private _allStudents: StudentResult[] = [];
@@ -106,6 +125,9 @@ export class PmStudentsPage extends HTMLElement {
     this.studentsTable = this.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable;
     this.wizardModal = this.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteStudentModal;
+    this.deleteGuardianModal = this.shadowRoot!.getElementById(
+      'deleteGuardianModal',
+    ) as unknown as PmDeleteGuardianModal;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
@@ -120,9 +142,17 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.addEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.addEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
+    this.shadowRoot!.addEventListener('guardians-tab-activated', this.handleGuardiansTabActivated);
+    this.shadowRoot!.addEventListener('create-guardians-preview-requested', this.handleCreateGuardiansPreviewRequested);
+    this.shadowRoot!.addEventListener('guardian-add-requested', this.handleGuardianAddRequested);
+    this.shadowRoot!.addEventListener('guardian-update-requested', this.handleGuardianUpdateRequested);
+    this.shadowRoot!.addEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
+    this.shadowRoot!.addEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
+    this.shadowRoot!.addEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
 
     clearStudentsCache();
     void this.loadStudents();
+    void this.loadGuardianRelationships();
   }
 
   disconnectedCallback(): void {
@@ -137,11 +167,43 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.removeEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.removeEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
+    this.shadowRoot!.removeEventListener('guardians-tab-activated', this.handleGuardiansTabActivated);
+    this.shadowRoot!.removeEventListener(
+      'create-guardians-preview-requested',
+      this.handleCreateGuardiansPreviewRequested,
+    );
+    this.shadowRoot!.removeEventListener('guardian-add-requested', this.handleGuardianAddRequested);
+    this.shadowRoot!.removeEventListener('guardian-update-requested', this.handleGuardianUpdateRequested);
+    this.shadowRoot!.removeEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
+    this.shadowRoot!.removeEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
+    this.shadowRoot!.removeEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
   }
 
   private handleCreateClick = (): void => {
-    this.wizardModal!.openForCreate(this._allStudents);
+    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForCreate(this._allStudents));
   };
+
+  /**
+   * Opens the wizard synchronously when the guardian-relationships lookup is
+   * already cached (the common case — loaded eagerly on page mount), so the
+   * existing synchronous open-then-fill flows are unaffected. Falls back to
+   * awaiting the fetch (which populates the same cache) only on a cold
+   * cache, so the Guardians step's relationship dropdown is never empty.
+   */
+  private openWizardWhenGuardianRelationshipsReady(open: () => void): void {
+    const cached = peekCachedGuardianRelationships();
+    if (cached) {
+      this.wizardModal!.guardianRelationships = cached;
+      open();
+      return;
+    }
+    getGuardianRelationships()
+      .then((relationships) => {
+        this.wizardModal!.guardianRelationships = relationships;
+        open();
+      })
+      .catch((err: unknown) => this.showError(err));
+  }
 
   private handleFilterChanged = (event: Event): void => {
     this._currentFilters = (event as CustomEvent<StudentFilters>).detail;
@@ -149,8 +211,9 @@ export class PmStudentsPage extends HTMLElement {
   };
 
   private handleCreateRequested = async (event: Event): Promise<void> => {
-    const { input, pendingSiblingIds } = (event as CustomEvent<{ input: StudentInput; pendingSiblingIds: string[] }>)
-      .detail;
+    const { input, pendingSiblingIds, pendingGuardians } = (
+      event as CustomEvent<{ input: StudentInput; pendingSiblingIds: string[]; pendingGuardians: GuardianInput[] }>
+    ).detail;
     this.clearError();
     try {
       const created = await createStudent(input);
@@ -158,6 +221,9 @@ export class PmStudentsPage extends HTMLElement {
       await this.loadStudents();
       if (pendingSiblingIds.length > 0) {
         await this.linkPendingSiblings(created.studentId, pendingSiblingIds);
+      }
+      if (pendingGuardians.length > 0) {
+        await this.linkPendingGuardians(created.studentId, pendingGuardians);
       }
     } catch (err) {
       this.wizardModal!.showStudentError(err instanceof StudentsError ? err.message : 'An unexpected error occurred');
@@ -178,9 +244,24 @@ export class PmStudentsPage extends HTMLElement {
     }
   }
 
+  /**
+   * Runs after siblings are linked, so a guardian added during Create links to
+   * the student's now-established sibling group too, matching addGuardian's
+   * edit-mode behaviour.
+   */
+  private async linkPendingGuardians(studentId: string, guardians: GuardianInput[]): Promise<void> {
+    try {
+      for (const guardian of guardians) {
+        await addGuardian(studentId, guardian);
+      }
+    } catch (err) {
+      this.showError(err);
+    }
+  }
+
   private handleEditRequested = (event: Event): void => {
     const { student } = (event as CustomEvent<{ student: StudentResult }>).detail;
-    this.wizardModal!.openForEdit(student);
+    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForEdit(student));
   };
 
   private handleUpdateRequested = async (event: Event): Promise<void> => {
@@ -215,10 +296,12 @@ export class PmStudentsPage extends HTMLElement {
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
     try {
-      const siblings = await getSiblings(studentId);
+      const [siblings, guardians] = await Promise.all([getSiblings(studentId), getGuardians(studentId)]);
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
+      this.studentsTable!.setGuardiansSummary(studentId, guardians);
     } catch {
       this.studentsTable!.setSiblingsSummary(studentId, []);
+      this.studentsTable!.setGuardiansSummary(studentId, []);
     }
   };
 
@@ -260,6 +343,141 @@ export class PmStudentsPage extends HTMLElement {
     }
   };
 
+  private handleGuardiansTabActivated = async (event: Event): Promise<void> => {
+    const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    await this.refreshWizardGuardians(studentId);
+  };
+
+  private handleCreateGuardiansPreviewRequested = async (event: Event): Promise<void> => {
+    const { siblingIds } = (event as CustomEvent<{ siblingIds: string[] }>).detail;
+    if (siblingIds.length === 0) {
+      this.wizardModal!.setInheritedGuardiansForCreate([]);
+      return;
+    }
+    try {
+      const lists = await Promise.all(siblingIds.map((id) => getGuardians(id)));
+      this.wizardModal!.setInheritedGuardiansForCreate(this.mergeGuardianLists(lists));
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleGuardianAddRequested = async (event: Event): Promise<void> => {
+    const { studentId, input } = (event as CustomEvent<{ studentId: string; input: GuardianInput }>).detail;
+    try {
+      await addGuardian(studentId, input);
+      await this.refreshWizardGuardians(studentId);
+      this.wizardModal!.closeGuardianForm();
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleGuardianUpdateRequested = async (event: Event): Promise<void> => {
+    const { guardianId, input } = (event as CustomEvent<{ guardianId: string; input: GuardianInput }>).detail;
+    try {
+      await updateGuardian(guardianId, input);
+      if (this.wizardModal!.studentId) {
+        await this.refreshWizardGuardians(this.wizardModal!.studentId);
+      }
+      this.wizardModal!.closeGuardianForm();
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleGuardianDeleteRequested = async (event: Event): Promise<void> => {
+    const { studentId, guardian } = (event as CustomEvent<{ studentId: string; guardian: GuardianResult }>).detail;
+    try {
+      const shared = await isGuardianShared(guardian.guardianId);
+      this.deleteGuardianModal!.show(
+        studentId,
+        guardian.guardianId,
+        `${guardian.firstName} ${guardian.surname}`,
+        shared,
+      );
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleGuardianDeleteConfirmed = async (event: Event): Promise<void> => {
+    const { studentId, guardianId, scope } = (
+      event as CustomEvent<{ studentId: string; guardianId: string; scope: GuardianDeleteScope }>
+    ).detail;
+    try {
+      if (scope === 'all') {
+        await deleteGuardian(guardianId);
+      } else {
+        await unlinkGuardian(studentId, guardianId);
+      }
+      await this.refreshWizardGuardians(studentId);
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleGuardiansSyncRequested = async (event: Event): Promise<void> => {
+    const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    try {
+      await syncGuardians(studentId);
+      await this.refreshWizardGuardians(studentId);
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private refreshWizardGuardians = async (studentId: string): Promise<void> => {
+    try {
+      const [guardians, missingGuardians] = await Promise.all([
+        getGuardians(studentId),
+        getMissingSiblingGuardians(studentId),
+      ]);
+      this.wizardModal!.guardians = guardians;
+      this.wizardModal!.hasMissingSiblingGuardians = missingGuardians.length > 0;
+    } catch (err) {
+      this.wizardModal!.showGuardiansError(
+        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private mergeGuardianLists(lists: GuardianResult[][]): GuardianResult[] {
+    const seen = new Set<string>();
+    const merged: GuardianResult[] = [];
+    for (const list of lists) {
+      for (const guardian of list) {
+        if (!seen.has(guardian.guardianId)) {
+          seen.add(guardian.guardianId);
+          merged.push(guardian);
+        }
+      }
+    }
+    return merged;
+  }
+
+  private async loadGuardianRelationships(): Promise<void> {
+    try {
+      const relationships = await getGuardianRelationships();
+      this.wizardModal!.guardianRelationships = relationships;
+      this.studentsTable!.relationships = relationships;
+    } catch (err) {
+      this.showError(err);
+    }
+  }
+
   private loadStudents = async (): Promise<void> => {
     this.clearError();
     try {
@@ -275,7 +493,8 @@ export class PmStudentsPage extends HTMLElement {
   }
 
   private showError(err: unknown): void {
-    this.errorBanner!.textContent = err instanceof StudentsError ? err.message : 'An unexpected error occurred';
+    this.errorBanner!.textContent =
+      err instanceof StudentsError || err instanceof GuardiansError ? err.message : 'An unexpected error occurred';
     this.errorBanner!.classList.add('students-page__error--visible');
   }
 

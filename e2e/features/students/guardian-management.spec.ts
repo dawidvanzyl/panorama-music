@@ -1,0 +1,140 @@
+import { test, expect } from '../../fixtures/base';
+import { goToStudentsPage } from '../../fixtures/testUsers';
+
+function uniqueName(label: string): { firstName: string; lastName: string } {
+  return {
+    firstName: `E2E-${label}`,
+    lastName: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  };
+}
+
+test.describe('Guardian Profile Management', { tag: ['@6IT1'] }, () => {
+  test('creates, reads, updates, and deletes a guardian profile', async ({ page }) => {
+    const student = uniqueName('guardian-crud');
+    const fullName = `${student.firstName} ${student.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+
+    await studentsPage.openGuardiansTab(fullName);
+    await studentsPage.addGuardian({
+      firstName: 'Nomvula',
+      surname: 'Dube',
+      relationshipLabel: 'Mother',
+      cell: '0821234567',
+      email: 'nomvula.dube@example.com',
+      receivesCorrespondence: true,
+      responsibleForPayment: true,
+    });
+
+    const createdRow = studentsPage.guardianListRow('Nomvula Dube');
+    await expect(createdRow).toBeVisible();
+    await expect(createdRow).toContainText('Mother');
+    await expect(createdRow).toContainText('0821234567');
+
+    await studentsPage.editGuardian('Nomvula Dube', {
+      surname: 'Khumalo',
+      relationshipLabel: 'Father',
+    });
+    const updatedRow = studentsPage.guardianListRow('Nomvula Khumalo');
+    await expect(updatedRow).toBeVisible();
+    await expect(updatedRow).toContainText('Father');
+    await expect(studentsPage.guardianListRow('Nomvula Dube')).toHaveCount(0);
+
+    await studentsPage.deleteGuardian('Nomvula Khumalo');
+    await expect(studentsPage.guardianListRow('Nomvula Khumalo')).toHaveCount(0);
+
+    await studentsPage.closeWizard();
+  });
+});
+
+test.describe('Guardian Shared Across Multiple Students', { tag: ['@6IT2'] }, () => {
+  test('a guardian added to one student is also linked to their linked sibling', async ({
+    page,
+  }) => {
+    const studentA = uniqueName('guardian-shared-a');
+    const studentB = uniqueName('guardian-shared-b');
+    const fullNameA = `${studentA.firstName} ${studentA.lastName}`;
+    const fullNameB = `${studentB.firstName} ${studentB.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: studentA.firstName,
+      lastName: studentA.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+    await studentsPage.createStudent({
+      firstName: studentB.firstName,
+      lastName: studentB.lastName,
+      dateOfBirth: '2013-09-05',
+      grade: 'Grade5',
+      class: 'E1',
+      phase: 'Senior',
+      language: 'Afrikaans',
+    });
+
+    await studentsPage.openSiblingsTab(fullNameA);
+    await studentsPage.addSibling(fullNameB);
+    await studentsPage.closeWizard();
+
+    await studentsPage.openGuardiansTab(fullNameA);
+    await studentsPage.addGuardian({
+      firstName: 'Peter',
+      surname: 'Ferreira',
+      relationshipLabel: 'Father',
+    });
+    await expect(studentsPage.guardianListRow('Peter Ferreira')).toBeVisible();
+    await studentsPage.closeWizard();
+
+    await studentsPage.openGuardiansTab(fullNameB);
+    await expect(studentsPage.guardianListRow('Peter Ferreira')).toBeVisible();
+    await studentsPage.closeWizard();
+  });
+});
+
+test.describe('Student With Multiple Guardians', { tag: ['@6IT3'] }, () => {
+  test('a student can have multiple linked guardians', async ({ page }) => {
+    const student = uniqueName('guardian-multiple');
+    const fullName = `${student.firstName} ${student.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+
+    await studentsPage.openGuardiansTab(fullName);
+    await studentsPage.addGuardian({
+      firstName: 'Nomvula',
+      surname: 'Dube',
+      relationshipLabel: 'Mother',
+    });
+    await studentsPage.addGuardian({
+      firstName: 'Peter',
+      surname: 'Dube',
+      relationshipLabel: 'Father',
+    });
+
+    await expect(studentsPage.guardianListRow('Nomvula Dube')).toBeVisible();
+    await expect(studentsPage.guardianListRow('Peter Dube')).toBeVisible();
+
+    await studentsPage.closeWizard();
+  });
+});

@@ -87,6 +87,9 @@ styles.replaceSync(`
       padding: 12px 16px;
       border-top: 1px solid var(--pm-border);
     }
+    .audit-table__footer[hidden] {
+      display: none;
+    }
     .audit-table__footer-label {
       font-size: 12px;
       color: var(--pm-text-muted);

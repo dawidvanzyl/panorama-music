@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using PanoramaMusic.Students.Application.Handlers;
+using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;

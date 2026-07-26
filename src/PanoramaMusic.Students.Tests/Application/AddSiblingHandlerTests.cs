@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using PanoramaMusic.Students.Application.Commands;
-using PanoramaMusic.Students.Application.Handlers;
+using PanoramaMusic.Students.Application.Commands.Siblings;
+using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
@@ -40,6 +40,12 @@ public class AddSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 		_context.Repositories.SiblingRepositoryMock
 			.Setup(r => r.AddAsync(It.IsAny<Sibling>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(siblingStudent.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
 
 		var result = await _handler.HandleAsync(
 			new AddSiblingCommand(student.StudentId, siblingStudent.StudentId),
@@ -123,5 +129,50 @@ public class AddSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 
 		_context.Repositories.SiblingRepositoryMock.Verify(
 			r => r.AddAsync(It.IsAny<Sibling>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "212UC7")]
+	public async Task HandleAsync_StudentsWithExistingGuardians_LinksEachStudentToTheOthersGuardians()
+	{
+		var student = StudentFactory.Create();
+		var siblingStudent = StudentFactory.Create(firstName: "Julian", lastName: "Thorne");
+		var studentGuardian = GuardianFactory.Create(firstName: "Nomvula", surname: "Dube");
+		var siblingGuardian = GuardianFactory.Create(firstName: "Peter", surname: "Thorne");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(siblingStudent.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(siblingStudent);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.AddAsync(It.IsAny<Sibling>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([studentGuardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(siblingStudent.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([siblingGuardian]);
+
+		await _handler.HandleAsync(
+			new AddSiblingCommand(student.StudentId, siblingStudent.StudentId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(
+					It.Is<StudentGuardian>(l => l.StudentId == siblingStudent.StudentId && l.GuardianId == studentGuardian.GuardianId),
+					It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(
+					It.Is<StudentGuardian>(l => l.StudentId == student.StudentId && l.GuardianId == siblingGuardian.GuardianId),
+					It.IsAny<CancellationToken>()),
+				Times.Once));
 	}
 }
