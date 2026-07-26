@@ -79,6 +79,9 @@ export default defineConfig({
       { name: '212UC19', description: 'The relationship dropdown in the Add Guardian form is populated from the guardian_relationships lookup' },
       { name: '212UC20', description: 'Expanding a student row shows a read-only summary of that student linked guardians' },
       { name: '212UC21', description: 'Entering the Create-wizard Guardians step with siblings selected prepopulates their guardians as read-only rows' },
+      { name: '213UC4', description: 'Coordinator is an assignable role alongside Teacher and Admin in the create-user request' },
+      { name: '213UC5', description: 'Admin assigns the Coordinator role and saves; the user is shown with the Coordinator role' },
+      { name: '213UC6', description: 'Admin removes the Coordinator role and saves; the user no longer shows the Coordinator role' },
     ],
   },
 })

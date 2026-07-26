@@ -40,4 +40,15 @@ public class CreateUserRequestValidatorTests
 
 		result.IsValid.ShouldBeTrue();
 	}
+
+	[Fact]
+	[Trait("AC", "213UC2")]
+	public void Validate_RoleValueNotDefinedInEnum_ReturnsFailureNamingRoles()
+	{
+		var result = _validator.Validate(new CreateUserRequest("user@test.com", [(Role)999]));
+
+		result.ShouldSatisfyAllConditions(
+			result => result.IsValid.ShouldBeFalse(),
+			result => result.Errors.ShouldContain(e => e.PropertyName == "Roles[0]"));
+	}
 }

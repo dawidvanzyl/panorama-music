@@ -79,3 +79,16 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
     await expect(dashboardPage.heading).toBeVisible();
   });
 });
+
+test.describe('Coordinator Role Assignment', { tag: '@6IT7' }, () => {
+  test('assigns the Coordinator role to a user and reflects it on the user', async ({ page }) => {
+    const email = uniqueTestEmail('coordinator-assign');
+    await createRegisteredUser(page, email, ORIGINAL_PASSWORD, ['Teacher']);
+
+    const adminUsersPage = await goToAdminUsersPage(page);
+    await adminUsersPage.editRoles(email, ['Teacher', 'Coordinator']);
+
+    await expect(adminUsersPage.row(email)).toContainText('Teacher');
+    await expect(adminUsersPage.row(email)).toContainText('Coordinator');
+  });
+});

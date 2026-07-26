@@ -2,6 +2,7 @@ namespace PanoramaMusic.Identity.Domain.Enums;
 
 public enum Role
 {
-	Admin,
-	Teacher
+	Teacher,
+	Coordinator,
+	Admin
 }

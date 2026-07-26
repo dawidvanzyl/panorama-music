@@ -35,4 +35,22 @@ public class ClaimsPrincipalExtensionsTests
 
 		user.HasRole(Role.Admin).ShouldBeTrue();
 	}
+
+	[Fact]
+	[Trait("AC", "213UC1")]
+	public void HasRole_WhenPrincipalHasCoordinatorRole_ReturnsTrue()
+	{
+		var user = ClaimsPrincipalFactory.Create(Role.Coordinator);
+
+		user.HasRole(Role.Coordinator).ShouldBeTrue();
+	}
+
+	[Fact]
+	[Trait("AC", "213UC3")]
+	public void HasRole_WhenPrincipalHasCoordinatorRoleOnly_AdminCheckReturnsFalse()
+	{
+		var user = ClaimsPrincipalFactory.Create(Role.Coordinator);
+
+		user.HasRole(Role.Admin).ShouldBeFalse();
+	}
 }
