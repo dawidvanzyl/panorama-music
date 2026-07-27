@@ -54,6 +54,40 @@ test.describe('Guardian Profile Management', { tag: ['@6IT1'] }, () => {
 
     await studentsPage.closeWizard();
   });
+
+  test("an expanded student row shows a read-only summary of that student's guardians", async ({
+    page,
+  }) => {
+    const student = uniqueName('guardian-summary');
+    const fullName = `${student.firstName} ${student.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+
+    await studentsPage.openGuardiansTab(fullName);
+    await studentsPage.addGuardian({
+      firstName: 'Thandi',
+      surname: 'Nkosi',
+      relationshipLabel: 'Mother',
+      cell: '0829876543',
+    });
+    await studentsPage.closeWizard();
+
+    await studentsPage.toggleRowExpanded(fullName);
+
+    const summary = studentsPage.visibleGuardiansSummary();
+    await expect(summary).toBeVisible();
+    await expect(summary).toContainText('Thandi Nkosi');
+    await expect(summary).toContainText('Mother');
+  });
 });
 
 test.describe('Guardian Shared Across Multiple Students', { tag: ['@6IT2'] }, () => {
@@ -100,6 +134,65 @@ test.describe('Guardian Shared Across Multiple Students', { tag: ['@6IT2'] }, ()
 
     await studentsPage.openGuardiansTab(fullNameB);
     await expect(studentsPage.guardianListRow('Peter Ferreira')).toBeVisible();
+    await studentsPage.closeWizard();
+  });
+
+  test('a sibling that diverged by an unlink can re-link the missing guardian via Sync Guardians', async ({
+    page,
+  }) => {
+    const studentA = uniqueName('guardian-sync-a');
+    const studentB = uniqueName('guardian-sync-b');
+    const fullNameA = `${studentA.firstName} ${studentA.lastName}`;
+    const fullNameB = `${studentB.firstName} ${studentB.lastName}`;
+    const studentsPage = await goToStudentsPage(page);
+
+    await studentsPage.createStudent({
+      firstName: studentA.firstName,
+      lastName: studentA.lastName,
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+    await studentsPage.createStudent({
+      firstName: studentB.firstName,
+      lastName: studentB.lastName,
+      dateOfBirth: '2013-09-05',
+      grade: 'Grade5',
+      class: 'E1',
+      phase: 'Senior',
+      language: 'Afrikaans',
+    });
+
+    await studentsPage.openSiblingsTab(fullNameA);
+    await studentsPage.addSibling(fullNameB);
+    await studentsPage.closeWizard();
+
+    await studentsPage.openGuardiansTab(fullNameA);
+    await studentsPage.addGuardian({
+      firstName: 'Sipho',
+      surname: 'Maluleke',
+      relationshipLabel: 'Father',
+    });
+    await studentsPage.closeWizard();
+
+    // Diverge: unlink from B only, leaving the record and A's link intact.
+    await studentsPage.openGuardiansTab(fullNameB);
+    await expect(studentsPage.guardianListRow('Sipho Maluleke')).toBeVisible();
+    await studentsPage.deleteGuardian('Sipho Maluleke', 'one');
+    await expect(studentsPage.guardianListRow('Sipho Maluleke')).toHaveCount(0);
+
+    // B is now missing a guardian its sibling still holds, so Sync re-links it.
+    await expect(studentsPage.syncGuardiansButton()).toBeVisible();
+    await studentsPage.syncGuardians();
+    await expect(studentsPage.guardianListRow('Sipho Maluleke')).toBeVisible();
+
+    await studentsPage.closeWizard();
+
+    // A kept its link throughout — the unlink was scoped to B.
+    await studentsPage.openGuardiansTab(fullNameA);
+    await expect(studentsPage.guardianListRow('Sipho Maluleke')).toBeVisible();
     await studentsPage.closeWizard();
   });
 });

@@ -23,6 +23,13 @@ public sealed class UnlinkGuardianHandler(
 		var guardian = await guardianRepository.GetByIdAsync(command.GuardianId, cancellationToken)
 			?? throw new EntityNotFoundException($"Guardian {command.GuardianId} was not found.");
 
+		// delete_student_guardian is a no-op when the pair is not linked, so without
+		// this check an unlink of an unrelated guardian would still raise
+		// GuardianUnlinked and return 200 — writing a false audit record.
+		var linkedGuardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken);
+		if (!linkedGuardians.Any(g => g.GuardianId == guardian.GuardianId))
+			throw new DomainException($"{guardian.FirstName} {guardian.Surname} is not linked to {student.FirstName} {student.LastName}.");
+
 		var link = new StudentGuardian(student.StudentId, guardian.GuardianId);
 		link.MarkUnlinked(student, guardian);
 		await studentGuardianRepository.DeleteAsync(link, cancellationToken);

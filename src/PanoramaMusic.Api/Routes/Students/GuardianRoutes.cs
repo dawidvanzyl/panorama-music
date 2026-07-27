@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
@@ -36,6 +37,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -73,6 +75,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetMissingSiblingGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -118,6 +121,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(guardianId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("IsGuardianShared")
 			.Produces<bool>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -133,6 +137,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetGuardianRelationships")
 			.Produces<IList<GuardianRelationshipResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)

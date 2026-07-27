@@ -11,13 +11,20 @@ public sealed class UpdateGuardianRequestValidator : AbstractValidator<UpdateGua
 			.NotEmpty();
 
 		RuleFor(x => x.FirstName)
-			.NotEmpty();
+			.NotEmpty()
+			.MaximumLength(GuardianValidationRules.NameMaxLength);
 
 		RuleFor(x => x.Surname)
-			.NotEmpty();
+			.NotEmpty()
+			.MaximumLength(GuardianValidationRules.NameMaxLength);
+
+		RuleFor(x => x.Cell)
+			.MaximumLength(GuardianValidationRules.CellMaxLength)
+			.When(x => !string.IsNullOrEmpty(x.Cell));
 
 		RuleFor(x => x.Email)
 			.EmailAddress()
+			.MaximumLength(GuardianValidationRules.EmailMaxLength)
 			.When(x => !string.IsNullOrEmpty(x.Email));
 	}
 }

@@ -3,6 +3,7 @@ using Moq;
 using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -34,6 +35,9 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(guardian);
 		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(1);
 
@@ -63,6 +67,9 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(guardian);
 		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(0);
 
@@ -70,5 +77,31 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 
 		_context.Repositories.GuardianRepositoryMock.Verify(
 			r => r.DeleteAsync(It.Is<Guardian>(g => g.GuardianId == guardian.GuardianId), It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	public async Task HandleAsync_GuardianNotLinkedToThisStudent_ThrowsWithoutUnlinkingOrRaisingAnEvent()
+	{
+		var student = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+
+		await Should.ThrowAsync<DomainException>(
+			() => _handler.HandleAsync(new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never));
 	}
 }
