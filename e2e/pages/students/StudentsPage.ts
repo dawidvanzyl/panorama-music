@@ -63,9 +63,15 @@ export class StudentsPage extends BasePage {
     await this.goto('/#/students');
   }
 
+  /**
+   * Steps the create wizard through all three tabs (Student → Siblings →
+   * Guardians) without adding any siblings or guardians. Save only appears on
+   * the final tab, so both Next clicks are required.
+   */
   async createStudent(input: StudentInput): Promise<void> {
     await this.createButton.click();
     await this.fillStudentFields(input);
+    await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#saveBtn').click();
   }
@@ -209,11 +215,62 @@ export class StudentsPage extends BasePage {
     await expect(this.guardianListRow(`${input.firstName} ${input.surname}`)).toBeVisible();
   }
 
+  /**
+   * Editing happens inline on the guardian's own table row — the shared
+   * #guardianForm panel is Add-only. Clicking Edit swaps the row's cells for
+   * inputs and its Edit/Delete buttons for Cancel/Save.
+   */
   async editGuardian(currentName: string, changes: Partial<GuardianInput>): Promise<void> {
-    const step = this.wizardModal.locator('#guardiansStep');
     await this.guardianListRow(currentName).locator('.guardian-list__btn--edit').click();
-    await this.fillGuardianFields(step, changes);
-    await step.locator('#guardianForm').locator('#confirmBtn').click();
+
+    // The row can no longer be found by name: its cells are now inputs, so the
+    // name lives in a value rather than in text content. Only one row edits at
+    // a time (every other row's Edit is disabled), so the row holding the
+    // inline inputs is unambiguous.
+    const editingRow = this.editingGuardianRow();
+    await this.fillGuardianRowFields(editingRow, changes);
+    await editingRow.locator('.guardian-list__btn--save').click();
+  }
+
+  /** The single guardian row currently in inline-edit mode. */
+  editingGuardianRow(): Locator {
+    return this.wizardModal
+      .locator('#guardiansStep')
+      .locator('#guardianList')
+      .locator('tr')
+      .filter({ has: this.page.locator('.guardian-list__edit-name') });
+  }
+
+  /**
+   * The inline edit row builds its inputs dynamically without ids, so fields
+   * are addressed by column position, matching pm-guardian-list's column order
+   * (Name, Relationship, Cell, Email, Correspondence, Payment, Married).
+   */
+  private async fillGuardianRowFields(
+    row: Locator,
+    changes: Partial<GuardianInput>
+  ): Promise<void> {
+    const nameInputs = row.locator('.guardian-list__edit-name input');
+    if (changes.firstName) await nameInputs.nth(0).fill(changes.firstName);
+    if (changes.surname) await nameInputs.nth(1).fill(changes.surname);
+    if (changes.relationshipLabel) {
+      await row.locator('select').selectOption({ label: changes.relationshipLabel });
+    }
+
+    const textInputs = row.locator('td input.guardian-list__edit-input');
+    if (changes.cell !== undefined) await textInputs.nth(2).fill(changes.cell);
+    if (changes.email !== undefined) await textInputs.nth(3).fill(changes.email);
+
+    const checkboxes = row.locator('.guardian-list__edit-checkbox');
+    if (changes.receivesCorrespondence !== undefined) {
+      await checkboxes.nth(0).setChecked(changes.receivesCorrespondence);
+    }
+    if (changes.responsibleForPayment !== undefined) {
+      await checkboxes.nth(1).setChecked(changes.responsibleForPayment);
+    }
+    if (changes.married !== undefined) {
+      await checkboxes.nth(2).setChecked(changes.married);
+    }
   }
 
   private async fillGuardianFields(step: Locator, changes: Partial<GuardianInput>): Promise<void> {
@@ -240,14 +297,6 @@ export class StudentsPage extends BasePage {
     return this.wizardModal
       .locator('#guardiansStep')
       .locator('#guardianList')
-      .locator('tr')
-      .filter({ hasText: name });
-  }
-
-  inheritedGuardianListRow(name: string): Locator {
-    return this.wizardModal
-      .locator('#guardiansStep')
-      .locator('#inheritedList')
       .locator('tr')
       .filter({ hasText: name });
   }
