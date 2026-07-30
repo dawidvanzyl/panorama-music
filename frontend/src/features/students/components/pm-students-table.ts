@@ -95,14 +95,12 @@ styles.replaceSync(`
       padding: 0;
       background: var(--pm-surface-2);
     }
+    /* Siblings first, then guardians beneath it — stacked rather than in two
+       columns so each section's items can size to their own content. */
     .students-table__summary-wrapper {
       display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-    }
-    .students-table__summary-wrapper > * {
-      flex: 1;
-      min-width: 220px;
+      flex-direction: column;
+      gap: 4px;
     }
     .students-table__summary-row[hidden] {
       display: none;

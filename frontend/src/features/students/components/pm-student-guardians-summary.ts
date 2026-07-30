@@ -16,7 +16,8 @@ styles.replaceSync(`
     }
     .summary__list {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
+      align-items: flex-start;
       gap: 8px;
       list-style: none;
       margin: 0;
