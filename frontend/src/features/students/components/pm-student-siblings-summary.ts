@@ -23,6 +23,9 @@ styles.replaceSync(`
       margin: 0;
       padding: 0;
     }
+    .summary__list[hidden] {
+      display: none;
+    }
     .summary__item {
       background: var(--pm-surface-2);
       border: 1px solid var(--pm-border);

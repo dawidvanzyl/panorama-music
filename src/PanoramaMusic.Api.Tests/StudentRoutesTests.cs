@@ -2,7 +2,7 @@ using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Students.Application.Models;
-using PanoramaMusic.Students.Application.Requests;
+using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Enums;
 using Shouldly;
 using System.Net;
@@ -200,6 +200,23 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	public async Task GetStudents_UnauthenticatedRequest_IsRejected()
 	{
 		var response = await fixture.CreateClient().GetAsync("/api/students", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	[Trait("AC", "212UC13")]
+	public async Task GetGuardians_UnauthenticatedRequest_IsRejected()
+	{
+		var response = await fixture.CreateClient().GetAsync($"/api/students/{Guid.NewGuid()}/guardians", TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+	}
+
+	[Fact]
+	public async Task IsGuardianShared_UnauthenticatedRequest_IsRejected()
+	{
+		var response = await fixture.CreateClient().GetAsync($"/api/guardians/{Guid.NewGuid()}/shared", TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 	}

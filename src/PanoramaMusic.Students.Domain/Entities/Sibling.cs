@@ -1,5 +1,5 @@
 using PanoramaMusic.Domain;
-using PanoramaMusic.Students.Domain.Events;
+using PanoramaMusic.Students.Domain.Events.Siblings;
 using PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Students.Domain.Entities;

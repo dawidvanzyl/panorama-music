@@ -24,10 +24,24 @@ export interface StudentInput {
   language: StudentLanguage;
 }
 
+export interface GuardianInput {
+  firstName: string;
+  surname: string;
+  relationshipLabel: string;
+  cell?: string;
+  email?: string;
+  receivesCorrespondence?: boolean;
+  responsibleForPayment?: boolean;
+  married?: boolean;
+}
+
+export type GuardianDeleteScope = 'one' | 'all';
+
 export class StudentsPage extends BasePage {
   readonly createButton: Locator;
   readonly wizardModal: Locator;
   readonly deleteModal: Locator;
+  readonly deleteGuardianModal: Locator;
   readonly filterNameInput: Locator;
   readonly filterGradeSelect: Locator;
   readonly filterPhaseSelect: Locator;
@@ -38,6 +52,7 @@ export class StudentsPage extends BasePage {
     this.createButton = page.locator('#createBtn');
     this.wizardModal = page.locator('#wizardModal');
     this.deleteModal = page.locator('#deleteModal');
+    this.deleteGuardianModal = page.locator('#deleteGuardianModal');
     this.filterNameInput = page.locator('#filterBar').locator('#name');
     this.filterGradeSelect = page.locator('#filterBar').locator('#grade');
     this.filterPhaseSelect = page.locator('#filterBar').locator('#phase');
@@ -48,9 +63,15 @@ export class StudentsPage extends BasePage {
     await this.goto('/#/students');
   }
 
+  /**
+   * Steps the create wizard through all three tabs (Student → Siblings →
+   * Guardians) without adding any siblings or guardians. Save only appears on
+   * the final tab, so both Next clicks are required.
+   */
   async createStudent(input: StudentInput): Promise<void> {
     await this.createButton.click();
     await this.fillStudentFields(input);
+    await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#saveBtn').click();
   }
@@ -62,7 +83,7 @@ export class StudentsPage extends BasePage {
   async editStudent(currentName: string, changes: Partial<StudentInput>): Promise<void> {
     await this.row(currentName).locator('.students-table__btn--edit').click();
     await this.fillStudentFields(changes);
-    await this.wizardModal.locator('#saveBtn').click();
+    await this.wizardModal.locator('#studentSaveBtn').click();
   }
 
   private async fillStudentFields(changes: Partial<StudentInput>): Promise<void> {
@@ -125,8 +146,21 @@ export class StudentsPage extends BasePage {
       .filter({ hasText: siblingName });
   }
 
+  /**
+   * Closes the wizard via whichever dismiss control is currently visible: the
+   * shared footer's Cancel (create mode) or Close (edit mode's Siblings/Guardians
+   * tabs, which persist their own changes and have nothing left to cancel), or
+   * the Student tab's own local Cancel (edit mode). Scoped to the wizard's own
+   * footer/step-actions rather than a bare role query, since a nested guardian
+   * form also has its own "Cancel" button that could otherwise collide.
+   */
   async closeWizard(): Promise<void> {
-    await this.wizardModal.locator('#cancelBtn').click();
+    const bottomDismiss = this.wizardModal.locator('.wizard__actions #cancelBtn');
+    if (await bottomDismiss.isVisible()) {
+      await bottomDismiss.click();
+      return;
+    }
+    await this.wizardModal.locator('.wizard__step-actions #studentCancelBtn').click();
   }
 
   /** The wizard modal's outer card element, whose fixed dimensions must not change between steps. */
@@ -160,5 +194,126 @@ export class StudentsPage extends BasePage {
    */
   visibleSiblingsSummary(): Locator {
     return this.page.locator('pm-student-siblings-summary:visible');
+  }
+
+  /** Read-only guardians summary for the currently-expanded row (same scoping rule as siblings). */
+  visibleGuardiansSummary(): Locator {
+    return this.page.locator('pm-student-guardians-summary:visible');
+  }
+
+  /** Opens the Edit wizard for `name` and switches to its Guardians tab. */
+  async openGuardiansTab(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await this.wizardModal.locator('#tabGuardians').click();
+  }
+
+  async addGuardian(input: GuardianInput): Promise<void> {
+    const step = this.wizardModal.locator('#guardiansStep');
+    await step.locator('#addBtn').click();
+    await this.fillGuardianFields(step, input);
+    await step.locator('#guardianForm').locator('#confirmBtn').click();
+    await expect(this.guardianListRow(`${input.firstName} ${input.surname}`)).toBeVisible();
+  }
+
+  /**
+   * Editing happens inline on the guardian's own table row — the shared
+   * #guardianForm panel is Add-only. Clicking Edit swaps the row's cells for
+   * inputs and its Edit/Delete buttons for Cancel/Save.
+   */
+  async editGuardian(currentName: string, changes: Partial<GuardianInput>): Promise<void> {
+    await this.guardianListRow(currentName).locator('.guardian-list__btn--edit').click();
+
+    // The row can no longer be found by name: its cells are now inputs, so the
+    // name lives in a value rather than in text content. Only one row edits at
+    // a time (every other row's Edit is disabled), so the row holding the
+    // inline inputs is unambiguous.
+    const editingRow = this.editingGuardianRow();
+    await this.fillGuardianRowFields(editingRow, changes);
+    await editingRow.locator('.guardian-list__btn--save').click();
+  }
+
+  /** The single guardian row currently in inline-edit mode. */
+  editingGuardianRow(): Locator {
+    return this.wizardModal
+      .locator('#guardiansStep')
+      .locator('#guardianList')
+      .locator('tr')
+      .filter({ has: this.page.locator('.guardian-list__edit-name') });
+  }
+
+  /**
+   * The inline edit row builds its inputs dynamically without ids, so fields
+   * are addressed by column position, matching pm-guardian-list's column order
+   * (Name, Relationship, Cell, Email, Correspondence, Payment, Married).
+   */
+  private async fillGuardianRowFields(
+    row: Locator,
+    changes: Partial<GuardianInput>
+  ): Promise<void> {
+    const nameInputs = row.locator('.guardian-list__edit-name input');
+    if (changes.firstName) await nameInputs.nth(0).fill(changes.firstName);
+    if (changes.surname) await nameInputs.nth(1).fill(changes.surname);
+    if (changes.relationshipLabel) {
+      await row.locator('select').selectOption({ label: changes.relationshipLabel });
+    }
+
+    const textInputs = row.locator('td input.guardian-list__edit-input');
+    if (changes.cell !== undefined) await textInputs.nth(2).fill(changes.cell);
+    if (changes.email !== undefined) await textInputs.nth(3).fill(changes.email);
+
+    const checkboxes = row.locator('.guardian-list__edit-checkbox');
+    if (changes.receivesCorrespondence !== undefined) {
+      await checkboxes.nth(0).setChecked(changes.receivesCorrespondence);
+    }
+    if (changes.responsibleForPayment !== undefined) {
+      await checkboxes.nth(1).setChecked(changes.responsibleForPayment);
+    }
+    if (changes.married !== undefined) {
+      await checkboxes.nth(2).setChecked(changes.married);
+    }
+  }
+
+  private async fillGuardianFields(step: Locator, changes: Partial<GuardianInput>): Promise<void> {
+    const form = step.locator('#guardianForm');
+    if (changes.firstName) await form.locator('#firstName').fill(changes.firstName);
+    if (changes.surname) await form.locator('#surname').fill(changes.surname);
+    if (changes.relationshipLabel) {
+      await form.locator('#relationship').selectOption({ label: changes.relationshipLabel });
+    }
+    if (changes.cell !== undefined) await form.locator('#cell').fill(changes.cell);
+    if (changes.email !== undefined) await form.locator('#email').fill(changes.email);
+    if (changes.receivesCorrespondence !== undefined) {
+      await form.locator('#receivesCorrespondence').setChecked(changes.receivesCorrespondence);
+    }
+    if (changes.responsibleForPayment !== undefined) {
+      await form.locator('#responsibleForPayment').setChecked(changes.responsibleForPayment);
+    }
+    if (changes.married !== undefined) {
+      await form.locator('#married').setChecked(changes.married);
+    }
+  }
+
+  guardianListRow(name: string): Locator {
+    return this.wizardModal
+      .locator('#guardiansStep')
+      .locator('#guardianList')
+      .locator('tr')
+      .filter({ hasText: name });
+  }
+
+  async deleteGuardian(name: string, scope: GuardianDeleteScope = 'one'): Promise<void> {
+    await this.guardianListRow(name).locator('.guardian-list__btn--delete').click();
+    if (await this.deleteGuardianModal.locator('#scopeChoice').isVisible()) {
+      await this.deleteGuardianModal.locator(scope === 'all' ? '#scopeAll' : '#scopeOne').check();
+    }
+    await this.deleteGuardianModal.locator('#deleteBtn').click();
+  }
+
+  syncGuardiansButton(): Locator {
+    return this.wizardModal.locator('#guardiansStep').locator('#syncBtn');
+  }
+
+  async syncGuardians(): Promise<void> {
+    await this.syncGuardiansButton().click();
   }
 }

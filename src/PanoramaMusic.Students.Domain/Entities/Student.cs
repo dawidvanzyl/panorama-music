@@ -1,6 +1,6 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Students.Domain.Enums;
-using PanoramaMusic.Students.Domain.Events;
+using PanoramaMusic.Students.Domain.Events.Students;
 
 namespace PanoramaMusic.Students.Domain.Entities;
 
@@ -52,7 +52,16 @@ public sealed class Student : AggregateRoot
 		PhaseType? phase,
 		Language language)
 	{
-		var student = new Student(studentId, firstName, lastName, dateOfBirth, grade, @class, phase, language);
+		var student = new Student(
+			studentId,
+			firstName,
+			lastName,
+			dateOfBirth,
+			grade,
+			@class,
+			phase,
+			language);
+
 		student.Raise(new StudentCreated(student));
 		return student;
 	}
@@ -71,7 +80,15 @@ public sealed class Student : AggregateRoot
 		PhaseType? phase,
 		Language language)
 	{
-		var before = new Student(StudentId, FirstName, LastName, DateOfBirth, Grade, Class, Phase, Language);
+		var before = new Student(
+			StudentId,
+			FirstName,
+			LastName,
+			DateOfBirth,
+			Grade,
+			Class,
+			Phase,
+			Language);
 
 		FirstName = firstName;
 		LastName = lastName;
