@@ -301,6 +301,45 @@ export class StudentsPage extends BasePage {
       .filter({ hasText: name });
   }
 
+  /**
+   * The three flag cells of a guardian's row, in table order. Each renders
+   * 'Yes' when set and '—' when not.
+   */
+  guardianFlagCells(name: string): {
+    receivesCorrespondence: Locator;
+    responsibleForPayment: Locator;
+    married: Locator;
+  } {
+    const cells = this.guardianListRow(name).locator('td');
+    return {
+      receivesCorrespondence: cells.nth(4),
+      responsibleForPayment: cells.nth(5),
+      married: cells.nth(6),
+    };
+  }
+
+  /** Opens the Add Guardian form without filling or submitting it. */
+  async openAddGuardianForm(): Promise<void> {
+    await this.wizardModal.locator('#guardiansStep').locator('#addBtn').click();
+  }
+
+  /** The Add form's relationship dropdown, populated from the seeded lookup. */
+  guardianRelationshipSelect(): Locator {
+    return this.wizardModal
+      .locator('#guardiansStep')
+      .locator('#guardianForm')
+      .locator('#relationship');
+  }
+
+  /** Dismisses the Add Guardian form without creating a guardian. */
+  async cancelGuardianForm(): Promise<void> {
+    await this.wizardModal
+      .locator('#guardiansStep')
+      .locator('#guardianForm')
+      .locator('#cancelBtn')
+      .click();
+  }
+
   async deleteGuardian(name: string, scope: GuardianDeleteScope = 'one'): Promise<void> {
     await this.guardianListRow(name).locator('.guardian-list__btn--delete').click();
     if (await this.deleteGuardianModal.locator('#scopeChoice').isVisible()) {

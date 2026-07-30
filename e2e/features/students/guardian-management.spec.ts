@@ -8,7 +8,19 @@ function uniqueName(label: string): { firstName: string; lastName: string } {
   };
 }
 
-test.describe('Guardian Profile Management', { tag: ['@6IT1'] }, () => {
+/** The relationship types seeded by seed_guardian_relationships.sql. */
+const SEEDED_RELATIONSHIPS = [
+  'Mother',
+  'Father',
+  'Stepmother',
+  'Stepfather',
+  'Grandmother',
+  'Grandfather',
+  'Legal Guardian',
+  'Other',
+];
+
+test.describe('Guardian Profile Management', { tag: ['@6IT1', '@6IT4', '@6IT5'] }, () => {
   test('creates, reads, updates, and deletes a guardian profile', async ({ page }) => {
     const student = uniqueName('guardian-crud');
     const fullName = `${student.firstName} ${student.lastName}`;
@@ -25,6 +37,18 @@ test.describe('Guardian Profile Management', { tag: ['@6IT1'] }, () => {
     });
 
     await studentsPage.openGuardiansTab(fullName);
+
+    // The relationship options come from the seeded lookup. Asserted as a
+    // subset, not an exact list, so the companion relationship-maintenance
+    // story adding a type does not break this.
+    await studentsPage.openAddGuardianForm();
+    const relationshipOptions = await studentsPage
+      .guardianRelationshipSelect()
+      .locator('option')
+      .allTextContents();
+    expect(relationshipOptions).toEqual(expect.arrayContaining(SEEDED_RELATIONSHIPS));
+    await studentsPage.cancelGuardianForm();
+
     await studentsPage.addGuardian({
       firstName: 'Nomvula',
       surname: 'Dube',
@@ -33,12 +57,19 @@ test.describe('Guardian Profile Management', { tag: ['@6IT1'] }, () => {
       email: 'nomvula.dube@example.com',
       receivesCorrespondence: true,
       responsibleForPayment: true,
+      married: true,
     });
 
     const createdRow = studentsPage.guardianListRow('Nomvula Dube');
     await expect(createdRow).toBeVisible();
     await expect(createdRow).toContainText('Mother');
     await expect(createdRow).toContainText('0821234567');
+
+    // Each of the three flags is captured independently.
+    const createdFlags = studentsPage.guardianFlagCells('Nomvula Dube');
+    await expect(createdFlags.receivesCorrespondence).toHaveText('Yes');
+    await expect(createdFlags.responsibleForPayment).toHaveText('Yes');
+    await expect(createdFlags.married).toHaveText('Yes');
 
     await studentsPage.editGuardian('Nomvula Dube', {
       surname: 'Khumalo',
@@ -194,6 +225,24 @@ test.describe('Guardian Shared Across Multiple Students', { tag: ['@6IT2'] }, ()
     await studentsPage.openGuardiansTab(fullNameA);
     await expect(studentsPage.guardianListRow('Sipho Maluleke')).toBeVisible();
     await studentsPage.closeWizard();
+  });
+});
+
+test.describe('Guardian Endpoint Authorization', { tag: ['@6IT6'] }, () => {
+  test('rejects unauthenticated requests to the guardian endpoints', async ({ page }) => {
+    // One per route group: the student-scoped guardians, the guardian record
+    // itself, and the relationship lookup.
+    const someGuid = '00000000-0000-0000-0000-000000000001';
+
+    for (const path of [
+      `/api/students/${someGuid}/guardians`,
+      `/api/guardians/${someGuid}/shared`,
+      '/api/guardian-relationships',
+    ]) {
+      const response = await page.request.get(path);
+
+      expect(response.status(), `${path} should reject an unauthenticated request`).toBe(401);
+    }
   });
 });
 
