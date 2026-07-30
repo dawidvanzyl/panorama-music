@@ -17,7 +17,7 @@ styles.replaceSync(`
     .summary__list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       list-style: none;
       margin: 0;
       padding: 0;
@@ -26,13 +26,28 @@ styles.replaceSync(`
       display: none;
     }
     .summary__item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      padding: 10px 12px;
+    }
+    .summary__item-heading {
       font-size: 13px;
+      font-weight: 600;
       color: var(--pm-text);
     }
-    .summary__item-name {
-      font-weight: 500;
+    .summary__item-contact {
+      font-size: 13px;
+      color: var(--pm-text-muted);
     }
-    .summary__item-detail {
+    .summary__item-email {
+      color: var(--pm-accent);
+    }
+    .summary__item-flags {
+      font-size: 12px;
       color: var(--pm-text-muted);
     }
     .summary__empty {
@@ -95,21 +110,65 @@ export class PmStudentGuardiansSummary extends HTMLElement {
     this.emptyMessage.hidden = hasGuardians;
 
     for (const guardian of this._guardians) {
-      const item = document.createElement('li');
-      item.classList.add('summary__item');
-
-      const name = document.createElement('span');
-      name.classList.add('summary__item-name');
-      name.textContent = `${guardian.firstName} ${guardian.surname}`;
-
-      const contact = [guardian.cell, guardian.email].filter(Boolean).join(' · ');
-      const detail = document.createElement('span');
-      detail.classList.add('summary__item-detail');
-      detail.textContent = ` — ${this.relationshipName(guardian.guardianRelationshipId)}${contact ? ` · ${contact}` : ''}`;
-
-      item.append(name, detail);
-      this.list.appendChild(item);
+      this.list.appendChild(this.buildItem(guardian));
     }
+  }
+
+  /**
+   * One block per guardian: name and relationship, then contact details, then
+   * whichever of the three flags are set. Lines with nothing to show are
+   * omitted rather than rendered empty.
+   */
+  private buildItem(guardian: GuardianResult): HTMLLIElement {
+    const item = document.createElement('li');
+    item.classList.add('summary__item');
+
+    const heading = document.createElement('span');
+    heading.classList.add('summary__item-heading');
+    heading.textContent = `${guardian.firstName} ${guardian.surname} · ${this.relationshipName(guardian.guardianRelationshipId)}`;
+    item.appendChild(heading);
+
+    const contact = this.buildContact(guardian);
+    if (contact) item.appendChild(contact);
+
+    const flags = [
+      guardian.receivesCorrespondence ? 'Correspondence' : null,
+      guardian.responsibleForPayment ? 'Payment' : null,
+      guardian.married ? 'Married' : null,
+    ].filter((flag) => flag !== null);
+
+    if (flags.length > 0) {
+      const flagsLine = document.createElement('span');
+      flagsLine.classList.add('summary__item-flags');
+      flagsLine.textContent = flags.join(', ');
+      item.appendChild(flagsLine);
+    }
+
+    return item;
+  }
+
+  /** Cell as plain text, email as a mailto link, separated when both are present. */
+  private buildContact(guardian: GuardianResult): HTMLSpanElement | null {
+    if (!guardian.cell && !guardian.email) return null;
+
+    const contact = document.createElement('span');
+    contact.classList.add('summary__item-contact');
+
+    if (guardian.cell) {
+      contact.appendChild(document.createTextNode(guardian.cell));
+    }
+
+    if (guardian.email) {
+      if (guardian.cell) contact.appendChild(document.createTextNode(' · '));
+
+      const email = document.createElement('a');
+      email.classList.add('summary__item-email');
+      email.href = `mailto:${guardian.email}`;
+      email.textContent = guardian.email;
+      contact.appendChild(email);
+    }
+
+    return contact;
   }
 }
 
