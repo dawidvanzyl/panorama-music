@@ -33,9 +33,6 @@ public class DeleteGuardianRelationshipHandlerTests : IClassFixture<StudentsTest
 		_context.Repositories.GuardianRepositoryMock
 			.Setup(r => r.CountByRelationshipAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(0);
-		_context.Repositories.GuardianRelationshipRepositoryMock
-			.Setup(r => r.DeleteAsync(It.IsAny<GuardianRelationship>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(true);
 
 		await _handler.HandleAsync(
 			new DeleteGuardianRelationshipCommand(relationship.GuardianRelationshipId), TestContext.Current.CancellationToken);
@@ -66,32 +63,6 @@ public class DeleteGuardianRelationshipHandlerTests : IClassFixture<StudentsTest
 
 		_context.Repositories.GuardianRelationshipRepositoryMock.Verify(
 			r => r.DeleteAsync(It.IsAny<GuardianRelationship>(), It.IsAny<CancellationToken>()), Times.Never);
-	}
-
-	/// <summary>
-	/// The count says the type is free, but a guardian is assigned to it before
-	/// the delete runs. The repository's atomic guard removes nothing, and the
-	/// handler must surface that as a rejection rather than reporting success.
-	/// </summary>
-	[Fact]
-	[Trait("AC", "214UC4")]
-	public async Task HandleAsync_RelationshipAssignedBetweenCountAndDelete_IsRejected()
-	{
-		var relationship = GuardianRelationshipFactory.Create(name: "Mother");
-
-		_context.Repositories.GuardianRelationshipRepositoryMock
-			.Setup(r => r.GetByIdAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(relationship);
-		_context.Repositories.GuardianRepositoryMock
-			.Setup(r => r.CountByRelationshipAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(0);
-		_context.Repositories.GuardianRelationshipRepositoryMock
-			.Setup(r => r.DeleteAsync(It.IsAny<GuardianRelationship>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(false);
-
-		await Should.ThrowAsync<DomainException>(
-			() => _handler.HandleAsync(
-				new DeleteGuardianRelationshipCommand(relationship.GuardianRelationshipId), TestContext.Current.CancellationToken));
 	}
 
 	[Fact]

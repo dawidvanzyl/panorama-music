@@ -163,7 +163,7 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
     this.clearError();
 
     try {
-      var countResult = await countGuardianRelationship(relationship.guardianRelationshipId);
+      const countResult = await countGuardianRelationship(relationship.guardianRelationshipId);
       if (countResult.count > 0) {
         this.showErrorMessage(
           `Guardian relationship ${relationship.name} is assigned to ${countResult.count} guardian(s) and cannot be deleted.`,

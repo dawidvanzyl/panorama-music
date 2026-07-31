@@ -6,12 +6,22 @@ vi.mock('../../services/auth', () => ({
   logout: vi.fn(),
 }));
 
+// Both stubs receive the roles they were asked about, so a test can grant a
+// specific role set (e.g. Coordinator but not Teacher) rather than a single
+// blanket boolean.
 const mockHasRole = vi.fn();
+const mockHasAnyRole = vi.fn();
 vi.mock('../../services/token-storage', () => ({
-  hasRole: () => mockHasRole(),
-  hasAnyRole: () => mockHasRole(),
+  hasRole: (role: string) => mockHasRole(role),
+  hasAnyRole: (roles: string[]) => mockHasAnyRole(roles),
   getEmail: () => 'admin@panorama-music.com',
 }));
+
+/** Grants exactly the given roles to both role checks. */
+function grantRoles(...roles: string[]): void {
+  mockHasRole.mockImplementation((role: string) => roles.includes(role));
+  mockHasAnyRole.mockImplementation((asked: string[]) => asked.some((role) => roles.includes(role)));
+}
 
 vi.mock('../../features/admin/services/admin', () => ({
   clearUsersCache: vi.fn(),
@@ -24,7 +34,7 @@ describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] 
 
   beforeEach(() => {
     mockIsAuthenticated.mockReturnValue(true);
-    mockHasRole.mockReturnValue(true);
+    grantRoles('Teacher', 'Coordinator', 'Admin');
     el = document.createElement('pm-nav-bar');
     document.body.appendChild(el);
   });
@@ -90,11 +100,55 @@ describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] 
   });
 
   it('hides the Admin link for a non-admin user', () => {
-    mockHasRole.mockReturnValue(false);
+    grantRoles('Teacher');
     window.location.hash = '#/';
     window.dispatchEvent(new Event('hashchange'));
 
     const adminLink = el.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
     expect(adminLink.hidden).toBe(true);
+  });
+});
+
+describe('pm-nav-bar — Students entry point per role', { tags: ['214UC7'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-nav-bar');
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function studentsLinkAfterRender(): HTMLAnchorElement {
+    document.body.appendChild(el);
+    window.location.hash = '#/';
+    window.dispatchEvent(new Event('hashchange'));
+    return el.shadowRoot!.getElementById('studentsLink') as HTMLAnchorElement;
+  }
+
+  it('points a Teacher at the student roster', () => {
+    grantRoles('Teacher');
+
+    const studentsLink = studentsLinkAfterRender();
+    expect(studentsLink.hidden).toBe(false);
+    expect(studentsLink.getAttribute('href')).toBe('#/students');
+  });
+
+  // A Coordinator who is not also a Teacher cannot open the roster, so the
+  // Students entry point takes them to the screen they can actually maintain.
+  it('points a Coordinator who is not a Teacher at the relationship screen', () => {
+    grantRoles('Coordinator');
+
+    const studentsLink = studentsLinkAfterRender();
+    expect(studentsLink.hidden).toBe(false);
+    expect(studentsLink.getAttribute('href')).toBe('#/students/guardian-relationships');
+  });
+
+  it('hides the Students link from a user with none of those roles', () => {
+    grantRoles();
+
+    expect(studentsLinkAfterRender().hidden).toBe(true);
   });
 });

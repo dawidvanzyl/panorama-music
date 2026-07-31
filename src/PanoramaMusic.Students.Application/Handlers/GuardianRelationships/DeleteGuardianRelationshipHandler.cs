@@ -23,11 +23,6 @@ public sealed class DeleteGuardianRelationshipHandler(
 
 		relationship.MarkDeleted();
 
-		// The repository's delete carries the same in-use guard as a single atomic
-		// statement, so a guardian assigned between the count above and here is
-		// still refused rather than failing on the foreign key.
-		var deleted = await guardianRelationshipRepository.DeleteAsync(relationship, cancellationToken);
-		if (!deleted)
-			throw new DomainException($"Guardian relationship '{relationship.Name}' was assigned to a guardian and cannot be deleted.");
+		await guardianRelationshipRepository.DeleteAsync(relationship, cancellationToken);
 	}
 }

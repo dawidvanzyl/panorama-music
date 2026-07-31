@@ -6,11 +6,21 @@ vi.mock('../../services/auth', () => ({
   logout: vi.fn(),
 }));
 
+// Both stubs receive the roles they were asked about, so a test can grant a
+// specific role set (e.g. Coordinator but not Teacher) rather than a single
+// blanket boolean.
 const mockHasRole = vi.fn();
+const mockHasAnyRole = vi.fn();
 vi.mock('../../services/token-storage', () => ({
-  hasRole: () => mockHasRole(),
-  hasAnyRole: () => mockHasRole(),
+  hasRole: (role: string) => mockHasRole(role),
+  hasAnyRole: (roles: string[]) => mockHasAnyRole(roles),
 }));
+
+/** Grants exactly the given roles to both role checks. */
+function grantRoles(...roles: string[]): void {
+  mockHasRole.mockImplementation((role: string) => roles.includes(role));
+  mockHasAnyRole.mockImplementation((asked: string[]) => asked.some((role) => roles.includes(role)));
+}
 
 vi.mock('../../features/admin/services/admin', () => ({
   clearUsersCache: vi.fn(),
@@ -27,7 +37,7 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
 
   beforeEach(() => {
     mockIsAuthenticated.mockReturnValue(true);
-    mockHasRole.mockReturnValue(true);
+    grantRoles('Teacher', 'Coordinator', 'Admin');
     el = document.createElement('pm-sidebar');
     document.body.appendChild(el);
   });
@@ -104,7 +114,7 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
   });
 
   it('never shows admin links for a non-admin even inside an /admin route', () => {
-    mockHasRole.mockReturnValue(false);
+    grantRoles('Teacher');
     window.location.hash = '#/admin/users';
     window.dispatchEvent(new Event('hashchange'));
 
@@ -149,11 +159,56 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
   });
 
   it('never shows Student Management for a user without Teacher or Admin, even inside the Students section', () => {
-    mockHasRole.mockReturnValue(false);
+    grantRoles();
     window.location.hash = '#/students';
     window.dispatchEvent(new Event('hashchange'));
 
     const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
     expect(studentManagementLink.hidden).toBe(true);
+  });
+});
+
+describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['214UC7'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function relationshipsLinkOn(hash: string): HTMLAnchorElement {
+    document.body.appendChild(el);
+    window.location.hash = hash;
+    window.dispatchEvent(new Event('hashchange'));
+    return el.shadowRoot!.getElementById('guardianRelationshipsLink') as HTMLAnchorElement;
+  }
+
+  it('shows the link inside the Students section for a Coordinator who is not a Teacher', () => {
+    grantRoles('Coordinator');
+
+    expect(relationshipsLinkOn('#/students/guardian-relationships').hidden).toBe(false);
+  });
+
+  it('marks the link active on its own route', () => {
+    grantRoles('Coordinator');
+
+    const link = relationshipsLinkOn('#/students/guardian-relationships');
+    expect(link.classList.contains('sidebar__link--active')).toBe(true);
+  });
+
+  it('hides the link from a Teacher who is neither Coordinator nor Admin', () => {
+    grantRoles('Teacher');
+
+    expect(relationshipsLinkOn('#/students').hidden).toBe(true);
+  });
+
+  it('hides the link outside the Students section, even for an Admin', () => {
+    grantRoles('Admin');
+
+    expect(relationshipsLinkOn('#/').hidden).toBe(true);
   });
 });

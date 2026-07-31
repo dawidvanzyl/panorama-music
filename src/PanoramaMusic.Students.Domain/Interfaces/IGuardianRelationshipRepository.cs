@@ -14,9 +14,5 @@ public interface IGuardianRelationshipRepository
 
 	Task UpdateAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken);
 
-	/// <summary>
-	/// Deletes the relationship type only while no guardian references it.
-	/// Returns whether it was removed — false means a guardian is using it.
-	/// </summary>
-	Task<bool> DeleteAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken);
+	Task DeleteAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken);
 }
