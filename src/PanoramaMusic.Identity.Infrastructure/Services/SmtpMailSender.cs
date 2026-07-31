@@ -8,6 +8,16 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
+/// <summary>
+/// Sends mail over SMTP via MailKit. One of the two permitted egress destinations under the
+/// outbound allowlist of ASVS 5.0.0-13.2.5 — the host and port come from operator
+/// configuration and are never influenced by user input.
+/// <para>
+/// Header injection (ASVS 5.0.0-1.3.11) is prevented by MimeKit rather than by us:
+/// <c>MailboxAddress.Parse</c> rejects malformed addresses and <c>MimeMessage</c> encodes
+/// header values, so a CR/LF in a field cannot forge a header.
+/// </para>
+/// </summary>
 public sealed class SmtpMailSender(IOptions<SmtpOptions> options) : IMailSender
 {
 	private readonly SmtpOptions _options = options.Value;

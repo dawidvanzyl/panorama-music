@@ -2,7 +2,20 @@ namespace PanoramaMusic.Identity.Application.Constants;
 
 /// <summary>
 /// Audit event types emitted by the Identity context, following the
-/// <c>{context}.{entity}.{action}</c> convention of the Audit Event Catalog.
+/// <c>{context}.{entity}.{action}</c> naming convention.
+/// <para>
+/// This declaration is authoritative. ASVS 5.0.0-16.3.3 requires the application to log "the
+/// security events defined in its documentation"; the per-context event-type constants
+/// <em>are</em> that documentation, so an event cannot be emitted without being declared here
+/// and cannot be declared here without appearing in the list. Adding a state-changing
+/// operation means adding a constant — never editing
+/// <c>docs/security-standards.md</c>, which deliberately holds no event catalogue.
+/// </para>
+/// <para>
+/// Recorded fields must respect the never-log rule in §14.2 of that document: no passwords,
+/// raw tokens, or full hashes in any field, and an outcome reason that is a category rather
+/// than sensitive detail.
+/// </para>
 /// </summary>
 public static class IdentityAuditEventTypes
 {

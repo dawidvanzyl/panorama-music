@@ -11,6 +11,17 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Admin;
 
+/// <summary>
+/// Deactivates a user and revokes their refresh tokens in the same unit of work.
+/// <para>
+/// This pairing is the mitigating control for the accepted limitation recorded against
+/// ASVS 5.0.0-8.3.2: authorization claims baked into an already-issued access token are not
+/// re-evaluated mid-lifetime, so a deactivated user's existing token keeps working until it
+/// expires. Revoking the refresh tokens atomically with the state change is what bounds that
+/// exposure to a single access-token lifetime. Splitting the two — or letting the revocation
+/// fail independently — turns a bounded window into an unbounded one.
+/// </para>
+/// </summary>
 public sealed class DeactivateUserHandler(
 	IUserRepository userRepository,
 	IRefreshTokenRepository refreshTokenRepository,

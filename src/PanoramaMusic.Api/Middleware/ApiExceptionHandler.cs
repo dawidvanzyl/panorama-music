@@ -7,6 +7,18 @@ using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Middleware;
 
+/// <summary>
+/// The last-resort handler required by ASVS 5.0.0-16.5.4, registered at the outermost layer
+/// of the pipeline so no request path can escape it.
+/// <para>
+/// It is also what satisfies ASVS 5.0.0-16.5.1: known domain and validation failures serialize
+/// only their own message, and anything unexpected returns a fixed generic message plus a
+/// correlation id, with the exception written to the logs and never to the response. That
+/// holds in every environment — a more revealing error body must not be switched on outside
+/// Production, since a leaked stack trace, query, or key is just as damaging from a staging
+/// host.
+/// </para>
+/// </summary>
 public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {
 	public async ValueTask<bool> TryHandleAsync(
