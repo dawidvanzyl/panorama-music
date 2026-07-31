@@ -1,6 +1,9 @@
 import './pm-student-siblings-summary';
+import './pm-student-guardians-summary';
 import type { StudentResult } from '../services/students';
+import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { PmStudentSiblingsSummary } from './pm-student-siblings-summary';
+import type { PmStudentGuardiansSummary } from './pm-student-guardians-summary';
 import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
@@ -92,6 +95,13 @@ styles.replaceSync(`
       padding: 0;
       background: var(--pm-surface-2);
     }
+    /* Siblings first, then guardians beneath it — stacked rather than in two
+       columns so each section's items can size to their own content. */
+    .students-table__summary-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .students-table__summary-row[hidden] {
       display: none;
     }
@@ -148,6 +158,9 @@ export class PmStudentsTable extends HTMLElement {
    * every OTHER still-expanded row.
    */
   private _siblingsCache = new Map<string, StudentResult[]>();
+  private _guardiansCache = new Map<string, GuardianResult[]>();
+  private _guardianSummaryComponents = new Map<string, PmStudentGuardiansSummary>();
+  private _relationships: GuardianRelationship[] = [];
 
   constructor() {
     super();
@@ -182,11 +195,25 @@ export class PmStudentsTable extends HTMLElement {
     if (component) component.siblings = siblings;
   }
 
+  setGuardiansSummary(studentId: string, guardians: GuardianResult[]): void {
+    this._guardiansCache.set(studentId, guardians);
+    const component = this._guardianSummaryComponents.get(studentId);
+    if (component) component.guardians = guardians;
+  }
+
+  set relationships(value: GuardianRelationship[]) {
+    this._relationships = value;
+    for (const component of this._guardianSummaryComponents.values()) {
+      component.relationships = value;
+    }
+  }
+
   private render(): void {
     if (!this.rowsBody || !this.emptyMessage) return;
 
     this.rowsBody.innerHTML = '';
     this._summaryComponents.clear();
+    this._guardianSummaryComponents.clear();
     this.emptyMessage.hidden = this._students.length > 0;
 
     for (const student of this._students) {
@@ -256,10 +283,20 @@ export class PmStudentsTable extends HTMLElement {
     summaryRow.dataset.studentId = student.studentId;
     const summaryCell = document.createElement('td');
     summaryCell.colSpan = 8;
-    const summary = document.createElement('pm-student-siblings-summary') as PmStudentSiblingsSummary;
-    summary.siblings = this._siblingsCache.get(student.studentId) ?? [];
-    this._summaryComponents.set(student.studentId, summary);
-    summaryCell.appendChild(summary);
+    const summaryWrapper = document.createElement('div');
+    summaryWrapper.classList.add('students-table__summary-wrapper');
+
+    const siblingsSummary = document.createElement('pm-student-siblings-summary') as PmStudentSiblingsSummary;
+    siblingsSummary.siblings = this._siblingsCache.get(student.studentId) ?? [];
+    this._summaryComponents.set(student.studentId, siblingsSummary);
+
+    const guardiansSummary = document.createElement('pm-student-guardians-summary') as PmStudentGuardiansSummary;
+    guardiansSummary.relationships = this._relationships;
+    guardiansSummary.guardians = this._guardiansCache.get(student.studentId) ?? [];
+    this._guardianSummaryComponents.set(student.studentId, guardiansSummary);
+
+    summaryWrapper.append(siblingsSummary, guardiansSummary);
+    summaryCell.appendChild(summaryWrapper);
     summaryRow.appendChild(summaryCell);
 
     return { mainRow: row, summaryRow };

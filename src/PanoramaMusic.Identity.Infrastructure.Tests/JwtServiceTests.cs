@@ -24,12 +24,14 @@ public class JwtServiceTests : IClassFixture<IdentityTestFixture>
 		_service = _context.ServiceProvider.GetRequiredService<JwtService>();
 	}
 
-	[Fact]
+	[Theory]
 	[Trait("AC", "M1UC19")]
-	public void GenerateToken_WhenCalledWithUserIdAndRoles_ContainsSubAndRolesClaims()
+	[Trait("AC", "213UC1")]
+	[InlineData(new object[] { new[] { Role.Admin } })]
+	[InlineData(new object[] { new[] { Role.Coordinator } })]
+	public void GenerateToken_WhenCalledWithUserIdAndRoles_ContainsSubAndRolesClaims(Role[] roles)
 	{
 		var userId = Guid.NewGuid();
-		var roles = new List<Role> { Role.Admin };
 
 		var result = _service.GenerateToken(userId, "admin@test.com", roles);
 
@@ -39,7 +41,7 @@ public class JwtServiceTests : IClassFixture<IdentityTestFixture>
 
 		jwt.ShouldSatisfyAllConditions(
 			() => jwt.Subject.ShouldBe(userId.ToString()),
-			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && c.Value.Contains("Admin")),
+			() => jwt.Claims.ShouldContain(c => c.Type == "roles" && roles.All(r => c.Value.Contains(r.ToString()))),
 			() => jwt.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Email && c.Value == "admin@test.com")
 		);
 	}

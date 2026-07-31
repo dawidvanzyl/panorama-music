@@ -12,12 +12,14 @@ import './features/sessions/pages/pm-sessions-page';
 import './features/sessions/pages/pm-admin-sessions-page';
 import './features/admin/pages/pm-admin-activity-log-page';
 import './features/students/pages/pm-students-page';
+import './features/students/pages/pm-guardian-relationships-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
 
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
 const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
+const COORDINATOR_OR_ADMIN_PATHS = new Set(['/students/guardian-relationships']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 const ROUTES: Record<string, () => string> = {
@@ -30,6 +32,7 @@ const ROUTES: Record<string, () => string> = {
   '/admin/activity-log': () => '<pm-admin-activity-log-page></pm-admin-activity-log-page>',
   '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
   '/students': () => '<pm-students-page></pm-students-page>',
+  '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
 
@@ -70,6 +73,11 @@ async function render(): Promise<void> {
   }
 
   if (TEACHER_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Admin'])) {
+    window.location.hash = '#/';
+    return;
+  }
+
+  if (COORDINATOR_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Coordinator', 'Admin'])) {
     window.location.hash = '#/';
     return;
   }

@@ -57,6 +57,24 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'identity.authorization.denied', label: 'Authorization Denied' },
     ],
   },
+  {
+    context: 'Students',
+    options: [
+      { value: 'students.student.created', label: 'Student Created' },
+      { value: 'students.student.updated', label: 'Student Updated' },
+      { value: 'students.student.deleted', label: 'Student Deleted' },
+      { value: 'students.sibling.added', label: 'Sibling Added' },
+      { value: 'students.sibling.removed', label: 'Sibling Removed' },
+      { value: 'students.guardian.created', label: 'Guardian Created' },
+      { value: 'students.guardian.updated', label: 'Guardian Updated' },
+      { value: 'students.guardian.deleted', label: 'Guardian Deleted' },
+      { value: 'students.guardian.linked', label: 'Guardian Linked' },
+      { value: 'students.guardian.unlinked', label: 'Guardian Unlinked' },
+      { value: 'students.guardian_relationship.created', label: 'Guardian Relationship Created' },
+      { value: 'students.guardian_relationship.renamed', label: 'Guardian Relationship Renamed' },
+      { value: 'students.guardian_relationship.deleted', label: 'Guardian Relationship Deleted' },
+    ],
+  },
 ];
 
 export class AuditError extends Error {

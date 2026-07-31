@@ -1,8 +1,11 @@
 using PanoramaMusic.Api.Filters;
-using PanoramaMusic.Students.Application.Commands;
-using PanoramaMusic.Students.Application.Handlers;
+using PanoramaMusic.Students.Application.Commands.Siblings;
+using PanoramaMusic.Students.Application.Commands.Students;
+using PanoramaMusic.Students.Application.Handlers.Siblings;
+using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Models;
-using PanoramaMusic.Students.Application.Requests;
+using PanoramaMusic.Students.Application.Requests.Siblings;
+using PanoramaMusic.Students.Application.Requests.Students;
 
 namespace PanoramaMusic.Api.Routes.Students;
 

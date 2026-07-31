@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using PanoramaMusic.Students.Application.Handlers;
+using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;

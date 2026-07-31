@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using PanoramaMusic.Students.Application.Handlers;
+using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
+using PanoramaMusic.Students.Application.Handlers.Guardians;
+using PanoramaMusic.Students.Application.Handlers.Siblings;
+using PanoramaMusic.Students.Application.Handlers.Students;
 
 namespace PanoramaMusic.Students.Tests;
 
@@ -22,6 +25,9 @@ public sealed class StudentsTestFixture
 	{
 		services.AddTransient(sp => context.Repositories.StudentRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.SiblingRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.GuardianRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.StudentGuardianRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.GuardianRelationshipRepositoryMock.Object);
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)
@@ -34,5 +40,18 @@ public sealed class StudentsTestFixture
 		services.AddTransient<AddSiblingHandler>();
 		services.AddTransient<GetSiblingsHandler>();
 		services.AddTransient<RemoveSiblingHandler>();
+		services.AddTransient<AddGuardianHandler>();
+		services.AddTransient<UpdateGuardianHandler>();
+		services.AddTransient<GetGuardiansHandler>();
+		services.AddTransient<UnlinkGuardianHandler>();
+		services.AddTransient<DeleteGuardianHandler>();
+		services.AddTransient<IsGuardianSharedHandler>();
+		services.AddTransient<SyncGuardiansHandler>();
+		services.AddTransient<GetMissingSiblingGuardiansHandler>();
+		services.AddTransient<GetGuardianRelationshipsHandler>();
+		services.AddTransient<CreateGuardianRelationshipHandler>();
+		services.AddTransient<RenameGuardianRelationshipHandler>();
+		services.AddTransient<DeleteGuardianRelationshipHandler>();
+		services.AddTransient<CountGuardianRelationshipHandler>();
 	}
 }

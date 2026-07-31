@@ -4,9 +4,22 @@ import {
   updateStudent,
   deleteStudent,
   addSibling,
+  getSiblings,
   StudentsError,
   type StudentResult,
 } from '../../services/students';
+import {
+  getGuardians,
+  addGuardian,
+  updateGuardian,
+  unlinkGuardian,
+  deleteGuardian,
+  isGuardianShared,
+  syncGuardians,
+  getMissingSiblingGuardians,
+  peekCachedGuardianRelationships,
+  type GuardianResult,
+} from '../../services/guardians';
 
 const mockGetStudents = vi.fn();
 vi.mock('../../services/students', async () => {
@@ -18,6 +31,28 @@ vi.mock('../../services/students', async () => {
     updateStudent: vi.fn(),
     deleteStudent: vi.fn(),
     addSibling: vi.fn(),
+    getSiblings: vi.fn(),
+  };
+});
+
+const mockGetGuardianRelationships = vi.fn();
+vi.mock('../../services/guardians', async () => {
+  const actual = await vi.importActual<typeof import('../../services/guardians')>('../../services/guardians');
+  return {
+    ...actual,
+    getGuardians: vi.fn(),
+    addGuardian: vi.fn(),
+    updateGuardian: vi.fn(),
+    unlinkGuardian: vi.fn(),
+    deleteGuardian: vi.fn(),
+    isGuardianShared: vi.fn(),
+    syncGuardians: vi.fn(),
+    getMissingSiblingGuardians: vi.fn(),
+    getGuardianRelationships: () => mockGetGuardianRelationships(),
+    // Mocked separately from the real cache the (also mocked) getGuardianRelationships
+    // would otherwise populate — tests set this directly to control which branch of
+    // pm-students-page's cache-peek-then-open logic runs.
+    peekCachedGuardianRelationships: vi.fn(),
   };
 });
 
@@ -25,6 +60,9 @@ import '../pm-students-page';
 import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../../components/pm-delete-student-modal';
+import type { PmDeleteGuardianModal } from '../../components/pm-delete-guardian-modal';
+import type { PmGuardianList } from '../../components/pm-guardian-list';
+import type { PmStudentGuardiansSummary } from '../../components/pm-student-guardians-summary';
 
 const alice: StudentResult = {
   studentId: 's1',
@@ -46,6 +84,21 @@ const julian: StudentResult = {
   class: 'E1',
   phase: 'Senior',
   language: 'Afrikaans',
+};
+
+const motherRelationship = { guardianRelationshipId: 'gr1', name: 'Mother' };
+const fatherRelationship = { guardianRelationshipId: 'gr2', name: 'Father' };
+
+const nomvula: GuardianResult = {
+  guardianId: 'g1',
+  guardianRelationshipId: 'gr1',
+  firstName: 'Nomvula',
+  surname: 'Dube',
+  cell: '0821234567',
+  email: 'nomvula@example.com',
+  receivesCorrespondence: true,
+  responsibleForPayment: true,
+  married: false,
 };
 
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -74,6 +127,14 @@ function deleteModalOf(el: HTMLElement): PmDeleteStudentModal {
   return el.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteStudentModal;
 }
 
+function deleteGuardianModalOf(el: HTMLElement): PmDeleteGuardianModal {
+  return el.shadowRoot!.getElementById('deleteGuardianModal') as unknown as PmDeleteGuardianModal;
+}
+
+function guardiansStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+  return wizard.shadowRoot!.getElementById('guardiansStep')!.shadowRoot!;
+}
+
 beforeEach(() => {
   mockGetStudents.mockReset();
   mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian]));
@@ -82,6 +143,28 @@ beforeEach(() => {
   vi.mocked(deleteStudent).mockReset();
   vi.mocked(deleteStudent).mockResolvedValue(undefined);
   vi.mocked(addSibling).mockReset();
+  vi.mocked(getSiblings).mockReset();
+  vi.mocked(getSiblings).mockResolvedValue([]);
+  mockGetGuardianRelationships.mockReset();
+  mockGetGuardianRelationships.mockResolvedValue([motherRelationship, fatherRelationship]);
+  vi.mocked(getGuardians).mockReset();
+  vi.mocked(getGuardians).mockResolvedValue([]);
+  vi.mocked(addGuardian).mockReset();
+  vi.mocked(updateGuardian).mockReset();
+  vi.mocked(unlinkGuardian).mockReset();
+  vi.mocked(unlinkGuardian).mockResolvedValue(undefined);
+  vi.mocked(deleteGuardian).mockReset();
+  vi.mocked(deleteGuardian).mockResolvedValue(undefined);
+  vi.mocked(isGuardianShared).mockReset();
+  vi.mocked(isGuardianShared).mockResolvedValue(false);
+  vi.mocked(syncGuardians).mockReset();
+  vi.mocked(getMissingSiblingGuardians).mockReset();
+  vi.mocked(getMissingSiblingGuardians).mockResolvedValue([]);
+  // Simulates the realistic common case: the cache is already warm by the time a
+  // test opens the wizard, exactly as it would be in the real app after the page's
+  // eager on-mount load resolves. Tests for the cold-cache fallback override this.
+  vi.mocked(peekCachedGuardianRelationships).mockReset();
+  vi.mocked(peekCachedGuardianRelationships).mockReturnValue([motherRelationship, fatherRelationship]);
 });
 
 describe('pm-students-page — loads the roster on page load', { tags: ['200UC8'] }, () => {
@@ -321,14 +404,14 @@ describe('pm-students-page — updates a student from the wizard modal', { tags:
     const wizard = wizardModalOf(el);
     const wizardShadow = wizard.shadowRoot!;
     wizard.openForEdit(alice);
-    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('studentSaveBtn') as HTMLButtonElement).click();
     await flush();
 
     expect(wizard.hasAttribute('open')).toBe(false);
 
     wizard.openForEdit(alice);
 
-    expect((wizardShadow.getElementById('saveBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((wizardShadow.getElementById('studentSaveBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
@@ -353,3 +436,547 @@ describe('pm-students-page — removes a student on delete confirmation', { tags
     expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1']);
   });
 });
+
+describe('pm-students-page — Guardians tab shows the student linked guardians', { tags: ['212UC14'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('opening the Guardians tab fetches and displays the linked guardians', async () => {
+    vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(getGuardians)).toHaveBeenCalledWith('s1');
+    const guardianList = guardiansStepShadowOf(wizard).getElementById('guardianList') as unknown as PmGuardianList;
+    expect(guardianList.guardians.map((g) => g.guardianId)).toEqual(['g1']);
+  });
+});
+
+describe('pm-students-page — adds a guardian from the Guardians tab', { tags: ['212UC15'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('submitting the Add Guardian form calls addGuardian and the new guardian appears in the list', async () => {
+    vi.mocked(getGuardians).mockReset();
+    vi.mocked(getGuardians).mockResolvedValueOnce([]).mockResolvedValueOnce([nomvula]);
+    vi.mocked(addGuardian).mockResolvedValue(nomvula);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    (guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+    const formShadow = guardiansStepShadow.getElementById('guardianForm')!.shadowRoot!;
+    (formShadow.getElementById('firstName') as HTMLInputElement).value = 'Nomvula';
+    (formShadow.getElementById('surname') as HTMLInputElement).value = 'Dube';
+    (formShadow.getElementById('relationship') as HTMLSelectElement).value = 'gr1';
+    (formShadow.getElementById('cell') as HTMLInputElement).value = '0821234567';
+    (formShadow.getElementById('email') as HTMLInputElement).value = 'nomvula@example.com';
+    (formShadow.getElementById('receivesCorrespondence') as HTMLInputElement).checked = true;
+    (formShadow.getElementById('responsibleForPayment') as HTMLInputElement).checked = true;
+    (formShadow.getElementById('confirmBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(addGuardian)).toHaveBeenCalledWith(
+      's1',
+      expect.objectContaining({ firstName: 'Nomvula', surname: 'Dube', guardianRelationshipId: 'gr1' }),
+    );
+    const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+    expect(guardianList.guardians.map((g) => g.guardianId)).toEqual(['g1']);
+
+    const formPanel = guardiansStepShadow.getElementById('formPanel') as HTMLElement;
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(false);
+    expect((guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).hidden).toBe(false);
+  });
+
+  it('does not collapse a form the user has already opened when a slower, unrelated tab-activation refresh resolves late', async () => {
+    // Simulates the real race this guards against: the tab-activation fetch is still
+    // in flight when the user clicks Add, and only resolves afterwards.
+    let resolveTabActivationFetch!: (guardians: GuardianResult[]) => void;
+    vi.mocked(getGuardians).mockReset();
+    vi.mocked(getGuardians).mockReturnValueOnce(new Promise((resolve) => (resolveTabActivationFetch = resolve)));
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    (guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+    const formPanel = guardiansStepShadow.getElementById('formPanel') as HTMLElement;
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
+
+    resolveTabActivationFetch([]);
+    await flush();
+
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
+  });
+
+  it('expands the Add Guardian form under the button with the list still visible, and collapses on Cancel', async () => {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    const formPanel = guardiansStepShadow.getElementById('formPanel') as HTMLElement;
+    const guardianListEl = guardiansStepShadow.getElementById('guardianList') as HTMLElement;
+    const addBtn = guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement;
+    const confirmBtn = guardiansStepShadow
+      .getElementById('guardianForm')!
+      .shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
+
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(false);
+    expect(formPanel.hasAttribute('inert')).toBe(true);
+    expect(addBtn.hidden).toBe(false);
+
+    addBtn.click();
+
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
+    expect(formPanel.hasAttribute('inert')).toBe(false);
+    expect(guardianListEl.hidden).toBe(false);
+    expect(confirmBtn.textContent).toBe('Add');
+    expect(addBtn.hidden).toBe(true);
+
+    (
+      guardiansStepShadow.getElementById('guardianForm')!.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement
+    ).click();
+
+    expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(false);
+    expect(formPanel.hasAttribute('inert')).toBe(true);
+    expect(addBtn.hidden).toBe(false);
+  });
+});
+
+describe('pm-students-page — edits a guardian from the Guardians tab', { tags: ['212UC16'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('editing a guardian inline on its table row calls updateGuardian and the list reflects the updated details', async () => {
+    const updated = { ...nomvula, surname: 'Khumalo' };
+    vi.mocked(getGuardians).mockReset();
+    vi.mocked(getGuardians).mockResolvedValueOnce([nomvula]).mockResolvedValueOnce([updated]);
+    vi.mocked(updateGuardian).mockResolvedValue(updated);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    const addBtn = guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement;
+    const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+    // Edit mode: guardians are already persisted, so the row uses "Edit"/"Delete", not "Change"/"Remove".
+    expect(guardianListShadow.querySelector('.guardian-list__btn--edit')?.textContent).toBe('Edit');
+    expect(guardianListShadow.querySelector('.guardian-list__btn--change')).toBeNull();
+    (guardianListShadow.querySelector('.guardian-list__btn--edit') as HTMLButtonElement).click();
+
+    expect(addBtn.hidden).toBe(true);
+
+    const row = guardianListShadow.querySelector('tbody tr')!;
+    const [firstNameInput, surnameInput] = row.querySelectorAll(
+      '.guardian-list__edit-name input',
+    ) as NodeListOf<HTMLInputElement>;
+    expect(firstNameInput.value).toBe('Nomvula');
+    surnameInput.value = 'Khumalo';
+    (row.querySelector('.guardian-list__btn--save') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(updateGuardian)).toHaveBeenCalledWith('g1', expect.objectContaining({ surname: 'Khumalo' }));
+    const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+    expect(guardianList.guardians[0]?.surname).toBe('Khumalo');
+    expect(addBtn.hidden).toBe(false);
+  });
+
+  it('cancelling an inline edit discards the row changes and restores the Add Guardian button', async () => {
+    vi.mocked(getGuardians).mockReset();
+    vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    const addBtn = guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement;
+    const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+    // Edit mode: guardians are already persisted, so the row uses "Edit"/"Delete", not "Change"/"Remove".
+    expect(guardianListShadow.querySelector('.guardian-list__btn--edit')?.textContent).toBe('Edit');
+    expect(guardianListShadow.querySelector('.guardian-list__btn--change')).toBeNull();
+    (guardianListShadow.querySelector('.guardian-list__btn--edit') as HTMLButtonElement).click();
+
+    expect(addBtn.hidden).toBe(true);
+
+    const row = guardianListShadow.querySelector('tbody tr')!;
+    (row.querySelector('.guardian-list__btn--cancel') as HTMLButtonElement).click();
+
+    expect(vi.mocked(updateGuardian)).not.toHaveBeenCalled();
+    expect(addBtn.hidden).toBe(false);
+    expect(guardianListShadow.querySelector('.guardian-list__btn--edit')).not.toBeNull();
+  });
+});
+
+describe('pm-students-page — scoped guardian delete from the Guardians tab', { tags: ['212UC17'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('offers a scoped choice when the guardian is actually shared, and "this student only" calls unlinkGuardian not deleteGuardian', async () => {
+    vi.mocked(isGuardianShared).mockResolvedValue(true);
+    vi.mocked(getGuardians).mockReset();
+    vi.mocked(getGuardians)
+      .mockResolvedValueOnce([nomvula]) // own guardians, tab activation
+      .mockResolvedValueOnce([]); // own guardians, post-unlink refresh
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+    (guardianListShadow.querySelector('.guardian-list__btn--delete') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(isGuardianShared)).toHaveBeenCalledWith('g1');
+    const deleteModal = deleteGuardianModalOf(el);
+    const modalShadow = deleteModal.shadowRoot!;
+    expect((modalShadow.getElementById('scopeChoice') as HTMLElement).hidden).toBe(false);
+    expect((modalShadow.getElementById('plainBody') as HTMLElement).hidden).toBe(true);
+
+    (modalShadow.getElementById('scopeOne') as HTMLInputElement).checked = true;
+    (modalShadow.getElementById('deleteBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(unlinkGuardian)).toHaveBeenCalledWith('s1', 'g1');
+    expect(vi.mocked(deleteGuardian)).not.toHaveBeenCalled();
+    const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+    expect(guardianList.guardians).toEqual([]);
+  });
+
+  it('shows the plain delete message when the student has siblings but this guardian is not actually shared', async () => {
+    // Regression guard: the student having siblings at all used to be treated as
+    // "maybe shared", showing the scoped choice regardless of whether this specific
+    // guardian was actually linked to any of them. The check must now be definitive.
+    vi.mocked(getSiblings).mockResolvedValue([julian]);
+    vi.mocked(isGuardianShared).mockResolvedValue(false);
+    vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+    (guardianListShadow.querySelector('.guardian-list__btn--delete') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(isGuardianShared)).toHaveBeenCalledWith('g1');
+    const deleteModal = deleteGuardianModalOf(el);
+    const modalShadow = deleteModal.shadowRoot!;
+    expect((modalShadow.getElementById('plainBody') as HTMLElement).hidden).toBe(false);
+    expect((modalShadow.getElementById('scopeChoice') as HTMLElement).hidden).toBe(true);
+  });
+});
+
+describe(
+  'pm-students-page — Sync Guardians for a student missing sibling-group guardians',
+  { tags: ['212UC18'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('shows Sync Guardians when a sibling holds a missing guardian, and clicking it links the missing guardian', async () => {
+      vi.mocked(getSiblings).mockResolvedValue([julian]);
+      vi.mocked(getGuardians).mockReset();
+      vi.mocked(getGuardians)
+        .mockResolvedValueOnce([]) // own guardians, tab activation
+        .mockResolvedValueOnce([nomvula]); // own guardians, post-sync refresh
+      vi.mocked(getMissingSiblingGuardians).mockReset();
+      vi.mocked(getMissingSiblingGuardians)
+        .mockResolvedValueOnce([nomvula]) // tab activation: nomvula is missing
+        .mockResolvedValueOnce([]); // post-sync refresh: no longer missing
+      vi.mocked(syncGuardians).mockResolvedValue([nomvula]);
+
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      const wizardShadow = wizard.shadowRoot!;
+      (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+      await flush();
+
+      const guardiansStepShadow = guardiansStepShadowOf(wizard);
+      const syncBtn = guardiansStepShadow.getElementById('syncBtn') as HTMLButtonElement;
+      const addBtn = guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement;
+      expect(syncBtn.hidden).toBe(false);
+      expect(syncBtn.compareDocumentPosition(addBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      addBtn.click();
+      expect(addBtn.hidden).toBe(true);
+      expect(syncBtn.hidden).toBe(true);
+      (
+        guardiansStepShadow.getElementById('guardianForm')!.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement
+      ).click();
+      expect(addBtn.hidden).toBe(false);
+      expect(syncBtn.hidden).toBe(false);
+
+      syncBtn.click();
+      await flush();
+
+      expect(vi.mocked(syncGuardians)).toHaveBeenCalledWith('s1');
+      expect(vi.mocked(getMissingSiblingGuardians)).toHaveBeenCalledWith('s1');
+      const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+      expect(guardianList.guardians.map((g) => g.guardianId)).toEqual(['g1']);
+      expect(syncBtn.hidden).toBe(true);
+    });
+  },
+);
+
+describe('pm-students-page — Add Guardian relationship dropdown sourced from the lookup', { tags: ['212UC19'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('populates the relationship select with the guardian relationships returned by the service', async () => {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabGuardians') as HTMLButtonElement).click();
+    await flush();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    (guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+    const select = guardiansStepShadow
+      .getElementById('guardianForm')!
+      .shadowRoot!.getElementById('relationship') as HTMLSelectElement;
+    const options = Array.from(select.options).filter((o) => o.value !== '');
+
+    expect(options.map((o) => o.value)).toEqual(['gr1', 'gr2']);
+    expect(options.map((o) => o.textContent)).toEqual(['Mother', 'Father']);
+  });
+
+  it('falls back to fetching relationships before opening the wizard when the cache is cold', async () => {
+    vi.mocked(peekCachedGuardianRelationships).mockReturnValue(null);
+    mockGetGuardianRelationships.mockReset();
+    mockGetGuardianRelationships.mockResolvedValue([motherRelationship, fatherRelationship]);
+
+    const createBtn = el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
+    createBtn.click();
+    await flush();
+
+    const wizard = wizardModalOf(el);
+    expect(wizard.hasAttribute('open')).toBe(true);
+    expect(mockGetGuardianRelationships).toHaveBeenCalled();
+
+    const guardiansStepShadow = guardiansStepShadowOf(wizard);
+    (guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+    const select = guardiansStepShadow
+      .getElementById('guardianForm')!
+      .shadowRoot!.getElementById('relationship') as HTMLSelectElement;
+    const options = Array.from(select.options).filter((o) => o.value !== '');
+    expect(options.map((o) => o.textContent)).toEqual(['Mother', 'Father']);
+  });
+});
+
+describe('pm-students-page — expanded row shows a read-only guardian summary', { tags: ['212UC20'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('expanding a student row fetches and displays that student linked guardians', async () => {
+    vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+    const tableShadow = (el.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable).shadowRoot!;
+    const chevron = tableShadow.querySelector('.students-table__chevron-btn') as HTMLButtonElement;
+    chevron.click();
+    await flush();
+
+    const summary = tableShadow.querySelector('pm-student-guardians-summary') as PmStudentGuardiansSummary;
+    expect(summary.guardians.map((g) => g.guardianId)).toEqual(['g1']);
+  });
+});
+
+describe(
+  'pm-students-page — Create wizard Guardians step prepopulates siblings guardians read-only',
+  { tags: ['212UC21'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('entering the Guardians step after picking a sibling shows that sibling guardians as read-only rows', async () => {
+      vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+      const createBtn = el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
+      createBtn.click();
+
+      const wizard = wizardModalOf(el);
+      const wizardShadow = wizard.shadowRoot!;
+      const stepShadow = wizardShadow.getElementById('studentStep')!.shadowRoot!;
+      (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+      (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+      (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+      (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+      (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+      (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
+      (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+      const searchSelectShadow = wizardShadow
+        .getElementById('siblingsStep')!
+        .shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+      const searchQuery = searchSelectShadow.getElementById('query') as HTMLInputElement;
+      searchQuery.value = julian.firstName;
+      searchQuery.dispatchEvent(new Event('input'));
+      const julianResult = searchSelectShadow.querySelector<HTMLButtonElement>(
+        `.search-select__result[data-student-id="${julian.studentId}"]`,
+      )!;
+      julianResult.click();
+      (searchSelectShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+      await flush();
+
+      expect(vi.mocked(getGuardians)).toHaveBeenCalledWith(julian.studentId);
+
+      const guardiansStepShadow = guardiansStepShadowOf(wizard);
+      const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+      expect(guardianList.guardians.map((g) => g.guardianId)).toEqual(['g1']);
+      expect(guardianList.guardians.every((g) => g.readOnly)).toBe(true);
+
+      const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+      expect(guardianListShadow.querySelector('.guardian-list__btn--edit')).toBeNull();
+      expect(guardianListShadow.querySelector('.guardian-list__btn--delete')).toBeNull();
+
+      const addBtn = guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement;
+      expect(addBtn.hidden).toBe(false);
+
+      // Only a single guardian list element exists — inherited and own guardians share it.
+      expect((guardiansStepShadow.getElementById('guardianList') as HTMLElement).hidden).toBe(false);
+    });
+
+    it('shows the own-guardians table once a new guardian is added alongside the inherited ones', async () => {
+      vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+
+      const createBtn = el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
+      createBtn.click();
+
+      const wizard = wizardModalOf(el);
+      const wizardShadow = wizard.shadowRoot!;
+      const stepShadow = wizardShadow.getElementById('studentStep')!.shadowRoot!;
+      (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+      (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+      (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+      (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+      (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+      (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
+      (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+      const searchSelectShadow = wizardShadow
+        .getElementById('siblingsStep')!
+        .shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+      const searchQuery = searchSelectShadow.getElementById('query') as HTMLInputElement;
+      searchQuery.value = julian.firstName;
+      searchQuery.dispatchEvent(new Event('input'));
+      searchSelectShadow
+        .querySelector<HTMLButtonElement>(`.search-select__result[data-student-id="${julian.studentId}"]`)!
+        .click();
+      (searchSelectShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+      await flush();
+
+      const guardiansStepShadow = guardiansStepShadowOf(wizard);
+      (guardiansStepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+      const formShadow = guardiansStepShadow.getElementById('guardianForm')!.shadowRoot!;
+      (formShadow.getElementById('firstName') as HTMLInputElement).value = 'Newly';
+      (formShadow.getElementById('surname') as HTMLInputElement).value = 'Added';
+      (formShadow.getElementById('relationship') as HTMLSelectElement).value = 'gr1';
+      (formShadow.getElementById('confirmBtn') as HTMLButtonElement).click();
+
+      expect((guardiansStepShadow.getElementById('guardianList') as HTMLElement).hidden).toBe(false);
+      const guardianList = guardiansStepShadow.getElementById('guardianList') as unknown as PmGuardianList;
+      expect(guardianList.guardians.map((g) => g.firstName)).toEqual(['Nomvula', 'Newly']);
+      expect(guardianList.guardians.map((g) => g.readOnly ?? false)).toEqual([true, false]);
+
+      // Create mode: the pending own guardian is only staged in memory, so its row
+      // uses "Change"/"Remove" (borderless) rather than the persisted "Edit"/"Delete".
+      const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
+      const ownRow = [...guardianListShadow.querySelectorAll('tbody tr')].find((row) =>
+        row.textContent!.includes('Newly'),
+      )!;
+      expect(ownRow.querySelector('.guardian-list__btn--change')?.textContent).toBe('Change');
+      expect(ownRow.querySelector('.guardian-list__btn--remove')?.textContent).toBe('Remove');
+      expect(ownRow.querySelector('.guardian-list__btn--edit')).toBeNull();
+      expect(ownRow.querySelector('.guardian-list__btn--delete')).toBeNull();
+    });
+  },
+);

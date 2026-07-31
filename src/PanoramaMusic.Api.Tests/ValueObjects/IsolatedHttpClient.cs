@@ -78,6 +78,13 @@ internal class IsolatedHttpClient(HttpClient client)
 		return request;
 	}
 
+	internal HttpRequestMessage AuthorizedPatchRequest<T>(string path, T body)
+	{
+		var request = AuthorizedRequest(HttpMethod.Patch, path, AccessToken);
+		request.Content = JsonContent.Create(body);
+		return request;
+	}
+
 	internal HttpRequestMessage AuthorizedDeleteRequest(string path) => AuthorizedRequest(HttpMethod.Delete, path, AccessToken);
 
 	// __Secure- prefixed cookies aren't resent automatically by HttpClient's cookie

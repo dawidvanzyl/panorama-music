@@ -39,13 +39,16 @@ public class UpdateUserRolesHandlerTests : IClassFixture<IdentityTestFixture>
 		_handler = _context.ServiceProvider.GetRequiredService<UpdateUserRolesHandler>();
 	}
 
-	[Fact]
+	[Theory]
 	[Trait("AC", "M1.1UC12")]
-	public async Task HandleAsync_AdminUpdatesRoles_ReturnsUpdatedUser()
+	[Trait("AC", "213UC2")]
+	[InlineData(new object[] { new[] { Role.Teacher, Role.Admin } })]
+	[InlineData(new object[] { new[] { Role.Teacher, Role.Coordinator } })]
+	public async Task HandleAsync_AdminUpdatesRoles_ReturnsUpdatedUser(Role[] roles)
 	{
 		var userId = Guid.NewGuid();
 		var user = UserFactory.Create(userId, "teacher@test.com");
-		var newRoles = new List<Role> { Role.Teacher, Role.Admin };
+		var newRoles = roles.ToList();
 
 		_context.Repositories.UserRepositoryMock
 			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -59,6 +62,32 @@ public class UpdateUserRolesHandlerTests : IClassFixture<IdentityTestFixture>
 			() => result.ShouldNotBeNull(),
 			() => result.UserId.ShouldBe(userId),
 			() => result.Roles.ShouldBe(newRoles),
+			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.SetRolesAsync(userId, newRoles, TestContext.Current.CancellationToken), Times.Once));
+	}
+
+	[Fact]
+	[Trait("AC", "213UC2")]
+	public async Task HandleAsync_AdminRemovesCoordinatorRole_PersistsRolesWithoutCoordinator()
+	{
+		var userId = Guid.NewGuid();
+		var user = UserFactory.Create(userId, "coordinator@test.com");
+		var newRoles = new List<Role> { Role.Teacher };
+
+		_context.Repositories.UserRoleRepositoryMock
+			.Setup(r => r.GetRolesAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IList<Role>)[Role.Teacher, Role.Coordinator]);
+
+		_context.Repositories.UserRepositoryMock
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		var result = await _handler.HandleAsync(
+			new UpdateUserRolesCommand(userId, new UpdateUserRolesRequest(newRoles)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.Roles.ShouldBe(newRoles),
+			() => result.Roles.ShouldNotContain(Role.Coordinator),
 			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.SetRolesAsync(userId, newRoles, TestContext.Current.CancellationToken), Times.Once));
 	}
 
