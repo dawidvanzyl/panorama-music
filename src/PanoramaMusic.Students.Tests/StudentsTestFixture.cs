@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.Students;
@@ -48,5 +49,9 @@ public sealed class StudentsTestFixture
 		services.AddTransient<SyncGuardiansHandler>();
 		services.AddTransient<GetMissingSiblingGuardiansHandler>();
 		services.AddTransient<GetGuardianRelationshipsHandler>();
+		services.AddTransient<CreateGuardianRelationshipHandler>();
+		services.AddTransient<RenameGuardianRelationshipHandler>();
+		services.AddTransient<DeleteGuardianRelationshipHandler>();
+		services.AddTransient<CountGuardianRelationshipHandler>();
 	}
 }

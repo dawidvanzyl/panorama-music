@@ -1,4 +1,5 @@
 using Dapper;
+using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Interfaces;
@@ -8,11 +9,7 @@ using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Students.Infrastructure.Repositories;
 
-/// <summary>
-/// Read-only access to the seeded guardian_relationships lookup (#4).
-/// Maintaining the lookup is a separate story; this context only consumes it.
-/// </summary>
-public class GuardianRelationshipRepository(IUnitOfWork unitOfWork)
+public class GuardianRelationshipRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
 	: RepositoryBase(unitOfWork), IGuardianRelationshipRepository
 {
 	public async Task<IList<GuardianRelationship>> GetAllAsync(CancellationToken cancellationToken)
@@ -34,4 +31,63 @@ public class GuardianRelationshipRepository(IUnitOfWork unitOfWork)
 
 		return dto?.MapToGuardianRelationship();
 	}
+
+	public async Task<GuardianRelationship?> GetByNameAsync(string name, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_guardian_relationship_by_name",
+			new { p_name = name },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<GuardianRelationshipDto>(command);
+
+		return dto?.MapToGuardianRelationship();
+	}
+
+	public async Task CreateAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.create_guardian_relationship",
+			ToParameters(guardianRelationship),
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(guardianRelationship);
+	}
+
+	public async Task UpdateAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.update_guardian_relationship",
+			ToParameters(guardianRelationship),
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(guardianRelationship);
+	}
+
+	public async Task<bool> DeleteAsync(GuardianRelationship guardianRelationship, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_guardian_relationship",
+			new { p_guardian_relationship_id = guardianRelationship.GuardianRelationshipId },
+			Transaction,
+			cancellationToken);
+		var deletedCount = await Connection.QuerySingleAsync<int>(command);
+
+		if (deletedCount == 0)
+			return false;
+
+		domainEventCollector.Collect(guardianRelationship);
+		return true;
+	}
+
+	private static object ToParameters(GuardianRelationship guardianRelationship) =>
+		new
+		{
+			p_guardian_relationship_id = guardianRelationship.GuardianRelationshipId,
+			p_name = guardianRelationship.Name,
+		};
 }

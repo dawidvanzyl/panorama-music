@@ -33,6 +33,10 @@ export interface GuardianRelationship {
   name: string;
 }
 
+export interface CountGuardianRelationship {
+  count: number;
+}
+
 export class GuardiansError extends Error {
   constructor(
     message: string,
@@ -160,9 +164,10 @@ export function peekCachedGuardianRelationships(): GuardianRelationship[] | null
 }
 
 /**
- * Seeded reference data (relationship types) — stable and reusable, so this
- * mirrors getStudents' cache-on-hit pattern. Nothing in the app mutates this
- * lookup, so there is no invalidation call site.
+ * Reference data (relationship types) — stable and reusable, so this mirrors
+ * getStudents' cache-on-hit pattern. The maintenance calls below invalidate the
+ * cache themselves, so a rename made on the maintenance screen is reflected the
+ * next time the guardian relationship dropdown is built.
  */
 export async function getGuardianRelationships(): Promise<GuardianRelationship[]> {
   if (_guardianRelationshipsCache) return _guardianRelationshipsCache;
@@ -170,4 +175,51 @@ export async function getGuardianRelationships(): Promise<GuardianRelationship[]
   const response = await fetch(GUARDIAN_RELATIONSHIPS_BASE, { headers: authHeaders() });
   _guardianRelationshipsCache = await handleResponse<GuardianRelationship[]>(response);
   return _guardianRelationshipsCache;
+}
+
+export async function createGuardianRelationship(name: string): Promise<GuardianRelationship> {
+  const response = await fetch(GUARDIAN_RELATIONSHIPS_BASE, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  const created = await handleResponse<GuardianRelationship>(response);
+  clearGuardianRelationshipsCache();
+  return created;
+}
+
+export async function renameGuardianRelationship(
+  guardianRelationshipId: string,
+  name: string,
+): Promise<GuardianRelationship> {
+  const response = await fetch(`${GUARDIAN_RELATIONSHIPS_BASE}/${guardianRelationshipId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  const renamed = await handleResponse<GuardianRelationship>(response);
+  clearGuardianRelationshipsCache();
+  return renamed;
+}
+
+/**
+ * Whether any guardian references this relationship type — the same condition
+ * the API enforces on delete. Lets the maintenance screen tell the user a type
+ * is in use before offering a confirmation it would have to reject.
+ */
+export async function countGuardianRelationship(guardianRelationshipId: string): Promise<CountGuardianRelationship> {
+  const response = await fetch(`${GUARDIAN_RELATIONSHIPS_BASE}/${guardianRelationshipId}/count`, {
+    headers: authHeaders(),
+  });
+  return handleResponse<CountGuardianRelationship>(response);
+}
+
+/** Rejected by the API with a 400 when the type is still assigned to a guardian. */
+export async function deleteGuardianRelationship(guardianRelationshipId: string): Promise<void> {
+  const response = await fetch(`${GUARDIAN_RELATIONSHIPS_BASE}/${guardianRelationshipId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearGuardianRelationshipsCache();
 }

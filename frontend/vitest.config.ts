@@ -82,6 +82,10 @@ export default defineConfig({
       { name: '213UC4', description: 'Coordinator is an assignable role alongside Teacher and Admin in the create-user request' },
       { name: '213UC5', description: 'Admin assigns the Coordinator role and saves; the user is shown with the Coordinator role' },
       { name: '213UC6', description: 'Admin removes the Coordinator role and saves; the user no longer shows the Coordinator role' },
+      { name: '214UC7', description: 'Guardian Relationship Management page displays the current relationship types on load' },
+      { name: '214UC8', description: 'Submitting the create relationship form adds the new type to the list' },
+      { name: '214UC9', description: 'Editing a relationship row inline and saving reflects the updated name in the list' },
+      { name: '214UC10', description: 'Deleting a relationship type that is in use surfaces that it cannot be deleted' },
     ],
   },
 })

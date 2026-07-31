@@ -89,6 +89,10 @@ template.innerHTML = `
         <span class="sidebar__icon">group</span>
         <span>Student Management</span>
       </a>
+      <a href="#/students/guardian-relationships" class="sidebar__link" id="guardianRelationshipsLink" hidden>
+        <span class="sidebar__icon">family_restroom</span>
+        <span>Guardian Relationships</span>
+      </a>
       <a href="#/admin/users" class="sidebar__link" id="userManagementLink" hidden>
         <span class="sidebar__icon">group</span>
         <span>User Management</span>
@@ -117,6 +121,7 @@ template.innerHTML = `
 
 export class PmSidebar extends HTMLElement {
   private studentManagementLink: HTMLAnchorElement | null = null;
+  private guardianRelationshipsLink: HTMLAnchorElement | null = null;
   private userManagementLink: HTMLAnchorElement | null = null;
   private adminSessionsLink: HTMLAnchorElement | null = null;
   private activityLogLink: HTMLAnchorElement | null = null;
@@ -132,6 +137,7 @@ export class PmSidebar extends HTMLElement {
 
   connectedCallback(): void {
     this.studentManagementLink = this.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
+    this.guardianRelationshipsLink = this.shadowRoot!.getElementById('guardianRelationshipsLink') as HTMLAnchorElement;
     this.userManagementLink = this.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
     this.adminSessionsLink = this.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
     this.activityLogLink = this.shadowRoot!.getElementById('activityLogLink') as HTMLAnchorElement;
@@ -154,12 +160,19 @@ export class PmSidebar extends HTMLElement {
 
     const showAdminLinks = isAuthenticated() && hasRole('Admin') && activeSection === 'admin';
     const showStudentLinks = isAuthenticated() && hasAnyRole(['Teacher', 'Admin']) && activeSection === 'students';
+    const showRelationshipLinks =
+      isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
     this.studentManagementLink!.hidden = !showStudentLinks;
+    this.guardianRelationshipsLink!.hidden = !showRelationshipLinks;
     this.userManagementLink!.hidden = !showAdminLinks;
     this.adminSessionsLink!.hidden = !showAdminLinks;
     this.activityLogLink!.hidden = !showAdminLinks;
 
     this.studentManagementLink!.classList.toggle('sidebar__link--active', basePath === '/students');
+    this.guardianRelationshipsLink!.classList.toggle(
+      'sidebar__link--active',
+      basePath === '/students/guardian-relationships',
+    );
     this.userManagementLink!.classList.toggle('sidebar__link--active', basePath === '/admin/users');
     this.adminSessionsLink!.classList.toggle('sidebar__link--active', basePath === '/admin/sessions');
     this.activityLogLink!.classList.toggle('sidebar__link--active', basePath === '/admin/activity-log');

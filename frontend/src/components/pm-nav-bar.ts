@@ -123,11 +123,16 @@ export class PmNavBar extends HTMLElement {
     const authed = isAuthenticated();
     const isAdmin = authed && hasRole('Admin');
     const isTeacherOrAdmin = authed && hasAnyRole(['Teacher', 'Admin']);
+    const isCoordinatorOrAdmin = authed && hasAnyRole(['Coordinator', 'Admin']);
     const basePath = window.location.hash.slice(1).split('?')[0];
     const activeSection = updateActiveNavSection(basePath);
 
     this.sections!.hidden = !authed;
-    this.studentsLink!.hidden = !isTeacherOrAdmin;
+    // A Coordinator who is not also a Teacher can reach the Students section,
+    // but only its relationship-maintenance screen — so the entry point points
+    // straight there rather than at the roster they cannot open.
+    this.studentsLink!.hidden = !isTeacherOrAdmin && !isCoordinatorOrAdmin;
+    this.studentsLink!.href = isTeacherOrAdmin ? '#/students' : '#/students/guardian-relationships';
     this.adminLink!.hidden = !isAdmin;
 
     this.dashboardLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'dashboard');

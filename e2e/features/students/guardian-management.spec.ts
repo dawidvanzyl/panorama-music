@@ -42,11 +42,11 @@ test.describe('Guardian Profile Management', { tag: ['@6IT1', '@6IT4', '@6IT5'] 
     // subset, not an exact list, so the companion relationship-maintenance
     // story adding a type does not break this.
     await studentsPage.openAddGuardianForm();
-    const relationshipOptions = await studentsPage
-      .guardianRelationshipSelect()
-      .locator('option')
-      .allTextContents();
-    expect(relationshipOptions).toEqual(expect.arrayContaining(SEEDED_RELATIONSHIPS));
+    for (const relationship of SEEDED_RELATIONSHIPS) {
+      await expect(
+        studentsPage.guardianRelationshipSelect().locator('option', { hasText: relationship }),
+      ).not.toHaveCount(0);
+    }
     await studentsPage.cancelGuardianForm();
 
     await studentsPage.addGuardian({
