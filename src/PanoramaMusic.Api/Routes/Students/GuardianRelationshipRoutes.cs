@@ -70,6 +70,7 @@ public static class GuardianRelationshipRoutes
 				var result = await handler.HandleAsync(guardianRelationshipId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("CountGuardianRelationship")
 			.Produces<CountGuardianRelationshipResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
