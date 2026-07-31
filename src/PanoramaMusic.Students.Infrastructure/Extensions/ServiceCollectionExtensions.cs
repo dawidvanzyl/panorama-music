@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.Students;
@@ -12,6 +13,7 @@ using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Contexts;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Repositories;
+using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
@@ -63,6 +65,10 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<SyncGuardiansHandler>();
 		services.AddTransient<GetMissingSiblingGuardiansHandler>();
 		services.AddTransient<GetGuardianRelationshipsHandler>();
+		services.AddTransient<CreateGuardianRelationshipHandler>();
+		services.AddTransient<RenameGuardianRelationshipHandler>();
+		services.AddTransient<DeleteGuardianRelationshipHandler>();
+		services.AddTransient<CountGuardianRelationshipHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -76,6 +82,9 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, GuardianDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianLinkedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianUnlinkedTranslator>();
+		services.AddTransient<IAuditEventTranslator, GuardianRelationshipCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, GuardianRelationshipRenamedTranslator>();
+		services.AddTransient<IAuditEventTranslator, GuardianRelationshipDeletedTranslator>();
 
 		return services;
 	}

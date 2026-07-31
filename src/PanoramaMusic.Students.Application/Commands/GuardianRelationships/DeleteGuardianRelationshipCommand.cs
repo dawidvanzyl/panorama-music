@@ -1,0 +1,3 @@
+namespace PanoramaMusic.Students.Application.Commands.GuardianRelationships;
+
+public sealed record DeleteGuardianRelationshipCommand(Guid GuardianRelationshipId);

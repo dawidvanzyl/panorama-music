@@ -127,20 +127,5 @@ public static class GuardianRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
-
-		app
-			.MapGroup("/api/guardian-relationships")
-			.WithTags("Guardians")
-			.RequireAuthorization("TeacherOrAdminPolicy")
-			.MapGet("/", async (GetGuardianRelationshipsHandler handler, CancellationToken ct) =>
-			{
-				var result = await handler.HandleAsync(ct);
-				return Results.Ok(result);
-			})
-			.MarkSensitiveResponse()
-			.WithName("GetGuardianRelationships")
-			.Produces<IList<GuardianRelationshipResult>>(StatusCodes.Status200OK)
-			.Produces(StatusCodes.Status401Unauthorized)
-			.Produces(StatusCodes.Status403Forbidden);
 	}
 }

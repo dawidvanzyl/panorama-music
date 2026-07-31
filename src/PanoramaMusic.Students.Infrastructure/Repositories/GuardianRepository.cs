@@ -24,6 +24,17 @@ public class GuardianRepository(IUnitOfWork unitOfWork, IDomainEventCollector do
 		return dto?.MapToGuardian();
 	}
 
+	public async Task<int> CountByRelationshipAsync(Guid guardianRelationshipId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_guardian_count_by_relationship",
+			new { p_guardian_relationship_id = guardianRelationshipId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.QuerySingleAsync<int>(command);
+	}
+
 	public async Task CreateAsync(Guardian guardian, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

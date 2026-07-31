@@ -1,0 +1,5 @@
+using PanoramaMusic.Students.Application.Requests.GuardianRelationships;
+
+namespace PanoramaMusic.Students.Application.Commands.GuardianRelationships;
+
+public sealed record RenameGuardianRelationshipCommand(Guid GuardianRelationshipId, UpdateGuardianRelationshipRequest Request);
