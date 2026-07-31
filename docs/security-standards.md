@@ -102,7 +102,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L1]` `ASVS 5.0.0-3.5.3` Sensitive functionality must use `POST`, `PUT`, `PATCH`, or `DELETE`. Safe HTTP methods (`GET`, `HEAD`, `OPTIONS`) must not trigger state changes or sensitive operations.
 * `[L2]` `ASVS 5.0.0-3.5.4` Separate applications must be hosted on different hostnames to leverage same-origin policy restrictions.
 * `[L2]` `ASVS 5.0.0-3.5.5` Messages received via `postMessage` must be discarded if the sender origin is not trusted or if the message syntax is invalid.
-* `[L3]` `ASVS 5.0.0-3.5.8` Authenticated resources (images, scripts, documents, etc.) must be loadable cross-origin only when intended — enforced via strict `Sec-Fetch-*` request header validation or a restrictive `Cross-Origin-Resource-Policy` response header. Adopted for those resource families that return sensitive, authenticated data.
+* `[L3]` `ASVS 5.0.0-3.5.8` Authenticated resources (images, scripts, documents, etc.) must be loadable cross-origin only when intended — enforced via strict `Sec-Fetch-*` request header validation or a restrictive `Cross-Origin-Resource-Policy` response header. Adopted only where a resource family returns sensitive, authenticated data — not across the API as a whole.
 
 ## 3.5 Other Frontend Controls
 
@@ -288,7 +288,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 10.3 Internal Service Communication
 
-* `[L2]` `ASVS 5.0.0-12.3.1` An encrypted protocol such as TLS must be used for all inbound and outbound connections to and from the application, including monitoring systems, management tools, remote access, middleware, and databases. No fallback to insecure or unencrypted protocols. Where a driver's transport security is governed by an implicit default, the requirement must be stated explicitly in the connection configuration rather than inferred, and it applies to every connection independently — including privileged administrative ones, which are the higher-value of the two and the easiest to overlook. Connections to a loopback datastore are outside this rule's threat model.
+* `[L2]` `ASVS 5.0.0-12.3.1` An encrypted protocol such as TLS must be used for all inbound and outbound connections to and from the application, including monitoring systems, management tools, remote access, middleware, and databases. No fallback to insecure or unencrypted protocols. Where a driver's transport security is governed by an implicit default, the requirement must be stated explicitly in the connection configuration rather than inferred. It applies to every connection independently, including privileged administrative ones — those carry the most authority and are the easiest to overlook.
 * `[L2]` `ASVS 5.0.0-12.3.2` TLS clients must validate the server's certificate before communicating with a TLS server.
 * `[L2]` `ASVS 5.0.0-12.3.3` TLS or another appropriate transport encryption mechanism must be used for all connectivity between internal HTTP-based services within the application, with no fallback to unencrypted communication.
 * `[L2]` `ASVS 5.0.0-12.3.4` TLS connections between internal services must use trusted certificates. Where internally generated or self-signed certificates are used, consuming services must be configured to trust only specific internal CAs or specific self-signed certificates.
