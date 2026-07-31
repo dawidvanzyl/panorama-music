@@ -116,6 +116,7 @@ public static class AuthRoutes
 			var result = await handler.HandleAsync(command, ct);
 			return Results.Ok(result);
 		})
+		.MarkSensitiveResponse()
 		.WithName("GetOwnSessions")
 		.Produces<IList<SessionResult>>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status401Unauthorized);
@@ -153,6 +154,7 @@ public static class AuthRoutes
 			var result = await handler.HandleAsync(command, ct);
 			return Results.Ok(result);
 		})
+		.MarkSensitiveResponse()
 		.WithName("GetAllSessions")
 		.Produces<IList<AdminSessionResult>>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status401Unauthorized)

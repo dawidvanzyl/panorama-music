@@ -24,6 +24,7 @@ public static class GuardianRoutes
 				return Results.Created($"/api/students/{studentId}/guardians/{result.GuardianId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<AddGuardianRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("AddGuardian")
 			.Produces<GuardianResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
@@ -63,6 +64,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("SyncGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -95,6 +97,7 @@ public static class GuardianRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<UpdateGuardianRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("UpdateGuardian")
 			.Produces<GuardianResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
@@ -121,7 +124,6 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(guardianId, ct);
 				return Results.Ok(result);
 			})
-			.MarkSensitiveResponse()
 			.WithName("IsGuardianShared")
 			.Produces<bool>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
