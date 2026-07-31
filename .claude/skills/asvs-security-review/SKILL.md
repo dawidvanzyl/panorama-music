@@ -81,6 +81,21 @@ table, and the "Considered and declined" / "Out of scope" lists. The
 out-of-scope and declined items are not re-litigated — never raise a finding
 against a rule the doc already explicitly excludes.
 
+The document states what must be **true**, never how it currently **is** true — it
+names no class, config key, hostname, or parameter value from the repo, and it
+contains no catalogue of endpoints, entities, or audit events. A diff can
+therefore never put the document "out of date". **"The doc doesn't mention X
+yet" is not a finding** — not a Blocker, not a Warning, not a Suggestion. Drop
+it. The only doc-related finding worth raising is a diff that violates or
+silently reverses a *documented decision* (an accepted limitation, a scoped
+exemption, or the egress allowlist), and that is a finding against the rule
+itself, cited at the offending `file:line`.
+
+Where a rule defers to documentation kept next to the code — audit event types,
+rate-limit thresholds, session lifetimes, forwarded-hop bounds — read that code
+to judge the rule. A stale comment *there* is a real finding; its absence from
+`security-standards.md` is not.
+
 ### 3) Scope rules to what the diff touches
 
 Don't run the full rule set against every diff — that's what produces noise.

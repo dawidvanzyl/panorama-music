@@ -1,10 +1,12 @@
-# Security Standards (v1.2)
+# Security Standards (v1.3)
 
 Application security requirements for the Panorama Music project, derived from the **OWASP Application Security Verification Standard (ASVS) 5.0.0**, scoped to this stack: ASP.NET Core API, React SPA, JWT authentication, PostgreSQL, REST endpoints.
 
 > This document targets **ASVS Level 1 and Level 2**, with a small number of **Level 3** rules adopted individually where cheap and relevant — each is tagged `[L3]` explicitly. Each rule is tagged `[L1]`, `[L2]`, or `[L3]`.
 >
 > For workflow, branching, and coding conventions see `coding-standards.md`, `coding-standards-backend.md`, and `coding-standards-frontend.md`.
+>
+> **Scope of this document.** Every rule below states what must be **true**, never how it currently **is** true. Class names, config keys, hostnames, connection strings, and parameter values deliberately do not appear here — those belong next to the code that owns them, where they break loudly when the code changes. Adding an endpoint, an audited entity, or a data class must never, by itself, make this document incorrect. When a reviewer needs to know how a rule is satisfied today, the answer is in the implementation, not here.
 
 ---
 
@@ -33,8 +35,8 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-1.3.6` SSRF must be prevented by validating untrusted data against an allowlist of protocols, domains, paths, and ports before using it to call another service.
 * `[L2]` `ASVS 5.0.0-1.3.7` Template injection must be prevented by not building templates from untrusted input. Where unavoidable, untrusted input must be sanitized or strictly validated before dynamic inclusion.
 * `[L2]` `ASVS 5.0.0-1.3.10` Format strings that might resolve unexpectedly or maliciously must be sanitized before processing.
-* `[L2]` `ASVS 5.0.0-1.3.11` The application must sanitize user input before passing it to mail systems, to protect against SMTP/IMAP injection. **Status: met today** — outbound mail is composed once by `EmailService` and handed to the configured `IMailSender` transport. `SmtpMailSender` sends via MailKit, whose `MailboxAddress.Parse`/`MimeMessage` reject malformed addresses and correctly encode header values; `MailerooMailSender` sends the message as a JSON body over HTTPS to the Maileroo API, so raw CR/LF header injection has no protocol to inject into on our side. In both cases the recipient address is the validated `Email` value object, not free-text input. Re-verify this rule whenever the mail-sending code path changes (e.g. if a free-text "display name" or subject line is ever built from user input).
-* `[L3]` `ASVS 5.0.0-1.3.12` Regular expressions must be free from elements causing exponential backtracking (ReDoS); untrusted input used in regex matching must be sanitized or length-bounded first. Adopted as a coding guideline: prefer FluentValidation's built-in rules (e.g. `.EmailAddress()`) over hand-written regex; if a custom regex is ever introduced, it must be reviewed for backtracking risk before merging.
+* `[L2]` `ASVS 5.0.0-1.3.11` The application must sanitize user input before passing it to mail systems, to protect against SMTP/IMAP injection. Recipient addresses and any header-bound field must be validated values rather than free-text input, and header composition must be delegated to a library that encodes and rejects malformed values rather than concatenated by hand.
+* `[L3]` `ASVS 5.0.0-1.3.12` Regular expressions must be free from elements causing exponential backtracking (ReDoS); untrusted input used in regex matching must be sanitized or length-bounded first. Adopted as a coding guideline: prefer the validation library's built-in rules over hand-written regex; any custom regex introduced must be reviewed for backtracking risk before merging.
 
 ## 1.4 Safe Deserialization
 
@@ -100,7 +102,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L1]` `ASVS 5.0.0-3.5.3` Sensitive functionality must use `POST`, `PUT`, `PATCH`, or `DELETE`. Safe HTTP methods (`GET`, `HEAD`, `OPTIONS`) must not trigger state changes or sensitive operations.
 * `[L2]` `ASVS 5.0.0-3.5.4` Separate applications must be hosted on different hostnames to leverage same-origin policy restrictions.
 * `[L2]` `ASVS 5.0.0-3.5.5` Messages received via `postMessage` must be discarded if the sender origin is not trusted or if the message syntax is invalid.
-* `[L3]` `ASVS 5.0.0-3.5.8` Authenticated resources (images, scripts, documents, etc.) must be loadable cross-origin only when intended — enforced via strict `Sec-Fetch-*` request header validation or a restrictive `Cross-Origin-Resource-Policy` response header. Adopted for `/api/users/*` specifically, since that's the one resource family that returns sensitive, authenticated data.
+* `[L3]` `ASVS 5.0.0-3.5.8` Authenticated resources (images, scripts, documents, etc.) must be loadable cross-origin only when intended — enforced via strict `Sec-Fetch-*` request header validation or a restrictive `Cross-Origin-Resource-Policy` response header. Adopted for those resource families that return sensitive, authenticated data.
 
 ## 3.5 Other Frontend Controls
 
@@ -119,7 +121,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 4.2 HTTP Message Integrity
 
-* `[L2]` `ASVS 5.0.0-4.2.1` All application components (load balancers, firewalls, application servers) must determine HTTP message boundaries using the correct mechanism for the HTTP version in use, to prevent request smuggling — e.g. in HTTP/1.x, if `Transfer-Encoding` is present, `Content-Length` must be ignored. **Status: met today** via Kestrel's compliant HTTP/1.1 and HTTP/2 framing; no app-level code is involved. Re-verify if a reverse proxy is introduced in front of the API.
+* `[L2]` `ASVS 5.0.0-4.2.1` All application components (load balancers, firewalls, application servers) must determine HTTP message boundaries using the correct mechanism for the HTTP version in use, to prevent request smuggling — e.g. in HTTP/1.x, if `Transfer-Encoding` is present, `Content-Length` must be ignored. Where framing is handled entirely by the web server and no application code participates, this rule is satisfied by that server's conformance; it must be re-verified whenever an intermediary is introduced in front of the application.
 
 ---
 
@@ -127,7 +129,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 5.1 Documentation
 
-* `[L1]` `ASVS 5.0.0-6.1.1` Application documentation must define how rate limiting, anti-automation, and adaptive response controls are configured to defend against credential stuffing and brute-force attacks, including how malicious account lockout is prevented. **Status: met today** — `/api/auth/login`, `/refresh`, `/forgot-password`, and `/reset-password` are rate-limited via ASP.NET Core's built-in `RateLimiter` middleware (`RateLimitingExtensions.AddAuthRateLimiting`), configured under `RateLimiting:Auth` (`IpPermitLimit`, `AccountPermitLimit`, `WindowSeconds`; no code-level defaults — config is required). Three independent fixed-window dimensions apply: per-IP, per-account (email for `login`/`forgot-password`, token-resolved account for `refresh`/`reset-password`), and per-token (`refresh`/`reset-password` only, which have no email field). Either threshold exceeded returns `429`; windows reset automatically — no manual unlock, so this does not constitute an account lockout. Anti-automation beyond these four endpoints (e.g. CAPTCHA) remains unimplemented — see §2.4.
+* `[L1]` `ASVS 5.0.0-6.1.1` Application documentation must define how rate limiting, anti-automation, and adaptive response controls are configured to defend against credential stuffing and brute-force attacks, including how malicious account lockout is prevented. Every credential-accepting endpoint must be rate-limited on at least a per-source and a per-account dimension, with thresholds supplied by configuration rather than hard-coded defaults. Exceeding a threshold must throttle the request and the window must reset on its own — a control that requires manual unlock would itself be an account-lockout denial-of-service and is not permitted. The concrete endpoints, dimensions, and thresholds are documented alongside the rate-limiting configuration they govern. Anti-automation coverage beyond credential endpoints is tracked separately — see §2.4.
 * `[L2]` `ASVS 5.0.0-6.1.2` A list of context-specific words must be documented to prevent their use in passwords — e.g. permutations of organization/product names, system identifiers, project codenames, department or role names.
 * `[L2]` `ASVS 5.0.0-6.1.3` If the application includes multiple authentication pathways, all pathways must be documented together with their security controls and the authentication strength enforced consistently across them.
 
@@ -152,7 +154,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L1]` `ASVS 5.0.0-6.3.2` Default user accounts (e.g., `root`, `admin`, `sa`) must not be present in the application or must be disabled.
 * `[L2]` `ASVS 5.0.0-6.3.3` Multi-factor authentication (MFA) or a combination of single-factor mechanisms must be required to access the application. Relaxing this requirement requires a fully documented rationale and a comprehensive set of mitigating controls.
 * `[L2]` `ASVS 5.0.0-6.3.4` If the application includes multiple authentication pathways, there must be no undocumented pathways and security controls must be enforced consistently.
-* `[L3]` `ASVS 5.0.0-6.3.8` Valid users must not be deducible from failed authentication challenges — error messages, HTTP response codes, and **response timing** must not differ based on whether the account exists. Applies to login, registration, and forgot-password. **Partially met, one known gap:** `forgot-password` always returns 202 regardless of whether the email exists, and `login` returns the same "Invalid credentials" message for both a nonexistent email and a wrong password. However, `LoginHandler.HandleAsync` only invokes the Argon2id `Verify` call on the path where a user record was found, so a nonexistent-email request returns measurably faster than a wrong-password request for a real account — a timing side-channel for user enumeration. Track as a follow-up: run a constant-time dummy hash verification on the "user not found" path too.
+* `[L3]` `ASVS 5.0.0-6.3.8` Valid users must not be deducible from failed authentication challenges — error messages, HTTP response codes, and **response timing** must not differ based on whether the account exists. Applies to login, registration, and forgot-password. Response-timing parity in particular requires that an authentication attempt against a nonexistent account performs the same costly work — notably password verification — as an attempt against an existing one, rather than short-circuiting.
 
 ## 5.4 Authentication Factor Lifecycle
 
@@ -195,7 +197,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 6.5 Session Documentation
 
-* `[L2]` `ASVS 5.0.0-7.1.1` The user's session inactivity timeout and absolute maximum session lifetime must be documented, appropriate in combination with other controls. **Current values:** access tokens expire after 15 minutes (`JwtService`); refresh tokens after 7 days, rotated on every use and revoked on logout (`LoginHandler`/`RefreshTokenHandler`/`LogoutHandler`). No inactivity timeout exists separately from the absolute refresh-token lifetime.
+* `[L2]` `ASVS 5.0.0-7.1.1` The user's session inactivity timeout and absolute maximum session lifetime must be documented, appropriate in combination with other controls. **Documented decision:** the session's absolute lifetime is bounded by the refresh-token lifetime, which is rotated on every use and revoked on logout; no inactivity timeout is enforced separately from it. The concrete lifetimes are documented alongside the token configuration that defines them.
 * `[L2]` `ASVS 5.0.0-7.1.2` The number of concurrent (parallel) sessions allowed per account, and the behavior when the maximum is reached, must be documented. **Documented decision:** no concurrent-session cap is enforced. Each login issues a new, independent refresh token; multiple devices/sessions per user are permitted by design.
 
 ---
@@ -217,7 +219,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 * `[L1]` `ASVS 5.0.0-8.3.1` Authorization rules must be enforced at a trusted service layer (the API backend). Authorization must never rely on controls that an untrusted consumer could manipulate, such as client-side JavaScript.
 * `[L2]` `ASVS 5.0.0-8.4.1` If the application supports multiple tenants, cross-tenant controls must ensure that operations performed by a consumer will never affect tenants with which they have no permissions to interact.
-* `[L3]` `ASVS 5.0.0-8.3.2` Changes to values that authorization decisions are based on must take effect immediately; where that's not possible (e.g. claims embedded in a self-contained token), mitigating controls must alert on and revert actions taken by a no-longer-authorized consumer. **Documented accepted limitation:** role/active-status changes to a user do not invalidate that user's already-issued access token. A demoted or deactivated admin's existing JWT remains valid for up to 15 minutes (the access-token TTL) before the new state takes effect. Refresh tokens *are* revoked immediately on deactivation (`DeactivateUserHandler` — deactivate + `RevokeAllForUserAsync` in the ambient unit-of-work transaction), bounding the exposure window to the access-token lifetime.
+* `[L3]` `ASVS 5.0.0-8.3.2` Changes to values that authorization decisions are based on must take effect immediately; where that's not possible (e.g. claims embedded in a self-contained token), mitigating controls must alert on and revert actions taken by a no-longer-authorized consumer. **Documented accepted limitation:** authorization claims carried inside an already-issued access token are not re-evaluated mid-lifetime, so a role or active-status change does not take effect until that token expires. The mitigating control is that revoking the user's refresh tokens in the same transaction as the state change bounds the exposure window to a single access-token lifetime, which is why the two must never be separated.
 
 ---
 
@@ -250,7 +252,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-11.2.1` Industry-validated implementations — including well-known libraries and hardware-accelerated implementations — must be used for all cryptographic operations. Do not implement cryptographic primitives from scratch.
 * `[L2]` `ASVS 5.0.0-11.2.2` The application must be designed with crypto agility: algorithms, key lengths, ciphers, and modes must be reconfigurable or swappable without significant refactoring. Keys and passwords must be replaceable and data must be re-encryptable.
 * `[L2]` `ASVS 5.0.0-11.2.3` All cryptographic primitives must provide a minimum of 128 bits of security based on the algorithm, key size, and configuration (e.g., 256-bit ECC, 3072-bit RSA).
-* `[L3]` `ASVS 5.0.0-11.2.4` All cryptographic operations must be constant-time, with no short-circuit comparisons/calculations/returns that could leak information. **Status: already met** — `Argon2PasswordHashService.CryptographicEquals` performs a fixed-time XOR-accumulate comparison rather than `==`/`SequenceEqual`. Documented here as verified-compliant, not as new work.
+* `[L3]` `ASVS 5.0.0-11.2.4` All cryptographic operations must be constant-time, with no short-circuit comparisons/calculations/returns that could leak information. Secret and hash comparisons must accumulate a difference over the full length rather than returning early on the first mismatch.
 
 ## 9.3 Encryption Algorithms
 
@@ -260,7 +262,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 9.4 Hashing
 
-* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose. **Status: scoped exemption** — `HibpPasswordService` uses SHA-1 only to compute the k-anonymity prefix/suffix required by HIBP's Pwned Passwords range API; this is bucketing for a public anonymity-set protocol, not a cryptographic integrity or secrecy use, so the prohibition this control targets doesn't apply.
+* `[L1]` `ASVS 5.0.0-11.4.1` Only approved hash functions must be used for general cryptographic purposes including digital signatures, HMAC, KDF, and random bit generation. MD5 must not be used for any cryptographic purpose. **Scoped exemption:** a legacy hash may be used where an external protocol mandates it purely as a bucketing/anonymity-set function — for example computing a k-anonymity prefix — since that is neither an integrity nor a secrecy use and is not what this control targets. Any such use must be confined to the protocol that requires it.
 * `[L2]` `ASVS 5.0.0-11.4.2` Passwords must be stored using an approved, computationally intensive key derivation function (e.g., Argon2id, bcrypt, scrypt) with parameters configured to make brute-force sufficiently costly. Parameters must be reviewed and updated as hardware improves.
 * `[L2]` `ASVS 5.0.0-11.4.3` Hash functions used in digital signatures or for data authentication/integrity must be collision-resistant with at least 256-bit output. If only resistance to second pre-image attacks is required, at least 128-bit output is required.
 * `[L2]` `ASVS 5.0.0-11.4.4` Approved key derivation functions with key-stretching parameters must be used when deriving secret keys from passwords, balancing security and performance.
@@ -286,7 +288,7 @@ Application security requirements for the Panorama Music project, derived from t
 
 ## 10.3 Internal Service Communication
 
-* `[L2]` `ASVS 5.0.0-12.3.1` An encrypted protocol such as TLS must be used for all inbound and outbound connections to and from the application, including monitoring systems, management tools, remote access, middleware, and databases. No fallback to insecure or unencrypted protocols. **Action item:** neither Npgsql connection string currently sets an explicit `SSL Mode`; verify/set `SSL Mode=Require` (or stronger) on **both** `ConnectionStrings:DefaultConnection` (the `panorama_app` runtime connection) and `ConnectionStrings:Migrations` (the privileged migration connection) for any non-localhost Postgres (QA/Prod), since the implicit default must not silently allow a plaintext fallback — the migration connection is the higher-privilege of the two.
+* `[L2]` `ASVS 5.0.0-12.3.1` An encrypted protocol such as TLS must be used for all inbound and outbound connections to and from the application, including monitoring systems, management tools, remote access, middleware, and databases. No fallback to insecure or unencrypted protocols. Where a driver's transport security is governed by an implicit default, the requirement must be stated explicitly in the connection configuration rather than inferred, and it applies to every connection independently — including privileged administrative ones, which are the higher-value of the two and the easiest to overlook. Connections to a loopback datastore are outside this rule's threat model.
 * `[L2]` `ASVS 5.0.0-12.3.2` TLS clients must validate the server's certificate before communicating with a TLS server.
 * `[L2]` `ASVS 5.0.0-12.3.3` TLS or another appropriate transport encryption mechanism must be used for all connectivity between internal HTTP-based services within the application, with no fallback to unencrypted communication.
 * `[L2]` `ASVS 5.0.0-12.3.4` TLS connections between internal services must use trusted certificates. Where internally generated or self-signed certificates are used, consuming services must be configured to trust only specific internal CAs or specific self-signed certificates.
@@ -302,7 +304,7 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-13.2.2` Communications between backend application components must use accounts assigned the least necessary privilege.
 * `[L2]` `ASVS 5.0.0-13.2.3` If a credential is used for service authentication, it must not be a default credential (e.g., `root/root`, `admin/admin`).
 * `[L2]` `ASVS 5.0.0-13.2.4` An allowlist must define the external resources or systems with which the application is permitted to communicate. This allowlist may be implemented at the application layer, web server, firewall, or a combination.
-* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** the SMTP host defined by `Smtp__Host`/`Smtp__Port`; `smtp.maileroo.com` (Maileroo HTTP email API, called by `MailerooMailSender` when `Email:Provider=Maileroo`, the Production transport since Render blocks outbound SMTP; base address is hardcoded, not user-influenced); and `api.pwnedpasswords.com` (HIBP Pwned Passwords range endpoint, called by `HibpPasswordService`; base address is hardcoded, not user-influenced, and toggled via `Hibp:Enabled`). No other egress exists.
+* `[L2]` `ASVS 5.0.0-13.2.5` The web or application server must be configured with an allowlist of resources or systems to which it can send requests or load data/files from. **Documented allowlist:** outbound calls are permitted only to the configured mail transport and the breached-password lookup service. Every permitted destination's address must be fixed in configuration or code and must never be derived from user input; introducing any other egress requires this allowlist to be extended first. Each destination is documented alongside the client that calls it.
 
 ## 11.2 Secret Management
 
@@ -317,8 +319,8 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-13.4.3` Web servers must not expose directory listings unless explicitly required.
 * `[L2]` `ASVS 5.0.0-13.4.4` The HTTP `TRACE` method must not be supported in production environments.
 * `[L2]` `ASVS 5.0.0-13.4.5` Documentation endpoints and monitoring endpoints must not be publicly exposed unless explicitly intended and secured.
-* `[L3]` `ASVS 5.0.0-13.4.6` The application must not expose detailed version information of backend components. Verify Kestrel's `Server` response header is suppressed (`AddServerHeader = false`) rather than advertising the Kestrel/.NET version.
-* `[L3]` `ASVS 5.0.0-13.4.7` The web tier must be configured to only serve files with specific, expected file extensions, to prevent unintentional information, configuration, or source leakage. Verify the built `wwwroot` output (the published frontend `dist`) does not contain stray non-asset files.
+* `[L3]` `ASVS 5.0.0-13.4.6` The application must not expose detailed version information of backend components. Server-identifying response headers must be suppressed rather than advertising the web server or runtime version.
+* `[L3]` `ASVS 5.0.0-13.4.7` The web tier must be configured to only serve files with specific, expected file extensions, to prevent unintentional information, configuration, or source leakage. The published static-asset output must contain only the expected asset types, with no stray source, map, or configuration files.
 
 ---
 
@@ -355,21 +357,19 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L1]` `ASVS 5.0.0-15.2.1` The application must only contain components that have not exceeded their documented update and remediation timeframes.
 * `[L2]` `ASVS 5.0.0-15.2.2` The application must have defenses against loss of availability from time-consuming or resource-demanding functionality, as defined in documented security decisions.
 * `[L2]` `ASVS 5.0.0-15.2.3` The production environment must only include functionality required for the application to operate. Test code, sample snippets, and development functionality must not be present in production.
-* `[L3]` `ASVS 5.0.0-15.2.4` Third-party components and all transitive dependencies must be confirmed to come from the expected repository (internal or external) with no risk of a dependency confusion attack. Verify NuGet (`nuget.org` only) and npm (`registry.npmjs.org` only) sources are pinned to official registries with no internal feed name collisions.
+* `[L3]` `ASVS 5.0.0-15.2.4` Third-party components and all transitive dependencies must be confirmed to come from the expected repository (internal or external) with no risk of a dependency confusion attack. Each ecosystem's package sources must be pinned to its official public registry, with no internal feed whose package names could collide with public ones.
 
 ## 13.2 Defensive Coding
 
 * `[L1]` `ASVS 5.0.0-15.3.1` API responses must only return the required subset of fields from a data object. Full data objects must not be returned if individual fields are not accessible to the requesting user.
 * `[L2]` `ASVS 5.0.0-15.3.2` When the application backend makes calls to external URLs, it must be configured to not follow redirects unless that is intended functionality.
 * `[L2]` `ASVS 5.0.0-15.3.3` The application must have countermeasures against mass assignment attacks by restricting allowed fields per controller and action. It must not be possible to insert or update a field value when it was not intended to be part of that action.
-* `[L2]` `ASVS 5.0.0-15.3.4` All proxying and middleware components must transfer the user's original IP address using trusted data fields the end user cannot manipulate; the application must use that trusted value for logging and security decisions such as rate limiting. **Status: met today** — `ForwardedHeadersOptions` is configured in `Program.cs` with `ForwardLimit = 1` and empty `KnownProxies`/`KnownIPNetworks`, rather than an IP allowlist, since Render doesn't publish stable edge IPs for its Web Services. This is safe because Render's container is not directly reachable from the public internet (Render's edge is the sole intermediary), and `ForwardLimit = 1` means only the right-most `X-Forwarded-For` entry — the one Render's edge itself appends from the real TCP peer — is ever trusted; an end user cannot inject an earlier, attacker-controlled value into that position. Re-verify if a CDN or additional proxy is ever placed in front of Render's edge.
-* `[L2]` `ASVS 5.0.0-15.3.7` The application must have defenses against HTTP parameter pollution, particularly where the framework doesn't distinguish the source of request parameters (query string, body, cookies, headers). Currently low-exposure (no list/array query parameters exist on any endpoint); re-verify if one is added.
+* `[L2]` `ASVS 5.0.0-15.3.4` All proxying and middleware components must transfer the user's original IP address using trusted data fields the end user cannot manipulate; the application must use that trusted value for logging and security decisions such as rate limiting. The number of forwarded hops the application trusts must be bounded to exactly the number of intermediaries actually in front of it, so that only entries appended by a trusted intermediary — never entries an end user can prepend — are ever consumed. That bound must be re-derived whenever the deployment topology changes; the rationale for the value in force is documented alongside the configuration that sets it.
+* `[L2]` `ASVS 5.0.0-15.3.7` The application must have defenses against HTTP parameter pollution, particularly where the framework doesn't distinguish the source of request parameters (query string, body, cookies, headers). Endpoints accepting list- or array-valued parameters warrant particular scrutiny, since that is where duplicate-parameter handling diverges between frameworks.
 
 ---
 
 # 14. Security Logging and Error Handling
-
-> **Status: largely unimplemented today.** This section documents the target state. The application currently has no structured security-event logging — only ad-hoc `ILogger` informational messages (e.g. `AdminSeedService`). Treat this section the same way as the rate-limiting gap in §5.1/§2.4: a real, tracked requirement, not a compliance claim.
 
 ## 14.1 Security Logging Documentation
 
@@ -382,34 +382,14 @@ Application security requirements for the Panorama Music project, derived from t
 * `[L2]` `ASVS 5.0.0-16.2.3` The application must only store or broadcast logs to the files/services documented in the log inventory (14.1).
 * `[L2]` `ASVS 5.0.0-16.2.4` Logs must be readable and correlatable by the log processor in use, preferably via a common logging format.
 * `[L2]` `ASVS 5.0.0-16.2.5` Logging of sensitive data must respect that data's protection level — credentials/payment details must never be logged; tokens may only be logged hashed or masked.
-* `[L1]` **Project rule (supplements 16.2.5; ties to ASVS 14.1.2 / 14.2.4):** Passwords, raw tokens, and full hashes must never appear in any log entry or audit record — in any field, including message text, structured properties, and the audit `detail` payload. Email is the primary PII recorded in audit events, and deliberately so: it is the identifier needed to investigate authentication and delegated-administration activity. The Students context (§14.3) is the one documented exception: its `detail.targetDisplay` records a student's full name rather than an email, since students are minors with no account/email of their own — name is the only human-readable identifier available for a Teacher/Admin reviewing that audit trail. This carries no more exposure than the Students roster already grants: it is visible only through `GET /api/audit`, gated by `AdminPolicy`, to the same Teacher/Admin population that can already see every student's name via the roster itself. Because logs and audit records contain this PII (email or, for Students events, name), access to them falls under the access-control requirement for sensitive data in logs defined by ASVS 14.1.2 / 14.2.4 (see §12.1 / §12.2) and the log-protection controls in §14.4.
+* `[L1]` **Project rule (supplements 16.2.5; ties to ASVS 14.1.2 / 14.2.4):** Passwords, raw tokens, and full hashes must never appear in any log entry or audit record — in any field, including message text, structured properties, and the audit detail payload. An audit record must identify its subject by the *least* identifying value that still supports an investigation: an account identifier where the subject holds an account, and a display name only where the subject has no account and no other human-readable identifier exists. Any such name-based identification is permitted only when the audit trail is restricted to a population that can already see that name through the application's ordinary functionality, so the audit trail widens no one's view of personal data. Because logs and audit records therefore contain PII, access to them falls under the access-control requirement for sensitive data in logs defined by ASVS 14.1.2 / 14.2.4 (see §12.1 / §12.2) and the log-protection controls in §14.4.
 
 ## 14.3 Security Events
 
 * `[L2]` `ASVS 5.0.0-16.3.1` All authentication operations must be logged, including successful and unsuccessful attempts, with metadata such as the authentication method used.
 * `[L2]` `ASVS 5.0.0-16.3.2` Failed authorization attempts must be logged.
-* `[L2]` `ASVS 5.0.0-16.3.3` The application must log the security events defined in its documentation and attempts to bypass security controls (input validation, business logic, anti-automation). For this application, the events defined in documentation are the entries of the **Audit Event Catalog** below.
+* `[L2]` `ASVS 5.0.0-16.3.3` The application must log the security events defined in its documentation and attempts to bypass security controls (input validation, business logic, anti-automation). The authoritative set of events this application defines is the audit event-type constants declared by each bounded context — that declaration *is* the documentation, so an event cannot be emitted without being defined and cannot be defined without appearing in the list. Every state-changing operation on an entity or on a security control must have a corresponding event type; the fields recorded must respect the never-log rule in §14.2, with an outcome capturing a reason *category* rather than sensitive detail.
 * `[L2]` `ASVS 5.0.0-16.3.4` Unexpected errors and security control failures (e.g. backend TLS failures) must be logged.
-
-### Audit Event Catalog
-
-The concrete set of security- and business-significant events this application is required to emit, satisfying the "events defined in documentation" requirement of 16.3.3. This catalog is informational documentation supplementing 16.3.3, not a new ASVS control. The event fields recorded must respect the never-log rule in §14.2 — outcome captures a reason *category*, never sensitive detail; email is the primary PII recorded, with one documented exception (Students events record a student's full name instead — see §14.2).
-
-| Event | Trigger | Actor → Target |
-|---|---|---|
-| Login succeeded / failed | `POST /api/auth/login` | user (or anon + attempted identifier) |
-| Logout | `POST /api/auth/logout` | user |
-| Token refreshed / revoked / reuse-detected | `POST /api/auth/refresh` | user |
-| Registration completed | `POST /api/auth/complete-registration` | user |
-| Password reset requested / completed | `POST /api/auth/forgot-password`, `/reset-password` | user (or anon) |
-| User created | `POST /api/users` | admin → new user |
-| Invite generated / regenerated | create, `POST /api/users/{id}/invite` | admin → user |
-| Roles changed (before → after) | `PATCH /api/users/{id}` | admin → user |
-| User activated / deactivated | `PATCH …/activate`, `DELETE /api/users/{id}` | admin → user |
-| User permanently deleted | `DELETE …/permanent` | admin → user |
-| Authorization denied (403) | any admin endpoint | user → resource |
-| Student created / updated (diff) / deleted | `POST`/`PUT`/`DELETE /api/students` | teacher-or-admin → student (name, not email) |
-| Sibling linked / unlinked | `POST`/`DELETE /api/students/{id}/siblings` | teacher-or-admin → student (name, not email) |
 
 ## 14.4 Log Protection
 
@@ -419,10 +399,10 @@ The concrete set of security- and business-significant events this application i
 
 ## 14.5 Error Handling
 
-* `[L2]` `ASVS 5.0.0-16.5.1` A generic message must be returned to the consumer on an unexpected or security-sensitive error, with no exposure of stack traces, queries, secret keys, or tokens. **Status: met** — `ApiExceptionHandler` handles every exception: known domain/validation exceptions serialize only `.Message`, and unexpected exceptions return a generic `{error, correlationId}` body (the exception itself is logged, never returned), so no stack trace, query, key, or token reaches the consumer in any environment.
+* `[L2]` `ASVS 5.0.0-16.5.1` A generic message must be returned to the consumer on an unexpected or security-sensitive error, with no exposure of stack traces, queries, secret keys, or tokens. Known domain and validation failures may return their own message; an unexpected failure must return a fixed generic message plus a correlation identifier, with the exception detail written only to the logs. This must hold in every environment — a more revealing error body must not be enabled outside production.
 * `[L2]` `ASVS 5.0.0-16.5.2` The application must continue operating securely when external resource access fails (e.g. via circuit breakers or graceful degradation).
 * `[L2]` `ASVS 5.0.0-16.5.3` The application must fail gracefully and securely, including on exceptions, preventing fail-open conditions such as processing a transaction despite a validation error.
-* `[L3]` `ASVS 5.0.0-16.5.4` A "last resort" error handler must catch all unhandled exceptions, both to preserve error details for logging and to prevent an unhandled exception from taking down the whole process. **Status: already met** — `AddExceptionHandler<ApiExceptionHandler>()` + `AddProblemDetails()` in `Program.cs` provides exactly this; documented as verified-compliant.
+* `[L3]` `ASVS 5.0.0-16.5.4` A "last resort" error handler must catch all unhandled exceptions, both to preserve error details for logging and to prevent an unhandled exception from taking down the whole process. It must be registered at the outermost layer of the request pipeline, so no code path can escape it.
 
 ---
 

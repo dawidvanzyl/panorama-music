@@ -12,6 +12,16 @@ namespace PanoramaMusic.Identity.Infrastructure.Services;
 /// so the password itself is never transmitted. Fails open (treats the password as acceptable
 /// and logs a warning) if the API is unreachable, so registration/reset never depends on a
 /// third party's uptime.
+/// <para>
+/// The SHA-1 use is the scoped exemption to ASVS 5.0.0-11.4.1: the range protocol mandates
+/// that digest purely as an anonymity-set bucketing function, which is neither an integrity
+/// nor a secrecy use. It must not spread beyond this call.
+/// </para>
+/// <para>
+/// One of the permitted egress destinations under the outbound allowlist of
+/// ASVS 5.0.0-13.2.5; the base address is registered on the injected client and is never
+/// derived from user input.
+/// </para>
 /// </summary>
 public sealed class HibpPasswordService(
 	HttpClient httpClient,

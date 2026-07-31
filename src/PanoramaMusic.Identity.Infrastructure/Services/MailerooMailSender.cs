@@ -6,6 +6,17 @@ using System.Text.Json.Serialization;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
+/// <summary>
+/// Sends mail through the Maileroo HTTP API — the Production transport, since the hosting
+/// provider blocks outbound SMTP. One of the two permitted egress destinations under the
+/// outbound allowlist of ASVS 5.0.0-13.2.5; the base address is registered on the injected
+/// client and is never derived from user input.
+/// <para>
+/// Header injection (ASVS 5.0.0-1.3.11) has no protocol surface here: the message is carried
+/// as a JSON body over HTTPS, so a CR/LF in a field is serialized as data, not as a header
+/// boundary.
+/// </para>
+/// </summary>
 public sealed class MailerooMailSender(HttpClient httpClient) : IMailSender
 {
 	public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken)

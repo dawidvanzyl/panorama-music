@@ -51,9 +51,18 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
 	options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-	// Render's edge proxy is the sole intermediary in front of the container — there is no
-	// additional untrusted hop to defend against — so trust exactly one forwarded hop rather
-	// than maintaining an IP/network allowlist for a proxy whose IPs Render doesn't publish.
+	// ASVS 5.0.0-15.3.4: the client IP used for logging and rate limiting must come from a
+	// field the end user cannot manipulate. Render's edge proxy is the sole intermediary in
+	// front of the container — there is no additional untrusted hop to defend against — so
+	// trust exactly one forwarded hop rather than maintaining an IP/network allowlist for a
+	// proxy whose IPs Render doesn't publish.
+	//
+	// ForwardLimit = 1 is what makes the empty allowlists safe, not a weakening of them: only
+	// the right-most X-Forwarded-For entry is ever read, and that entry is the one Render's
+	// edge appends from the real TCP peer. A user can prepend arbitrary earlier entries, but
+	// never occupy that position. Re-derive this bound if a CDN or second proxy is ever placed
+	// in front of Render's edge — each extra hop that is *not* counted here silently hands the
+	// attacker the trusted position.
 	options.ForwardLimit = 1;
 	options.KnownIPNetworks.Clear();
 	options.KnownProxies.Clear();

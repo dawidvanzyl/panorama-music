@@ -6,6 +6,14 @@ using PanoramaMusic.Identity.Infrastructure.Configurations;
 
 namespace PanoramaMusic.Identity.Infrastructure.Services;
 
+/// <summary>
+/// Composes outbound mail and hands it to the configured transport. This is the single
+/// composition point for the SMTP/IMAP injection rule (ASVS 5.0.0-1.3.11): every
+/// header-bound field is a validated value or a fixed literal, never free-text user input,
+/// and header encoding is delegated to the transport rather than done by string
+/// concatenation here. Re-verify that rule if a user-supplied display name or subject line
+/// is ever introduced.
+/// </summary>
 public sealed class EmailService(IMailSender mailSender, IOptions<EmailOptions> options, IAppOptions appOptions) : IEmailService
 {
 	private readonly EmailOptions _options = options.Value;
