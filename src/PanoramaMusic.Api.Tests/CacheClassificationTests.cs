@@ -4,13 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Tests.Fixtures;
-using PanoramaMusic.Identity.Domain.Enums;
-using PanoramaMusic.Students.Application.Models;
 using Shouldly;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Xunit;
 
 namespace PanoramaMusic.Api.Tests;
@@ -18,19 +12,22 @@ namespace PanoramaMusic.Api.Tests;
 /// <summary>
 /// Every endpoint returning a typed 200/201 body must appear in <see cref="_expected"/> with an
 /// explicit verdict. That row is the record that the endpoint's payload was considered — an
-/// endpoint nobody has thought about fails <see cref="EveryBodyReturningEndpoint_HasAnExpectationDeclared"/>
-/// by name, and the verdict itself is reviewable in one place rather than scattered across six
-/// route files.
+/// endpoint nobody has thought about fails
+/// <see cref="CacheClassification_EveryBodyReturningEndpoint_HasAnExpectationDeclared"/> by name,
+/// and the verdict itself is reviewable in one place rather than scattered across six route files.
 /// <para>
 /// The criterion for choosing a verdict is documented on <c>MarkSensitiveResponse</c> in
 /// <c>SensitiveResponseExtensions</c>, where a developer declaring an endpoint will meet it.
+/// </para>
+/// <para>
+/// These tests assert only which verdict each endpoint carries. That a verdict actually produces
+/// the right response header is asserted in <see cref="SecurityHeadersTests"/>, alongside the
+/// other header coverage.
 /// </para>
 /// </summary>
 [Collection(ApiTestCollection.Name)]
 public sealed class CacheClassificationTests(ApiTestFixture fixture)
 {
-	private const string _password = "CacheClassification123!";
-
 	/// <summary>
 	/// Keyed on the endpoint name assigned by <c>WithName(...)</c>, which ASP.NET Core requires
 	/// to be unique across the application.
@@ -79,11 +76,6 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["IsGuardianShared"] = CacheExpectation.Cacheable,
 	};
 
-	private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
-	{
-		Converters = { new JsonStringEnumConverter() },
-	};
-
 	private enum CacheExpectation
 	{
 		NoStore,
@@ -92,7 +84,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "218UC1")]
-	public void EveryBodyReturningEndpoint_HasAnExpectationDeclared()
+	public void CacheClassification_EveryBodyReturningEndpoint_HasAnExpectationDeclared()
 	{
 		var undeclared = BodyReturningEndpointNames()
 			.Where(name => !_expected.ContainsKey(name))
@@ -106,7 +98,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "218UC1")]
-	public void EveryBodyReturningEndpoint_MatchesItsDeclaredExpectation()
+	public void CacheClassification_EveryBodyReturningEndpoint_MatchesItsDeclaredExpectation()
 	{
 		var endpoints = BodyReturningEndpoints()
 			.Where(endpoint => _expected.ContainsKey(NameOf(endpoint)))
@@ -129,7 +121,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "218UC2")]
-	public void EveryDeclaredExpectation_MapsToARegisteredEndpoint()
+	public void CacheClassification_EveryDeclaredExpectation_MapsToARegisteredEndpoint()
 	{
 		var registered = BodyReturningEndpointNames().ToHashSet();
 
@@ -142,7 +134,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "218UC5")]
-	public void EndpointsWithNoTypedResponseBody_AreExemptFromExpectation()
+	public void CacheClassification_EndpointsWithNoTypedResponseBody_AreExempt()
 	{
 		var registered = AllEndpointNames().ToHashSet();
 		var required = BodyReturningEndpointNames().ToHashSet();
@@ -155,48 +147,6 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 			() => registered.ShouldContain("GetHealth"),
 			() => required.ShouldNotContain("Logout", "a 204 response has no body to cache"),
 			() => required.ShouldNotContain("GetHealth", "an untyped Ok() declares no response type"));
-	}
-
-	[Fact]
-	[Trait("AC", "218UC3")]
-	[Trait("AC", "218UC6")]
-	public async Task GetStudents_ExpectedSensitive_CarriesCacheControlNoStoreAndIsOtherwiseUnchanged()
-	{
-		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "cache-classification-sensitive", Role.Teacher);
-		var client = fixture.CreateIsolatedClient("10.0.60.1");
-		await client.LoginAsync(teacherEmail, _password);
-
-		var response = await client.Client.SendAsync(
-			client.AuthorizedGetRequest("/api/students"),
-			TestContext.Current.CancellationToken);
-
-		var students = await response.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
-
-		ShouldlyHelpers.Satisfy(
-			() => response.Headers.GetValues("Cache-Control").ShouldContain(value => value.Contains("no-store")),
-			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
-			() => students.ShouldNotBeNull());
-	}
-
-	[Fact]
-	[Trait("AC", "218UC4")]
-	[Trait("AC", "218UC6")]
-	public async Task GetGuardianRelationships_ExpectedCacheable_OmitsCacheControlNoStoreAndIsOtherwiseUnchanged()
-	{
-		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "cache-classification-cacheable", Role.Teacher);
-		var client = fixture.CreateIsolatedClient("10.0.60.2");
-		await client.LoginAsync(teacherEmail, _password);
-
-		var response = await client.Client.SendAsync(
-			client.AuthorizedGetRequest("/api/guardian-relationships"),
-			TestContext.Current.CancellationToken);
-
-		var relationships = await response.Content.ReadFromJsonAsync<List<GuardianRelationshipResult>>(_jsonOptions, TestContext.Current.CancellationToken);
-
-		ShouldlyHelpers.Satisfy(
-			() => response.Headers.Contains("Cache-Control").ShouldBeFalse(),
-			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
-			() => relationships.ShouldNotBeNull());
 	}
 
 	private IEnumerable<Endpoint> BodyReturningEndpoints() =>
@@ -230,9 +180,14 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 			? CacheExpectation.NoStore
 			: CacheExpectation.Cacheable;
 
+	/// <summary>
+	/// Falls back to the display name rather than throwing, so an endpoint declared without
+	/// <c>WithName(...)</c> surfaces as an undeclared expectation through the normal assertion
+	/// path — a named failure a reader can act on — instead of an exception escaping the LINQ
+	/// pipeline as a test error.
+	/// </summary>
 	private static string NameOf(Endpoint endpoint) =>
 		endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName
-		?? throw new InvalidOperationException(
-			$"Endpoint '{endpoint.DisplayName}' returns a body but declares no WithName(...), " +
-			"so no cache expectation can be recorded against it.");
+		?? endpoint.DisplayName
+		?? "(unnamed endpoint)";
 }
