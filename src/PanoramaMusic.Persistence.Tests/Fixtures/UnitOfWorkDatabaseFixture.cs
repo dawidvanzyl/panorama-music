@@ -32,8 +32,9 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		.WithImage("postgres:16")
 		.Build();
 
-	private string _migrationConnectionString = string.Empty;
-	private string _applicationConnectionString = string.Empty;
+	public string ApplicationConnectionString { get; private set; } = string.Empty;
+
+	public string MigrationConnectionString { get; private set; } = string.Empty;
 
 	public async ValueTask InitializeAsync()
 	{
@@ -44,17 +45,17 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 
 		await _postgres.StartAsync();
 
-		_migrationConnectionString = _postgres.GetConnectionString();
-		_applicationConnectionString = new NpgsqlConnectionStringBuilder(_migrationConnectionString)
+		MigrationConnectionString = _postgres.GetConnectionString();
+		ApplicationConnectionString = new NpgsqlConnectionStringBuilder(MigrationConnectionString)
 		{
 			Username = DatabaseMigrator.ApplicationRoleName,
 			Password = "panorama_app_test",
 		}.ConnectionString;
 
-		DatabaseMigrator.EnsureApplicationRole(_migrationConnectionString, _applicationConnectionString);
-		AuditMigrator.Run(_migrationConnectionString);
-		IdentityMigrator.Run(_migrationConnectionString);
-		StudentMigrator.Run(_migrationConnectionString);
+		DatabaseMigrator.EnsureApplicationRole(MigrationConnectionString, ApplicationConnectionString);
+		AuditMigrator.Run(MigrationConnectionString);
+		IdentityMigrator.Run(MigrationConnectionString);
+		StudentMigrator.Run(MigrationConnectionString);
 	}
 
 	public UnitOfWorkDatabaseContext CreateContext()
@@ -63,7 +64,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		{
 			var services = new ServiceCollection();
 
-			services.AddInfrastructure(_applicationConnectionString, dataSourceBuilder =>
+			services.AddInfrastructure(ApplicationConnectionString, dataSourceBuilder =>
 			{
 				PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
 				PanoramaMusic.Students.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
@@ -119,8 +120,9 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 
 	private void RegisterRepositories(ServiceCollection services, UnitOfWorkDatabaseContext context)
 	{
-		services.AddTransient(sp => new AuditTrailTestReader(_applicationConnectionString));
-		services.AddTransient(sp => new RevokedAccessTokenTestReader(_applicationConnectionString));
+		services.AddTransient(sp => new AuditTrailTestReader(ApplicationConnectionString));
+		services.AddTransient(sp => new RevokedAccessTokenTestReader(ApplicationConnectionString));
+		services.AddTransient(sp => new ForeignKeyIndexTestReader(ApplicationConnectionString, MigrationConnectionString));
 		services.AddTransient(sp => context.Repositories.UserRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRoleRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.RefreshTokenRepositoryMock.Object);

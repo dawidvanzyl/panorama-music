@@ -12,3 +12,6 @@ CREATE TABLE IF NOT EXISTS students.siblings (
     PRIMARY KEY (student_id, sibling_id),
     CHECK (student_id <> sibling_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_siblings_sibling_id
+    ON students.siblings (sibling_id);

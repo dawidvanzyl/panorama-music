@@ -15,3 +15,6 @@ CREATE TABLE IF NOT EXISTS students.guardians (
     married                  BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS ix_guardians_guardian_relationship_id
+    ON students.guardians (guardian_relationship_id);

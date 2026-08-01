@@ -11,3 +11,6 @@ CREATE TABLE IF NOT EXISTS students.student_guardians (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (student_id, guardian_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_student_guardians_guardian_id
+    ON students.student_guardians (guardian_id);
