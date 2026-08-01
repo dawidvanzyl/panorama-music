@@ -1,4 +1,4 @@
-const SMTP4DEV_BASE_URL = 'http://localhost:5000';
+const SMTP4DEV_BASE_URL = `http://localhost:${process.env.QA_SMTP_UI_PORT ?? 5000}`;
 
 interface Smtp4devMessageSummary {
   id: string;

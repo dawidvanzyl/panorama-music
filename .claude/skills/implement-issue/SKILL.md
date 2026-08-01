@@ -55,7 +55,11 @@ Before doing anything else:
 - Invoke the `prepare-base` skill.
 - Allow `prepare-base` to ask for and checkout the base branch independently.
 - Do not pass or assume a base branch — let the user confirm it within `prepare-base`.
-- After `prepare-base` completes, the current branch is the base branch.
+- After `prepare-base` completes, `origin/{base_branch}` has been fetched and
+  is current. The current local branch may or may not be `base_branch` itself
+  (if another worktree already had it checked out, `prepare-base` will have
+  stayed on the prior branch and relied on the fetched remote ref instead —
+  this is expected and does not block the next step).
 
 ### 1) Read and orient
 
@@ -137,9 +141,13 @@ requirement will land, without having written a single line yet.
 
 - Determine the branch prefix from the issue's labels: `type: feature` →
   `feature/`, `type: bug` → `bug/`, `type: tech-debt` → `tech-debt/`.
-- Create branch `{prefix}/{issue_number}-{slug}` from current HEAD, per the
-  slug rule in `docs/coding-standards.md` (kebab-case, derived from the issue
-  title, max 5 words). No milestone number in the branch name.
+- Create branch `{prefix}/{issue_number}-{slug}` from `origin/{base_branch}`
+  (`git checkout -b {prefix}/{issue_number}-{slug} origin/{base_branch}`),
+  never from current HEAD — this keeps the branch point correct even when
+  another worktree's local copy of `base_branch` is stale or the branch
+  wasn't checked out locally in step 0.5. Slug per the rule in
+  `docs/coding-standards.md` (kebab-case, derived from the issue title, max 5
+  words). No milestone number in the branch name.
 
 ### 4) Implement
 

@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB_QA:-panorama_music_qa}
     ports:
-      - "5433:5432"
+      - "${QA_DB_PORT:-5433}:5432"
     volumes:
       - db-qa-data:/var/lib/postgresql/data
     healthcheck:
@@ -33,8 +33,8 @@ services:
     profiles: [dev, qa]
     restart: always
     ports:
-      - "127.0.0.1:1025:25"
-      - "127.0.0.1:5000:80"
+      - "127.0.0.1:${QA_SMTP_PORT:-1025}:25"
+      - "127.0.0.1:${QA_SMTP_UI_PORT:-5000}:80"
     volumes:
       - smtp4dev-data:/smtp4dev
     environment:
@@ -42,7 +42,7 @@ services:
       - ServerOptions__HostName=smtp4dev
 
   api:
-    image: panorama-music-api:qa
+    image: panorama-music-api:${QA_IMAGE_TAG:-qa}
     build:
       context: .
       dockerfile: Dockerfile
@@ -79,10 +79,10 @@ services:
       Email__FromDisplayName: ${Email__FromDisplayName:-Panorama Music (QA)}
       Smtp__Host: ${Smtp__Host:-smtp4dev}
       Smtp__Port: ${Smtp__Port:-25}
-      AppBaseUrl: ${AppBaseUrl:-http://localhost:3000}
+      AppBaseUrl: ${AppBaseUrl:-http://localhost:${QA_API_PORT:-3000}}
       Hibp__Enabled: ${Hibp__Enabled:-false}
     ports:
-      - "3000:3000"
+      - "${QA_API_PORT:-3000}:3000"
     depends_on:
       db-qa:
         condition: service_healthy
