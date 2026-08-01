@@ -3,7 +3,7 @@ import { Client } from 'pg';
 function createClient(): Client {
   return new Client({
     host: 'localhost',
-    port: 5433,
+    port: Number(process.env.QA_DB_PORT ?? 5433),
     user: process.env.POSTGRES_USER ?? 'postgres',
     password: process.env.POSTGRES_PASSWORD ?? 'postgres',
     database: process.env.POSTGRES_DB_QA ?? 'panorama_music_qa',

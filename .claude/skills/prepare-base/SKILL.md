@@ -71,17 +71,35 @@ Do not proceed until `base_branch` is confirmed.
 
 ---
 
-### 3) Checkout base branch
+### 3) Checkout base branch (worktree-aware)
 
-* Checkout `base_branch`
-* Notify:
+* Attempt:
 
-  > "Checked out branch: {base_branch}"
+  ```bash
+  git checkout {base_branch}
+  ```
+* If it succeeds:
+
+  * Notify: "Checked out branch: {base_branch}"
+  * Proceed to step 4.
+* If it fails because the branch is already checked out in another worktree
+  (git reports something like `'{base_branch}' is already used by worktree
+  at '<path>'`):
+
+  * Do not retry, force, or attempt to detach/move the other worktree.
+  * Stay on the current branch.
+  * Notify: "{base_branch} is already checked out in another worktree
+    (`<path>`); skipping local checkout. origin/{base_branch} (fetched in
+    step 2) is the branch reference point for downstream steps."
+  * Skip step 4 — the remote ref is already current from the fetch in step 2.
+  * Proceed to step 5.
+* Any other checkout failure → stop and report it to the user.
 
 ---
 
 ### 4) Pull latest
 
+* Only runs if step 3 checked out `base_branch` locally.
 * Pull latest changes:
 
   ```bash
@@ -114,6 +132,17 @@ Steps:
   * `release/*`
   * `milestone/*`
 
+* Exclude branches checked out in any other worktree:
+
+  ```bash
+  git worktree list --porcelain
+  ```
+
+  Parse each `worktree`/`branch` pair. Any branch attached to a worktree
+  path other than the current one is never a deletion candidate — it belongs
+  to another worktree's in-progress work, regardless of merge or upstream
+  status.
+
 * Determine:
 
   * branches with no upstream
@@ -126,7 +155,8 @@ git branch --merged {base_branch}
 git branch -vv
 ```
 
-* Final candidate list = local-only ∩ merged ∩ not protected
+* Final candidate list = local-only ∩ merged ∩ not protected ∩ not checked
+  out in another worktree
 
 >Note: --merged detects branches whose commits are direct ancestors of base_branch. Branches integrated via squash-merge (per project standards, all feature/bug branches are squash-merged) will typically NOT appear as merged, even though their work has landed. This step will under-report candidates for squash-merged branches — this is expected and safe, since step 8 uses -d, which would refuse to delete them anyway.
 
