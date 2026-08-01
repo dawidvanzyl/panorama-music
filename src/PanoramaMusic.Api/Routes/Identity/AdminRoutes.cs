@@ -22,6 +22,7 @@ public static class AdminRoutes
 				var result = await handler.HandleAsync(ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetUsers")
 			.Produces<IList<GetUserResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -64,6 +65,7 @@ public static class AdminRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<UpdateUserRolesRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("UpdateUserRoles")
 			.Produces<UpdateUserRolesResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)

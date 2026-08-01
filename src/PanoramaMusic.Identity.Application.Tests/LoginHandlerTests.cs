@@ -213,6 +213,7 @@ public class LoginHandlerTests : IClassFixture<IdentityTestFixture>
 	{
 		var userEmail = "user@test.com";
 		var user = UserFactory.CreateActive(Guid.NewGuid(), userEmail);
+		user.RequirePasswordReset();
 
 		_context.Repositories.UserRepositoryMock
 			.Setup(r => r.GetByEmailAsync(userEmail, It.IsAny<CancellationToken>()))

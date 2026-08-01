@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Students.Application.Commands.Siblings;
 using PanoramaMusic.Students.Application.Commands.Students;
@@ -24,6 +25,7 @@ public static class StudentRoutes
 				var result = await handler.HandleAsync(ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetStudents")
 			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -35,6 +37,7 @@ public static class StudentRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetStudentById")
 			.Produces<StudentResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -49,6 +52,7 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{result.StudentId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<CreateStudentRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("CreateStudent")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
@@ -63,6 +67,7 @@ public static class StudentRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<UpdateStudentRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("UpdateStudent")
 			.Produces<StudentResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
@@ -91,6 +96,7 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{studentId}/siblings/{request.SiblingId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<AddSiblingRequest>>()
+			.MarkSensitiveResponse()
 			.WithName("AddSibling")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
@@ -104,6 +110,7 @@ public static class StudentRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.MarkSensitiveResponse()
 			.WithName("GetSiblings")
 			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)

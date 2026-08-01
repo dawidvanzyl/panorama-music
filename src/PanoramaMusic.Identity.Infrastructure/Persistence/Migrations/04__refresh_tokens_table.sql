@@ -8,3 +8,6 @@ CREATE TABLE IF NOT EXISTS identity.refresh_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     revoked_at TIMESTAMPTZ NULL
 );
+
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id
+    ON identity.refresh_tokens (user_id);

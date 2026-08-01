@@ -49,7 +49,7 @@ public class AdminSeedService(
 		if (existing is not null)
 		{
 			await unitOfWork.CommitAsync(cancellationToken);
-			logger.LogInformation("Admin user with email {Email} already exists — skipping seed.", email);
+			logger.LogInformation("Admin user already exists — skipping seed.");
 			return;
 		}
 
@@ -63,7 +63,7 @@ public class AdminSeedService(
 		// forcing rotation there would just break the seeded-admin login path.
 		if (hostEnvironment.IsProduction())
 		{
-			logger.LogInformation("Admin user {Email} requires a password reset.", email);
+			logger.LogInformation("Admin user requires a password reset.");
 			user.RequirePasswordReset();
 		}
 
@@ -79,7 +79,7 @@ public class AdminSeedService(
 		await userRoleRepo.CreateManyAsync(user.UserId, [Role.Admin], cancellationToken);
 		await unitOfWork.CommitAsync(cancellationToken);
 
-		logger.LogInformation("Admin user {Email} created successfully.", email);
+		logger.LogInformation("Admin user created successfully.");
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

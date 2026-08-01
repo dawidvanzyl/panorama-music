@@ -32,6 +32,10 @@ public sealed class LoginHandler(
 		var user = await userRepository.GetByEmailAsync(command.Request.Email.ToLowerInvariant(), cancellationToken);
 		if (user is null || !user.IsActive)
 		{
+			// ASVS 5.0.0-6.3.8: a matching identical message and status code is not enough —
+			// skipping the Argon2id verify here would make this path return measurably faster
+			// than a wrong-password attempt on a real account, enumerating valid users by
+			// timing alone. The result is deliberately discarded; only the cost matters.
 			passwordHashService.Verify(command.Request.Password, passwordHashService.DummyHash);
 			await AuditLoginFailedAsync(command.Request.Email, cancellationToken);
 			throw new UnauthorizedException("Invalid credentials.");
