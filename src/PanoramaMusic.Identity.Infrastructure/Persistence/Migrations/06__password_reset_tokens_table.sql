@@ -8,3 +8,6 @@ CREATE TABLE IF NOT EXISTS identity.password_reset_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     used_at    TIMESTAMPTZ NULL
 );
+
+CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_user_id
+    ON identity.password_reset_tokens (user_id);
