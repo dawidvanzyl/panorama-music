@@ -2,6 +2,7 @@ using PanoramaMusic.Audit.Infrastructure.Persistence;
 using PanoramaMusic.Identity.Infrastructure.Persistence;
 using PanoramaMusic.Persistence;
 using PanoramaMusic.Students.Infrastructure.Persistence;
+using PanoramaMusic.Teachers.Infrastructure.Persistence;
 
 namespace PanoramaMusic.Api.Extensions;
 
@@ -28,10 +29,11 @@ public static class WebApplicationExtensions
 		DatabaseMigrator.Run(migrationConnectionString, ensureDatabase: app.Environment.IsDevelopment());
 		DatabaseMigrator.EnsureApplicationRole(migrationConnectionString, applicationConnectionString);
 
-		// Context migrators execute in a fixed order: Audit → Identity → Students.
+		// Context migrators execute in a fixed order: Audit → Identity → Students → Teachers.
 		// Maintain this order as new contexts are added.
 		AuditMigrator.Run(migrationConnectionString);
 		IdentityMigrator.Run(migrationConnectionString);
 		StudentMigrator.Run(migrationConnectionString);
+		TeacherMigrator.Run(migrationConnectionString);
 	}
 }

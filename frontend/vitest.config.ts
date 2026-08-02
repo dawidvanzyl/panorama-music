@@ -86,6 +86,12 @@ export default defineConfig({
       { name: '214UC8', description: 'Submitting the create relationship form adds the new type to the list' },
       { name: '214UC9', description: 'Editing a relationship row inline and saving reflects the updated name in the list' },
       { name: '214UC10', description: 'Deleting a relationship type that is in use surfaces that it cannot be deleted' },
+      { name: '231UC7', description: 'Teachers list render shows name, classification, and status per row' },
+      { name: '231UC8', description: 'Client-side filter narrows visible teacher rows without a further server request' },
+      { name: '231UC9', description: 'Submitting the create section without first name/surname shows validation messages and issues no request' },
+      { name: '231UC10', description: 'A non-Admin/Coordinator user is not shown the Teachers nav entry or create action' },
+      { name: '231UC11', description: 'Create action expands an inline section on the same screen; Cancel collapses it with no navigation or overlay' },
+      { name: '231UC12', description: 'Profile edit/cancel/save wraps only first name and surname; the classification toggle sits outside the edit gate and persists immediately, reverting on failure' },
     ],
   },
 })

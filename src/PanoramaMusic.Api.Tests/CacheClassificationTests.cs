@@ -74,6 +74,13 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
 		["IsGuardianShared"] = CacheExpectation.Cacheable,
+
+		// Teacher payloads carry names.
+		["GetTeachers"] = CacheExpectation.NoStore,
+		["GetTeacherById"] = CacheExpectation.NoStore,
+		["CreateTeacher"] = CacheExpectation.NoStore,
+		["UpdateTeacherProfile"] = CacheExpectation.NoStore,
+		["UpdateTeacherClassification"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation
