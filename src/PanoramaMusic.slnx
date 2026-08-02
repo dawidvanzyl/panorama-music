@@ -42,6 +42,7 @@
     <Project Path="PanoramaMusic.Students.Tests/PanoramaMusic.Students.Tests.csproj" />
   </Folder>
   <Project Path="PanoramaMusic.Api/PanoramaMusic.Api.csproj" />
+  <Project Path="PanoramaMusic.DataProtection/PanoramaMusic.DataProtection.csproj" />
   <Project Path="PanoramaMusic.Domain/PanoramaMusic.Domain.csproj" />
   <Project Path="PanoramaMusic.Persistence/PanoramaMusic.Persistence.csproj" />
 </Solution>

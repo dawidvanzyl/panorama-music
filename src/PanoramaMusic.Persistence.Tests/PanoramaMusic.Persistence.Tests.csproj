@@ -22,6 +22,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.DataProtection\PanoramaMusic.DataProtection.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Audit.Infrastructure\PanoramaMusic.Audit.Infrastructure.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj" />

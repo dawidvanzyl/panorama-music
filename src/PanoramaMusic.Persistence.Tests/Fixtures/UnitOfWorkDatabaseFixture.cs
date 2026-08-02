@@ -5,6 +5,7 @@ using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Audit.Infrastructure.Persistence;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
+using PanoramaMusic.DataProtection.Persistence;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
 using PanoramaMusic.Identity.Infrastructure.Persistence;
@@ -21,7 +22,7 @@ namespace PanoramaMusic.Persistence.Tests.Fixtures;
 
 /// <summary>
 /// Starts a disposable Postgres, provisions the restricted panorama_app role, and
-/// runs the Audit, Identity, and Students context migrations. Originally scoped to
+/// runs the DataProtection, Audit, Identity, and Students migrations. Originally scoped to
 /// the two contexts whose writes the shared unit of work must commit and roll back
 /// atomically; now doubles as the shared harness for any bounded context's
 /// audit-trail tests that need a real Postgres-backed IUnitOfWork.
@@ -53,6 +54,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		}.ConnectionString;
 
 		DatabaseMigrator.EnsureApplicationRole(MigrationConnectionString, ApplicationConnectionString);
+		DataProtectionMigrator.Run(MigrationConnectionString);
 		AuditMigrator.Run(MigrationConnectionString);
 		IdentityMigrator.Run(MigrationConnectionString);
 		StudentMigrator.Run(MigrationConnectionString);
