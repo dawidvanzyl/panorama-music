@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PanoramaMusic.DataProtection.Configurations;
 using PanoramaMusic.DataProtection.Enums;
 using PanoramaMusic.DataProtection.Repositories;
 using PanoramaMusic.Persistence.Factories;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace PanoramaMusic.DataProtection.Extensions;
@@ -33,8 +35,14 @@ public static class ServiceCollectionExtensions
 		if (string.IsNullOrWhiteSpace(options.ApplicationName))
 			throw new InvalidOperationException($"'{KeyringOptions.SectionName}:{nameof(KeyringOptions.ApplicationName)}' is not configured.");
 
+		// Idempotent (TryAdd-based); called so this extension carries its own logging
+		// dependency rather than relying on the host having configured one first.
+		services.AddLogging();
+
 		services.AddSingleton<IXmlRepository>(sp =>
-			new PostgresXmlRepository(sp.GetRequiredService<IDbConnectionFactory>()));
+			new PostgresXmlRepository(
+				sp.GetRequiredService<IDbConnectionFactory>(),
+				sp.GetRequiredService<ILogger<PostgresXmlRepository>>()));
 
 		var builder = services.AddDataProtection()
 			.SetApplicationName(options.ApplicationName);
@@ -51,11 +59,45 @@ public static class ServiceCollectionExtensions
 			if (string.IsNullOrWhiteSpace(options.CertificatePassword))
 				throw new InvalidOperationException($"'{KeyringOptions.SectionName}:{nameof(KeyringOptions.CertificatePassword)}' is not configured.");
 
-			var certificateBytes = Convert.FromBase64String(options.CertificateBase64);
-			var certificate = X509CertificateLoader.LoadPkcs12(certificateBytes, options.CertificatePassword);
+			var certificate = LoadProtectionCertificate(options.CertificateBase64, options.CertificatePassword);
+
+			// Registered so the container disposes it at shutdown. The certificate must
+			// outlive every protect/unprotect the key ring performs, so it cannot be
+			// disposed here — but leaving it unowned would, on Windows, keep the PKCS#12
+			// key file in the crypto store until finalization.
+			services.AddSingleton(certificate);
 			builder.ProtectKeysWithCertificate(certificate);
 		}
 
 		return services;
+	}
+
+	/// <summary>
+	/// Fails with an error naming the offending setting when the certificate is present
+	/// but unusable. A malformed blob or a wrong password is the likelier production
+	/// failure than an absent one, and the underlying FormatException /
+	/// CryptographicException names neither setting.
+	/// </summary>
+	private static X509Certificate2 LoadProtectionCertificate(string certificateBase64, string certificatePassword)
+	{
+		byte[] certificateBytes;
+
+		try
+		{
+			certificateBytes = Convert.FromBase64String(certificateBase64);
+		}
+		catch (FormatException exception)
+		{
+			throw new InvalidOperationException($"'{KeyringOptions.SectionName}:{nameof(KeyringOptions.CertificateBase64)}' is not valid base64.", exception);
+		}
+
+		try
+		{
+			return X509CertificateLoader.LoadPkcs12(certificateBytes, certificatePassword);
+		}
+		catch (CryptographicException exception)
+		{
+			throw new InvalidOperationException($"'{KeyringOptions.SectionName}:{nameof(KeyringOptions.CertificateBase64)}' could not be loaded as a PKCS#12 certificate. Verify the certificate and that '{KeyringOptions.SectionName}:{nameof(KeyringOptions.CertificatePassword)}' matches it.", exception);
+		}
 	}
 }
