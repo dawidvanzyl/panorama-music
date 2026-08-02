@@ -61,11 +61,13 @@ public static class ServiceCollectionExtensions
 
 			var certificate = LoadProtectionCertificate(options.CertificateBase64, options.CertificatePassword);
 
-			// Registered so the container disposes it at shutdown. The certificate must
-			// outlive every protect/unprotect the key ring performs, so it cannot be
-			// disposed here — but leaving it unowned would, on Windows, keep the PKCS#12
-			// key file in the crypto store until finalization.
-			services.AddSingleton(certificate);
+			// Deliberately process-lifetime and unowned: it must outlive every
+			// protect/unprotect the key ring performs, and the process exits with it.
+			// Do not "fix" this by registering it in DI expecting disposal —
+			// AddSingleton(instance) is never disposed (the container only disposes what
+			// it constructs), and the factory overload is only disposed once something
+			// resolves it, which nothing here does since ProtectKeysWithCertificate takes
+			// the instance directly.
 			builder.ProtectKeysWithCertificate(certificate);
 		}
 
