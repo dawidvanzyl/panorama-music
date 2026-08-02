@@ -8,6 +8,7 @@ using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Api.Routes.Students;
 using PanoramaMusic.Api.Routes.Teachers;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
+using PanoramaMusic.DataProtection.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
 using PanoramaMusic.Persistence.Extensions;
 using PanoramaMusic.Students.Infrastructure.Extensions;
@@ -77,6 +78,7 @@ builder.Services.AddInfrastructure(connectionString, dataSourceBuilder =>
 	PanoramaMusic.Students.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
 	PanoramaMusic.Teachers.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
 });
+builder.Services.AddDataProtectionInfrastructure(builder.Configuration);
 builder.Services.AddAuditInfrastructure();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
