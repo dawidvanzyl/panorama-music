@@ -23,12 +23,14 @@ export class TeacherDetailPage extends BasePage {
     await this.goto(`/#/teachers/${teacherId}`);
   }
 
+  // Scoped to the read view: Playwright pierces shadow roots, so an unscoped
+  // #firstName also matches the edit form's input of the same id.
   firstName(): Locator {
-    return this.profileSection.locator('#firstName');
+    return this.profileSection.locator('#readView #firstName');
   }
 
   surname(): Locator {
-    return this.profileSection.locator('#surname');
+    return this.profileSection.locator('#readView #surname');
   }
 
   typeChip(): Locator {
