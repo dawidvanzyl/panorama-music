@@ -60,7 +60,10 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     this.shadowRoot!.addEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
-    this.shadowRoot!.addEventListener('teacher-classification-change-requested', this.handleClassificationChangeRequested);
+    this.shadowRoot!.addEventListener(
+      'teacher-classification-change-requested',
+      this.handleClassificationChangeRequested,
+    );
 
     this._teacherId = this.getAttribute('teacher-id');
     if (this._teacherId) void this.loadTeacher(this._teacherId);

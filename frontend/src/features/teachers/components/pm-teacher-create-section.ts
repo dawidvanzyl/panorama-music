@@ -248,9 +248,7 @@ export class PmTeacherCreateSection extends HTMLElement {
   }
 
   private updateToggleHelp = (): void => {
-    this.toggleHelp!.textContent = this.privateCheckbox!.checked
-      ? 'Paid directly by parents.'
-      : 'Paid by the school.';
+    this.toggleHelp!.textContent = this.privateCheckbox!.checked ? 'Paid directly by parents.' : 'Paid by the school.';
   };
 
   private clearErrors(): void {

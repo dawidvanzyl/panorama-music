@@ -168,8 +168,7 @@ export class PmSidebar extends HTMLElement {
     const showStudentLinks = isAuthenticated() && hasAnyRole(['Teacher', 'Admin']) && activeSection === 'students';
     const showRelationshipLinks =
       isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
-    const showTeachersLink =
-      isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
+    const showTeachersLink = isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
     this.studentManagementLink!.hidden = !showStudentLinks;
     this.guardianRelationshipsLink!.hidden = !showRelationshipLinks;
     this.teachersLink!.hidden = !showTeachersLink;

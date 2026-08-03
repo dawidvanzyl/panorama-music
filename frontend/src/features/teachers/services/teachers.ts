@@ -92,10 +92,7 @@ export async function createTeacher(input: TeacherInput): Promise<TeacherResult>
 }
 
 /** Updates the profile names only — the classification has its own endpoint. */
-export async function updateTeacherProfile(
-  teacherId: string,
-  input: TeacherProfileInput,
-): Promise<TeacherResult> {
+export async function updateTeacherProfile(teacherId: string, input: TeacherProfileInput): Promise<TeacherResult> {
   const response = await fetch(`${API_BASE}/${teacherId}/profile`, {
     method: 'PUT',
     headers: authHeaders(),
@@ -107,10 +104,7 @@ export async function updateTeacherProfile(
 }
 
 /** Persists the employment classification on its own, outside the edit flow. */
-export async function updateTeacherClassification(
-  teacherId: string,
-  isPrivate: boolean,
-): Promise<TeacherResult> {
+export async function updateTeacherClassification(teacherId: string, isPrivate: boolean): Promise<TeacherResult> {
   const response = await fetch(`${API_BASE}/${teacherId}/classification`, {
     method: 'PUT',
     headers: authHeaders(),
