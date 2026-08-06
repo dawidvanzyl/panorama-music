@@ -13,6 +13,12 @@ describe('nav-section', { tags: ['M1.4UC12'] }, () => {
     expect(getActiveNavSection()).toBe('dashboard');
   });
 
+  it('maps /students and /teachers paths to the students section', () => {
+    expect(updateActiveNavSection('/students')).toBe('students');
+    expect(updateActiveNavSection('/teachers')).toBe('students');
+    expect(updateActiveNavSection('/teachers/abc-123')).toBe('students');
+  });
+
   it('keeps the previous section for a path that is neither Dashboard nor Admin', () => {
     updateActiveNavSection('/admin/sessions');
     expect(updateActiveNavSection('/sessions')).toBe('admin');

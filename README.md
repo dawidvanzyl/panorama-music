@@ -36,7 +36,7 @@ All jobs run in parallel. Formatting, lint, or E2E spec failures will block the 
 
 The API uses two database connection strings:
 
-- `ConnectionStrings:DefaultConnection` — the application's runtime connection. It must connect as the restricted `panorama_app` role, which holds full DML on the `identity` and `students` schemas but only `INSERT`/`SELECT` on the append-only `audit.audit_events` table.
+- `ConnectionStrings:DefaultConnection` — the application's runtime connection. It must connect as the restricted `panorama_app` role, which holds full DML on the `identity`, `students`, and `teachers` schemas but only `INSERT`/`SELECT` on the append-only `audit.audit_events` table.
 - `ConnectionStrings:Migrations` — a privileged (superuser/owner) connection used only at startup to run DbUp migrations and provision the `panorama_app` role. The role's credentials are taken from `DefaultConnection`, so the role is created/updated automatically on startup.
 
 For local development, `appsettings.Development.json` is pre-configured for a Docker PostgreSQL instance:
@@ -122,7 +122,7 @@ curl http://localhost:3000/api/health
 
 To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
 
-1. Drop and recreate the `public`, `audit`, `identity`, and `students` schemas (all tables and data across every bounded context are wiped)
+1. Drop and recreate the `public`, `audit`, `identity`, `students`, and `teachers` schemas (all tables and data across every bounded context are wiped)
 2. Re-run all DbUp migrations from scratch
 3. Execute all seed scripts from `Persistence/Seeds/` in filename order
 

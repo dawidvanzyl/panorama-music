@@ -20,6 +20,11 @@
     <Project Path="PanoramaMusic.Students.Domain/PanoramaMusic.Students.Domain.csproj" />
     <Project Path="PanoramaMusic.Students.Infrastructure/PanoramaMusic.Students.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Domains/Teachers/">
+    <Project Path="PanoramaMusic.Teachers.Application/PanoramaMusic.Teachers.Application.csproj" />
+    <Project Path="PanoramaMusic.Teachers.Domain/PanoramaMusic.Teachers.Domain.csproj" />
+    <Project Path="PanoramaMusic.Teachers.Infrastructure/PanoramaMusic.Teachers.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
@@ -40,6 +45,9 @@
   </Folder>
   <Folder Name="/Tests/Domains/Students/">
     <Project Path="PanoramaMusic.Students.Tests/PanoramaMusic.Students.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Domains/Teachers/">
+    <Project Path="PanoramaMusic.Teachers.Tests/PanoramaMusic.Teachers.Tests.csproj" />
   </Folder>
   <Project Path="PanoramaMusic.Api/PanoramaMusic.Api.csproj" />
   <Project Path="PanoramaMusic.DataProtection/PanoramaMusic.DataProtection.csproj" />
