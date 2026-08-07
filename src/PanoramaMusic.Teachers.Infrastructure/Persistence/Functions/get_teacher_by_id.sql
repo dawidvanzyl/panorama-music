@@ -1,5 +1,7 @@
 -- get_teacher_by_id
--- Returns a single teacher row by id, or no rows if not found.
+-- Returns a single teacher row by id, or no rows if not found. The linked
+-- account is returned as an id only; naming it is Identity's to answer, and the
+-- application layer composes the two.
 
 DROP FUNCTION IF EXISTS teachers.get_teacher_by_id(UUID);
 

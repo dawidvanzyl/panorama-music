@@ -20,6 +20,7 @@ const alice: TeacherResult = {
   isPrivate: false,
   isActive: true,
   linkedAccountId: null,
+  linkedAccountEmail: null,
 };
 
 beforeEach(() => {

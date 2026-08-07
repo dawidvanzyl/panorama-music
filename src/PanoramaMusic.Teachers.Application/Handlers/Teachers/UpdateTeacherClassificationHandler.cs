@@ -1,12 +1,14 @@
 using PanoramaMusic.Teachers.Application.Commands.Teachers;
-using PanoramaMusic.Teachers.Application.Extensions;
 using PanoramaMusic.Teachers.Application.Models;
+using PanoramaMusic.Teachers.Application.Services;
 using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 
 namespace PanoramaMusic.Teachers.Application.Handlers.Teachers;
 
-public sealed class UpdateTeacherClassificationHandler(ITeacherRepository teacherRepository)
+public sealed class UpdateTeacherClassificationHandler(
+	ITeacherRepository teacherRepository,
+	TeacherResultComposer resultComposer)
 {
 	public async Task<TeacherResult> HandleAsync(UpdateTeacherClassificationCommand command, CancellationToken cancellationToken)
 	{
@@ -17,6 +19,6 @@ public sealed class UpdateTeacherClassificationHandler(ITeacherRepository teache
 
 		await teacherRepository.UpdateClassificationAsync(teacher, cancellationToken);
 
-		return teacher.ToResult();
+		return await resultComposer.ComposeAsync(teacher, cancellationToken);
 	}
 }

@@ -13,10 +13,17 @@ public sealed class TeachersTestContext
 
 	public RepositoryMocks Repositories { get; } = new RepositoryMocks();
 
+	public DirectoryMocks Directories { get; } = new DirectoryMocks();
+
 	public IServiceProvider ServiceProvider { get; }
 
 	public class RepositoryMocks
 	{
 		public Mock<ITeacherRepository> TeacherRepositoryMock { get; } = new Mock<ITeacherRepository>();
+	}
+
+	public class DirectoryMocks
+	{
+		public Mock<IAccountDirectory> AccountDirectoryMock { get; } = new Mock<IAccountDirectory>();
 	}
 }

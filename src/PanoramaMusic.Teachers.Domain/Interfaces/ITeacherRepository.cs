@@ -13,4 +13,17 @@ public interface ITeacherRepository
 	Task UpdateProfileAsync(Teacher teacher, CancellationToken cancellationToken);
 
 	Task UpdateClassificationAsync(Teacher teacher, CancellationToken cancellationToken);
+
+	/// <summary>Whether some teacher already claims this login account.</summary>
+	Task<bool> IsAccountLinkedAsync(Guid accountId, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Every account id currently claimed by a teacher — what an eligible-account
+	/// set is filtered against.
+	/// </summary>
+	Task<IList<Guid>> GetLinkedAccountIdsAsync(CancellationToken cancellationToken);
+
+	Task LinkAccountAsync(Teacher teacher, CancellationToken cancellationToken);
+
+	Task UnlinkAccountAsync(Teacher teacher, CancellationToken cancellationToken);
 }

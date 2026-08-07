@@ -1,6 +1,8 @@
 -- get_teachers
 -- Returns the full teacher roster in a single query. Accepts no filter
--- parameters — the API's list endpoint always returns the complete set.
+-- parameters - the API's list endpoint always returns the complete set.
+-- The linked account is returned as an id only; naming it is Identity's to
+-- answer, and the application layer composes the two.
 
 DROP FUNCTION IF EXISTS teachers.get_teachers();
 

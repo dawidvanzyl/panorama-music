@@ -3,6 +3,7 @@ import '../components/pm-teacher-table';
 import '../components/pm-teacher-create-section';
 import {
   getTeachers,
+  getLinkableAccounts,
   createTeacher,
   clearTeachersCache,
   TeachersError,
@@ -86,6 +87,7 @@ export class PmTeachersPage extends HTMLElement {
 
     clearTeachersCache();
     void this.loadTeachers();
+    void this.loadLinkableAccounts();
   }
 
   disconnectedCallback(): void {
@@ -105,6 +107,9 @@ export class PmTeachersPage extends HTMLElement {
       await createTeacher(input);
       this.createSection!.reset();
       await this.loadTeachers();
+      // Linking during creation consumes an account, so the picker's options
+      // are stale the moment the create succeeds.
+      await this.loadLinkableAccounts();
     } catch (err) {
       this.createSection!.showError(err instanceof TeachersError ? err.message : 'An unexpected error occurred');
     }
@@ -113,6 +118,14 @@ export class PmTeachersPage extends HTMLElement {
   private handleOpenRequested = (event: Event): void => {
     const { teacherId } = (event as CustomEvent<{ teacherId: string }>).detail;
     window.location.hash = `#/teachers/${teacherId}`;
+  };
+
+  private loadLinkableAccounts = async (): Promise<void> => {
+    try {
+      this.createSection!.linkableAccounts = await getLinkableAccounts();
+    } catch (err) {
+      this.showError(err);
+    }
   };
 
   private loadTeachers = async (): Promise<void> => {

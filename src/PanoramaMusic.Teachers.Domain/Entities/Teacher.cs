@@ -1,5 +1,7 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Teachers.Domain.Events.Teachers;
+using PanoramaMusic.Teachers.Domain.Exceptions;
+using PanoramaMusic.Teachers.Domain.Messages;
 
 namespace PanoramaMusic.Teachers.Domain.Entities;
 
@@ -35,7 +37,11 @@ public sealed class Teacher : AggregateRoot
 
 	public bool IsActive { get; private set; }
 
-	/// <summary>Reserved for a future story — no linking logic exists yet.</summary>
+	/// <summary>
+	/// The login account this teacher maintains their own record through, or
+	/// null when the teacher has no account. Optional — a teacher without one is
+	/// a valid, complete record.
+	/// </summary>
 	public Guid? LinkedAccountId { get; private set; }
 
 	public static Teacher Create(
@@ -82,6 +88,35 @@ public sealed class Teacher : AggregateRoot
 		IsPrivate = isPrivate;
 
 		Raise(new TeacherClassificationChanged(before, this));
+	}
+
+	/// <summary>
+	/// Attaches a login account. A link is established or removed, never changed
+	/// in place — relinking a teacher that already has an account would leave the
+	/// audit trail ambiguous about which account was replaced, so it is refused.
+	/// </summary>
+	public void LinkAccount(Guid accountId)
+	{
+		if (LinkedAccountId is not null)
+			throw new DomainException(TeacherAccountLinkMessages.TeacherAlreadyLinked);
+
+		LinkedAccountId = accountId;
+
+		Raise(new TeacherAccountLinked(this, accountId));
+	}
+
+	/// <summary>
+	/// Detaches the login account, leaving the teacher record intact and active.
+	/// </summary>
+	public void UnlinkAccount()
+	{
+		if (LinkedAccountId is null)
+			throw new DomainException(TeacherAccountLinkMessages.TeacherNotLinked);
+
+		var previousAccountId = LinkedAccountId.Value;
+		LinkedAccountId = null;
+
+		Raise(new TeacherAccountUnlinked(this, previousAccountId));
 	}
 
 	private Teacher Snapshot() =>

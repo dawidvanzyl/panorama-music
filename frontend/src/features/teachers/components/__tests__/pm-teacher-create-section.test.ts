@@ -46,6 +46,7 @@ describe('pm-teacher-create-section — validation', { tags: ['231UC9'] }, () =>
       firstName: 'Naomi',
       surname: 'Fischer',
       isPrivate: false,
+      linkedAccountId: null,
     });
   });
 

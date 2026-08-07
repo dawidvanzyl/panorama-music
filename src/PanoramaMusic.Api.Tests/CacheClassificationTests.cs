@@ -81,6 +81,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["CreateTeacher"] = CacheExpectation.NoStore,
 		["UpdateTeacherProfile"] = CacheExpectation.NoStore,
 		["UpdateTeacherClassification"] = CacheExpectation.NoStore,
+		// Account-link payloads carry names and account email addresses.
+		["GetLinkableAccounts"] = CacheExpectation.NoStore,
+		["LinkTeacherAccount"] = CacheExpectation.NoStore,
+		["UnlinkTeacherAccount"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

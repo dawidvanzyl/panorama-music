@@ -6,4 +6,5 @@ public sealed record TeacherResult(
 	string Surname,
 	bool IsPrivate,
 	bool IsActive,
-	Guid? LinkedAccountId);
+	Guid? LinkedAccountId,
+	string? LinkedAccountEmail);

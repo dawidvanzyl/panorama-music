@@ -213,6 +213,42 @@ styles.replaceSync(`
       font-size: 12px;
       color: var(--pm-danger);
     }
+    /* Carried by its own full-width row directly above the user it concerns, so
+       a rejected save spans the table the way the relationship banner spans the
+       guardian screen rather than being boxed into one column. */
+    .users-table__error-row td {
+      border-bottom: none;
+      padding: 10px 12px 0;
+    }
+    .users-table__row-error {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--pm-radius);
+      background: rgba(224, 82, 82, 0.1);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
+      font-size: 13px;
+    }
+    .users-table__row-error-message {
+      flex: 1;
+    }
+    .users-table__row-error-dismiss {
+      display: flex;
+      align-items: center;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--pm-danger);
+      cursor: pointer;
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .users-table__row-error-dismiss:hover {
+      opacity: 0.7;
+    }
     .users-table__empty {
       color: var(--pm-text-muted);
       font-size: 14px;
@@ -252,6 +288,9 @@ styles.replaceSync(`
       text-align: right;
     }
   `);
+
+/** Email, Roles, Status, Actions — what a full-width row banner must span. */
+const columnCount = 4;
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -567,13 +606,10 @@ export class PmUsersTable extends HTMLElement {
     cancelBtn: HTMLButtonElement,
   ): Promise<void> => {
     const roles = this.getCheckedRoles(rolesCell);
-    rolesCell.querySelector('.users-table__error')?.remove();
+    this.clearRowError(rolesCell);
 
     if (roles.length === 0) {
-      const error = document.createElement('span');
-      error.classList.add('users-table__error');
-      error.textContent = 'At least one role must be selected.';
-      rolesCell.appendChild(error);
+      this.showRowError(rolesCell, 'At least one role must be selected.');
       return;
     }
 
@@ -589,14 +625,66 @@ export class PmUsersTable extends HTMLElement {
       this._editingUserId = null;
       this.render();
     } catch (err) {
-      const error = document.createElement('span');
-      error.classList.add('users-table__error');
-      error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      rolesCell.appendChild(error);
+      // A rejected change never took effect, so the checkboxes go back to the
+      // roles the server still holds rather than leaving the refused selection
+      // on screen as though it had been accepted.
+      this.restoreRoleSelection(rolesCell, userId);
+      this.showRowError(rolesCell, err instanceof AdminError ? err.message : 'An unexpected error occurred');
       saveBtn.disabled = false;
       cancelBtn.disabled = false;
     }
   };
+
+  /**
+   * Inserts the banner as its own row above the user it concerns, spanning
+   * every column, and dismissible so it need not sit there until the next save.
+   */
+  private showRowError(rolesCell: HTMLElement, message: string): void {
+    const userRow = rolesCell.closest('tr');
+    if (!userRow) return;
+
+    this.clearRowError(rolesCell);
+
+    const errorRow = document.createElement('tr');
+    errorRow.classList.add('users-table__error-row');
+
+    const errorCell = document.createElement('td');
+    errorCell.colSpan = columnCount;
+
+    const banner = document.createElement('div');
+    banner.classList.add('users-table__row-error');
+
+    const messageText = document.createElement('span');
+    messageText.classList.add('users-table__row-error-message');
+    messageText.textContent = message;
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.type = 'button';
+    dismissBtn.classList.add('users-table__row-error-dismiss');
+    dismissBtn.textContent = 'close';
+    dismissBtn.setAttribute('aria-label', 'Dismiss error');
+    dismissBtn.addEventListener('click', () => errorRow.remove());
+
+    banner.append(messageText, dismissBtn);
+    errorCell.appendChild(banner);
+    errorRow.appendChild(errorCell);
+    userRow.parentElement?.insertBefore(errorRow, userRow);
+  }
+
+  private clearRowError(rolesCell: HTMLElement): void {
+    const userRow = rolesCell.closest('tr');
+    const previous = userRow?.previousElementSibling;
+
+    if (previous?.classList.contains('users-table__error-row')) previous.remove();
+  }
+
+  private restoreRoleSelection(rolesCell: HTMLElement, userId: string): void {
+    const persistedRoles = this._users.find((u) => u.userId === userId)?.roles ?? [];
+
+    for (const checkbox of rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+      checkbox.checked = persistedRoles.includes(checkbox.value);
+    }
+  }
 
   private handleRegenerate = async (
     userId: string,

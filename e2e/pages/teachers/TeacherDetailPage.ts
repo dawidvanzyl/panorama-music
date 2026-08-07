@@ -8,6 +8,16 @@ export class TeacherDetailPage extends BasePage {
   readonly editForm: Locator;
   readonly privateToggle: Locator;
   readonly classificationError: Locator;
+  readonly accountBadge: Locator;
+  readonly unlinkButton: Locator;
+  readonly linkButton: Locator;
+  readonly linkModal: Locator;
+  readonly accountPicker: Locator;
+  readonly linkModalConfirm: Locator;
+  readonly unlinkModal: Locator;
+  readonly unlinkModalConfirm: Locator;
+  readonly linkNotice: Locator;
+  readonly errorBanner: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -17,6 +27,16 @@ export class TeacherDetailPage extends BasePage {
     this.editForm = this.profileSection.locator('#editForm');
     this.privateToggle = this.profileSection.locator('#private');
     this.classificationError = this.profileSection.locator('#classificationError');
+    this.accountBadge = this.header.locator('#accountBadge');
+    this.unlinkButton = this.header.locator('#unlinkBtn');
+    this.linkButton = this.header.locator('#linkBtn');
+    this.linkModal = page.locator('#linkModal');
+    this.accountPicker = this.linkModal.locator('#picker').locator('#account');
+    this.linkModalConfirm = this.linkModal.locator('#linkBtn');
+    this.unlinkModal = page.locator('#unlinkModal');
+    this.unlinkModalConfirm = this.unlinkModal.locator('#unlinkBtn');
+    this.linkNotice = page.locator('#linkNotice');
+    this.errorBanner = page.locator('#error');
   }
 
   async gotoTeacher(teacherId: string): Promise<void> {
@@ -43,6 +63,19 @@ export class TeacherDetailPage extends BasePage {
     await this.editForm.locator('#firstName').fill(firstName);
     await this.editForm.locator('#surname').fill(surname);
     await this.editForm.locator('#saveBtn').click();
+  }
+
+  /** Opens the link modal, picks an account, and confirms. */
+  async linkAccount(accountEmail: string): Promise<void> {
+    await this.linkButton.click();
+    await this.accountPicker.selectOption({ label: accountEmail });
+    await this.linkModalConfirm.click();
+  }
+
+  /** Opens the unlink confirmation and confirms it. */
+  async unlinkAccount(): Promise<void> {
+    await this.unlinkButton.click();
+    await this.unlinkModalConfirm.click();
   }
 
   /** Toggles the classification switch, which persists immediately. */

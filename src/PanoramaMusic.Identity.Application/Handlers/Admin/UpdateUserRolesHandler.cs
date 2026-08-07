@@ -19,7 +19,8 @@ public sealed class UpdateUserRolesHandler(
 	IAdminOptions adminOptions,
 	IUserContext userContext,
 	IAuditLogger auditLogger,
-	IAuditEventFactory auditEventFactory)
+	IAuditEventFactory auditEventFactory,
+	IEnumerable<IRoleRemovalValidator> roleRemovalValidators)
 {
 	public async Task<UpdateUserRolesResult> HandleAsync(UpdateUserRolesCommand command, CancellationToken cancellationToken)
 	{
@@ -40,6 +41,9 @@ public sealed class UpdateUserRolesHandler(
 	private async Task SetRolesAsync(User user, IList<Role> newRoles, CancellationToken cancellationToken)
 	{
 		var rolesBefore = await userRoleRepository.GetRolesAsync(user.UserId, cancellationToken);
+
+		await ValidateRemovedRolesAsync(user.UserId, rolesBefore.Except(newRoles), cancellationToken);
+
 		await userRoleRepository.SetRolesAsync(user.UserId, newRoles, cancellationToken);
 
 		await auditLogger.CreateAsync(
@@ -56,5 +60,23 @@ public sealed class UpdateUserRolesHandler(
 					[AuditEventDetailKeys.RolesAfter] = newRoles.Select(r => r.ToString()).ToArray(),
 				}),
 			cancellationToken);
+	}
+
+	/// <summary>
+	/// Asks every registered <see cref="IRoleRemovalValidator"/> about each role the
+	/// update drops. The first objection rejects the whole update, so a partially
+	/// applied role set is never persisted.
+	/// </summary>
+	private async Task ValidateRemovedRolesAsync(Guid userId, IEnumerable<Role> removedRoles, CancellationToken cancellationToken)
+	{
+		foreach (var role in removedRoles)
+		{
+			foreach (var roleRemovalValidator in roleRemovalValidators)
+			{
+				var validationResult = await roleRemovalValidator.ValidateRemoveAsync(userId, role, cancellationToken);
+				if (!validationResult.IsValid)
+					throw new DomainException(validationResult.ErrorMessage);
+			}
+		}
 	}
 }

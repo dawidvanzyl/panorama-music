@@ -123,7 +123,7 @@ export class PmTeacherRow extends HTMLElement {
     this.statusChip.textContent = t.isActive ? 'Active' : 'Deactivated';
     this.statusChip.className = `teacher-row__chip ${t.isActive ? 'teacher-row__chip--status-active' : 'teacher-row__chip--status-inactive'}`;
 
-    this.accountEl.textContent = t.linkedAccountId ? 'Linked' : 'No login account';
+    this.accountEl.textContent = t.linkedAccountEmail ?? 'No login account';
   }
 
   private handleOpen = (): void => {

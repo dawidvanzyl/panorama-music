@@ -1,4 +1,6 @@
-import type { TeacherInput } from '../services/teachers';
+import './pm-account-link-picker';
+import type { LinkableAccount, TeacherInput } from '../services/teachers';
+import type { PmAccountLinkPicker } from './pm-account-link-picker';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -61,11 +63,23 @@ styles.replaceSync(`
     .create-section__error:empty {
       display: none;
     }
+    /* Heads the classification column the way the labels head the two input
+       columns beside it. */
+    .create-section__heading {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pm-text);
+    }
+    .create-section__classification {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-self: end;
+    }
     .create-section__toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      align-self: end;
       gap: 12px;
       /* Same content height and border as the inputs beside it, so the three
          columns bottom-align exactly. */
@@ -176,17 +190,21 @@ template.innerHTML = `
         <input type="text" id="surname" />
         <span class="create-section__error" id="surnameError"></span>
       </div>
-      <div class="create-section__toggle-row">
-        <div class="create-section__toggle-text">
-          <label for="private">Private teacher</label>
-          <span aria-hidden="true">-</span>
-          <span class="create-section__toggle-help" id="toggleHelp">Paid by the school.</span>
+      <div class="create-section__classification">
+        <span class="create-section__heading">Employment classification</span>
+        <div class="create-section__toggle-row">
+          <div class="create-section__toggle-text">
+            <label for="private">Private teacher</label>
+            <span aria-hidden="true">-</span>
+            <span class="create-section__toggle-help" id="toggleHelp">Paid by the school.</span>
+          </div>
+          <label class="toggle" for="private">
+            <input type="checkbox" id="private" class="toggle__input" />
+            <span class="toggle__track"><span class="toggle__thumb"></span></span>
+          </label>
         </div>
-        <label class="toggle" for="private">
-          <input type="checkbox" id="private" class="toggle__input" />
-          <span class="toggle__track"><span class="toggle__thumb"></span></span>
-        </label>
       </div>
+      <pm-account-link-picker class="create-section__field--full" id="accountPicker"></pm-account-link-picker>
     </div>
     <div class="create-section__error" id="formError"></div>
     <div class="create-section__actions">
@@ -199,6 +217,8 @@ export class PmTeacherCreateSection extends HTMLElement {
   private firstNameInput: HTMLInputElement | null = null;
   private surnameInput: HTMLInputElement | null = null;
   private privateCheckbox: HTMLInputElement | null = null;
+  private accountPicker: PmAccountLinkPicker | null = null;
+  private _linkableAccounts: LinkableAccount[] = [];
   private toggleHelp: HTMLElement | null = null;
   private firstNameError: HTMLElement | null = null;
   private surnameError: HTMLElement | null = null;
@@ -216,6 +236,8 @@ export class PmTeacherCreateSection extends HTMLElement {
     this.firstNameInput = this.shadowRoot!.getElementById('firstName') as HTMLInputElement;
     this.surnameInput = this.shadowRoot!.getElementById('surname') as HTMLInputElement;
     this.privateCheckbox = this.shadowRoot!.getElementById('private') as HTMLInputElement;
+    this.accountPicker = this.shadowRoot!.getElementById('accountPicker') as unknown as PmAccountLinkPicker;
+    this.accountPicker.accounts = this._linkableAccounts;
     this.toggleHelp = this.shadowRoot!.getElementById('toggleHelp') as HTMLElement;
     this.firstNameError = this.shadowRoot!.getElementById('firstNameError') as HTMLElement;
     this.surnameError = this.shadowRoot!.getElementById('surnameError') as HTMLElement;
@@ -231,6 +253,16 @@ export class PmTeacherCreateSection extends HTMLElement {
     this.saveBtn?.removeEventListener('click', this.handleSave);
   }
 
+  /** The eligible accounts to offer; the page owns fetching them. */
+  set linkableAccounts(value: LinkableAccount[]) {
+    this._linkableAccounts = value;
+    if (this.accountPicker) this.accountPicker.accounts = value;
+  }
+
+  get linkableAccounts(): LinkableAccount[] {
+    return this._linkableAccounts;
+  }
+
   /**
    * Returns the form to its empty state. The section is always on screen, so
    * this runs after a successful create to ready it for the next teacher.
@@ -239,6 +271,7 @@ export class PmTeacherCreateSection extends HTMLElement {
     this.firstNameInput!.value = '';
     this.surnameInput!.value = '';
     this.privateCheckbox!.checked = false;
+    this.accountPicker!.reset();
     this.updateToggleHelp();
     this.clearErrors();
   }
@@ -274,7 +307,12 @@ export class PmTeacherCreateSection extends HTMLElement {
     }
     if (!valid) return;
 
-    const input: TeacherInput = { firstName, surname, isPrivate: this.privateCheckbox!.checked };
+    const input: TeacherInput = {
+      firstName,
+      surname,
+      isPrivate: this.privateCheckbox!.checked,
+      linkedAccountId: this.accountPicker!.selectedAccountId,
+    };
 
     this.dispatchEvent(
       new CustomEvent<{ input: TeacherInput }>('teacher-create-requested', {
