@@ -290,7 +290,7 @@ styles.replaceSync(`
   `);
 
 /** Email, Roles, Status, Actions — what a full-width row banner must span. */
-const _columnCount = 4;
+const columnCount = 4;
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -649,7 +649,7 @@ export class PmUsersTable extends HTMLElement {
     errorRow.classList.add('users-table__error-row');
 
     const errorCell = document.createElement('td');
-    errorCell.colSpan = _columnCount;
+    errorCell.colSpan = columnCount;
 
     const banner = document.createElement('div');
     banner.classList.add('users-table__row-error');

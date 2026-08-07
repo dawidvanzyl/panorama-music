@@ -1,12 +1,14 @@
 using PanoramaMusic.Teachers.Application.Commands.Teachers;
-using PanoramaMusic.Teachers.Application.Extensions;
 using PanoramaMusic.Teachers.Application.Models;
+using PanoramaMusic.Teachers.Application.Services;
 using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 
 namespace PanoramaMusic.Teachers.Application.Handlers.Teachers;
 
-public sealed class UnlinkTeacherAccountHandler(ITeacherRepository teacherRepository)
+public sealed class UnlinkTeacherAccountHandler(
+	ITeacherRepository teacherRepository,
+	TeacherResultComposer resultComposer)
 {
 	/// <summary>
 	/// Unlinks on behalf of teacher management, which only an Admin or Coordinator
@@ -23,6 +25,6 @@ public sealed class UnlinkTeacherAccountHandler(ITeacherRepository teacherReposi
 
 		await teacherRepository.UnlinkAccountAsync(teacher, cancellationToken);
 
-		return teacher.ToResult();
+		return await resultComposer.ComposeAsync(teacher, cancellationToken);
 	}
 }

@@ -1,6 +1,6 @@
 using PanoramaMusic.Teachers.Application.Commands.Teachers;
-using PanoramaMusic.Teachers.Application.Extensions;
 using PanoramaMusic.Teachers.Application.Models;
+using PanoramaMusic.Teachers.Application.Services;
 using PanoramaMusic.Teachers.Domain.Entities;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Services;
@@ -9,7 +9,8 @@ namespace PanoramaMusic.Teachers.Application.Handlers.Teachers;
 
 public sealed class CreateTeacherHandler(
 	ITeacherRepository teacherRepository,
-	TeacherAccountLinkService accountLinkService)
+	TeacherAccountLinkService accountLinkService,
+	TeacherResultComposer resultComposer)
 {
 	public async Task<TeacherResult> HandleAsync(CreateTeacherCommand command, CancellationToken cancellationToken)
 	{
@@ -28,6 +29,6 @@ public sealed class CreateTeacherHandler(
 
 		await teacherRepository.CreateAsync(teacher, cancellationToken);
 
-		return teacher.ToResult();
+		return await resultComposer.ComposeAsync(teacher, cancellationToken);
 	}
 }

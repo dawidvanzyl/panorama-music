@@ -5,7 +5,7 @@ using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Teachers.Domain.Entities;
 using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
-using PanoramaMusic.Teachers.Domain.ValueObjects;
+using PanoramaMusic.Teachers.Domain.Messages;
 using PanoramaMusic.Teachers.Infrastructure.Dtos;
 using PanoramaMusic.Teachers.Infrastructure.Extensions;
 using PanoramaMusic.Teachers.Infrastructure.Repositories.Bases;
@@ -53,7 +53,17 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 			},
 			Transaction,
 			cancellationToken);
-		await Connection.ExecuteAsync(command);
+
+		try
+		{
+			await Connection.ExecuteAsync(command);
+		}
+		catch (PostgresException ex) when (IsLinkedAccountUniqueViolation(ex))
+		{
+			// Creating with a link races the same index a later link does, so it
+			// gets the same refusal rather than an unhandled 500.
+			throw new DomainException(TeacherAccountLinkMessages.AccountAlreadyLinked);
+		}
 
 		domainEventCollector.Collect(teacher);
 	}
@@ -91,28 +101,26 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		domainEventCollector.Collect(teacher);
 	}
 
-	public async Task<IList<LinkableAccount>> GetLinkableAccountsAsync(CancellationToken cancellationToken)
+	public async Task<bool> IsAccountLinkedAsync(Guid accountId, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
-			"teachers.get_linkable_accounts",
-			null,
-			Transaction,
-			cancellationToken);
-		var dtos = await Connection.QueryAsync<LinkableAccountDto>(command);
-
-		return [.. dtos.Select(dto => dto.MapToLinkableAccount())];
-	}
-
-	public async Task<AccountLinkState?> GetAccountLinkStateAsync(Guid accountId, CancellationToken cancellationToken)
-	{
-		var command = CreateCommandDefinition(
-			"teachers.get_account_link_state",
+			"teachers.get_account_is_linked",
 			new { p_account_id = accountId },
 			Transaction,
 			cancellationToken);
-		var dto = await Connection.QuerySingleOrDefaultAsync<AccountLinkStateDto>(command);
 
-		return dto?.MapToAccountLinkState();
+		return await Connection.ExecuteScalarAsync<bool>(command);
+	}
+
+	public async Task<IList<Guid>> GetLinkedAccountIdsAsync(CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"teachers.get_linked_account_ids",
+			null,
+			Transaction,
+			cancellationToken);
+
+		return [.. await Connection.QueryAsync<Guid>(command)];
 	}
 
 	public async Task LinkAccountAsync(Teacher teacher, CancellationToken cancellationToken)
@@ -137,15 +145,11 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 			// the unique index is what actually settles it. Translating that into
 			// the same refusal the read would have produced keeps the loser of the
 			// race on the 400 path instead of an unexplained 500.
-			throw new DomainException("That login account is already linked to a teacher.");
+			throw new DomainException(TeacherAccountLinkMessages.AccountAlreadyLinked);
 		}
 
 		domainEventCollector.Collect(teacher);
 	}
-
-	private static bool IsLinkedAccountUniqueViolation(PostgresException exception) =>
-		exception.SqlState == _uniqueViolationSqlState
-		&& exception.ConstraintName == _linkedAccountUniqueIndex;
 
 	public async Task UnlinkAccountAsync(Teacher teacher, CancellationToken cancellationToken)
 	{
@@ -158,6 +162,10 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 
 		domainEventCollector.Collect(teacher);
 	}
+
+	private static bool IsLinkedAccountUniqueViolation(PostgresException exception) =>
+		exception.SqlState == _uniqueViolationSqlState
+		&& exception.ConstraintName == _linkedAccountUniqueIndex;
 
 	private static TeacherInputDto ToInputDto(Teacher teacher) =>
 		new(

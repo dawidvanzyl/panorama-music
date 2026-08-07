@@ -18,9 +18,9 @@ public sealed class TeacherLinkRoleRemovalValidator(ITeacherRepository teacherRe
 		if (role != Role.Teacher)
 			return ValidationResult.Success();
 
-		var linkState = await teacherRepository.GetAccountLinkStateAsync(userId, cancellationToken);
+		var isLinked = await teacherRepository.IsAccountLinkedAsync(userId, cancellationToken);
 
-		return linkState?.IsLinked == true
+		return isLinked
 			? ValidationResult.Failure("This account is linked to a teacher. Unlink the teacher first, then remove the Teacher role.")
 			: ValidationResult.Success();
 	}

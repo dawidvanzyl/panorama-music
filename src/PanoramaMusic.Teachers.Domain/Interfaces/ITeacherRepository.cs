@@ -1,5 +1,4 @@
 using PanoramaMusic.Teachers.Domain.Entities;
-using PanoramaMusic.Teachers.Domain.ValueObjects;
 
 namespace PanoramaMusic.Teachers.Domain.Interfaces;
 
@@ -15,15 +14,14 @@ public interface ITeacherRepository
 
 	Task UpdateClassificationAsync(Teacher teacher, CancellationToken cancellationToken);
 
-	/// <summary>
-	/// Every login account eligible for linking. Eligibility is resolved where
-	/// the set is produced rather than by filtering a fuller list afterwards —
-	/// it is a correctness constraint, not a presentation one.
-	/// </summary>
-	Task<IList<LinkableAccount>> GetLinkableAccountsAsync(CancellationToken cancellationToken);
+	/// <summary>Whether some teacher already claims this login account.</summary>
+	Task<bool> IsAccountLinkedAsync(Guid accountId, CancellationToken cancellationToken);
 
-	/// <summary>Returns null when no such login account exists.</summary>
-	Task<AccountLinkState?> GetAccountLinkStateAsync(Guid accountId, CancellationToken cancellationToken);
+	/// <summary>
+	/// Every account id currently claimed by a teacher — what an eligible-account
+	/// set is filtered against.
+	/// </summary>
+	Task<IList<Guid>> GetLinkedAccountIdsAsync(CancellationToken cancellationToken);
 
 	Task LinkAccountAsync(Teacher teacher, CancellationToken cancellationToken);
 

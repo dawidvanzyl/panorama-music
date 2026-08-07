@@ -1,6 +1,6 @@
 namespace PanoramaMusic.Identity.Domain.ValueObjects;
 
-public class ValidationResult
+public sealed class ValidationResult
 {
 	private ValidationResult(bool isValid, string errorMessage)
 	{

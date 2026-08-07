@@ -35,7 +35,6 @@ public sealed class TeacherAccountLinkedTranslator(IAuditContext auditContext, I
 			{
 				["targetDisplay"] = $"{teacher.FirstName} {teacher.Surname}",
 				["accountId"] = linked.AccountId,
-				["accountEmail"] = linked.AccountEmail,
 			});
 	}
 }

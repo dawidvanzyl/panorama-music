@@ -1,6 +1,7 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Teachers.Domain.Events.Teachers;
 using PanoramaMusic.Teachers.Domain.Exceptions;
+using PanoramaMusic.Teachers.Domain.Messages;
 
 namespace PanoramaMusic.Teachers.Domain.Entities;
 
@@ -12,8 +13,7 @@ public sealed class Teacher : AggregateRoot
 		string surname,
 		bool isPrivate,
 		bool isActive,
-		Guid? linkedAccountId,
-		string? linkedAccountEmail)
+		Guid? linkedAccountId)
 	{
 		TeacherId = teacherId;
 		FirstName = firstName;
@@ -21,7 +21,6 @@ public sealed class Teacher : AggregateRoot
 		IsPrivate = isPrivate;
 		IsActive = isActive;
 		LinkedAccountId = linkedAccountId;
-		LinkedAccountEmail = linkedAccountEmail;
 	}
 
 	public Guid TeacherId { get; }
@@ -45,13 +44,6 @@ public sealed class Teacher : AggregateRoot
 	/// </summary>
 	public Guid? LinkedAccountId { get; private set; }
 
-	/// <summary>
-	/// The linked account's email address, carried alongside the id purely so
-	/// the record and the roster can name the account without a per-teacher
-	/// lookup. Identity owns the value; the Teachers context only reads it.
-	/// </summary>
-	public string? LinkedAccountEmail { get; private set; }
-
 	public static Teacher Create(
 		Guid teacherId,
 		string firstName,
@@ -64,8 +56,7 @@ public sealed class Teacher : AggregateRoot
 			surname,
 			isPrivate,
 			isActive: true,
-			linkedAccountId: null,
-			linkedAccountEmail: null);
+			linkedAccountId: null);
 
 		teacher.Raise(new TeacherCreated(teacher));
 		return teacher;
@@ -104,15 +95,14 @@ public sealed class Teacher : AggregateRoot
 	/// in place — relinking a teacher that already has an account would leave the
 	/// audit trail ambiguous about which account was replaced, so it is refused.
 	/// </summary>
-	public void LinkAccount(Guid accountId, string accountEmail)
+	public void LinkAccount(Guid accountId)
 	{
 		if (LinkedAccountId is not null)
-			throw new DomainException("This teacher is already linked to a login account. Unlink it first.");
+			throw new DomainException(TeacherAccountLinkMessages.TeacherAlreadyLinked);
 
 		LinkedAccountId = accountId;
-		LinkedAccountEmail = accountEmail;
 
-		Raise(new TeacherAccountLinked(this, accountId, accountEmail));
+		Raise(new TeacherAccountLinked(this, accountId));
 	}
 
 	/// <summary>
@@ -121,16 +111,14 @@ public sealed class Teacher : AggregateRoot
 	public void UnlinkAccount()
 	{
 		if (LinkedAccountId is null)
-			throw new DomainException("This teacher is not linked to a login account.");
+			throw new DomainException(TeacherAccountLinkMessages.TeacherNotLinked);
 
 		var previousAccountId = LinkedAccountId.Value;
-		var previousAccountEmail = LinkedAccountEmail;
 		LinkedAccountId = null;
-		LinkedAccountEmail = null;
 
-		Raise(new TeacherAccountUnlinked(this, previousAccountId, previousAccountEmail));
+		Raise(new TeacherAccountUnlinked(this, previousAccountId));
 	}
 
 	private Teacher Snapshot() =>
-		new(TeacherId, FirstName, Surname, IsPrivate, IsActive, LinkedAccountId, LinkedAccountEmail);
+		new(TeacherId, FirstName, Surname, IsPrivate, IsActive, LinkedAccountId);
 }
