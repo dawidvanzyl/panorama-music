@@ -11,7 +11,6 @@ using PanoramaMusic.Teachers.Application.Validators.Teachers;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Services;
 using PanoramaMusic.Teachers.Infrastructure.Contexts;
-using PanoramaMusic.Teachers.Infrastructure.Directories;
 using PanoramaMusic.Teachers.Infrastructure.Dtos;
 using PanoramaMusic.Teachers.Infrastructure.Repositories;
 using PanoramaMusic.Teachers.Infrastructure.Translators.Teachers;
@@ -44,10 +43,6 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IUserContext, UserContext>();
 		services.AddTransient<TeacherAccountLinkService>();
 		services.AddTransient<TeacherResultComposer>();
-
-		// The only place Teachers touches Identity: a port Teachers owns, satisfied
-		// by Identity's own repositories rather than by querying its schema.
-		services.AddTransient<IAccountDirectory, IdentityAccountDirectory>();
 
 		// Identity owns the contract; the Teachers context supplies the answer, so
 		// Identity can refuse to strip the Teacher role from a linked account

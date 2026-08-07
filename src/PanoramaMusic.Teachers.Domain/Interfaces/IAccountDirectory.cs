@@ -3,13 +3,15 @@ using PanoramaMusic.Teachers.Domain.ValueObjects;
 namespace PanoramaMusic.Teachers.Domain.Interfaces;
 
 /// <summary>
-/// What the Teachers context needs to know about login accounts, expressed as a
-/// contract it owns and Identity satisfies.
+/// What the Teachers context needs to know about login accounts, declared by the
+/// context that consumes it and implemented by the one that owns the data.
 /// <para>
-/// Teachers depends on Identity, never the reverse — but that dependency runs
-/// through this port rather than through Identity's schema. Teachers knows which
-/// accounts it has claimed; everything else about an account is Identity's to
-/// answer.
+/// Teachers knows which accounts it has claimed; everything else about an
+/// account is someone else's to answer, and Teachers never learns who or how.
+/// There are no users behind this interface as far as this context is
+/// concerned — only accounts, in the shape it asked for. The reverse direction
+/// takes the same form: Identity declares <c>IRoleRemovalValidator</c> and
+/// Teachers implements it, because that fact belongs to Teachers.
 /// </para>
 /// </summary>
 public interface IAccountDirectory

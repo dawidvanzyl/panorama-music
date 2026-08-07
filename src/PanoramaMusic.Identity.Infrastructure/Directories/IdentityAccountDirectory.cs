@@ -3,12 +3,18 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.ValueObjects;
 
-namespace PanoramaMusic.Teachers.Infrastructure.Directories;
+namespace PanoramaMusic.Identity.Infrastructure.Directories;
 
 /// <summary>
-/// Satisfies the Teachers context's <see cref="IAccountDirectory"/> by asking
-/// Identity's own repositories, so no Teachers query reaches into the identity
-/// schema. This adapter is the single place the two contexts touch.
+/// Identity's answer to the Teachers context's <see cref="IAccountDirectory"/>.
+/// <para>
+/// The port is declared by Teachers, which needs the data; the implementation
+/// lives here, because who holds a role and what their email is are Identity's
+/// facts to publish. Teachers never learns that a "user" is what backs a
+/// <see cref="DirectoryAccount"/> — the same shape as
+/// <c>IAuditEventTranslator</c>, which Audit declares and each producing
+/// context implements over its own domain.
+/// </para>
 /// </summary>
 public sealed class IdentityAccountDirectory(
 	IUserRepository userRepository,

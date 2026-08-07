@@ -13,6 +13,10 @@
   <ItemGroup>
     <ProjectReference Include="..\PanoramaMusic.Identity.Application\PanoramaMusic.Identity.Application.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+    <!-- For the Teachers-owned IAccountDirectory port this project implements.
+         Identity's own domain and application layers stay ignorant of teachers;
+         only this adapter knows the port exists. -->
+    <ProjectReference Include="..\PanoramaMusic.Teachers.Domain\PanoramaMusic.Teachers.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />

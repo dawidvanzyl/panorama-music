@@ -19,10 +19,12 @@ using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Identity.Infrastructure.Contexts;
+using PanoramaMusic.Identity.Infrastructure.Directories;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Enums;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Identity.Infrastructure.Services;
+using PanoramaMusic.Teachers.Domain.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Text;
@@ -147,6 +149,12 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
 		services.AddTransient<IRevokedAccessTokenRepository, RevokedAccessTokenRepository>();
 		services.AddTransient<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+
+		// Identity publishes what other contexts are allowed to know about an
+		// account. The port belongs to the context that consumes it; the answer
+		// belongs here, with the data.
+		services.AddTransient<IAccountDirectory, IdentityAccountDirectory>();
+
 		return services;
 	}
 
