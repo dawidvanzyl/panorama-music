@@ -3,6 +3,9 @@ import {
   getTeacherById,
   updateTeacherProfile,
   updateTeacherClassification,
+  getLinkableAccounts,
+  unlinkTeacherAccount,
+  linkTeacherAccount,
   TeachersError,
   type TeacherResult,
 } from '../../services/teachers';
@@ -14,6 +17,9 @@ vi.mock('../../services/teachers', async () => {
     getTeacherById: vi.fn(),
     updateTeacherProfile: vi.fn(),
     updateTeacherClassification: vi.fn(),
+    getLinkableAccounts: vi.fn(),
+    unlinkTeacherAccount: vi.fn(),
+    linkTeacherAccount: vi.fn(),
   };
 });
 
@@ -27,6 +33,7 @@ const alice: TeacherResult = {
   isPrivate: false,
   isActive: true,
   linkedAccountId: null,
+  linkedAccountEmail: null,
 };
 
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -51,6 +58,84 @@ beforeEach(() => {
   vi.mocked(getTeacherById).mockReset().mockResolvedValue(alice);
   vi.mocked(updateTeacherProfile).mockReset();
   vi.mocked(updateTeacherClassification).mockReset();
+  vi.mocked(getLinkableAccounts)
+    .mockReset()
+    .mockResolvedValue([{ accountId: 'acc-1', email: 'ada@test.com' }]);
+  vi.mocked(unlinkTeacherAccount).mockReset();
+  vi.mocked(linkTeacherAccount).mockReset();
+});
+
+const linkedAlice: TeacherResult = { ...alice, linkedAccountId: 'acc-9', linkedAccountEmail: 'linked@test.com' };
+
+describe('pm-teacher-detail-page — a linked account is shown, not re-pickable', { tags: ['232UC10'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('names the account, offers no picker, and offers an unlink action', async () => {
+    vi.mocked(getTeacherById).mockResolvedValue(linkedAlice);
+
+    el = await mountPage();
+    const headerShadow = el.shadowRoot!.getElementById('header')!.shadowRoot!;
+
+    expect(headerShadow.getElementById('accountBadge')!.shadowRoot!.textContent).toContain('linked@test.com');
+    expect(headerShadow.getElementById('unlinkBtn')!.hasAttribute('hidden')).toBe(false);
+    expect(headerShadow.getElementById('linkBtn')!.hasAttribute('hidden')).toBe(true);
+    expect(el.shadowRoot!.getElementById('linkNotice')!.hasAttribute('hidden')).toBe(false);
+    // The record itself never carries a dropdown — the picker lives in the modal.
+    expect(el.shadowRoot!.querySelector('select')).toBeNull();
+    expect(el.shadowRoot!.getElementById('linkModal')!.hasAttribute('open')).toBe(false);
+    expect(vi.mocked(getLinkableAccounts)).not.toHaveBeenCalled();
+  });
+
+  it('unlinking is confirmed in a modal, then clears the account and offers Link account', async () => {
+    vi.mocked(getTeacherById).mockResolvedValue(linkedAlice);
+    vi.mocked(unlinkTeacherAccount).mockResolvedValue(alice);
+
+    el = await mountPage();
+    const headerShadow = el.shadowRoot!.getElementById('header')!.shadowRoot!;
+    const unlinkModal = el.shadowRoot!.getElementById('unlinkModal')!;
+
+    headerShadow.getElementById('unlinkBtn')!.click();
+    expect(unlinkModal.hasAttribute('open')).toBe(true);
+    expect(unlinkModal.shadowRoot!.getElementById('modalEmail')!.textContent).toBe('linked@test.com');
+    expect(vi.mocked(unlinkTeacherAccount)).not.toHaveBeenCalled();
+
+    unlinkModal.shadowRoot!.getElementById('unlinkBtn')!.click();
+    await flush();
+
+    expect(vi.mocked(unlinkTeacherAccount)).toHaveBeenCalledWith('t1');
+    expect(headerShadow.getElementById('accountBadge')!.shadowRoot!.textContent).toContain('No login account');
+    expect(headerShadow.getElementById('unlinkBtn')!.hasAttribute('hidden')).toBe(true);
+    expect(headerShadow.getElementById('linkBtn')!.hasAttribute('hidden')).toBe(false);
+    expect(el.shadowRoot!.getElementById('linkNotice')!.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('Link account opens the modal with the eligible accounts and links the chosen one', async () => {
+    vi.mocked(getTeacherById).mockResolvedValue(alice);
+    vi.mocked(linkTeacherAccount).mockResolvedValue(linkedAlice);
+
+    el = await mountPage();
+    const headerShadow = el.shadowRoot!.getElementById('header')!.shadowRoot!;
+    const linkModal = el.shadowRoot!.getElementById('linkModal')!;
+
+    headerShadow.getElementById('linkBtn')!.click();
+    await flush();
+
+    expect(linkModal.hasAttribute('open')).toBe(true);
+    const select = linkModal.shadowRoot!.getElementById('picker')!.shadowRoot!.querySelector('select')!;
+    expect([...select.options].map((o) => o.value)).toEqual(['', 'acc-1']);
+
+    select.value = 'acc-1';
+    linkModal.shadowRoot!.getElementById('linkBtn')!.click();
+    await flush();
+
+    expect(vi.mocked(linkTeacherAccount)).toHaveBeenCalledWith('t1', 'acc-1');
+    expect(linkModal.hasAttribute('open')).toBe(false);
+    expect(headerShadow.getElementById('accountBadge')!.shadowRoot!.textContent).toContain('linked@test.com');
+  });
 });
 
 describe('pm-teacher-detail-page — profile edit covers names only', { tags: ['231UC12'] }, () => {

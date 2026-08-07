@@ -6,4 +6,5 @@ internal sealed record TeacherDto(
 	string Surname,
 	bool Is_Private,
 	bool Is_Active,
-	Guid? Linked_Account_Id);
+	Guid? Linked_Account_Id,
+	string? Linked_Account_Email);

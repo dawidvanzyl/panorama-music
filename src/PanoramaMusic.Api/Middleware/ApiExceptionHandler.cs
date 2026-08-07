@@ -4,6 +4,7 @@ using PanoramaMusic.Api.Extensions;
 using System.Text.Json;
 using IdentityExceptions = PanoramaMusic.Identity.Domain.Exceptions;
 using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
+using TeachersExceptions = PanoramaMusic.Teachers.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Middleware;
 
@@ -63,14 +64,14 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException)
+		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException or TeachersExceptions.EntityNotFoundException)
 		{
 			LogHandled(exception, StatusCodes.Status404NotFound, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status404NotFound, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 
-		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException)
+		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException or TeachersExceptions.DomainException)
 		{
 			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = exception.Message, correlationId }, cancellationToken);

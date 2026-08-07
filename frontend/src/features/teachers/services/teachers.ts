@@ -11,12 +11,22 @@ export interface TeacherResult {
   isPrivate: boolean;
   isActive: boolean;
   linkedAccountId: string | null;
+  /** The linked account's email address, or null when there is no link. */
+  linkedAccountEmail: string | null;
+}
+
+/** A login account the server has already judged eligible for linking. */
+export interface LinkableAccount {
+  accountId: string;
+  email: string;
 }
 
 export interface TeacherInput {
   firstName: string;
   surname: string;
   isPrivate: boolean;
+  /** Optional — a teacher created without a login account is a complete record. */
+  linkedAccountId?: string | null;
 }
 
 export interface TeacherProfileInput {
@@ -97,6 +107,38 @@ export async function updateTeacherProfile(teacherId: string, input: TeacherProf
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(input),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  return result;
+}
+
+/**
+ * The accounts that may be offered in the link picker. Never cached: the set
+ * shrinks the moment anyone links an account, and offering a stale one would
+ * only produce a rejection at save time.
+ */
+export async function getLinkableAccounts(): Promise<LinkableAccount[]> {
+  const response = await fetch(`${API_BASE}/linkable-accounts`, { headers: authHeaders() });
+  return handleResponse<LinkableAccount[]>(response);
+}
+
+/** Attaches a login account. A link is established or removed, never changed in place. */
+export async function linkTeacherAccount(teacherId: string, accountId: string): Promise<TeacherResult> {
+  const response = await fetch(`${API_BASE}/${teacherId}/account`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ accountId }),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function unlinkTeacherAccount(teacherId: string): Promise<TeacherResult> {
+  const response = await fetch(`${API_BASE}/${teacherId}/account`, {
+    method: 'DELETE',
+    headers: authHeaders(),
   });
   const result = await handleResponse<TeacherResult>(response);
   clearTeachersCache();

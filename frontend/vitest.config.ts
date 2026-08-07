@@ -92,6 +92,9 @@ export default defineConfig({
       { name: '231UC10', description: 'A non-Admin/Coordinator user is not shown the Teachers nav entry or create action' },
       { name: '231UC11', description: 'Create action expands an inline section on the same screen; Cancel collapses it with no navigation or overlay' },
       { name: '231UC12', description: 'Profile edit/cancel/save wraps only first name and surname; the classification toggle sits outside the edit gate and persists immediately, reverting on failure' },
+      { name: '232UC9', description: 'The account link picker offers only the accounts the server ruled eligible for linking' },
+      { name: '232UC10', description: 'A linked teacher shows the account, hides the picker, and offers an unlink action' },
+      { name: '232UC11', description: 'A rejected role removal surfaces the reason and restores the persisted role selection' },
     ],
   },
 })

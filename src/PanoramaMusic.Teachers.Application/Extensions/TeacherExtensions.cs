@@ -12,5 +12,6 @@ public static class TeacherExtensions
 			teacher.Surname,
 			teacher.IsPrivate,
 			teacher.IsActive,
-			teacher.LinkedAccountId);
+			teacher.LinkedAccountId,
+			teacher.LinkedAccountEmail);
 }

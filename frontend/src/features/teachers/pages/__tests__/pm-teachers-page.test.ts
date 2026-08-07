@@ -2,11 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createTeacher, type TeacherResult } from '../../services/teachers';
 
 const mockGetTeachers = vi.fn();
+const mockGetLinkableAccounts = vi.fn(() => Promise.resolve([]));
 vi.mock('../../services/teachers', async () => {
   const actual = await vi.importActual<typeof import('../../services/teachers')>('../../services/teachers');
   return {
     ...actual,
     getTeachers: () => mockGetTeachers(),
+    getLinkableAccounts: () => mockGetLinkableAccounts(),
     createTeacher: vi.fn(),
   };
 });
@@ -22,6 +24,7 @@ const alice: TeacherResult = {
   isPrivate: false,
   isActive: true,
   linkedAccountId: null,
+  linkedAccountEmail: null,
 };
 
 const julian: TeacherResult = {
@@ -31,6 +34,7 @@ const julian: TeacherResult = {
   isPrivate: true,
   isActive: false,
   linkedAccountId: 'acc-1',
+  linkedAccountEmail: 'linked@example.com',
 };
 
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -166,6 +170,7 @@ describe(
         firstName: 'Nadia',
         surname: 'Vance',
         isPrivate: false,
+        linkedAccountId: null,
       });
       expect(section.hidden).toBe(false);
       expect((shadow.getElementById('firstName') as HTMLInputElement).value).toBe('');

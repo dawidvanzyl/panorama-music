@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PanoramaMusic.Teachers.Application\PanoramaMusic.Teachers.Application.csproj" />
+    <!-- The Teachers context depends on Identity, never the reverse: this is
+         what lets it implement Identity's IRoleRemovalGuard. Identity's Domain
+         only, so no Identity application logic leaks in with it. -->
+    <ProjectReference Include="..\PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj" />

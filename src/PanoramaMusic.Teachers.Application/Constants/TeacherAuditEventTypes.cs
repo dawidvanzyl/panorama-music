@@ -11,4 +11,6 @@ public static class TeacherAuditEventTypes
 	public const string TeacherCreated = "teachers.teacher.created";
 	public const string TeacherProfileUpdated = "teachers.teacher.profile_updated";
 	public const string TeacherClassificationChanged = "teachers.teacher.classification_changed";
+	public const string TeacherAccountLinked = "teachers.teacher.account_linked";
+	public const string TeacherAccountUnlinked = "teachers.teacher.account_unlinked";
 }

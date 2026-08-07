@@ -29,6 +29,18 @@ public static class TeacherRoutes
 			.Produces(StatusCodes.Status403Forbidden);
 
 		group
+			.MapGet("/linkable-accounts", async (GetLinkableAccountsHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("GetLinkableAccounts")
+			.Produces<IList<LinkableAccountResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		group
 			.MapGet("/{teacherId:guid}", async (Guid teacherId, GetTeacherByIdHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(teacherId, ct);
@@ -83,6 +95,39 @@ public static class TeacherRoutes
 			})
 			.MarkSensitiveResponse()
 			.WithName("UpdateTeacherClassification")
+			.Produces<TeacherResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// A link is established or removed, never changed in place, so linking
+		// and unlinking are separate operations rather than one nullable write.
+		group
+			.MapPut("/{teacherId:guid}/account", async (Guid teacherId, LinkTeacherAccountRequest request, LinkTeacherAccountHandler handler, CancellationToken ct) =>
+			{
+				var command = new LinkTeacherAccountCommand(teacherId, request.AccountId);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.AddEndpointFilter<ValidationFilter<LinkTeacherAccountRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("LinkTeacherAccount")
+			.Produces<TeacherResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapDelete("/{teacherId:guid}/account", async (Guid teacherId, UnlinkTeacherAccountHandler handler, CancellationToken ct) =>
+			{
+				var command = new UnlinkTeacherAccountCommand(teacherId);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("UnlinkTeacherAccount")
 			.Produces<TeacherResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)

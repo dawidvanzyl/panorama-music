@@ -9,6 +9,7 @@ const alice: TeacherResult = {
   isPrivate: false,
   isActive: true,
   linkedAccountId: null,
+  linkedAccountEmail: null,
 };
 
 const julian: TeacherResult = {
@@ -18,6 +19,7 @@ const julian: TeacherResult = {
   isPrivate: true,
   isActive: true,
   linkedAccountId: 'acc-1',
+  linkedAccountEmail: 'linked@example.com',
 };
 
 const zola: TeacherResult = {
@@ -27,6 +29,7 @@ const zola: TeacherResult = {
   isPrivate: false,
   isActive: false,
   linkedAccountId: null,
+  linkedAccountEmail: null,
 };
 
 const teachers = [alice, julian, zola];

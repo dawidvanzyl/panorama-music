@@ -10,4 +10,5 @@ namespace PanoramaMusic.Teachers.Infrastructure.Dtos;
 internal sealed record TeacherInputDto(
 	string FirstName,
 	string Surname,
-	bool IsPrivate);
+	bool IsPrivate,
+	Guid? LinkedAccountId);
