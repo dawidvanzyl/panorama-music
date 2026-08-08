@@ -62,7 +62,7 @@ public static class TeacherBankingRoutes
 			{
 				var command = new CreateBankingDetailsCommand(teacherId, request);
 				var result = await handler.HandleAsync(command, ct);
-				return Results.Created($"/api/teachers/{teacherId}", result);
+				return Results.Created($"/api/teachers/{teacherId}/banking", result);
 			})
 			.AddEndpointFilter<ValidationFilter<CreateBankingDetailsRequest>>()
 			.MarkSensitiveResponse()

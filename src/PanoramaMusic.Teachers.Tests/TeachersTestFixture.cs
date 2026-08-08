@@ -35,7 +35,7 @@ public sealed class TeachersTestFixture
 		// not have to say so, and an unconfigured mock would otherwise hand the
 		// composer a null list.
 		context.Repositories.BankingDetailsRepositoryMock
-			.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
+			.Setup(m => m.GetByTeacherIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync([]);
 	}
 

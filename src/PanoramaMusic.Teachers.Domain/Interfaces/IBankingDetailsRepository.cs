@@ -18,10 +18,13 @@ public interface IBankingDetailsRepository
 	Task<BankingDetails?> GetByTeacherIdAsync(Guid teacherId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// Every captured set, masked, in one call — what composing a roster's
-	/// banking column reads, instead of a lookup per teacher.
+	/// The captured sets for the given teachers, masked, in one call — what
+	/// composing a roster's banking column reads, instead of a lookup per
+	/// teacher. Scoped to the ids asked for so the work scales with the request
+	/// rather than with the table. Teachers without banking details are simply
+	/// absent from the result.
 	/// </summary>
-	Task<IList<BankingDetails>> GetAllAsync(CancellationToken cancellationToken);
+	Task<IList<BankingDetails>> GetByTeacherIdsAsync(IReadOnlyCollection<Guid> teacherIds, CancellationToken cancellationToken);
 
 	Task CreateAsync(BankingDetails bankingDetails, CancellationToken cancellationToken);
 

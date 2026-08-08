@@ -50,10 +50,10 @@ public sealed class TeacherResultComposer(
 	}
 
 	/// <summary>
-	/// One teacher is read by id; a roster reads the whole set in one call
-	/// rather than one call per teacher. An empty roster reads nothing at all —
-	/// without the guard it would fall through to the whole-set query and throw
-	/// the result away.
+	/// One call scoped to exactly the teachers being composed, whether that is
+	/// one record or a whole roster — so the read costs one query rather than
+	/// one per teacher, and still touches only the rows the caller asked about.
+	/// An empty roster reads nothing at all.
 	/// </summary>
 	private async Task<IReadOnlyDictionary<Guid, BankingDetailsResult>> ResolveBankingAsync(
 		IList<Teacher> teachers,
@@ -62,18 +62,10 @@ public sealed class TeacherResultComposer(
 		if (teachers.Count == 0)
 			return new Dictionary<Guid, BankingDetailsResult>();
 
-		if (teachers.Count == 1)
-		{
-			var single = await bankingDetailsRepository.GetByTeacherIdAsync(teachers[0].TeacherId, cancellationToken);
+		var teacherIds = teachers.Select(teacher => teacher.TeacherId).ToArray();
+		var banking = await bankingDetailsRepository.GetByTeacherIdsAsync(teacherIds, cancellationToken);
 
-			return single is null
-				? new Dictionary<Guid, BankingDetailsResult>()
-				: new Dictionary<Guid, BankingDetailsResult> { [single.TeacherId] = single.ToResult() };
-		}
-
-		var all = await bankingDetailsRepository.GetAllAsync(cancellationToken);
-
-		return all.ToDictionary(details => details.TeacherId, details => details.ToResult());
+		return banking.ToDictionary(details => details.TeacherId, details => details.ToResult());
 	}
 
 	private static string? EmailOf(Guid? accountId, IReadOnlyDictionary<Guid, string> emails) =>

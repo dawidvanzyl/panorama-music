@@ -11,10 +11,12 @@ namespace PanoramaMusic.Teachers.Domain.ValueObjects;
 /// is the one place a plaintext account number exists in memory, and structured
 /// logging, exception messages and debugger output all reach for
 /// <c>ToString()</c>. Reading the value has to be a deliberate act, so it is
-/// <see cref="Value"/> and nothing else.
+/// <see cref="Value"/> and nothing else. The override is what makes this type
+/// safe to hold as a record: without it the compiler-generated
+/// <c>ToString()</c> would print the number.
 /// </para>
 /// </summary>
-public sealed class AccountNumber
+public sealed record AccountNumber
 {
 	private const int _minimumLength = 6;
 	private const int _maximumLength = 12;

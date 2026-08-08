@@ -21,6 +21,13 @@ public sealed class CreateBankingDetailsHandler(
 		var teacher = await teacherRepository.GetByIdAsync(command.TeacherId, cancellationToken)
 			?? throw new EntityNotFoundException($"Teacher {command.TeacherId} was not found.");
 
+		// Deactivation deletes a teacher's banking details, so capturing them for
+		// a deactivated teacher would recreate exactly what deactivation removed.
+		// Enforced here rather than only in the interface: hiding the add action
+		// is presentation and is not an authorization boundary.
+		if (!teacher.IsActive)
+			throw new DomainException(BankingDetailMessages.TeacherNotActive);
+
 		var existing = await bankingDetailsRepository.GetByTeacherIdAsync(teacher.TeacherId, cancellationToken);
 
 		if (existing is not null)

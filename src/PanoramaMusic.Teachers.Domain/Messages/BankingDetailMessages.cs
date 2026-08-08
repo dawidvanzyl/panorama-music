@@ -15,4 +15,5 @@ public static class BankingDetailMessages
 	public const string BranchCodeLength = "Branch code must be 6 digits.";
 	public const string BankingDetailsAlreadyCaptured = "This teacher already has banking details captured. Edit them instead.";
 	public const string BankingDetailsNotCaptured = "This teacher has no banking details captured.";
+	public const string TeacherNotActive = "Banking details cannot be captured for a deactivated teacher.";
 }

@@ -50,11 +50,11 @@ public class BankingDetailsRepository(
 		return dto?.MapToBankingDetails();
 	}
 
-	public async Task<IList<BankingDetails>> GetAllAsync(CancellationToken cancellationToken)
+	public async Task<IList<BankingDetails>> GetByTeacherIdsAsync(IReadOnlyCollection<Guid> teacherIds, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
-			"teachers.get_all_teacher_banking_details",
-			null,
+			"teachers.get_teacher_banking_details_by_ids",
+			new { p_teacher_ids = teacherIds.ToArray() },
 			Transaction,
 			cancellationToken);
 		var dtos = await Connection.QueryAsync<BankingDetailsDto>(command);
