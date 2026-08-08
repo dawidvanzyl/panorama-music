@@ -118,6 +118,7 @@ Frontend checks (run when `frontend/` is changed):
 - Read `frontend/package.json` to discover available scripts.
 - Run:
   - `npm run lint` if `lint` exists.
+  - `npm run format:check` if `format:check` exists.
   - `npm run typecheck` if `typecheck` exists.
   - `npm run build` if `build` exists.
 - If a `test` script exists, run:
@@ -179,6 +180,7 @@ Use flat markdown headings and tables. Omit any section that has 0 items.
 - dotnet format: {passed/failed}
 - dotnet test: {per-project pass/fail, e.g. "PanoramaMusic.Domain.Tests: 12/12 passed", or "No backend test projects found"}
 - npm run lint: {passed/failed}
+- npm run format:check: {passed/failed}
 - npm run typecheck: {passed/failed}
 - npm run build: {passed/failed}
 - npm run test / vitest: {passed/failed}
@@ -215,6 +217,7 @@ dotnet build output (last ~50 lines)
 dotnet format output (last ~50 lines)
 dotnet test output (last ~50 lines)
 npm lint output (last ~50 lines)
+npm format:check output (last ~50 lines)
 npm typecheck output (last ~50 lines)
 npm build output (last ~50 lines)
 npm test output (last ~50 lines)
