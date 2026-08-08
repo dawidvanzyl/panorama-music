@@ -104,6 +104,9 @@ template.innerHTML = `
   <div class="header__title-row">
     <h1 class="header__name" id="name"></h1>
     <div class="header__actions">
+      <button type="button" class="header__btn header__btn--unlink" id="bankingActivityBtn" hidden>
+        <span class="header__btn-icon" aria-hidden="true">receipt_long</span>Banking activity
+      </button>
       <button type="button" class="header__btn header__btn--link" id="linkBtn" hidden>
         <span class="header__btn-icon" aria-hidden="true">link</span>Link account
       </button>
@@ -126,6 +129,7 @@ export class PmTeacherHeader extends HTMLElement {
   private accountBadge: PmLinkedAccountBadge | null = null;
   private linkBtn: HTMLButtonElement | null = null;
   private unlinkBtn: HTMLButtonElement | null = null;
+  private bankingActivityBtn: HTMLButtonElement | null = null;
   private _teacher: TeacherResult | null = null;
 
   constructor() {
@@ -142,14 +146,17 @@ export class PmTeacherHeader extends HTMLElement {
     this.accountBadge = this.shadowRoot!.getElementById('accountBadge') as unknown as PmLinkedAccountBadge;
     this.linkBtn = this.shadowRoot!.getElementById('linkBtn') as HTMLButtonElement;
     this.unlinkBtn = this.shadowRoot!.getElementById('unlinkBtn') as HTMLButtonElement;
+    this.bankingActivityBtn = this.shadowRoot!.getElementById('bankingActivityBtn') as HTMLButtonElement;
     this.linkBtn.addEventListener('click', this.handleLinkClick);
     this.unlinkBtn.addEventListener('click', this.handleUnlinkClick);
+    this.bankingActivityBtn.addEventListener('click', this.handleBankingActivityClick);
     this.render();
   }
 
   disconnectedCallback(): void {
     this.linkBtn?.removeEventListener('click', this.handleLinkClick);
     this.unlinkBtn?.removeEventListener('click', this.handleUnlinkClick);
+    this.bankingActivityBtn?.removeEventListener('click', this.handleBankingActivityClick);
   }
 
   set teacher(value: TeacherResult | null) {
@@ -175,6 +182,8 @@ export class PmTeacherHeader extends HTMLElement {
     // two actions is on offer.
     this.linkBtn!.hidden = linked;
     this.unlinkBtn!.hidden = !linked;
+    // Offered only once there are banking details to have a history of.
+    this.bankingActivityBtn!.hidden = teacher.banking === null;
   }
 
   private handleLinkClick = (): void => {
@@ -183,6 +192,10 @@ export class PmTeacherHeader extends HTMLElement {
 
   private handleUnlinkClick = (): void => {
     this.dispatchEvent(new CustomEvent('teacher-account-unlink-requested', { bubbles: true, composed: true }));
+  };
+
+  private handleBankingActivityClick = (): void => {
+    this.dispatchEvent(new CustomEvent('teacher-banking-activity-requested', { bubbles: true, composed: true }));
   };
 }
 

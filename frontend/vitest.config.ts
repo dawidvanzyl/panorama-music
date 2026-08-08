@@ -95,6 +95,12 @@ export default defineConfig({
       { name: '232UC9', description: 'The account link picker offers only the accounts the server ruled eligible for linking' },
       { name: '232UC10', description: 'A linked teacher shows the account, hides the picker, and offers an unlink action' },
       { name: '232UC11', description: 'A rejected role removal surfaces the reason and restores the persisted role selection' },
+      { name: '233UC12', description: 'The banking section renders with an empty state and an add action for a teacher of either classification with no details captured' },
+      { name: '233UC13', description: 'A captured account number is masked on the record and the full value is absent from the rendered markup' },
+      { name: '233UC14', description: 'Activating reveal requests the full account number and displays it' },
+      { name: '233UC15', description: 'A Coordinator is offered no edit, delete or reveal action and the masked-only restriction is explained' },
+      { name: '233UC16', description: 'Each banking activity entry shows the action, actor and timestamp with at most the last four digits' },
+      { name: '233UC17', description: 'The teachers list banking column shows the masked number or that none was captured, for private and school-paid teachers alike' },
     ],
   },
 })

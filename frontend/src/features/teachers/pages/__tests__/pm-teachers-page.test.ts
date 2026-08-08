@@ -25,6 +25,7 @@ const alice: TeacherResult = {
   isActive: true,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 const julian: TeacherResult = {
@@ -35,6 +36,7 @@ const julian: TeacherResult = {
   isActive: false,
   linkedAccountId: 'acc-1',
   linkedAccountEmail: 'linked@example.com',
+  banking: null,
 };
 
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));

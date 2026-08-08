@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using Npgsql;
@@ -5,6 +6,8 @@ using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.Audit.Infrastructure.Persistence;
 using PanoramaMusic.Audit.Infrastructure.Repositories;
+using PanoramaMusic.DataProtection.Configurations;
+using PanoramaMusic.DataProtection.Extensions;
 using PanoramaMusic.DataProtection.Persistence;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Auth;
@@ -15,6 +18,8 @@ using PanoramaMusic.Persistence.Tests.DomainEvents;
 using PanoramaMusic.Persistence.Tests.Repository;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Persistence;
+using PanoramaMusic.Teachers.Infrastructure.Extensions;
+using PanoramaMusic.Teachers.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -22,7 +27,7 @@ namespace PanoramaMusic.Persistence.Tests.Fixtures;
 
 /// <summary>
 /// Starts a disposable Postgres, provisions the restricted panorama_app role, and
-/// runs the DataProtection, Audit, Identity, and Students migrations. Originally scoped to
+/// runs the DataProtection, Audit, Identity, Students, and Teachers migrations. Originally scoped to
 /// the two contexts whose writes the shared unit of work must commit and roll back
 /// atomically; now doubles as the shared harness for any bounded context's
 /// audit-trail tests that need a real Postgres-backed IUnitOfWork.
@@ -58,6 +63,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		AuditMigrator.Run(MigrationConnectionString);
 		IdentityMigrator.Run(MigrationConnectionString);
 		StudentMigrator.Run(MigrationConnectionString);
+		TeacherMigrator.Run(MigrationConnectionString);
 	}
 
 	public UnitOfWorkDatabaseContext CreateContext()
@@ -70,8 +76,20 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 			{
 				PanoramaMusic.Identity.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
 				PanoramaMusic.Students.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
+				PanoramaMusic.Teachers.Infrastructure.Extensions.ServiceCollectionExtensions.ConfigureCompositeTypes(dataSourceBuilder);
 			});
 			services.AddAuditInfrastructure();
+
+			// The real protection provider over the real Postgres-backed keyring —
+			// the same wiring Program.cs uses. Banking tests assert on what actually
+			// lands in the column, so a stand-in protector would prove nothing.
+			services.AddDataProtectionInfrastructure(
+				new ConfigurationBuilder()
+					.AddInMemoryCollection(new Dictionary<string, string?>
+					{
+						[$"{KeyringOptions.SectionName}:{nameof(KeyringOptions.ApplicationName)}"] = "PanoramaMusic.Tests",
+					})
+					.Build());
 
 			// Registers the real IStudentRepository, Students handlers, and the real
 			// Students audit translators — the same call Program.cs makes, so this
@@ -79,6 +97,11 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 			// also registers (which needs an HTTP context that doesn't exist here) is
 			// overridden by a mock in RegisterContexts below.
 			services.AddStudentsInfrastructure();
+
+			// Same reasoning as AddStudentsInfrastructure above: the real banking
+			// repository is where the account number is protected and where banking
+			// domain events are collected, so the tests drive it rather than a stand-in.
+			services.AddTeachersInfrastructure();
 
 			RegisterOptions(services, context);
 			RegisterContexts(services, context);
@@ -102,6 +125,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		services.AddScoped(sp => context.Contexts.ClientContextMock.Object);
 		services.AddScoped(sp => context.Contexts.IdentityIUserContextMock.Object);
 		services.AddScoped(sp => context.Contexts.StudentUserContextMock.Object);
+		services.AddScoped(sp => context.Contexts.TeacherUserContextMock.Object);
 
 		context.Contexts.AuditContextMock.SetupGet(m => m.SourceIp).Returns("127.0.0.1");
 		context.Contexts.AuditContextMock.SetupGet(m => m.UserAgent).Returns("xunit");
@@ -124,6 +148,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 	{
 		services.AddTransient(sp => new AuditTrailTestReader(ApplicationConnectionString));
 		services.AddTransient(sp => new RevokedAccessTokenTestReader(ApplicationConnectionString));
+		services.AddTransient(sp => new BankingDetailsTestReader(ApplicationConnectionString));
 		services.AddTransient(sp => new ForeignKeyIndexTestReader(ApplicationConnectionString, MigrationConnectionString));
 		services.AddTransient(sp => context.Repositories.UserRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRoleRepositoryMock.Object);

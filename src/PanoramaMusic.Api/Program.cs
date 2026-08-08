@@ -136,6 +136,7 @@ app.MapStudentRoutes();
 app.MapGuardianRoutes();
 app.MapGuardianRelationshipRoutes();
 app.MapTeacherRoutes();
+app.MapTeacherBankingRoutes();
 
 // Return 404 for unmatched /api/* routes so typos don't silently return the SPA
 app.MapFallback("/api/{**path}", () => Results.NotFound());

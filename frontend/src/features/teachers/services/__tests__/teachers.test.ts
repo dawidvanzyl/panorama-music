@@ -21,6 +21,7 @@ const alice: TeacherResult = {
   isActive: true,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 beforeEach(() => {

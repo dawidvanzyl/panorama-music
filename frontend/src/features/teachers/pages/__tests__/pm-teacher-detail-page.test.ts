@@ -34,6 +34,7 @@ const alice: TeacherResult = {
   isActive: true,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));

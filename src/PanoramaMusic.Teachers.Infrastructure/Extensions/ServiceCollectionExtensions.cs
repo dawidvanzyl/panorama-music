@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Teachers.Application.Handlers.Banking;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Application.Interfaces;
 using PanoramaMusic.Teachers.Application.Services;
@@ -11,8 +12,10 @@ using PanoramaMusic.Teachers.Application.Validators.Teachers;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Services;
 using PanoramaMusic.Teachers.Infrastructure.Contexts;
+using PanoramaMusic.Teachers.Infrastructure.Directories;
 using PanoramaMusic.Teachers.Infrastructure.Dtos;
 using PanoramaMusic.Teachers.Infrastructure.Repositories;
+using PanoramaMusic.Teachers.Infrastructure.Translators.Banking;
 using PanoramaMusic.Teachers.Infrastructure.Translators.Teachers;
 using PanoramaMusic.Teachers.Infrastructure.TypeHandlers;
 using PanoramaMusic.Teachers.Infrastructure.Validators;
@@ -40,6 +43,8 @@ public static class ServiceCollectionExtensions
 		SqlMapper.AddTypeHandler(new TeacherInputTypeHandler());
 
 		services.AddTransient<ITeacherRepository, TeacherRepository>();
+		services.AddTransient<IBankingDetailsRepository, BankingDetailsRepository>();
+		services.AddTransient<IBankingActivityLog, AuditBankingActivityLog>();
 		services.AddScoped<IUserContext, UserContext>();
 		services.AddTransient<TeacherAccountLinkService>();
 		services.AddTransient<TeacherResultComposer>();
@@ -57,6 +62,11 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetLinkableAccountsHandler>();
 		services.AddTransient<LinkTeacherAccountHandler>();
 		services.AddTransient<UnlinkTeacherAccountHandler>();
+		services.AddTransient<CreateBankingDetailsHandler>();
+		services.AddTransient<UpdateBankingDetailsHandler>();
+		services.AddTransient<DeleteBankingDetailsHandler>();
+		services.AddTransient<RevealAccountNumberHandler>();
+		services.AddTransient<GetBankingActivityHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateTeacherRequestValidator>();
 
@@ -65,6 +75,10 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, TeacherClassificationChangedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherAccountLinkedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherAccountUnlinkedTranslator>();
+		services.AddTransient<IAuditEventTranslator, BankingDetailsAmendedTranslator>();
+		services.AddTransient<IAuditEventTranslator, BankingDetailsCapturedTranslator>();
+		services.AddTransient<IAuditEventTranslator, BankingDetailsDeletedTranslator>();
+		services.AddTransient<IAuditEventTranslator, BankingDetailsRevealedTranslator>();
 
 		return services;
 	}

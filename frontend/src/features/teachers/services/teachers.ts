@@ -3,6 +3,40 @@ import { handleUnauthorized } from '../../../services/auth';
 
 const API_BASE = '/api/teachers';
 
+export type Bank = 'StandardBank' | 'Fnb' | 'Nedbank' | 'Absa' | 'Capitec';
+
+export type BankAccountType = 'ChequeCurrent' | 'Savings';
+
+/**
+ * A teacher's banking details as the server returns them anywhere but the
+ * reveal endpoint. There is no account-number field — only its last four
+ * digits — so no view built from this type can render the full value.
+ */
+export interface BankingDetails {
+  bank: Bank;
+  accountType: BankAccountType;
+  branchCode: string;
+  accountNumberLast4: string;
+}
+
+export interface BankingDetailsInput {
+  bank: Bank;
+  accountType: BankAccountType;
+  branchCode: string;
+  /**
+   * Omitted on an edit that keeps the stored number. The stored one cannot be
+   * read back into the form, so absence is how "unchanged" is expressed.
+   */
+  accountNumber?: string;
+}
+
+export interface BankingActivityEntry {
+  occurredAt: string;
+  eventType: string;
+  actorEmail: string | null;
+  accountNumberLast4: string | null;
+}
+
 export interface TeacherResult {
   teacherId: string;
   firstName: string;
@@ -13,6 +47,8 @@ export interface TeacherResult {
   linkedAccountId: string | null;
   /** The linked account's email address, or null when there is no link. */
   linkedAccountEmail: string | null;
+  /** Null when none have been captured — valid for any teacher. */
+  banking: BankingDetails | null;
 }
 
 /** A login account the server has already judged eligible for linking. */
@@ -143,6 +179,58 @@ export async function unlinkTeacherAccount(teacherId: string): Promise<TeacherRe
   const result = await handleResponse<TeacherResult>(response);
   clearTeachersCache();
   return result;
+}
+
+export async function createBankingDetails(teacherId: string, input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${API_BASE}/${teacherId}/banking`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function updateBankingDetails(teacherId: string, input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${API_BASE}/${teacherId}/banking`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function deleteBankingDetails(teacherId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${teacherId}/banking`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearTeachersCache();
+}
+
+/**
+ * Returns the full account number. The one call in this service that does, and
+ * the server records an audit entry against the caller for making it — so it is
+ * issued only when someone explicitly asks to see the number, never as part of
+ * loading a record.
+ */
+export async function revealAccountNumber(teacherId: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/${teacherId}/banking/reveal`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  const result = await handleResponse<{ accountNumber: string }>(response);
+  return result.accountNumber;
+}
+
+/** Never cached — the point of the view is to show what has just happened. */
+export async function getBankingActivity(teacherId: string): Promise<BankingActivityEntry[]> {
+  const response = await fetch(`${API_BASE}/${teacherId}/banking/activity`, { headers: authHeaders() });
+  return handleResponse<BankingActivityEntry[]>(response);
 }
 
 /** Persists the employment classification on its own, outside the edit flow. */

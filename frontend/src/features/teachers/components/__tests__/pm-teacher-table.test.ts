@@ -11,6 +11,7 @@ const naomi: TeacherResult = {
   isActive: true,
   linkedAccountId: 'acc-1',
   linkedAccountEmail: 'linked@example.com',
+  banking: null,
 };
 
 const tomas: TeacherResult = {
@@ -21,6 +22,7 @@ const tomas: TeacherResult = {
   isActive: false,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 async function mountTable(teachers: TeacherResult[]): Promise<PmTeacherTable> {
