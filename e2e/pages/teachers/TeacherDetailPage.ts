@@ -84,6 +84,10 @@ export class TeacherDetailPage extends BasePage {
       await this.bankingForm.locator('#accountNumberInput').fill(input.accountNumber);
     }
     await this.bankingForm.locator('#submitBtn').click();
+    // The form only closes once the save has come back, so waiting for that is
+    // what makes the details actually readable afterwards. Without it a caller
+    // that goes straight to the API races its own write.
+    await this.bankingForm.waitFor({ state: 'hidden' });
   }
 
   async captureBankingDetails(input: {
@@ -99,6 +103,9 @@ export class TeacherDetailPage extends BasePage {
   async deleteBankingDetails(): Promise<void> {
     await this.bankingDeleteButton.click();
     await this.bankingDeleteModalConfirm.click();
+    // Same reasoning as saveBankingDetails: the empty state appearing is what
+    // says the delete has come back.
+    await this.bankingEmptyState.waitFor({ state: 'visible' });
   }
 
   async gotoTeacher(teacherId: string): Promise<void> {

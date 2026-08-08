@@ -225,9 +225,7 @@ export class PmTeacherDetailPage extends HTMLElement {
 
     try {
       const banking =
-        mode === 'create'
-          ? await createBankingDetails(teacherId, input)
-          : await updateBankingDetails(teacherId, input);
+        mode === 'create' ? await createBankingDetails(teacherId, input) : await updateBankingDetails(teacherId, input);
 
       this.applyTeacher({ ...this._teacher!, banking });
       this.bankingSection!.closeForm();

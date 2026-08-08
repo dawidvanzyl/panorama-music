@@ -26,7 +26,7 @@ template.innerHTML = `
         <h2 class="modal__title">Unlink this account?</h2>
       </div>
       <p class="modal__body">
-        Are you sure you want to unlink <span class="modal__email" id="modalEmail"></span>?</br></br>The teacher record survives
+        Are you sure you want to unlink <span class="modal__email" id="modalEmail"></span>?<br /><br />The teacher record survives
         and the account keeps its Teacher role, but the teacher loses self-service access to this profile and its
         banking details.
       </p>

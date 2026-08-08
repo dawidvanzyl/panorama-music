@@ -27,14 +27,20 @@ async function authHeaders(page: import('@playwright/test').Page): Promise<{ Aut
   return { Authorization: `Bearer ${accessToken}` };
 }
 
-async function teacherIdByFirstName(
-  page: import('@playwright/test').Page,
-  firstName: string,
-): Promise<string> {
+/**
+ * Looks the teacher up by surname, which is the half of uniqueName() that is
+ * actually unique — the first name is a fixed per-test label. Matching on the
+ * first name silently found whichever teacher of that name came first in the
+ * roster, which is the run's own teacher only on a freshly reset database.
+ */
+async function teacherIdBySurname(page: import('@playwright/test').Page, surname: string): Promise<string> {
   const response = await page.request.get('/api/teachers', { headers: await authHeaders(page) });
-  const teachers = (await response.json()) as { firstName: string; teacherId: string }[];
+  const teachers = (await response.json()) as { surname: string; teacherId: string }[];
+  const teacher = teachers.find((candidate) => candidate.surname === surname);
 
-  return teachers.find((teacher) => teacher.firstName === firstName)!.teacherId;
+  expect(teacher, `No teacher found with surname ${surname}`).toBeDefined();
+
+  return teacher!.teacherId;
 }
 
 test.describe('Banking details are captured on the teacher record', { tag: ['@7IT13'] }, () => {
@@ -58,7 +64,7 @@ test.describe('Banking details are captured on the teacher record', { tag: ['@7I
     await expect(detailPage.bankingSection).toContainText('Capitec');
 
     // A second capture is refused — the teacher has at most one set.
-    const teacherId = await teacherIdByFirstName(page, firstName);
+    const teacherId = await teacherIdBySurname(page, surname);
     const secondCapture = await page.request.post(`/api/teachers/${teacherId}/banking`, {
       headers: await authHeaders(page),
       data: { bank: 'Absa', accountType: 'Savings', branchCode: '632005', accountNumber: '9999888877' },
@@ -78,7 +84,7 @@ test.describe('The stored account number is protected, never plaintext', { tag: 
     const detailPage = new TeacherDetailPage(page);
     await detailPage.captureBankingDetails(BANKING);
 
-    const teacherId = await teacherIdByFirstName(page, firstName);
+    const teacherId = await teacherIdBySurname(page, surname);
     const headers = await authHeaders(page);
 
     const record = await (await page.request.get(`/api/teachers/${teacherId}`, { headers })).text();
@@ -116,13 +122,17 @@ test.describe('The account number is masked and revealed only deliberately', { t
     await teachersPage.gotoTeachers();
     await expect(teachersPage.bankingDetails(fullName)).toHaveText(`•••• •••• ${LAST4}`);
 
-    const teacherId = await teacherIdByFirstName(page, firstName);
+    const teacherId = await teacherIdBySurname(page, surname);
 
     const coordinatorEmail = uniqueTestEmail('banking-coordinator');
     await createRegisteredUser(page, coordinatorEmail, PASSWORD, ['Coordinator']);
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(coordinatorEmail, PASSWORD);
+    // Wait for the post-login redirect before navigating, as every fixture
+    // helper does. Without it the next navigation races the login, and the
+    // app's own redirect lands part-way through the assertions below.
+    await expect(page).toHaveURL(/#\/$/);
 
     const coordinatorTeachers = new TeachersPage(page);
     await coordinatorTeachers.gotoTeachers();
@@ -159,7 +169,7 @@ test.describe('Every banking operation is audited', { tag: ['@7IT16'] }, () => {
 
     // The history outlives the record it describes — the activity is still
     // there after the details are deleted.
-    const teacherId = await teacherIdByFirstName(page, firstName);
+    const teacherId = await teacherIdBySurname(page, surname);
     const activity = (await (
       await page.request.get(`/api/teachers/${teacherId}/banking/activity`, { headers: await authHeaders(page) })
     ).json()) as { eventType: string; actorEmail: string | null }[];
@@ -186,7 +196,7 @@ test.describe('Audit entries carry at most the last four digits', { tag: ['@7IT1
     await detailPage.bankingRevealButton.click();
     await expect(detailPage.bankingAccountNumber).toHaveText(ACCOUNT_NUMBER);
 
-    const teacherId = await teacherIdByFirstName(page, firstName);
+    const teacherId = await teacherIdBySurname(page, surname);
     const headers = await authHeaders(page);
 
     const activityBody = await (
