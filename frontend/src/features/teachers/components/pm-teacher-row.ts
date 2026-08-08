@@ -1,3 +1,4 @@
+import { bankingColumnText } from '../services/banking-display';
 import type { TeacherResult } from '../services/teachers';
 
 const styles = new CSSStyleSheet();
@@ -61,6 +62,9 @@ styles.replaceSync(`
     .teacher-row__account {
       color: var(--pm-text-muted);
     }
+    .teacher-row__banking {
+      color: var(--pm-text-muted);
+    }
   `);
 
 const template = document.createElement('template');
@@ -69,6 +73,7 @@ template.innerHTML = `
   <td><span class="teacher-row__chip" id="typeChip"></span></td>
   <td><span class="teacher-row__chip" id="statusChip"></span></td>
   <td><span class="teacher-row__account" id="account"></span></td>
+  <td><span class="teacher-row__banking" id="banking"></span></td>
   <td class="teacher-row__actions"><button type="button" class="teacher-row__btn" id="openBtn">Open</button></td>
 `;
 
@@ -78,6 +83,7 @@ export class PmTeacherRow extends HTMLElement {
   private typeChip: HTMLElement | null = null;
   private statusChip: HTMLElement | null = null;
   private accountEl: HTMLElement | null = null;
+  private bankingEl: HTMLElement | null = null;
   private openBtn: HTMLButtonElement | null = null;
 
   constructor() {
@@ -92,6 +98,7 @@ export class PmTeacherRow extends HTMLElement {
     this.typeChip = this.shadowRoot!.getElementById('typeChip') as HTMLElement;
     this.statusChip = this.shadowRoot!.getElementById('statusChip') as HTMLElement;
     this.accountEl = this.shadowRoot!.getElementById('account') as HTMLElement;
+    this.bankingEl = this.shadowRoot!.getElementById('banking') as HTMLElement;
     this.openBtn = this.shadowRoot!.getElementById('openBtn') as HTMLButtonElement;
     this.openBtn.addEventListener('click', this.handleOpen);
     this.render();
@@ -111,7 +118,8 @@ export class PmTeacherRow extends HTMLElement {
   }
 
   private render(): void {
-    if (!this._teacher || !this.nameEl || !this.typeChip || !this.statusChip || !this.accountEl) return;
+    if (!this._teacher || !this.nameEl || !this.typeChip || !this.statusChip || !this.accountEl || !this.bankingEl)
+      return;
     const t = this._teacher;
 
     this.nameEl.textContent = `${t.firstName} ${t.surname}`;
@@ -124,6 +132,10 @@ export class PmTeacherRow extends HTMLElement {
     this.statusChip.className = `teacher-row__chip ${t.isActive ? 'teacher-row__chip--status-active' : 'teacher-row__chip--status-inactive'}`;
 
     this.accountEl.textContent = t.linkedAccountEmail ?? 'No login account';
+
+    // Masked or nothing at all — a list never carries a full account number,
+    // for private and school-paid teachers alike.
+    this.bankingEl.textContent = bankingColumnText(t.banking?.accountNumberLast4);
   }
 
   private handleOpen = (): void => {

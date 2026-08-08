@@ -7,4 +7,5 @@ public sealed record TeacherResult(
 	bool IsPrivate,
 	bool IsActive,
 	Guid? LinkedAccountId,
-	string? LinkedAccountEmail);
+	string? LinkedAccountEmail,
+	BankingDetailsResult? Banking);

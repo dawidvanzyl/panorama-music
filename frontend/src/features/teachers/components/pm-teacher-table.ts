@@ -39,6 +39,11 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       font-size: 14px;
     }
+    .teacher-table__footnote {
+      margin: 16px 0 0;
+      color: var(--pm-text-muted);
+      font-size: 12px;
+    }
   `);
 
 const template = document.createElement('template');
@@ -51,6 +56,7 @@ template.innerHTML = `
         <col />
         <col />
         <col />
+        <col />
         <col class="teacher-table__col-actions" />
       </colgroup>
       <thead>
@@ -59,12 +65,17 @@ template.innerHTML = `
           <th>Type</th>
           <th>Status</th>
           <th>Linked Account</th>
+          <th>Banking details</th>
           <th class="teacher-table__actions-header">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
     <p class="teacher-table__empty" id="empty" hidden>No teachers match these filters.</p>
+    <p class="teacher-table__footnote">
+      Account numbers are masked everywhere. The full value is only returned by an explicit reveal on the teacher
+      record, and never appears in a list.
+    </p>
   </div>
 `;
 

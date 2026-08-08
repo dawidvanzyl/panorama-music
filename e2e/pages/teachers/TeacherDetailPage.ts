@@ -18,6 +18,20 @@ export class TeacherDetailPage extends BasePage {
   readonly unlinkModalConfirm: Locator;
   readonly linkNotice: Locator;
   readonly errorBanner: Locator;
+  readonly bankingSection: Locator;
+  readonly bankingEmptyState: Locator;
+  readonly bankingAddButton: Locator;
+  readonly bankingEditButton: Locator;
+  readonly bankingDeleteButton: Locator;
+  readonly bankingRevealButton: Locator;
+  readonly bankingRevealNote: Locator;
+  readonly bankingAccountNumber: Locator;
+  readonly bankingForm: Locator;
+  readonly bankingDeleteModal: Locator;
+  readonly bankingDeleteModalConfirm: Locator;
+  readonly bankingActivityButton: Locator;
+  readonly bankingActivityModal: Locator;
+  readonly bankingActivityRows: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -37,6 +51,54 @@ export class TeacherDetailPage extends BasePage {
     this.unlinkModalConfirm = this.unlinkModal.locator('#unlinkBtn');
     this.linkNotice = page.locator('#linkNotice');
     this.errorBanner = page.locator('#error');
+    this.bankingSection = page.locator('#bankingSection');
+    this.bankingEmptyState = this.bankingSection.locator('#emptyView');
+    this.bankingAddButton = this.bankingSection.locator('#addBtn');
+    this.bankingEditButton = this.bankingSection.locator('#editBtn');
+    this.bankingDeleteButton = this.bankingSection.locator('#deleteBtn');
+    this.bankingRevealButton = this.bankingSection.locator('#revealBtn');
+    this.bankingRevealNote = this.bankingSection.locator('#revealNote');
+    this.bankingAccountNumber = this.bankingSection.locator('#accountNumberValue');
+    this.bankingForm = this.bankingSection.locator('#formView');
+    this.bankingDeleteModal = page.locator('#bankingDeleteModal');
+    this.bankingDeleteModalConfirm = this.bankingDeleteModal.locator('#deleteBtn');
+    this.bankingActivityButton = this.header.locator('#bankingActivityBtn');
+    this.bankingActivityModal = page.locator('#bankingActivityModal');
+    this.bankingActivityRows = this.bankingActivityModal.locator('#rows tr');
+  }
+
+  /**
+   * Fills and submits the banking form. The account number is omitted on an
+   * edit that keeps the stored one — it cannot be read back into the field.
+   */
+  async saveBankingDetails(input: {
+    bank: string;
+    accountType: string;
+    branchCode: string;
+    accountNumber?: string;
+  }): Promise<void> {
+    await this.bankingForm.locator('#bankInput').selectOption(input.bank);
+    await this.bankingForm.locator('#accountTypeInput').selectOption(input.accountType);
+    await this.bankingForm.locator('#branchCodeInput').fill(input.branchCode);
+    if (input.accountNumber) {
+      await this.bankingForm.locator('#accountNumberInput').fill(input.accountNumber);
+    }
+    await this.bankingForm.locator('#submitBtn').click();
+  }
+
+  async captureBankingDetails(input: {
+    bank: string;
+    accountType: string;
+    branchCode: string;
+    accountNumber: string;
+  }): Promise<void> {
+    await this.bankingAddButton.click();
+    await this.saveBankingDetails(input);
+  }
+
+  async deleteBankingDetails(): Promise<void> {
+    await this.bankingDeleteButton.click();
+    await this.bankingDeleteModalConfirm.click();
   }
 
   async gotoTeacher(teacherId: string): Promise<void> {

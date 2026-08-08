@@ -20,10 +20,14 @@ public sealed class TeachersTestContext
 	public class RepositoryMocks
 	{
 		public Mock<ITeacherRepository> TeacherRepositoryMock { get; } = new Mock<ITeacherRepository>();
+
+		public Mock<IBankingDetailsRepository> BankingDetailsRepositoryMock { get; } = new Mock<IBankingDetailsRepository>();
 	}
 
 	public class DirectoryMocks
 	{
 		public Mock<IAccountDirectory> AccountDirectoryMock { get; } = new Mock<IAccountDirectory>();
+
+		public Mock<IBankingActivityLog> BankingActivityLogMock { get; } = new Mock<IBankingActivityLog>();
 	}
 }

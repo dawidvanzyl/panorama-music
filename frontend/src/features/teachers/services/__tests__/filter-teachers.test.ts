@@ -10,6 +10,7 @@ const alice: TeacherResult = {
   isActive: true,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 const julian: TeacherResult = {
@@ -20,6 +21,7 @@ const julian: TeacherResult = {
   isActive: true,
   linkedAccountId: 'acc-1',
   linkedAccountEmail: 'linked@example.com',
+  banking: null,
 };
 
 const zola: TeacherResult = {
@@ -30,6 +32,7 @@ const zola: TeacherResult = {
   isActive: false,
   linkedAccountId: null,
   linkedAccountEmail: null,
+  banking: null,
 };
 
 const teachers = [alice, julian, zola];

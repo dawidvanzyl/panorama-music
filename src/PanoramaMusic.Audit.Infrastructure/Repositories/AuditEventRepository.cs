@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace PanoramaMusic.Audit.Infrastructure.Repositories;
 
-public class AuditEventRepository(IUnitOfWork unitOfWork) : RepositoryBase, IAuditLogger, IAuditEventReader
+public class AuditEventRepository(IUnitOfWork unitOfWork) : RepositoryBase, IAuditLogger, IAuditEventReader, IAuditActivityReader
 {
 	public async Task CreateAsync(AuditEvent auditEvent, CancellationToken cancellationToken)
 	{
@@ -54,5 +54,25 @@ public class AuditEventRepository(IUnitOfWork unitOfWork) : RepositoryBase, IAud
 		var rows = (await unitOfWork.Connection.QueryAsync<AuditEventRowDto>(command)).AsList();
 		var totalCount = rows.Count > 0 ? (int)rows[0].Total_Count : 0;
 		return new AuditEventPage([.. rows.Select(dto => dto.MapToAuditEvent())], totalCount);
+	}
+
+	public async Task<IList<AuditEvent>> GetForTargetAsync(
+		Guid targetId,
+		IReadOnlyCollection<string> eventTypes,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"audit.get_target_activity",
+			new
+			{
+				p_target_id = targetId,
+				p_event_types = eventTypes.ToArray(),
+			},
+			unitOfWork.Transaction,
+			cancellationToken);
+
+		var rows = await unitOfWork.Connection.QueryAsync<AuditEventRowDto>(command);
+
+		return [.. rows.Select(dto => dto.MapToAuditEvent())];
 	}
 }

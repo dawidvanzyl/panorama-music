@@ -6,11 +6,15 @@ using PanoramaMusic.Teachers.Domain.Interfaces;
 namespace PanoramaMusic.Teachers.Application.Services;
 
 /// <summary>
-/// Joins a teacher to the name of the account it is linked to. The teacher and
-/// the account are owned by different contexts, so the join happens here rather
-/// than in a query spanning both schemas.
+/// Joins a teacher to the name of the account it is linked to and to its
+/// banking details. The teacher, the account and the banking details are three
+/// separate concerns — a different context owns the account, a different
+/// aggregate owns the banking — so the join happens here rather than in a query
+/// spanning all three.
 /// </summary>
-public sealed class TeacherResultComposer(IAccountDirectory accountDirectory)
+public sealed class TeacherResultComposer(
+	IAccountDirectory accountDirectory,
+	IBankingDetailsRepository bankingDetailsRepository)
 {
 	public async Task<TeacherResult> ComposeAsync(Teacher teacher, CancellationToken cancellationToken)
 	{
@@ -20,8 +24,9 @@ public sealed class TeacherResultComposer(IAccountDirectory accountDirectory)
 	}
 
 	/// <summary>
-	/// Resolves every linked account in one directory call, so a roster costs one
-	/// lookup rather than one per linked teacher.
+	/// Resolves every linked account in one directory call and every set of
+	/// banking details in one query, so a roster costs two lookups rather than
+	/// two per teacher.
 	/// </summary>
 	public async Task<IList<TeacherResult>> ComposeManyAsync(IList<Teacher> teachers, CancellationToken cancellationToken)
 	{
@@ -34,9 +39,46 @@ public sealed class TeacherResultComposer(IAccountDirectory accountDirectory)
 			? new Dictionary<Guid, string>()
 			: await accountDirectory.GetEmailsAsync(linkedAccountIds, cancellationToken);
 
-		return [.. teachers.Select(teacher => teacher.ToResult(EmailOf(teacher.LinkedAccountId, emails)))];
+		var banking = await ResolveBankingAsync(teachers, cancellationToken);
+
+		return
+		[
+			.. teachers.Select(teacher => teacher.ToResult(
+				EmailOf(teacher.LinkedAccountId, emails),
+				BankingOf(teacher.TeacherId, banking))),
+		];
+	}
+
+	/// <summary>
+	/// One teacher is read by id; a roster reads the whole set in one call
+	/// rather than one call per teacher. An empty roster reads nothing at all —
+	/// without the guard it would fall through to the whole-set query and throw
+	/// the result away.
+	/// </summary>
+	private async Task<IReadOnlyDictionary<Guid, BankingDetailsResult>> ResolveBankingAsync(
+		IList<Teacher> teachers,
+		CancellationToken cancellationToken)
+	{
+		if (teachers.Count == 0)
+			return new Dictionary<Guid, BankingDetailsResult>();
+
+		if (teachers.Count == 1)
+		{
+			var single = await bankingDetailsRepository.GetByTeacherIdAsync(teachers[0].TeacherId, cancellationToken);
+
+			return single is null
+				? new Dictionary<Guid, BankingDetailsResult>()
+				: new Dictionary<Guid, BankingDetailsResult> { [single.TeacherId] = single.ToResult() };
+		}
+
+		var all = await bankingDetailsRepository.GetAllAsync(cancellationToken);
+
+		return all.ToDictionary(details => details.TeacherId, details => details.ToResult());
 	}
 
 	private static string? EmailOf(Guid? accountId, IReadOnlyDictionary<Guid, string> emails) =>
 		accountId is not null && emails.TryGetValue(accountId.Value, out var email) ? email : null;
+
+	private static BankingDetailsResult? BankingOf(Guid teacherId, IReadOnlyDictionary<Guid, BankingDetailsResult> banking) =>
+		banking.TryGetValue(teacherId, out var details) ? details : null;
 }

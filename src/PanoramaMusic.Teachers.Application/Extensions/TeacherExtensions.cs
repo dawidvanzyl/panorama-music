@@ -6,11 +6,14 @@ namespace PanoramaMusic.Teachers.Application.Extensions;
 public static class TeacherExtensions
 {
 	/// <summary>
-	/// The linked account's email is passed in rather than read off the teacher:
-	/// Identity owns it, so the handler resolves it through the account directory
-	/// and composes it here.
+	/// The linked account's email and the banking details are passed in rather
+	/// than read off the teacher: Identity owns the one and a separate aggregate
+	/// owns the other, so the handler resolves both and composes them here.
 	/// </summary>
-	public static TeacherResult ToResult(this Teacher teacher, string? linkedAccountEmail = null) =>
+	public static TeacherResult ToResult(
+		this Teacher teacher,
+		string? linkedAccountEmail = null,
+		BankingDetailsResult? banking = null) =>
 		new(
 			teacher.TeacherId,
 			teacher.FirstName,
@@ -18,5 +21,6 @@ public static class TeacherExtensions
 			teacher.IsPrivate,
 			teacher.IsActive,
 			teacher.LinkedAccountId,
-			linkedAccountEmail);
+			linkedAccountEmail,
+			banking);
 }

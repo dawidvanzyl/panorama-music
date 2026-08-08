@@ -53,6 +53,11 @@ export class TeachersPage extends BasePage {
     return this.row(name).locator('#account');
   }
 
+  /** The banking column on a roster row: the masked number, or the empty state. */
+  bankingDetails(name: string): Locator {
+    return this.row(name).locator('#banking');
+  }
+
   async filterByType(type: 'private' | 'school-paid' | ''): Promise<void> {
     await this.filterBar.locator('#type').selectOption(type);
   }

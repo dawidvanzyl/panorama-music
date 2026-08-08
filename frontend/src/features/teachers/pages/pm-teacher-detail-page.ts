@@ -3,6 +3,9 @@ import '../components/pm-teacher-profile-section';
 import '../components/pm-link-constraint-notice';
 import '../components/pm-link-account-modal';
 import '../components/pm-unlink-account-modal';
+import '../components/pm-banking-section';
+import '../components/pm-banking-delete-modal';
+import '../components/pm-banking-activity-modal';
 import {
   getTeacherById,
   updateTeacherProfile,
@@ -10,7 +13,13 @@ import {
   unlinkTeacherAccount,
   linkTeacherAccount,
   getLinkableAccounts,
+  createBankingDetails,
+  updateBankingDetails,
+  deleteBankingDetails,
+  revealAccountNumber,
+  getBankingActivity,
   TeachersError,
+  type BankingDetailsInput,
   type TeacherProfileInput,
   type TeacherResult,
 } from '../services/teachers';
@@ -18,6 +27,9 @@ import type { PmTeacherHeader } from '../components/pm-teacher-header';
 import type { PmTeacherProfileSection } from '../components/pm-teacher-profile-section';
 import type { PmLinkAccountModal } from '../components/pm-link-account-modal';
 import type { PmUnlinkAccountModal } from '../components/pm-unlink-account-modal';
+import type { PmBankingSection } from '../components/pm-banking-section';
+import type { PmBankingDeleteModal } from '../components/pm-banking-delete-modal';
+import type { PmBankingActivityModal } from '../components/pm-banking-activity-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -39,6 +51,23 @@ styles.replaceSync(`
     .detail-page__error--visible {
       display: block;
     }
+    /* Profile and banking sit side by side: they are the two halves of a
+       teacher's record and neither is subordinate to the other. Each section
+       carries its own top margin, so the columns line up without one here. */
+    .detail-page__columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+      gap: 24px;
+    }
+    /* Below this the two cards' field grids get too narrow to read, so they
+       stack in the same order they appear side by side. */
+    @media (max-width: 900px) {
+      .detail-page__columns {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
   `);
 
 const template = document.createElement('template');
@@ -49,7 +78,12 @@ template.innerHTML = `
   <pm-link-account-modal id="linkModal"></pm-link-account-modal>
   <pm-unlink-account-modal id="unlinkModal"></pm-unlink-account-modal>
   <div class="detail-page__error" id="error"></div>
-  <pm-teacher-profile-section id="profileSection"></pm-teacher-profile-section>
+  <div class="detail-page__columns">
+    <pm-teacher-profile-section id="profileSection"></pm-teacher-profile-section>
+    <pm-banking-section id="bankingSection"></pm-banking-section>
+  </div>
+  <pm-banking-delete-modal id="bankingDeleteModal"></pm-banking-delete-modal>
+  <pm-banking-activity-modal id="bankingActivityModal"></pm-banking-activity-modal>
 `;
 
 export class PmTeacherDetailPage extends HTMLElement {
@@ -59,6 +93,9 @@ export class PmTeacherDetailPage extends HTMLElement {
   private linkNotice: HTMLElement | null = null;
   private linkModal: PmLinkAccountModal | null = null;
   private unlinkModal: PmUnlinkAccountModal | null = null;
+  private bankingSection: PmBankingSection | null = null;
+  private bankingDeleteModal: PmBankingDeleteModal | null = null;
+  private bankingActivityModal: PmBankingActivityModal | null = null;
   private _teacher: TeacherResult | null = null;
   private _teacherId: string | null = null;
 
@@ -76,8 +113,18 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.linkNotice = this.shadowRoot!.getElementById('linkNotice') as HTMLElement;
     this.linkModal = this.shadowRoot!.getElementById('linkModal') as unknown as PmLinkAccountModal;
     this.unlinkModal = this.shadowRoot!.getElementById('unlinkModal') as unknown as PmUnlinkAccountModal;
+    this.bankingSection = this.shadowRoot!.getElementById('bankingSection') as unknown as PmBankingSection;
+    this.bankingDeleteModal = this.shadowRoot!.getElementById('bankingDeleteModal') as unknown as PmBankingDeleteModal;
+    this.bankingActivityModal = this.shadowRoot!.getElementById(
+      'bankingActivityModal',
+    ) as unknown as PmBankingActivityModal;
 
     this.shadowRoot!.addEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
+    this.shadowRoot!.addEventListener('teacher-banking-save-requested', this.handleBankingSaveRequested);
+    this.shadowRoot!.addEventListener('teacher-banking-delete-requested', this.handleBankingDeleteRequested);
+    this.shadowRoot!.addEventListener('teacher-banking-delete-confirmed', this.handleBankingDeleteConfirmed);
+    this.shadowRoot!.addEventListener('teacher-banking-reveal-requested', this.handleBankingRevealRequested);
+    this.shadowRoot!.addEventListener('teacher-banking-activity-requested', this.handleBankingActivityRequested);
     this.shadowRoot!.addEventListener('teacher-account-link-requested', this.handleAccountLinkRequested);
     this.shadowRoot!.addEventListener('teacher-account-link-confirmed', this.handleAccountLinkConfirmed);
     this.shadowRoot!.addEventListener('teacher-account-unlink-requested', this.handleAccountUnlinkRequested);
@@ -93,6 +140,11 @@ export class PmTeacherDetailPage extends HTMLElement {
 
   disconnectedCallback(): void {
     this.shadowRoot!.removeEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
+    this.shadowRoot!.removeEventListener('teacher-banking-save-requested', this.handleBankingSaveRequested);
+    this.shadowRoot!.removeEventListener('teacher-banking-delete-requested', this.handleBankingDeleteRequested);
+    this.shadowRoot!.removeEventListener('teacher-banking-delete-confirmed', this.handleBankingDeleteConfirmed);
+    this.shadowRoot!.removeEventListener('teacher-banking-reveal-requested', this.handleBankingRevealRequested);
+    this.shadowRoot!.removeEventListener('teacher-banking-activity-requested', this.handleBankingActivityRequested);
     this.shadowRoot!.removeEventListener('teacher-account-link-requested', this.handleAccountLinkRequested);
     this.shadowRoot!.removeEventListener('teacher-account-link-confirmed', this.handleAccountLinkConfirmed);
     this.shadowRoot!.removeEventListener('teacher-account-unlink-requested', this.handleAccountUnlinkRequested);
@@ -166,6 +218,64 @@ export class PmTeacherDetailPage extends HTMLElement {
     }
   };
 
+  private handleBankingSaveRequested = async (event: Event): Promise<void> => {
+    const { teacherId, mode, input } = (
+      event as CustomEvent<{ teacherId: string; mode: 'create' | 'edit'; input: BankingDetailsInput }>
+    ).detail;
+
+    try {
+      const banking =
+        mode === 'create'
+          ? await createBankingDetails(teacherId, input)
+          : await updateBankingDetails(teacherId, input);
+
+      this.applyTeacher({ ...this._teacher!, banking });
+      this.bankingSection!.closeForm();
+    } catch (err) {
+      // The form stays open on a rejection so the values can be corrected.
+      this.bankingSection!.showFormError(this.messageOf(err));
+    }
+  };
+
+  private handleBankingDeleteRequested = (event: Event): void => {
+    const { accountNumberLast4 } = (event as CustomEvent<{ accountNumberLast4: string }>).detail;
+    this.bankingDeleteModal!.show(accountNumberLast4);
+  };
+
+  private handleBankingDeleteConfirmed = async (): Promise<void> => {
+    this.clearError();
+    try {
+      await deleteBankingDetails(this._teacherId!);
+      this.applyTeacher({ ...this._teacher!, banking: null });
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  /**
+   * The full number is fetched, handed to the section, and never stored on this
+   * page — the only place it lives is the element that is displaying it, until
+   * the record is reloaded or hidden.
+   */
+  private handleBankingRevealRequested = async (event: Event): Promise<void> => {
+    const { teacherId } = (event as CustomEvent<{ teacherId: string }>).detail;
+    this.clearError();
+    try {
+      this.bankingSection!.showRevealed(await revealAccountNumber(teacherId));
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  private handleBankingActivityRequested = async (): Promise<void> => {
+    this.clearError();
+    try {
+      this.bankingActivityModal!.show(await getBankingActivity(this._teacherId!));
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
   private async loadTeacher(teacherId: string): Promise<void> {
     this.clearError();
     try {
@@ -179,6 +289,7 @@ export class PmTeacherDetailPage extends HTMLElement {
     this._teacher = teacher;
     this.header!.teacher = teacher;
     this.profileSection!.teacher = teacher;
+    this.bankingSection!.teacher = teacher;
     this.linkNotice!.hidden = teacher.linkedAccountId === null;
   }
 
