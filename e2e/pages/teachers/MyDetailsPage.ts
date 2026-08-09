@@ -35,7 +35,8 @@ export class MyDetailsPage extends BasePage {
     this.myDetailsItem = page.locator('pm-my-details-menu #openBtn');
     this.modal = page.locator('pm-my-details-modal');
     this.classification = this.modal.locator('.my-details__classification');
-    this.editButton = this.modal.locator('#editBtn');
+    // The banking section inside the modal carries an #editBtn of its own.
+    this.editButton = this.modal.locator('.my-details__edit-btn');
     this.editForm = this.modal.locator('#editForm');
     this.bankingSection = this.modal.locator('#bankingSection');
     this.bankingEmptyState = this.bankingSection.locator('#emptyView');
