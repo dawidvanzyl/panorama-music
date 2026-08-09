@@ -56,7 +56,9 @@ export class MyDetailsPage extends BasePage {
   async open(): Promise<void> {
     await this.accountChip.click();
     await this.myDetailsItem.click();
-    await this.modal.waitFor({ state: 'visible' });
+    // The host element wraps a fixed-position backdrop and so has no geometry
+    // of its own; the card inside it is what actually becomes visible.
+    await this.modal.locator('.modal__card').waitFor({ state: 'visible' });
   }
 
   async editNames(firstName: string, surname: string): Promise<void> {
