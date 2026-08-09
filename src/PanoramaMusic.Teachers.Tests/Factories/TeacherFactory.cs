@@ -14,4 +14,20 @@ public static class TeacherFactory
 			firstName,
 			surname,
 			isPrivate);
+
+	/// <summary>
+	/// A teacher already taken out of active service — the only state a
+	/// permanent deletion is allowed from.
+	/// </summary>
+	public static Teacher CreateDeactivated(
+		Guid? teacherId = null,
+		string firstName = "Alice",
+		string surname = "Vance",
+		bool isPrivate = false)
+	{
+		var teacher = Create(teacherId, firstName, surname, isPrivate);
+		teacher.Deactivate();
+
+		return teacher;
+	}
 }

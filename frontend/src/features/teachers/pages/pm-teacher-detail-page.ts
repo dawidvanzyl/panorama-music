@@ -6,6 +6,8 @@ import '../components/pm-unlink-account-modal';
 import '../components/pm-banking-section';
 import '../components/pm-banking-delete-modal';
 import '../components/pm-banking-activity-modal';
+import '../components/pm-teacher-deactivate-modal';
+import '../components/pm-teacher-delete-modal';
 import {
   getTeacherById,
   updateTeacherProfile,
@@ -18,6 +20,9 @@ import {
   deleteBankingDetails,
   revealAccountNumber,
   getBankingActivity,
+  deactivateTeacher,
+  reactivateTeacher,
+  deleteTeacher,
   TeachersError,
   type BankingDetailsInput,
   type TeacherProfileInput,
@@ -30,6 +35,8 @@ import type { PmUnlinkAccountModal } from '../components/pm-unlink-account-modal
 import type { PmBankingSection } from '../components/pm-banking-section';
 import type { PmBankingDeleteModal } from '../components/pm-banking-delete-modal';
 import type { PmBankingActivityModal } from '../components/pm-banking-activity-modal';
+import type { PmTeacherDeactivateModal } from '../components/pm-teacher-deactivate-modal';
+import type { PmTeacherDeleteModal } from '../components/pm-teacher-delete-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -84,6 +91,8 @@ template.innerHTML = `
   </div>
   <pm-banking-delete-modal id="bankingDeleteModal"></pm-banking-delete-modal>
   <pm-banking-activity-modal id="bankingActivityModal"></pm-banking-activity-modal>
+  <pm-teacher-deactivate-modal id="deactivateModal"></pm-teacher-deactivate-modal>
+  <pm-teacher-delete-modal id="deleteModal"></pm-teacher-delete-modal>
 `;
 
 export class PmTeacherDetailPage extends HTMLElement {
@@ -96,6 +105,8 @@ export class PmTeacherDetailPage extends HTMLElement {
   private bankingSection: PmBankingSection | null = null;
   private bankingDeleteModal: PmBankingDeleteModal | null = null;
   private bankingActivityModal: PmBankingActivityModal | null = null;
+  private deactivateModal: PmTeacherDeactivateModal | null = null;
+  private deleteModal: PmTeacherDeleteModal | null = null;
   private _teacher: TeacherResult | null = null;
   private _teacherId: string | null = null;
 
@@ -118,6 +129,8 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.bankingActivityModal = this.shadowRoot!.getElementById(
       'bankingActivityModal',
     ) as unknown as PmBankingActivityModal;
+    this.deactivateModal = this.shadowRoot!.getElementById('deactivateModal') as unknown as PmTeacherDeactivateModal;
+    this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmTeacherDeleteModal;
 
     this.shadowRoot!.addEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
     this.shadowRoot!.addEventListener('teacher-banking-save-requested', this.handleBankingSaveRequested);
@@ -129,6 +142,11 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.shadowRoot!.addEventListener('teacher-account-link-confirmed', this.handleAccountLinkConfirmed);
     this.shadowRoot!.addEventListener('teacher-account-unlink-requested', this.handleAccountUnlinkRequested);
     this.shadowRoot!.addEventListener('teacher-account-unlink-confirmed', this.handleAccountUnlinkConfirmed);
+    this.shadowRoot!.addEventListener('teacher-deactivate-requested', this.handleDeactivateRequested);
+    this.shadowRoot!.addEventListener('teacher-deactivate-confirmed', this.handleDeactivateConfirmed);
+    this.shadowRoot!.addEventListener('teacher-reactivate-requested', this.handleReactivateRequested);
+    this.shadowRoot!.addEventListener('teacher-delete-requested', this.handleDeleteRequested);
+    this.shadowRoot!.addEventListener('teacher-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.addEventListener(
       'teacher-classification-change-requested',
       this.handleClassificationChangeRequested,
@@ -149,6 +167,11 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('teacher-account-link-confirmed', this.handleAccountLinkConfirmed);
     this.shadowRoot!.removeEventListener('teacher-account-unlink-requested', this.handleAccountUnlinkRequested);
     this.shadowRoot!.removeEventListener('teacher-account-unlink-confirmed', this.handleAccountUnlinkConfirmed);
+    this.shadowRoot!.removeEventListener('teacher-deactivate-requested', this.handleDeactivateRequested);
+    this.shadowRoot!.removeEventListener('teacher-deactivate-confirmed', this.handleDeactivateConfirmed);
+    this.shadowRoot!.removeEventListener('teacher-reactivate-requested', this.handleReactivateRequested);
+    this.shadowRoot!.removeEventListener('teacher-delete-requested', this.handleDeleteRequested);
+    this.shadowRoot!.removeEventListener('teacher-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.removeEventListener(
       'teacher-classification-change-requested',
       this.handleClassificationChangeRequested,
@@ -273,6 +296,47 @@ export class PmTeacherDetailPage extends HTMLElement {
       this.showError(err);
     }
   };
+
+  private handleDeactivateRequested = (): void => {
+    this.deactivateModal!.show(this.teacherName());
+  };
+
+  private handleDeactivateConfirmed = async (): Promise<void> => {
+    this.clearError();
+    try {
+      this.applyTeacher(await deactivateTeacher(this._teacherId!));
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  private handleReactivateRequested = async (): Promise<void> => {
+    this.clearError();
+    try {
+      this.applyTeacher(await reactivateTeacher(this._teacherId!));
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  private handleDeleteRequested = (): void => {
+    this.deleteModal!.show(this.teacherName());
+  };
+
+  /** The record is gone, so there is nothing left to show — the roster is. */
+  private handleDeleteConfirmed = async (): Promise<void> => {
+    this.clearError();
+    try {
+      await deleteTeacher(this._teacherId!);
+      window.location.hash = '#/teachers';
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  private teacherName(): string {
+    return this._teacher ? `${this._teacher.firstName} ${this._teacher.surname}` : 'this teacher';
+  }
 
   private async loadTeacher(teacherId: string): Promise<void> {
     this.clearError();

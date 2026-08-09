@@ -101,6 +101,12 @@ export default defineConfig({
       { name: '233UC15', description: 'A Coordinator is offered no edit, delete or reveal action and the masked-only restriction is explained' },
       { name: '233UC16', description: 'Each banking activity entry shows the action, actor and timestamp with at most the last four digits' },
       { name: '233UC17', description: 'The teachers list banking column shows the masked number or that none was captured, for private and school-paid teachers alike' },
+      { name: '234UC8', description: 'An active teacher viewed by an Admin offers a deactivate action and no delete action at all' },
+      { name: '234UC9', description: 'The deactivate confirmation warns that the teacher banking details will be deleted' },
+      { name: '234UC10', description: 'A Coordinator viewing a teacher is offered no deactivate, reactivate or delete action' },
+      { name: '234UC11', description: 'A deactivated teacher shows the deactivated status, reactivate replaces deactivate, and delete is offered alongside it' },
+      { name: '234UC12', description: 'A deactivated teacher banking section shows the empty state with no add action' },
+      { name: '234UC14', description: 'A deactivated teacher offers no link-account action, while unlinking stays available' },
     ],
   },
 })

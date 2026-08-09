@@ -44,6 +44,36 @@ public class TeacherAccountLinkTests
 	}
 
 	[Fact]
+	[Trait("AC", "234UC13")]
+	public void LinkAccount_DeactivatedTeacher_IsRefusedAndLeavesThemUnlinked()
+	{
+		var teacher = TeacherFactory.CreateDeactivated();
+
+		var link = () => teacher.LinkAccount(Guid.NewGuid());
+
+		ShouldlyHelpers.Satisfy(
+			() => link.ShouldThrow<DomainException>().Message.ShouldBe(TeacherAccountLinkMessages.TeacherNotActive),
+			() => teacher.LinkedAccountId.ShouldBeNull());
+	}
+
+	[Fact]
+	[Trait("AC", "234UC13")]
+	public void UnlinkAccount_DeactivatedTeacher_IsStillAllowed()
+	{
+		var teacher = TeacherFactory.Create();
+		teacher.LinkAccount(Guid.NewGuid());
+		teacher.Deactivate();
+
+		teacher.UnlinkAccount();
+
+		// Removing access from a teacher who has been stood down is never the
+		// wrong direction, so deactivation bars linking without barring this.
+		ShouldlyHelpers.Satisfy(
+			() => teacher.LinkedAccountId.ShouldBeNull(),
+			() => teacher.IsActive.ShouldBeFalse());
+	}
+
+	[Fact]
 	[Trait("AC", "232UC4")]
 	public void UnlinkAccount_TeacherWithoutALink_IsRefused()
 	{

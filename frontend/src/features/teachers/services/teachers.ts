@@ -233,6 +233,41 @@ export async function getBankingActivity(teacherId: string): Promise<BankingActi
   return handleResponse<BankingActivityEntry[]>(response);
 }
 
+/**
+ * Takes a teacher out of active service. The server deletes their banking
+ * details in the same operation, so the returned record comes back with none.
+ */
+export async function deactivateTeacher(teacherId: string): Promise<TeacherResult> {
+  const response = await fetch(`${API_BASE}/${teacherId}/deactivate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  return result;
+}
+
+/** Returns a deactivated teacher to active — without their deleted banking details. */
+export async function reactivateTeacher(teacherId: string): Promise<TeacherResult> {
+  const response = await fetch(`${API_BASE}/${teacherId}/reactivate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  return result;
+}
+
+/** Permanently removes the record. The server refuses this while the teacher is active. */
+export async function deleteTeacher(teacherId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${teacherId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearTeachersCache();
+}
+
 /** Persists the employment classification on its own, outside the edit flow. */
 export async function updateTeacherClassification(teacherId: string, isPrivate: boolean): Promise<TeacherResult> {
   const response = await fetch(`${API_BASE}/${teacherId}/classification`, {

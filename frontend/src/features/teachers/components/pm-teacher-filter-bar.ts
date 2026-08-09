@@ -48,7 +48,7 @@ template.innerHTML = `
     <select class="filter-bar__select" id="type">
       <option value="">All Types</option>
       <option value="private">Private</option>
-      <option value="school-paid">School-Paid</option>
+      <option value="school-paid">School-paid</option>
     </select>
     <select class="filter-bar__select" id="account">
       <option value="">All Accounts</option>

@@ -13,4 +13,5 @@ public static class TeacherAccountLinkMessages
 	public const string AccountAlreadyLinked = "That login account is already linked to a teacher.";
 	public const string TeacherAlreadyLinked = "This teacher is already linked to a login account. Unlink it first.";
 	public const string TeacherNotLinked = "This teacher is not linked to a login account.";
+	public const string TeacherNotActive = "A login account cannot be linked to a deactivated teacher.";
 }

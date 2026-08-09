@@ -55,4 +55,24 @@ public class GetTeachersHandlerTests : IClassFixture<TeachersTestFixture>
 
 		result.ShouldContain(t => t.TeacherId == privateTeacher.TeacherId && t.IsPrivate);
 	}
+
+	[Fact]
+	[Trait("AC", "234UC7")]
+	public async Task HandleAsync_DeactivatedTeacherOnTheRoster_IncludesThemCarryingTheirDeactivatedStatus()
+	{
+		var activeTeacher = TeacherFactory.Create(firstName: "Alice", surname: "Vance");
+		var deactivatedTeacher = TeacherFactory.CreateDeactivated(firstName: "Julian", surname: "Thorne");
+		_context.Repositories.TeacherRepositoryMock
+			.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+			.ReturnsAsync([activeTeacher, deactivatedTeacher]);
+
+		var result = await _handler.HandleAsync(TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			// Present rather than filtered out — a deactivated teacher stays
+			// reachable, and the status is what lets the client filter it.
+			() => result.Count.ShouldBe(2),
+			() => result.ShouldContain(t => t.TeacherId == deactivatedTeacher.TeacherId && !t.IsActive),
+			() => result.ShouldContain(t => t.TeacherId == activeTeacher.TeacherId && t.IsActive));
+	}
 }

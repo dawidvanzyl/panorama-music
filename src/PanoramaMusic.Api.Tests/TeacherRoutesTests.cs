@@ -128,6 +128,47 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "234UC6")]
+	public async Task LifecycleEndpoints_Coordinator_AreAllRejectedWithForbidden()
+	{
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-admin", Role.Admin);
+		var adminClient = fixture.CreateIsolatedClient("10.0.60.4");
+		await adminClient.LoginAsync(adminEmail, _password);
+
+		var createResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Lerato", "Dube", IsPrivate: false)),
+			TestContext.Current.CancellationToken);
+		var teacher = await createResponse.Content.ReadFromJsonAsync<TeacherResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-coordinator", Role.Coordinator);
+		var coordinator = fixture.CreateIsolatedClient("10.0.60.5");
+		await coordinator.LoginAsync(coordinatorEmail, _password);
+
+		var deactivateResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPatchRequest($"/api/teachers/{teacher!.TeacherId}/deactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var reactivateResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/reactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedDeleteRequest($"/api/teachers/{teacher.TeacherId}"),
+			TestContext.Current.CancellationToken);
+
+		// The record is untouched by all three — the refusal is the endpoint's,
+		// not a hidden control's.
+		var afterResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}"), TestContext.Current.CancellationToken);
+		var after = await afterResponse.Content.ReadFromJsonAsync<TeacherResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => deactivateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => reactivateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => afterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => after.ShouldNotBeNull().IsActive.ShouldBeTrue());
+	}
+
+	[Fact]
 	[Trait("AC", "231UC6")]
 	public async Task TeacherEndpoints_UnauthenticatedRequests_AreRejected()
 	{

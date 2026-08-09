@@ -173,6 +173,27 @@ describe('pm-banking-section — the section is present for every teacher', { ta
   });
 });
 
+describe(
+  'pm-banking-section — a deactivated teacher has no details and no way to add any',
+  { tags: ['234UC12'] },
+  () => {
+    it('shows the empty state with no add action once deactivation has deleted the details', () => {
+      element = mount({ ...privateTeacher, banking });
+
+      // The state the record is in immediately after deactivation: the details
+      // are gone and the teacher is inactive.
+      element.teacher = { ...privateTeacher, isActive: false, banking: null };
+
+      expect(byId(element, 'emptyView').hidden).toBe(false);
+      expect(byId(element, 'readView').hidden).toBe(true);
+      expect(textOf(element)).toContain('No banking details captured.');
+      // None may be captured while a teacher is inactive, so the add action is
+      // not offered at all.
+      expect(byId(element, 'addBtn').hidden).toBe(true);
+    });
+  },
+);
+
 describe('pm-banking-section — a Coordinator gets a masked, read-only view', { tags: ['233UC15'] }, () => {
   it('offers no edit, delete or reveal action and explains the restriction', () => {
     vi.mocked(hasRole).mockReturnValue(false);
