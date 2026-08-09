@@ -91,6 +91,11 @@ styles.replaceSync(`
       align-items: center;
       gap: 6px;
     }
+    .my-details__lock-note {
+      margin-top: 4px;
+      color: var(--pm-text-muted);
+      font-size: 12px;
+    }
     .my-details__lock-icon {
       font-family: 'Material Symbols Outlined', sans-serif;
       font-size: 16px;
@@ -137,6 +142,9 @@ template.innerHTML = `
             <span class="my-details__lock-icon" aria-hidden="true" title="Locked">lock</span>
           </span>
           <span class="my-details__field-value" id="classificationValue"></span>
+          <span class="my-details__lock-note" id="classificationLockNote">
+            Only an Admin or Coordinator can change this classification
+          </span>
         </div>
       </div>
 
