@@ -6,6 +6,13 @@ public interface ITeacherRepository
 {
 	Task<Teacher?> GetByIdAsync(Guid teacherId, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// The teacher claiming a login account, or null when none does. The entry
+	/// point for every self-service use case: the caller's record is found from
+	/// their account, never from an identifier they supplied.
+	/// </summary>
+	Task<Teacher?> GetByLinkedAccountIdAsync(Guid accountId, CancellationToken cancellationToken);
+
 	Task<IList<Teacher>> GetAllAsync(CancellationToken cancellationToken);
 
 	Task CreateAsync(Teacher teacher, CancellationToken cancellationToken);

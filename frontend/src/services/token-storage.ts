@@ -1,3 +1,5 @@
+import { clearSessionCaches } from './session-cache';
+
 const ACCESS_TOKEN_KEY = 'pm_access_token';
 const EXPIRES_AT_KEY = 'pm_expires_at';
 
@@ -18,6 +20,7 @@ export function getAccessToken(): string | null {
 export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
+  clearSessionCaches();
 }
 
 export function isAuthenticated(): boolean {

@@ -1,7 +1,15 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/teachers';
+
+/**
+ * The self-service endpoints. They carry no teacher id: the server resolves the
+ * caller's record from the signed-in account, so nothing this client sends could
+ * point at somebody else's.
+ */
+const OWN_API_BASE = '/api/teachers/me';
 
 export type Bank = 'StandardBank' | 'Fnb' | 'Nedbank' | 'Absa' | 'Capitec';
 
@@ -104,10 +112,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 let _teachersCache: TeacherResult[] | null = null;
+let _ownTeacherCache: TeacherResult | null = null;
 
 export function clearTeachersCache(): void {
   _teachersCache = null;
+  _ownTeacherCache = null;
 }
+
+registerSessionCache(clearTeachersCache);
 
 /**
  * Returns the full teacher roster. Status/type/linked-account filtering is a
@@ -266,6 +278,89 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
   });
   await assertOk(response);
   clearTeachersCache();
+}
+
+/**
+ * The signed-in caller's own teacher record. Rejects with a 404 when the account
+ * is linked to no teacher — which is how the interface learns not to offer the
+ * own-record entry point at all.
+ *
+ * The record is cached, because the account menu asks on every page and it
+ * changes only when the caller changes it — at which point the write clears
+ * this. A refusal is never cached: an Admin can link an account while its owner
+ * is signed in, and remembering the refusal would withhold the entry point for
+ * the life of the tab with nothing to tell them why.
+ */
+export async function getOwnTeacher(): Promise<TeacherResult> {
+  if (_ownTeacherCache) return _ownTeacherCache;
+
+  const response = await fetch(OWN_API_BASE, { headers: authHeaders() });
+  _ownTeacherCache = await handleResponse<TeacherResult>(response);
+  return _ownTeacherCache;
+}
+
+/** Updates the caller's own names. There is no self-service classification or account-link call. */
+export async function updateOwnTeacherProfile(input: TeacherProfileInput): Promise<TeacherResult> {
+  const response = await fetch(`${OWN_API_BASE}/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  // The response is the record as it now stands, so the cache is refreshed from
+  // it rather than left empty for the next page to fetch again.
+  _ownTeacherCache = result;
+  return result;
+}
+
+export async function createOwnBankingDetails(input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function updateOwnBankingDetails(input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function deleteOwnBankingDetails(): Promise<void> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearTeachersCache();
+}
+
+/**
+ * Returns the caller's own full account number, and the server records the
+ * reveal against their account — the same way an Admin reveal is recorded.
+ */
+export async function revealOwnAccountNumber(): Promise<string> {
+  const response = await fetch(`${OWN_API_BASE}/banking/reveal`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  const result = await handleResponse<{ accountNumber: string }>(response);
+  return result.accountNumber;
+}
+
+export async function getOwnBankingActivity(): Promise<BankingActivityEntry[]> {
+  const response = await fetch(`${OWN_API_BASE}/banking/activity`, { headers: authHeaders() });
+  return handleResponse<BankingActivityEntry[]>(response);
 }
 
 /** Persists the employment classification on its own, outside the edit flow. */

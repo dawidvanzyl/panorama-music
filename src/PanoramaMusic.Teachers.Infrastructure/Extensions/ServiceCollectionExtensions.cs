@@ -5,6 +5,7 @@ using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Teachers.Application.Handlers.Banking;
+using PanoramaMusic.Teachers.Application.Handlers.Self;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Application.Interfaces;
 using PanoramaMusic.Teachers.Application.Services;
@@ -48,6 +49,7 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IUserContext, UserContext>();
 		services.AddTransient<TeacherAccountLinkService>();
 		services.AddTransient<TeacherResultComposer>();
+		services.AddTransient<OwnTeacherResolver>();
 
 		// Identity owns the contract; the Teachers context supplies the answer, so
 		// Identity can refuse to strip the Teacher role from a linked account
@@ -70,6 +72,14 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteBankingDetailsHandler>();
 		services.AddTransient<RevealAccountNumberHandler>();
 		services.AddTransient<GetBankingActivityHandler>();
+
+		services.AddTransient<GetOwnTeacherHandler>();
+		services.AddTransient<UpdateOwnTeacherProfileHandler>();
+		services.AddTransient<CreateOwnBankingDetailsHandler>();
+		services.AddTransient<UpdateOwnBankingDetailsHandler>();
+		services.AddTransient<DeleteOwnBankingDetailsHandler>();
+		services.AddTransient<RevealOwnAccountNumberHandler>();
+		services.AddTransient<GetOwnBankingActivityHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateTeacherRequestValidator>();
 

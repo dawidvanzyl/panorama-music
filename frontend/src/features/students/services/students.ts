@@ -1,5 +1,6 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/students';
 
@@ -67,6 +68,8 @@ let _studentsCache: StudentResult[] | null = null;
 export function clearStudentsCache(): void {
   _studentsCache = null;
 }
+
+registerSessionCache(clearStudentsCache);
 
 /**
  * Returns the full student roster. Grade/phase/class/name filtering is a

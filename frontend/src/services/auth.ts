@@ -1,4 +1,5 @@
 import { clearTokens, storeTokens, getAccessToken, isAuthenticated } from './token-storage';
+import { clearSessionCaches } from './session-cache';
 
 const API_BASE = '/api/auth';
 
@@ -65,6 +66,9 @@ export async function login(email: string, password: string): Promise<LoginOutco
   }
 
   const result = await handleResponse<AuthResult>(response);
+  // A sign-in is also the start of a session, and the tab may still be holding
+  // caches from one that ended without clearing them.
+  clearSessionCaches();
   storeTokens({
     accessToken: result.accessToken,
     expiresAt: result.accessTokenExpiresAt,

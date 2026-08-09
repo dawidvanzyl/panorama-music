@@ -16,6 +16,23 @@ public static class TeacherFactory
 			isPrivate);
 
 	/// <summary>
+	/// A teacher who holds a login account — the only kind who has a self-service
+	/// record to maintain.
+	/// </summary>
+	public static Teacher CreateLinked(
+		Guid accountId,
+		Guid? teacherId = null,
+		string firstName = "Alice",
+		string surname = "Vance",
+		bool isPrivate = false)
+	{
+		var teacher = Create(teacherId, firstName, surname, isPrivate);
+		teacher.LinkAccount(accountId);
+
+		return teacher;
+	}
+
+	/// <summary>
 	/// A teacher already taken out of active service — the only state a
 	/// permanent deletion is allowed from.
 	/// </summary>

@@ -25,7 +25,7 @@ export class AdminUsersPage extends BasePage {
     this.roleTeacherCheckbox = page.locator('#roleTeacher');
     this.roleCoordinatorCheckbox = page.locator('#roleCoordinator');
     this.roleAdminCheckbox = page.locator('#roleAdmin');
-    this.submitButton = page.locator('#submitBtn');
+    this.submitButton = page.locator('pm-create-user-form').locator('#submitBtn');
     this.userCreatedInviteUrl = page.locator('#userCreatedBanner').locator('#inviteUrl');
     this.reinviteUrl = page.locator('#reinviteBanner').locator('#inviteUrl');
     this.deactivateModalConfirmButton = page.locator('#deactivateModal').locator('#deactivateBtn');

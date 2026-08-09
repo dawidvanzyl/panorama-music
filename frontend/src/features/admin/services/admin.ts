@@ -1,5 +1,6 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/users';
 
@@ -70,6 +71,8 @@ let _usersCache: GetUserResult[] | null = null;
 export function clearUsersCache(): void {
   _usersCache = null;
 }
+
+registerSessionCache(clearUsersCache);
 
 export async function getUsers(): Promise<GetUserResult[]> {
   if (_usersCache) return _usersCache;

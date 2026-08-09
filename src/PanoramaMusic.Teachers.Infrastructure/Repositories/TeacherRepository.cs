@@ -30,6 +30,18 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		return dto?.MapToTeacher();
 	}
 
+	public async Task<Teacher?> GetByLinkedAccountIdAsync(Guid accountId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"teachers.get_teacher_by_linked_account_id",
+			new { p_account_id = accountId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<TeacherDto>(command);
+
+		return dto?.MapToTeacher();
+	}
+
 	public async Task<IList<Teacher>> GetAllAsync(CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

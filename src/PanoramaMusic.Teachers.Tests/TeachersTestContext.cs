@@ -1,4 +1,5 @@
 using Moq;
+using PanoramaMusic.Teachers.Application.Interfaces;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 
 namespace PanoramaMusic.Teachers.Tests;
@@ -15,6 +16,8 @@ public sealed class TeachersTestContext
 
 	public DirectoryMocks Directories { get; } = new DirectoryMocks();
 
+	public ContextMocks Contexts { get; } = new ContextMocks();
+
 	public IServiceProvider ServiceProvider { get; }
 
 	public class RepositoryMocks
@@ -29,5 +32,10 @@ public sealed class TeachersTestContext
 		public Mock<IAccountDirectory> AccountDirectoryMock { get; } = new Mock<IAccountDirectory>();
 
 		public Mock<IBankingActivityLog> BankingActivityLogMock { get; } = new Mock<IBankingActivityLog>();
+	}
+
+	public class ContextMocks
+	{
+		public Mock<IUserContext> UserContextMock { get; } = new Mock<IUserContext>();
 	}
 }

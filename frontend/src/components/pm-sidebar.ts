@@ -1,7 +1,5 @@
 import { isAuthenticated, logout } from '../services/auth';
 import { hasRole, hasAnyRole } from '../services/token-storage';
-import { clearUsersCache } from '../features/admin/services/admin';
-import { clearStudentsCache } from '../features/students/services/students';
 import { updateActiveNavSection } from '../services/nav-section';
 
 const styles = new CSSStyleSheet();
@@ -189,8 +187,8 @@ export class PmSidebar extends HTMLElement {
   };
 
   private handleLogout = async (): Promise<void> => {
-    clearUsersCache();
-    clearStudentsCache();
+    // The session caches are cleared by clearTokens(), which logout() reaches
+    // on every path — the same clearing a session expiry gets.
     await logout();
     this.updateVisibility();
     window.location.hash = '#/login';
