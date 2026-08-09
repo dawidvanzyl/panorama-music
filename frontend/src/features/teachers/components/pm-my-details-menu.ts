@@ -102,15 +102,7 @@ export class PmMyDetailsMenu extends HTMLElement {
 
   connectedCallback(): void {
     this.openBtn = this.shadowRoot!.getElementById('openBtn') as HTMLButtonElement;
-    this.mountDialogs();
-
     this.openBtn.addEventListener('click', this.handleOpen);
-    this.dialogs!.addEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
-    this.dialogs!.addEventListener('teacher-banking-save-requested', this.handleBankingSaveRequested);
-    this.dialogs!.addEventListener('teacher-banking-delete-requested', this.handleBankingDeleteRequested);
-    this.dialogs!.addEventListener('teacher-banking-delete-confirmed', this.handleBankingDeleteConfirmed);
-    this.dialogs!.addEventListener('teacher-banking-reveal-requested', this.handleBankingRevealRequested);
-    this.dialogs!.addEventListener('teacher-banking-activity-requested', this.handleBankingActivityRequested);
 
     // Hidden until the server confirms there is a record to open — the entry
     // point must not be offered to a user who has none.
@@ -135,7 +127,14 @@ export class PmMyDetailsMenu extends HTMLElement {
     return this.dialogs!;
   }
 
+  /**
+   * The dialogs are mounted only once there is a record to open. They carry
+   * their own ids, and a user with no record would otherwise have a second set
+   * of them on every page for a view they can never reach.
+   */
   private mountDialogs(): void {
+    if (this.dialogs) return;
+
     this.dialogs = document.createElement('div');
     this.dialogs.className = 'pm-my-details-dialogs';
     this.dialogs.appendChild(dialogsTemplate.content.cloneNode(true));
@@ -147,6 +146,13 @@ export class PmMyDetailsMenu extends HTMLElement {
       '#bankingActivityModal',
     ) as unknown as PmBankingActivityModal;
     this.errorBanner = this.dialogs.querySelector('#error') as HTMLElement;
+
+    this.dialogs.addEventListener('teacher-profile-update-requested', this.handleProfileUpdateRequested);
+    this.dialogs.addEventListener('teacher-banking-save-requested', this.handleBankingSaveRequested);
+    this.dialogs.addEventListener('teacher-banking-delete-requested', this.handleBankingDeleteRequested);
+    this.dialogs.addEventListener('teacher-banking-delete-confirmed', this.handleBankingDeleteConfirmed);
+    this.dialogs.addEventListener('teacher-banking-reveal-requested', this.handleBankingRevealRequested);
+    this.dialogs.addEventListener('teacher-banking-activity-requested', this.handleBankingActivityRequested);
   }
 
   /**
@@ -162,6 +168,7 @@ export class PmMyDetailsMenu extends HTMLElement {
 
     try {
       this._teacher = await getOwnTeacher();
+      this.mountDialogs();
       this.hidden = false;
     } catch {
       // A refusal is the expected answer for an account linked to no teacher,
