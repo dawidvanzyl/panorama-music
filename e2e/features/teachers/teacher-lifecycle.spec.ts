@@ -40,6 +40,11 @@ async function teacherIdBySurname(page: import('@playwright/test').Page, surname
 
 test.describe('Deactivation deletes the banking details and preserves the teacher', { tag: ['@7IT3'] }, () => {
   test('removes the details in the same operation while the record and its history survive', async ({ page }) => {
+    // A real Teacher-role account, so the relink below is refused for the
+    // deactivation and not merely because the account does not exist.
+    const relinkEmail = uniqueTestEmail('lifecycle-relink');
+    await createRegisteredUser(page, relinkEmail, PASSWORD, ['Teacher']);
+
     const teachersPage = await goToTeachersPage(page);
     const { firstName, surname } = uniqueName('lifecycle-deactivate');
     const fullName = `${firstName} ${surname}`;
@@ -73,11 +78,20 @@ test.describe('Deactivation deletes the banking details and preserves the teache
     // so it cannot be handed to a teacher who has been stood down — withheld in
     // the interface, and refused by the endpoint behind it.
     await expect(detailPage.linkButton).toBeDisabled();
+    const headers = await authHeaders(page);
+    const accounts = (await (await page.request.get('/api/users', { headers })).json()) as {
+      email: string;
+      userId: string;
+    }[];
+    const relinkAccountId = accounts.find((account) => account.email === relinkEmail)!.userId;
     const relink = await page.request.put(`/api/teachers/${teacherId}/account`, {
-      headers: await authHeaders(page),
-      data: { accountId: '00000000-0000-0000-0000-000000000001' },
+      headers,
+      data: { accountId: relinkAccountId },
     });
+
     expect(relink.status()).toBe(400);
+    // The refusal is the deactivation bar itself, not an unrelated rejection.
+    expect(await relink.text()).toContain('cannot be linked to a deactivated teacher');
 
     // The record's history outlives the details it described.
     const activity = (await (

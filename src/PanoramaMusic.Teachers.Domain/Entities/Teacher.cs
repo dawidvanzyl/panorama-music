@@ -100,8 +100,8 @@ public sealed class Teacher : AggregateRoot
 		// A link is what gives a teacher self-service access to their own record
 		// and its banking details. Handing that to a teacher who has been stood
 		// down would reopen, through the account, exactly what deactivation
-		// closed — so the teacher's own state is checked before anything about
-		// the account is. Unlinking carries no such bar: removing access from a
+		// closed — so a deactivated teacher is refused whichever account is
+		// offered. Unlinking carries no such bar: removing access from a
 		// deactivated teacher is never the wrong direction.
 		if (!IsActive)
 			throw new DomainException(TeacherAccountLinkMessages.TeacherNotActive);
