@@ -40,9 +40,11 @@ styles.replaceSync(`
       background: rgba(34, 197, 94, 0.12);
       color: #16a34a;
     }
+    /* The same red the record's own status chip carries — a deactivated
+       teacher should read the same in the list and on their record. */
     .teacher-row__chip--status-inactive {
-      background: rgba(148, 163, 184, 0.2);
-      color: var(--pm-text-muted);
+      background: rgba(224, 82, 82, 0.15);
+      color: var(--pm-danger, #e05252);
     }
     .teacher-row__actions {
       text-align: right;

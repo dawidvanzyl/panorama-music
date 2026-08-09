@@ -32,6 +32,14 @@ export class TeacherDetailPage extends BasePage {
   readonly bankingActivityButton: Locator;
   readonly bankingActivityModal: Locator;
   readonly bankingActivityRows: Locator;
+  readonly statusChip: Locator;
+  readonly deactivateButton: Locator;
+  readonly reactivateButton: Locator;
+  readonly deleteButton: Locator;
+  readonly deactivateModal: Locator;
+  readonly deactivateModalConfirm: Locator;
+  readonly deleteModal: Locator;
+  readonly deleteModalConfirm: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -65,6 +73,28 @@ export class TeacherDetailPage extends BasePage {
     this.bankingActivityButton = this.header.locator('#bankingActivityBtn');
     this.bankingActivityModal = page.locator('#bankingActivityModal');
     this.bankingActivityRows = this.bankingActivityModal.locator('#rows tr');
+    this.statusChip = this.header.locator('#statusChip');
+    this.deactivateButton = this.header.locator('#deactivateBtn');
+    this.reactivateButton = this.header.locator('#reactivateBtn');
+    this.deleteButton = this.header.locator('#deleteBtn');
+    this.deactivateModal = page.locator('#deactivateModal');
+    this.deactivateModalConfirm = this.deactivateModal.locator('#deactivateBtn');
+    this.deleteModal = page.locator('#deleteModal');
+    this.deleteModalConfirm = this.deleteModal.locator('#deleteBtn');
+  }
+
+  /** Opens the deactivate confirmation and confirms it. */
+  async deactivate(): Promise<void> {
+    await this.deactivateButton.click();
+    await this.deactivateModalConfirm.click();
+    // The reactivate action appearing is what says the change has come back.
+    await this.reactivateButton.waitFor({ state: 'visible' });
+  }
+
+  /** Opens the permanent-delete confirmation and confirms it. */
+  async deleteTeacher(): Promise<void> {
+    await this.deleteButton.click();
+    await this.deleteModalConfirm.click();
   }
 
   /**

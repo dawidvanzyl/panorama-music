@@ -74,7 +74,7 @@ test.describe('Teacher Private Flag', { tag: ['@7IT2'] }, () => {
     await teachersPage.filterByType('');
     await teachersPage.openTeacher(fullName);
     await detailPage.setPrivate(false);
-    await expect(detailPage.typeChip()).toHaveText('School-Paid');
+    await expect(detailPage.typeChip()).toHaveText('School-paid');
     await page.reload();
     await expect(detailPage.privateToggle).not.toBeChecked();
   });

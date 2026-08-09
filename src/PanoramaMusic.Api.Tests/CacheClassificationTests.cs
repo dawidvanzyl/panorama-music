@@ -85,6 +85,8 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetLinkableAccounts"] = CacheExpectation.NoStore,
 		["LinkTeacherAccount"] = CacheExpectation.NoStore,
 		["UnlinkTeacherAccount"] = CacheExpectation.NoStore,
+		["DeactivateTeacher"] = CacheExpectation.NoStore,
+		["ReactivateTeacher"] = CacheExpectation.NoStore,
 		// Banking payloads carry account details, and the reveal payload carries
 		// the account number itself — the one response in the application that
 		// must never reach a cache of any kind.

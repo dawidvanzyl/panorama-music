@@ -61,4 +61,14 @@ export class TeachersPage extends BasePage {
   async filterByType(type: 'private' | 'school-paid' | ''): Promise<void> {
     await this.filterBar.locator('#type').selectOption(type);
   }
+
+  /** A deactivated teacher stays reachable, so the roster can be filtered to them. */
+  async filterByStatus(status: 'active' | 'deactivated' | ''): Promise<void> {
+    await this.filterBar.locator('#status').selectOption(status);
+  }
+
+  /** The status column on a roster row: Active or Deactivated. */
+  status(name: string): Locator {
+    return this.row(name).locator('#statusChip');
+  }
 }

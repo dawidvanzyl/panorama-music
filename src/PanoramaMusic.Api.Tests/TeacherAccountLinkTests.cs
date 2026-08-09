@@ -214,6 +214,49 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 			() => linkableResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
+	[Fact]
+	[Trait("AC", "234UC13")]
+	public async Task LinkTeacherAccount_DeactivatedTeacher_IsRejectedWhileUnlinkingStaysAvailable()
+	{
+		var client = await CreateAdminClientAsync("link-deactivated-admin", "10.0.61.10");
+		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "link-deactivated-account", Role.Teacher);
+		var (_, secondAccountId) = await fixture.SeedActiveUserAsync(_password, "link-deactivated-second", Role.Teacher);
+
+		var teacher = await CreateTeacherAsync(client, "Alice", "Vance");
+		await LinkAsync(client, teacher.TeacherId, accountId);
+
+		var deactivateResponse = await client.Client.SendAsync(
+			client.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/deactivate", new { }),
+			TestContext.Current.CancellationToken);
+
+		// Removing access from a stood-down teacher is never the wrong direction.
+		var unlinkResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/teachers/{teacher.TeacherId}/account"),
+			TestContext.Current.CancellationToken);
+
+		// Granting it back is, so the endpoint refuses rather than relying on the
+		// interface having disabled the control.
+		var relinkResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest($"/api/teachers/{teacher.TeacherId}/account", new LinkTeacherAccountRequest(secondAccountId)),
+			TestContext.Current.CancellationToken);
+
+		var afterReactivate = await client.Client.SendAsync(
+			client.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/reactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var linkOnceActive = await client.Client.SendAsync(
+			client.AuthorizedPutRequest($"/api/teachers/{teacher.TeacherId}/account", new LinkTeacherAccountRequest(secondAccountId)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => deactivateResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => unlinkResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => relinkResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
+			// The bar is the teacher's state, not the account's — it lifts again
+			// on reactivation.
+			() => afterReactivate.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => linkOnceActive.StatusCode.ShouldBe(HttpStatusCode.OK));
+	}
+
 	private async Task<IsolatedHttpClient> CreateAdminClientAsync(string emailPrefix, string simulatedIp)
 	{
 		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, emailPrefix, Role.Admin);

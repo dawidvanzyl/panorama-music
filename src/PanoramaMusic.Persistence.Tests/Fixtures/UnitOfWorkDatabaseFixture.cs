@@ -149,7 +149,9 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		services.AddTransient(sp => new AuditTrailTestReader(ApplicationConnectionString));
 		services.AddTransient(sp => new RevokedAccessTokenTestReader(ApplicationConnectionString));
 		services.AddTransient(sp => new BankingDetailsTestReader(ApplicationConnectionString));
+		services.AddTransient(sp => new TeacherTestReader(ApplicationConnectionString));
 		services.AddTransient(sp => new ForeignKeyIndexTestReader(ApplicationConnectionString, MigrationConnectionString));
+		services.AddTransient(sp => context.Directories.AccountDirectoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.UserRoleRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.RefreshTokenRepositoryMock.Object);

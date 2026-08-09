@@ -55,6 +55,9 @@ public sealed class TeachersTestFixture
 		services.AddTransient<GetLinkableAccountsHandler>();
 		services.AddTransient<LinkTeacherAccountHandler>();
 		services.AddTransient<UnlinkTeacherAccountHandler>();
+		services.AddTransient<DeactivateTeacherHandler>();
+		services.AddTransient<ReactivateTeacherHandler>();
+		services.AddTransient<DeleteTeacherHandler>();
 		services.AddTransient<CreateBankingDetailsHandler>();
 		services.AddTransient<UpdateBankingDetailsHandler>();
 		services.AddTransient<DeleteBankingDetailsHandler>();

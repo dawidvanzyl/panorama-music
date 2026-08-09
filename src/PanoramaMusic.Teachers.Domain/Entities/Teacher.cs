@@ -97,6 +97,15 @@ public sealed class Teacher : AggregateRoot
 	/// </summary>
 	public void LinkAccount(Guid accountId)
 	{
+		// A link is what gives a teacher self-service access to their own record
+		// and its banking details. Handing that to a teacher who has been stood
+		// down would reopen, through the account, exactly what deactivation
+		// closed — so a deactivated teacher is refused whichever account is
+		// offered. Unlinking carries no such bar: removing access from a
+		// deactivated teacher is never the wrong direction.
+		if (!IsActive)
+			throw new DomainException(TeacherAccountLinkMessages.TeacherNotActive);
+
 		if (LinkedAccountId is not null)
 			throw new DomainException(TeacherAccountLinkMessages.TeacherAlreadyLinked);
 
@@ -117,6 +126,55 @@ public sealed class Teacher : AggregateRoot
 		LinkedAccountId = null;
 
 		Raise(new TeacherAccountUnlinked(this, previousAccountId));
+	}
+
+	/// <summary>
+	/// Takes the teacher out of active service. The record and its history
+	/// survive — only <see cref="Delete"/> removes them. The banking details that
+	/// go with a deactivation are their own aggregate and are deleted alongside
+	/// this change rather than from here.
+	/// </summary>
+	public void Deactivate()
+	{
+		if (!IsActive)
+			throw new DomainException(TeacherLifecycleMessages.TeacherAlreadyDeactivated);
+
+		IsActive = false;
+
+		Raise(new TeacherDeactivated(this));
+	}
+
+	/// <summary>
+	/// Returns a deactivated teacher to active. Nothing is restored with them:
+	/// the banking details deleted at deactivation are gone and must be captured
+	/// again.
+	/// </summary>
+	public void Reactivate()
+	{
+		if (IsActive)
+			throw new DomainException(TeacherLifecycleMessages.TeacherAlreadyActive);
+
+		IsActive = true;
+
+		Raise(new TeacherReactivated(this));
+	}
+
+	/// <summary>
+	/// Permanently removes the teacher. Guarded rather than merely hidden: the
+	/// interface withholds the action while a teacher is active, but this is what
+	/// actually refuses it.
+	/// <para>
+	/// The guards are a plain sequence so a further one — deletion is also
+	/// refused while the teacher is assigned to a course — can be added once
+	/// courses exist, without reshaping the path.
+	/// </para>
+	/// </summary>
+	public void Delete()
+	{
+		if (IsActive)
+			throw new DomainException(TeacherLifecycleMessages.TeacherMustBeDeactivatedBeforeDeletion);
+
+		Raise(new TeacherDeleted(this));
 	}
 
 	private Teacher Snapshot() =>

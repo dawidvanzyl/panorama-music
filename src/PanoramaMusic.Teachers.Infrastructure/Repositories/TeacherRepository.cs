@@ -163,6 +163,42 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		domainEventCollector.Collect(teacher);
 	}
 
+	public async Task DeactivateAsync(Teacher teacher, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"teachers.update_teacher_deactivate",
+			new { p_teacher_id = teacher.TeacherId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(teacher);
+	}
+
+	public async Task ReactivateAsync(Teacher teacher, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"teachers.update_teacher_reactivate",
+			new { p_teacher_id = teacher.TeacherId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(teacher);
+	}
+
+	public async Task DeleteAsync(Teacher teacher, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"teachers.delete_teacher",
+			new { p_teacher_id = teacher.TeacherId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(teacher);
+	}
+
 	private static bool IsLinkedAccountUniqueViolation(PostgresException exception) =>
 		exception.SqlState == _uniqueViolationSqlState
 		&& exception.ConstraintName == _linkedAccountUniqueIndex;

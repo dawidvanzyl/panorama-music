@@ -13,6 +13,9 @@ public static class TeacherAuditEventTypes
 	public const string TeacherClassificationChanged = "teachers.teacher.classification_changed";
 	public const string TeacherAccountLinked = "teachers.teacher.account_linked";
 	public const string TeacherAccountUnlinked = "teachers.teacher.account_unlinked";
+	public const string TeacherDeactivated = "teachers.teacher.deactivated";
+	public const string TeacherReactivated = "teachers.teacher.reactivated";
+	public const string TeacherDeleted = "teachers.teacher.deleted";
 	public const string BankingDetailsCaptured = "teachers.banking_details.captured";
 	public const string BankingDetailsAmended = "teachers.banking_details.amended";
 	public const string BankingDetailsDeleted = "teachers.banking_details.deleted";

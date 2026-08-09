@@ -16,6 +16,15 @@ public static class TeacherRoutes
 			.WithTags("Teachers")
 			.RequireAuthorization("CoordinatorOrAdminPolicy");
 
+		// The lifecycle actions carry a narrower boundary than the rest of the
+		// record: a Coordinator maintains a teacher's profile but does not end
+		// one. Two independent groups rather than one branched twice, for the
+		// same reason the banking routes use two — see TeacherBankingRoutes.
+		var adminGroup = app
+			.MapGroup("/api/teachers")
+			.WithTags("Teachers")
+			.RequireAuthorization("AdminPolicy");
+
 		group
 			.MapGet("/", async (GetTeachersHandler handler, CancellationToken ct) =>
 			{
@@ -129,6 +138,57 @@ public static class TeacherRoutes
 			.MarkSensitiveResponse()
 			.WithName("UnlinkTeacherAccount")
 			.Produces<TeacherResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Deactivation and reactivation move the record between two states rather
+		// than replacing it, so each is its own action on the resource. DELETE is
+		// reserved for the permanent removal below — the two steps of the
+		// lifecycle stay distinguishable at the URL.
+		adminGroup
+			.MapPatch("/{teacherId:guid}/deactivate", async (Guid teacherId, DeactivateTeacherHandler handler, CancellationToken ct) =>
+			{
+				var command = new DeactivateTeacherCommand(teacherId);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("DeactivateTeacher")
+			.Produces<TeacherResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		adminGroup
+			.MapPatch("/{teacherId:guid}/reactivate", async (Guid teacherId, ReactivateTeacherHandler handler, CancellationToken ct) =>
+			{
+				var command = new ReactivateTeacherCommand(teacherId);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("ReactivateTeacher")
+			.Produces<TeacherResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Refused outright while the teacher is active. The interface does not
+		// offer the action until then, but that is presentation — this endpoint
+		// is where the rule is actually enforced.
+		adminGroup
+			.MapDelete("/{teacherId:guid}", async (Guid teacherId, DeleteTeacherHandler handler, CancellationToken ct) =>
+			{
+				var command = new DeleteTeacherCommand(teacherId);
+				await handler.HandleAsync(command, ct);
+				return Results.NoContent();
+			})
+			.WithName("DeleteTeacher")
+			.Produces(StatusCodes.Status204NoContent)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)

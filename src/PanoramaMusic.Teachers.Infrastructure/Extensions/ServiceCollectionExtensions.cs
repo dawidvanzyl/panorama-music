@@ -62,6 +62,9 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetLinkableAccountsHandler>();
 		services.AddTransient<LinkTeacherAccountHandler>();
 		services.AddTransient<UnlinkTeacherAccountHandler>();
+		services.AddTransient<DeactivateTeacherHandler>();
+		services.AddTransient<ReactivateTeacherHandler>();
+		services.AddTransient<DeleteTeacherHandler>();
 		services.AddTransient<CreateBankingDetailsHandler>();
 		services.AddTransient<UpdateBankingDetailsHandler>();
 		services.AddTransient<DeleteBankingDetailsHandler>();
@@ -75,6 +78,9 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, TeacherClassificationChangedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherAccountLinkedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherAccountUnlinkedTranslator>();
+		services.AddTransient<IAuditEventTranslator, TeacherDeactivatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, TeacherReactivatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, TeacherDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsAmendedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsCapturedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsDeletedTranslator>();

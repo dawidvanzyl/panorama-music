@@ -26,4 +26,11 @@ public interface ITeacherRepository
 	Task LinkAccountAsync(Teacher teacher, CancellationToken cancellationToken);
 
 	Task UnlinkAccountAsync(Teacher teacher, CancellationToken cancellationToken);
+
+	Task DeactivateAsync(Teacher teacher, CancellationToken cancellationToken);
+
+	Task ReactivateAsync(Teacher teacher, CancellationToken cancellationToken);
+
+	/// <summary>Permanently removes the teacher row and everything keyed to it.</summary>
+	Task DeleteAsync(Teacher teacher, CancellationToken cancellationToken);
 }
