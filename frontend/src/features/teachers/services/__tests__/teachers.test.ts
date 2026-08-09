@@ -11,6 +11,7 @@ import {
   TeachersError,
   type TeacherResult,
 } from '../teachers';
+import { clearTokens } from '../../../../services/token-storage';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -84,13 +85,27 @@ describe('getOwnTeacher', () => {
     expect(second).toEqual(linked);
   });
 
-  it('caches the refusal too — an account with no record is a stable answer', async () => {
+  it('does not cache the refusal — an account linked mid-session gets its record', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: 'Not linked' }) });
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
 
     await expect(getOwnTeacher()).rejects.toThrow(TeachersError);
-    await expect(getOwnTeacher()).rejects.toThrow(TeachersError);
+    const afterLinking = await getOwnTeacher();
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(afterLinking).toEqual(linked);
+  });
+
+  it('drops the cached record when the tokens are cleared, so the next account does not inherit it', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
+    await getOwnTeacher();
+
+    clearTokens();
+
+    const other = { ...linked, teacherId: 't2', firstName: 'Bruno' };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => other });
+
+    expect(await getOwnTeacher()).toEqual(other);
   });
 
   it('does not cache a transient failure — the next page retries', async () => {

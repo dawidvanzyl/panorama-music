@@ -1,8 +1,5 @@
 import { isAuthenticated, logout } from '../services/auth';
 import { hasRole, hasAnyRole } from '../services/token-storage';
-import { clearUsersCache } from '../features/admin/services/admin';
-import { clearStudentsCache } from '../features/students/services/students';
-import { clearTeachersCache } from '../features/teachers/services/teachers';
 import { updateActiveNavSection } from '../services/nav-section';
 
 const styles = new CSSStyleSheet();
@@ -190,11 +187,8 @@ export class PmSidebar extends HTMLElement {
   };
 
   private handleLogout = async (): Promise<void> => {
-    clearUsersCache();
-    clearStudentsCache();
-    // Includes the caller's own teacher record — signing a different account in
-    // on the same tab must not inherit the previous one's.
-    clearTeachersCache();
+    // The session caches are cleared by clearTokens(), which logout() reaches
+    // on every path — the same clearing a session expiry gets.
     await logout();
     this.updateVisibility();
     window.location.hash = '#/login';

@@ -1,5 +1,6 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/teachers';
 
@@ -112,18 +113,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 let _teachersCache: TeacherResult[] | null = null;
 let _ownTeacherCache: TeacherResult | null = null;
-/**
- * The "you have no teacher record" refusal, replayed instead of re-requested.
- * Cached alongside the record because the absence of one is just as stable an
- * answer as the record itself, and the caller asks on every page.
- */
-let _ownTeacherRefusal: TeachersError | null = null;
 
 export function clearTeachersCache(): void {
   _teachersCache = null;
   _ownTeacherCache = null;
-  _ownTeacherRefusal = null;
 }
+
+registerSessionCache(clearTeachersCache);
 
 /**
  * Returns the full teacher roster. Status/type/linked-account filtering is a
@@ -289,24 +285,17 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
  * is linked to no teacher — which is how the interface learns not to offer the
  * own-record entry point at all.
  *
- * Cached, because the account menu asks on every page and the answer changes
- * only when the caller changes it — at which point the write clears this. Only
- * a refusal is remembered, never a transient failure: a request that fell over
- * is worth retrying on the next page, an account with no record is not.
+ * The record is cached, because the account menu asks on every page and it
+ * changes only when the caller changes it — at which point the write clears
+ * this. A refusal is never cached: an Admin can link an account while its owner
+ * is signed in, and remembering the refusal would withhold the entry point for
+ * the life of the tab with nothing to tell them why.
  */
 export async function getOwnTeacher(): Promise<TeacherResult> {
   if (_ownTeacherCache) return _ownTeacherCache;
-  if (_ownTeacherRefusal) throw _ownTeacherRefusal;
 
   const response = await fetch(OWN_API_BASE, { headers: authHeaders() });
-
-  try {
-    _ownTeacherCache = await handleResponse<TeacherResult>(response);
-  } catch (err) {
-    if (err instanceof TeachersError && err.status === 404) _ownTeacherRefusal = err;
-    throw err;
-  }
-
+  _ownTeacherCache = await handleResponse<TeacherResult>(response);
   return _ownTeacherCache;
 }
 

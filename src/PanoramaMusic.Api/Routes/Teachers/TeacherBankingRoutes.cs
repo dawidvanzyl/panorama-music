@@ -20,10 +20,11 @@ namespace PanoramaMusic.Api.Routes.Teachers;
 /// </para>
 /// <para>
 /// Every role check is on the endpoint. Hiding a control in the interface is
-/// presentation and is not an authorization boundary. The Admin-only group is
-/// also shaped so the self-service story can widen it to the teacher linked to
-/// the record by changing the policy these endpoints require, rather than by
-/// rewriting them.
+/// presentation and is not an authorization boundary. Self-service is not served
+/// by widening the policy on this group: a teacher acting on their own record
+/// goes through the parallel /api/teachers/me group, which takes no teacher id
+/// at all and resolves the record from the signed-in account, so no caller can
+/// name a record that is not theirs.
 /// </para>
 /// </summary>
 public static class TeacherBankingRoutes
