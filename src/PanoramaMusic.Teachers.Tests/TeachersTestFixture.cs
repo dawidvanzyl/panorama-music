@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Teachers.Application.Handlers.Banking;
+using PanoramaMusic.Teachers.Application.Handlers.Self;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Application.Services;
 using PanoramaMusic.Teachers.Domain.Services;
@@ -16,6 +17,7 @@ public sealed class TeachersTestFixture
 			var services = new ServiceCollection();
 
 			RegisterRepositories(services, context);
+			RegisterContexts(services, context);
 			RegisterServices(services);
 			RegisterHandlers(services);
 
@@ -39,10 +41,16 @@ public sealed class TeachersTestFixture
 			.ReturnsAsync([]);
 	}
 
+	private static void RegisterContexts(ServiceCollection services, TeachersTestContext context)
+	{
+		services.AddTransient(sp => context.Contexts.UserContextMock.Object);
+	}
+
 	private static void RegisterServices(ServiceCollection services)
 	{
 		services.AddTransient<TeacherAccountLinkService>();
 		services.AddTransient<TeacherResultComposer>();
+		services.AddTransient<OwnTeacherResolver>();
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)
@@ -63,5 +71,12 @@ public sealed class TeachersTestFixture
 		services.AddTransient<DeleteBankingDetailsHandler>();
 		services.AddTransient<RevealAccountNumberHandler>();
 		services.AddTransient<GetBankingActivityHandler>();
+		services.AddTransient<GetOwnTeacherHandler>();
+		services.AddTransient<UpdateOwnTeacherProfileHandler>();
+		services.AddTransient<CreateOwnBankingDetailsHandler>();
+		services.AddTransient<UpdateOwnBankingDetailsHandler>();
+		services.AddTransient<DeleteOwnBankingDetailsHandler>();
+		services.AddTransient<RevealOwnAccountNumberHandler>();
+		services.AddTransient<GetOwnBankingActivityHandler>();
 	}
 }

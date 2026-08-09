@@ -15,6 +15,7 @@ import './features/students/pages/pm-students-page';
 import './features/students/pages/pm-guardian-relationships-page';
 import './features/teachers/pages/pm-teachers-page';
 import './features/teachers/pages/pm-teacher-detail-page';
+import './features/teachers/components/pm-my-details-menu';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
 
@@ -103,7 +104,10 @@ async function render(): Promise<void> {
       : () => '<pm-login-page></pm-login-page>';
   app.innerHTML = isPublicPage
     ? '<main>' + route() + '</main>'
-    : '<div class="pm-app-shell"><pm-nav-bar></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
+    : // The account menu is composed into the nav bar's slot from here: the shell
+      // knows which features contribute an entry, and the shared nav bar stays
+      // free of any one feature's screens.
+      '<div class="pm-app-shell"><pm-nav-bar><pm-my-details-menu slot="account-menu"></pm-my-details-menu></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
       route() +
       '</main></div><pm-app-footer></pm-app-footer></div>';
 }

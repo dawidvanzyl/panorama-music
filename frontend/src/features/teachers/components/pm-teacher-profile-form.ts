@@ -43,6 +43,9 @@ styles.replaceSync(`
       display: flex;
       justify-content: flex-end;
       gap: 12px;
+      /* The error line above collapses when empty, so without this the buttons
+         sit flush against the inputs. */
+      margin-top: 16px;
     }
     button {
       border-radius: var(--pm-radius);

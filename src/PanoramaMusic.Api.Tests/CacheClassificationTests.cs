@@ -94,6 +94,15 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["UpdateTeacherBankingDetails"] = CacheExpectation.NoStore,
 		["RevealTeacherAccountNumber"] = CacheExpectation.NoStore,
 		["GetTeacherBankingActivity"] = CacheExpectation.NoStore,
+
+		// The same payloads a teacher's own record serves back to them — a name
+		// and banking details are no less sensitive for belonging to the caller.
+		["GetOwnTeacher"] = CacheExpectation.NoStore,
+		["UpdateOwnTeacherProfile"] = CacheExpectation.NoStore,
+		["CreateOwnBankingDetails"] = CacheExpectation.NoStore,
+		["UpdateOwnBankingDetails"] = CacheExpectation.NoStore,
+		["RevealOwnAccountNumber"] = CacheExpectation.NoStore,
+		["GetOwnBankingActivity"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

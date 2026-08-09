@@ -15,6 +15,16 @@ styles.replaceSync(`
       padding: 24px;
       margin-top: 24px;
     }
+    /* On a teacher's own record the section is already inside a dialog, so a
+       second card around it would be a box in a box. A rule separates it from
+       the profile above instead. */
+    .banking__card--flush {
+      background: none;
+      border: none;
+      border-top: 1px solid var(--pm-border);
+      border-radius: 0;
+      padding: 24px 0 0;
+    }
     .banking__header {
       display: flex;
       justify-content: space-between;
@@ -84,10 +94,30 @@ styles.replaceSync(`
     .banking__field-value {
       color: var(--pm-text);
     }
-    .banking__account-row {
+    /* The account number gets its own panel below the other fields rather than a
+       cell alongside them: it is the value the whole section exists to protect,
+       and the reveal action belongs next to it. */
+    .banking__account-panel {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+    }
+    .banking__account-number {
+      font-size: 16px;
+      color: var(--pm-text);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.06em;
+    }
+    .banking__account-actions {
+      display: flex;
+      gap: 8px;
     }
     /* Same icon treatment as the header's link/unlink actions. */
     .banking__btn--icon {
@@ -144,7 +174,7 @@ styles.replaceSync(`
       color: var(--pm-danger, #e05252);
     }
     .banking__error {
-      margin-top: 12px;
+      margin-top: 8px;
       font-size: 13px;
       color: var(--pm-danger, #e05252);
       min-height: 18px;
@@ -153,7 +183,9 @@ styles.replaceSync(`
       display: flex;
       justify-content: flex-end;
       gap: 8px;
-      margin-top: 20px;
+      /* The error line above already reserves its own height, so the actions
+         only need enough of a gap to read as a separate row. */
+      margin-top: 8px;
     }
     [hidden] {
       display: none !important;
@@ -162,7 +194,7 @@ styles.replaceSync(`
 
 const template = document.createElement('template');
 template.innerHTML = `
-  <div class="banking__card">
+  <div class="banking__card" id="card">
     <div class="banking__header">
       <h2 class="banking__title">Banking details</h2>
       <div class="banking__actions" id="readActions">
@@ -170,7 +202,7 @@ template.innerHTML = `
         <button type="button" class="banking__btn banking__btn--danger" id="deleteBtn">Delete</button>
       </div>
     </div>
-    <p class="banking__caption">Encrypted at rest &middot; deleted when this teacher is deactivated</p>
+    <p class="banking__caption" id="caption"></p>
 
     <div id="readView">
       <div class="banking__read-grid">
@@ -186,15 +218,21 @@ template.innerHTML = `
           <span class="banking__field-label">Branch code</span>
           <span class="banking__field-value" id="branchCodeValue"></span>
         </div>
+      </div>
+      <div class="banking__account-panel">
         <div class="banking__field">
           <span class="banking__field-label">Account number</span>
-          <span class="banking__account-row">
-            <span class="banking__field-value" id="accountNumberValue"></span>
-            <button type="button" class="banking__btn banking__btn--icon" id="revealBtn">
-              <span class="banking__btn-icon" aria-hidden="true" id="revealIcon">visibility</span>
-              <span id="revealLabel">Reveal</span>
-            </button>
-          </span>
+          <span class="banking__account-number" id="accountNumberValue"></span>
+        </div>
+        <div class="banking__account-actions">
+          <button type="button" class="banking__btn banking__btn--icon" id="revealBtn">
+            <span class="banking__btn-icon" aria-hidden="true" id="revealIcon">visibility</span>
+            <span id="revealLabel">Reveal</span>
+          </button>
+          <button type="button" class="banking__btn banking__btn--icon" id="activityBtn" hidden>
+            <span class="banking__btn-icon" aria-hidden="true">receipt_long</span>
+            <span>Activity</span>
+          </button>
         </div>
       </div>
       <p class="banking__note" id="revealNote"></p>
@@ -247,6 +285,9 @@ const ADMIN_REVEAL_NOTE =
 const RESTRICTED_REVEAL_NOTE =
   'Your role can see the masked value only. Revealing the full number is restricted to an Admin or the linked teacher.';
 
+const ADMIN_CAPTION = 'Encrypted at rest · deleted when this teacher is deactivated';
+const SELF_SERVICE_CAPTION = 'Encrypted at rest · deleted if your record is deactivated';
+
 /**
  * How long a revealed account number stays on screen. An unattended screen is
  * the exposure the masking exists to prevent, so the reveal expires on its own
@@ -271,6 +312,13 @@ const ACCOUNT_LENGTH_ERROR = 'Enter an account number of 6 to 12 digits.';
  * Which actions appear is decided by role here, but that is presentation only:
  * the endpoints enforce the same rules, and this component never treats a
  * hidden control as a security boundary.
+ *
+ * The `self-service` attribute puts the section on a teacher's own record rather
+ * than on an Admin's view of somebody else's. The details, the form and the
+ * masking are identical — what changes is that the caller manages them because
+ * they own them rather than because of a role, that the caption addresses them
+ * directly, and that the activity action lives here, since the own-record view
+ * has no page header to carry it.
  */
 export class PmBankingSection extends HTMLElement {
   private _teacher: TeacherResult | null = null;
@@ -292,6 +340,7 @@ export class PmBankingSection extends HTMLElement {
     this.byId<HTMLButtonElement>('editBtn').addEventListener('click', this.handleEdit);
     this.byId<HTMLButtonElement>('deleteBtn').addEventListener('click', this.handleDelete);
     this.byId<HTMLButtonElement>('revealBtn').addEventListener('click', this.handleRevealToggle);
+    this.byId<HTMLButtonElement>('activityBtn').addEventListener('click', this.handleActivity);
     this.byId<HTMLButtonElement>('cancelBtn').addEventListener('click', this.handleCancel);
     this.byId<HTMLFormElement>('formView').addEventListener('submit', this.handleSubmit);
 
@@ -303,6 +352,7 @@ export class PmBankingSection extends HTMLElement {
     this.byId<HTMLButtonElement>('editBtn').removeEventListener('click', this.handleEdit);
     this.byId<HTMLButtonElement>('deleteBtn').removeEventListener('click', this.handleDelete);
     this.byId<HTMLButtonElement>('revealBtn').removeEventListener('click', this.handleRevealToggle);
+    this.byId<HTMLButtonElement>('activityBtn').removeEventListener('click', this.handleActivity);
     this.byId<HTMLButtonElement>('cancelBtn').removeEventListener('click', this.handleCancel);
     this.byId<HTMLFormElement>('formView').removeEventListener('submit', this.handleSubmit);
     this.clearReveal();
@@ -363,8 +413,16 @@ export class PmBankingSection extends HTMLElement {
     this.byId<HTMLElement>('formError').textContent = message;
   }
 
+  /**
+   * On a teacher's own record the right to manage comes from owning it, not
+   * from a role — a linked teacher is not thereby an Admin.
+   */
+  private get selfService(): boolean {
+    return this.hasAttribute('self-service');
+  }
+
   private get canManage(): boolean {
-    return hasRole('Admin');
+    return this.selfService || hasRole('Admin');
   }
 
   private get banking(): BankingDetails | null {
@@ -401,7 +459,17 @@ export class PmBankingSection extends HTMLElement {
     // deleted.
     this.byId<HTMLElement>('addBtn').hidden = !this.canManage || this._teacher?.isActive !== true;
     this.byId<HTMLButtonElement>('revealBtn').hidden = !this.canManage;
+    // The activity view is reached from the page header on a teacher record;
+    // the own-record view has no header, so the action rides with the number.
+    this.byId<HTMLButtonElement>('activityBtn').hidden = !this.selfService;
 
+    this.byId<HTMLElement>('card').classList.toggle('banking__card--flush', this.selfService);
+    this.byId<HTMLElement>('caption').textContent = this.selfService ? SELF_SERVICE_CAPTION : ADMIN_CAPTION;
+
+    // The note explains a restriction, so it is only worth showing to somebody
+    // restricted. A teacher looking at their own details is told nothing they
+    // did not already choose by clicking Reveal.
+    this.byId<HTMLElement>('revealNote').hidden = this.selfService;
     this.byId<HTMLElement>('revealNote').textContent = this.canManage ? ADMIN_REVEAL_NOTE : RESTRICTED_REVEAL_NOTE;
 
     if (banking) {
@@ -463,6 +531,16 @@ export class PmBankingSection extends HTMLElement {
         bubbles: true,
         composed: true,
         detail: { teacherId: this._teacher!.teacherId, accountNumberLast4: this.banking?.accountNumberLast4 ?? '' },
+      }),
+    );
+  };
+
+  private handleActivity = (): void => {
+    this.dispatchEvent(
+      new CustomEvent('teacher-banking-activity-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { teacherId: this._teacher!.teacherId },
       }),
     );
   };

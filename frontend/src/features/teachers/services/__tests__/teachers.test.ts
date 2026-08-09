@@ -5,6 +5,8 @@ import {
   createTeacher,
   updateTeacherProfile,
   updateTeacherClassification,
+  getOwnTeacher,
+  updateOwnTeacherProfile,
   clearTeachersCache,
   TeachersError,
   type TeacherResult,
@@ -54,6 +56,67 @@ describe('getTeachers', { tags: ['231UC7'] }, () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: 'Unauthorized' }) });
 
     await expect(getTeachers()).rejects.toThrow(TeachersError);
+  });
+});
+
+describe('getOwnTeacher', () => {
+  const linked: TeacherResult = { ...alice, linkedAccountId: 'a1', linkedAccountEmail: 'alice@panorama-music.qa' };
+
+  it('asks for the caller own record without naming a teacher', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
+
+    const result = await getOwnTeacher();
+
+    expect(result).toEqual(linked);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/teachers/me',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
+  it('caches the record, so opening a second page does not ask again', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
+
+    await getOwnTeacher();
+    const second = await getOwnTeacher();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(linked);
+  });
+
+  it('caches the refusal too — an account with no record is a stable answer', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: 'Not linked' }) });
+
+    await expect(getOwnTeacher()).rejects.toThrow(TeachersError);
+    await expect(getOwnTeacher()).rejects.toThrow(TeachersError);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache a transient failure — the next page retries', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Boom' }) });
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
+
+    await expect(getOwnTeacher()).rejects.toThrow(TeachersError);
+    const retried = await getOwnTeacher();
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(retried).toEqual(linked);
+  });
+
+  it('refreshes the cached record when the caller edits their own profile', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => linked });
+    await getOwnTeacher();
+
+    const renamed = { ...linked, firstName: 'Alicia' };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => renamed });
+    await updateOwnTeacherProfile({ firstName: 'Alicia', surname: 'Vance' });
+
+    const afterEdit = await getOwnTeacher();
+
+    // Three calls would mean the edit invalidated the cache without refilling it.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(afterEdit).toEqual(renamed);
   });
 });
 

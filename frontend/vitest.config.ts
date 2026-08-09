@@ -107,6 +107,10 @@ export default defineConfig({
       { name: '234UC11', description: 'A deactivated teacher shows the deactivated status, reactivate replaces deactivate, and delete is offered alongside it' },
       { name: '234UC12', description: 'A deactivated teacher banking section shows the empty state with no add action' },
       { name: '234UC14', description: 'A deactivated teacher offers no link-account action, while unlinking stays available' },
+      { name: '235UC9', description: 'The account chip offers My Details to a linked teacher and to nobody else' },
+      { name: '235UC10', description: 'My Details shows the employment classification locked, with the reason it cannot be changed there' },
+      { name: '235UC11', description: 'My Details offers no account-link control and no deactivate, reactivate or delete action' },
+      { name: '235UC12', description: 'My Details banking section offers edit, delete, reveal and activity, with the account number masked until revealed' },
     ],
   },
 })

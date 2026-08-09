@@ -3,6 +3,13 @@ import { handleUnauthorized } from '../../../services/auth';
 
 const API_BASE = '/api/teachers';
 
+/**
+ * The self-service endpoints. They carry no teacher id: the server resolves the
+ * caller's record from the signed-in account, so nothing this client sends could
+ * point at somebody else's.
+ */
+const OWN_API_BASE = '/api/teachers/me';
+
 export type Bank = 'StandardBank' | 'Fnb' | 'Nedbank' | 'Absa' | 'Capitec';
 
 export type BankAccountType = 'ChequeCurrent' | 'Savings';
@@ -104,9 +111,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 let _teachersCache: TeacherResult[] | null = null;
+let _ownTeacherCache: TeacherResult | null = null;
+/**
+ * The "you have no teacher record" refusal, replayed instead of re-requested.
+ * Cached alongside the record because the absence of one is just as stable an
+ * answer as the record itself, and the caller asks on every page.
+ */
+let _ownTeacherRefusal: TeachersError | null = null;
 
 export function clearTeachersCache(): void {
   _teachersCache = null;
+  _ownTeacherCache = null;
+  _ownTeacherRefusal = null;
 }
 
 /**
@@ -266,6 +282,96 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
   });
   await assertOk(response);
   clearTeachersCache();
+}
+
+/**
+ * The signed-in caller's own teacher record. Rejects with a 404 when the account
+ * is linked to no teacher — which is how the interface learns not to offer the
+ * own-record entry point at all.
+ *
+ * Cached, because the account menu asks on every page and the answer changes
+ * only when the caller changes it — at which point the write clears this. Only
+ * a refusal is remembered, never a transient failure: a request that fell over
+ * is worth retrying on the next page, an account with no record is not.
+ */
+export async function getOwnTeacher(): Promise<TeacherResult> {
+  if (_ownTeacherCache) return _ownTeacherCache;
+  if (_ownTeacherRefusal) throw _ownTeacherRefusal;
+
+  const response = await fetch(OWN_API_BASE, { headers: authHeaders() });
+
+  try {
+    _ownTeacherCache = await handleResponse<TeacherResult>(response);
+  } catch (err) {
+    if (err instanceof TeachersError && err.status === 404) _ownTeacherRefusal = err;
+    throw err;
+  }
+
+  return _ownTeacherCache;
+}
+
+/** Updates the caller's own names. There is no self-service classification or account-link call. */
+export async function updateOwnTeacherProfile(input: TeacherProfileInput): Promise<TeacherResult> {
+  const response = await fetch(`${OWN_API_BASE}/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<TeacherResult>(response);
+  clearTeachersCache();
+  // The response is the record as it now stands, so the cache is refreshed from
+  // it rather than left empty for the next page to fetch again.
+  _ownTeacherCache = result;
+  return result;
+}
+
+export async function createOwnBankingDetails(input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function updateOwnBankingDetails(input: BankingDetailsInput): Promise<BankingDetails> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const result = await handleResponse<BankingDetails>(response);
+  clearTeachersCache();
+  return result;
+}
+
+export async function deleteOwnBankingDetails(): Promise<void> {
+  const response = await fetch(`${OWN_API_BASE}/banking`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearTeachersCache();
+}
+
+/**
+ * Returns the caller's own full account number, and the server records the
+ * reveal against their account — the same way an Admin reveal is recorded.
+ */
+export async function revealOwnAccountNumber(): Promise<string> {
+  const response = await fetch(`${OWN_API_BASE}/banking/reveal`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  const result = await handleResponse<{ accountNumber: string }>(response);
+  return result.accountNumber;
+}
+
+export async function getOwnBankingActivity(): Promise<BankingActivityEntry[]> {
+  const response = await fetch(`${OWN_API_BASE}/banking/activity`, { headers: authHeaders() });
+  return handleResponse<BankingActivityEntry[]>(response);
 }
 
 /** Persists the employment classification on its own, outside the edit flow. */
