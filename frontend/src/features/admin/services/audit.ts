@@ -75,6 +75,14 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'students.guardian_relationship.deleted', label: 'Guardian Relationship Deleted' },
     ],
   },
+  {
+    context: 'Teachers',
+    options: [
+      { value: 'teachers.teacher.created', label: 'Teacher Created' },
+      { value: 'teachers.teacher.profile_updated', label: 'Teacher Profile Updated' },
+      { value: 'teachers.teacher.classification_changed', label: 'Teacher Classification Changed' },
+    ],
+  },
 ];
 
 export class AuditError extends Error {

@@ -6,6 +6,7 @@ import { RegistrationPage } from '../pages/identity/auth/RegistrationPage';
 import { AdminUsersPage, type UserRole } from '../pages/identity/admin/AdminUsersPage';
 import { StudentsPage } from '../pages/students/StudentsPage';
 import { GuardianRelationshipsPage } from '../pages/students/GuardianRelationshipsPage';
+import { TeachersPage } from '../pages/teachers/TeachersPage';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -45,6 +46,17 @@ export async function goToGuardianRelationshipsPage(page: Page): Promise<Guardia
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
   await guardianRelationshipsPage.gotoGuardianRelationships();
   return guardianRelationshipsPage;
+}
+
+export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
+  const loginPage = new LoginPage(page);
+  await loginPage.gotoLogin();
+  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+  await expect(page).toHaveURL(/#\/$/);
+
+  const teachersPage = new TeachersPage(page);
+  await teachersPage.gotoTeachers();
+  return teachersPage;
 }
 
 export async function inviteUser(page: Page, email: string, roles: UserRole[] = ['Teacher']): Promise<string> {

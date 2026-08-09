@@ -9,7 +9,9 @@ export function getActiveNavSection(): NavSection {
 export function updateActiveNavSection(basePath: string): NavSection {
   if (basePath.startsWith('/admin')) {
     activeSection = 'admin';
-  } else if (basePath.startsWith('/students')) {
+    // Teacher Management is a Students-section screen — it has no section of
+    // its own, so /teachers routes keep the Students sidebar open.
+  } else if (basePath.startsWith('/students') || basePath.startsWith('/teachers')) {
     activeSection = 'students';
   } else if (basePath === '/') {
     activeSection = 'dashboard';

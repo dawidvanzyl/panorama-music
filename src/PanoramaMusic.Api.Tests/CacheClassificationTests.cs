@@ -74,6 +74,35 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
 		["IsGuardianShared"] = CacheExpectation.Cacheable,
+
+		// Teacher payloads carry names.
+		["GetTeachers"] = CacheExpectation.NoStore,
+		["GetTeacherById"] = CacheExpectation.NoStore,
+		["CreateTeacher"] = CacheExpectation.NoStore,
+		["UpdateTeacherProfile"] = CacheExpectation.NoStore,
+		["UpdateTeacherClassification"] = CacheExpectation.NoStore,
+		// Account-link payloads carry names and account email addresses.
+		["GetLinkableAccounts"] = CacheExpectation.NoStore,
+		["LinkTeacherAccount"] = CacheExpectation.NoStore,
+		["UnlinkTeacherAccount"] = CacheExpectation.NoStore,
+		["DeactivateTeacher"] = CacheExpectation.NoStore,
+		["ReactivateTeacher"] = CacheExpectation.NoStore,
+		// Banking payloads carry account details, and the reveal payload carries
+		// the account number itself — the one response in the application that
+		// must never reach a cache of any kind.
+		["CreateTeacherBankingDetails"] = CacheExpectation.NoStore,
+		["UpdateTeacherBankingDetails"] = CacheExpectation.NoStore,
+		["RevealTeacherAccountNumber"] = CacheExpectation.NoStore,
+		["GetTeacherBankingActivity"] = CacheExpectation.NoStore,
+
+		// The same payloads a teacher's own record serves back to them — a name
+		// and banking details are no less sensitive for belonging to the caller.
+		["GetOwnTeacher"] = CacheExpectation.NoStore,
+		["UpdateOwnTeacherProfile"] = CacheExpectation.NoStore,
+		["CreateOwnBankingDetails"] = CacheExpectation.NoStore,
+		["UpdateOwnBankingDetails"] = CacheExpectation.NoStore,
+		["RevealOwnAccountNumber"] = CacheExpectation.NoStore,
+		["GetOwnBankingActivity"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

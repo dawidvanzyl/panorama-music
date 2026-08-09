@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
 		// factory is needed.
 		services.AddTransient<IAuditLogger, AuditEventRepository>();
 		services.AddTransient<IAuditEventReader, AuditEventRepository>();
+		services.AddTransient<IAuditActivityReader, AuditEventRepository>();
 		services.AddTransient<IAuditContext, AuditContext>();
 		services.AddTransient<IAuditEventFactory, AuditEventFactory>();
 		services.AddTransient<GetAuditEventsHandler>();

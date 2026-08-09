@@ -1,5 +1,6 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
 
 const STUDENTS_BASE = '/api/students';
 const GUARDIANS_BASE = '/api/guardians';
@@ -151,6 +152,8 @@ let _guardianRelationshipsCache: GuardianRelationship[] | null = null;
 export function clearGuardianRelationshipsCache(): void {
   _guardianRelationshipsCache = null;
 }
+
+registerSessionCache(clearGuardianRelationshipsCache);
 
 /**
  * Synchronous cache read, with no fetch fallback. Lets a caller open UI that

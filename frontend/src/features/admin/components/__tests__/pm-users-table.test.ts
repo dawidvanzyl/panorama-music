@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PmUsersTable } from '../pm-users-table';
-import type { GetUserResult } from '../../services/admin';
+import { AdminError, type GetUserResult } from '../../services/admin';
 
 const mockUpdateUserRoles = vi.fn();
 vi.mock('../../services/admin', async () => {
@@ -277,5 +277,71 @@ describe('pm-users-table — status filter', { tags: ['M1.1UC22'] }, () => {
 
     el.shadowRoot!.querySelector<HTMLButtonElement>('[data-value="all"]')!.click();
     expect(filterLabel.textContent).toBe('Status');
+  });
+});
+
+describe('pm-users-table — a rejected role removal', { tags: ['232UC11'] }, () => {
+  let el: PmUsersTable;
+
+  const linkedTeacher: GetUserResult = {
+    userId: 'user-linked',
+    email: 'linked@test.com',
+    roles: ['Teacher', 'Coordinator'],
+    isActive: true,
+    isProtected: false,
+    hasCompletedRegistration: true,
+  };
+
+  const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  beforeEach(() => {
+    mockUpdateUserRoles.mockReset();
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+    el.users = [linkedTeacher];
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('surfaces the reason and restores the roles the server still holds', async () => {
+    mockUpdateUserRoles.mockRejectedValue(
+      new AdminError(
+        'This account is linked to a teacher. Unlink the teacher first, then remove the Teacher role.',
+        400,
+      ),
+    );
+
+    const checkboxes = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+    const teacherCheckbox = checkboxes.find((cb) => cb.value === 'Teacher')!;
+    teacherCheckbox.checked = false;
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+    await flush();
+
+    const rowError = el.shadowRoot!.querySelector('.users-table__row-error') as HTMLElement;
+    expect(rowError.textContent).toContain('Unlink the teacher first');
+
+    // Its own row, spanning every column, directly above the user it concerns.
+    const errorRow = rowError.closest('tr')!;
+    expect(errorRow.querySelector('td')!.colSpan).toBe(4);
+    expect(errorRow.nextElementSibling!.textContent).toContain(linkedTeacher.email);
+    expect(teacherCheckbox.checked).toBe(true);
+    // Still in edit mode, so the admin can act on the message without re-entering it.
+    expect(el.shadowRoot!.querySelector('.users-table__btn--save')).not.toBeNull();
+  });
+
+  it('the error can be dismissed without leaving edit mode', async () => {
+    mockUpdateUserRoles.mockRejectedValue(new AdminError('Unlink the teacher first.', 400));
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+    await flush();
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__row-error-dismiss')!.click();
+
+    expect(el.shadowRoot!.querySelector('.users-table__row-error')).toBeNull();
+    expect(el.shadowRoot!.querySelector('.users-table__btn--save')).not.toBeNull();
   });
 });

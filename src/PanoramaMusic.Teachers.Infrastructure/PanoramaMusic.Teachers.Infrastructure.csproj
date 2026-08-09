@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PanoramaMusic.Teachers.Application\PanoramaMusic.Teachers.Application.csproj" />
+    <!-- Solely to implement Identity's IRoleRemovalValidator port — whether a
+         teacher claims an account is this context's fact to publish, the same
+         way each context implements Audit's IAuditEventTranslator over its own
+         domain. Nothing here reads Identity's data: what Teachers needs to know
+         about an account arrives through its own IAccountDirectory port, which
+         Identity implements. -->
+    <ProjectReference Include="..\PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Persistence\Migrations\*.sql" />
+    <EmbeddedResource Include="Persistence\Functions\*.sql" />
+  </ItemGroup>
+</Project>

@@ -66,6 +66,28 @@ main {
   box-sizing: border-box;
 }
 
+/* The own-record dialogs are mounted on the document rather than inside the
+   account dropdown that opens them, so their error banner is styled here — it
+   is the one piece of that group living in the light DOM. */
+.pm-my-details-error {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 110;
+  max-width: 360px;
+  padding: 12px 16px;
+  border-radius: var(--pm-radius);
+  background: rgba(224, 82, 82, 0.1);
+  border: 1px solid var(--pm-danger);
+  color: var(--pm-danger);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.pm-my-details-error[hidden] {
+  display: none;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }

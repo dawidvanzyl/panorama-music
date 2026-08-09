@@ -13,6 +13,9 @@ import './features/sessions/pages/pm-admin-sessions-page';
 import './features/admin/pages/pm-admin-activity-log-page';
 import './features/students/pages/pm-students-page';
 import './features/students/pages/pm-guardian-relationships-page';
+import './features/teachers/pages/pm-teachers-page';
+import './features/teachers/pages/pm-teacher-detail-page';
+import './features/teachers/components/pm-my-details-menu';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
 
@@ -21,6 +24,10 @@ const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/act
 const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
 const COORDINATOR_OR_ADMIN_PATHS = new Set(['/students/guardian-relationships']);
 const REFRESH_RETRY_DELAY_MS = 3000;
+
+function isCoordinatorOrAdminOnlyPath(basePath: string): boolean {
+  return COORDINATOR_OR_ADMIN_PATHS.has(basePath) || basePath === '/teachers' || basePath.startsWith('/teachers/');
+}
 
 const ROUTES: Record<string, () => string> = {
   '/login': () => '<pm-login-page></pm-login-page>',
@@ -33,8 +40,11 @@ const ROUTES: Record<string, () => string> = {
   '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
   '/students': () => '<pm-students-page></pm-students-page>',
   '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
+  '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
   '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
 };
+
+const TEACHER_DETAIL_PATTERN = /^\/teachers\/([^/]+)$/;
 
 let retryTimer: ReturnType<typeof window.setTimeout> | null = null;
 
@@ -77,15 +87,27 @@ async function render(): Promise<void> {
     return;
   }
 
-  if (COORDINATOR_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Coordinator', 'Admin'])) {
+  if (isCoordinatorOrAdminOnlyPath(basePath) && !hasAnyRole(['Coordinator', 'Admin'])) {
     window.location.hash = '#/';
     return;
   }
 
-  const route = Object.hasOwn(ROUTES, basePath) ? ROUTES[basePath] : () => '<pm-login-page></pm-login-page>';
+  const teacherDetailMatch = TEACHER_DETAIL_PATTERN.exec(basePath);
+  const route = teacherDetailMatch
+    ? () => {
+        const el = document.createElement('pm-teacher-detail-page');
+        el.setAttribute('teacher-id', decodeURIComponent(teacherDetailMatch[1]));
+        return el.outerHTML;
+      }
+    : Object.hasOwn(ROUTES, basePath)
+      ? ROUTES[basePath]
+      : () => '<pm-login-page></pm-login-page>';
   app.innerHTML = isPublicPage
     ? '<main>' + route() + '</main>'
-    : '<div class="pm-app-shell"><pm-nav-bar></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
+    : // The account menu is composed into the nav bar's slot from here: the shell
+      // knows which features contribute an entry, and the shared nav bar stays
+      // free of any one feature's screens.
+      '<div class="pm-app-shell"><pm-nav-bar><pm-my-details-menu slot="account-menu"></pm-my-details-menu></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
       route() +
       '</main></div><pm-app-footer></pm-app-footer></div>';
 }

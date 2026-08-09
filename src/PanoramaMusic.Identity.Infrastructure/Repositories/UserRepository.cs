@@ -1,5 +1,6 @@
 using Dapper;
 using PanoramaMusic.Identity.Domain.Entities;
+using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Dtos;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -39,6 +40,33 @@ public class UserRepository(IUnitOfWork unitOfWork) : RepositoryBase(unitOfWork)
 		var command = CreateCommandDefinition(
 			"identity.get_users",
 			null,
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<UserDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToUser())];
+	}
+
+	public async Task<IList<User>> GetByRoleAsync(Role role, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"identity.get_users_by_role",
+			new { p_role = role.ToString() },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<UserDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToUser())];
+	}
+
+	public async Task<IList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken)
+	{
+		if (userIds.Count == 0)
+			return [];
+
+		var command = CreateCommandDefinition(
+			"identity.get_users_by_ids",
+			new { p_user_ids = userIds.ToArray() },
 			Transaction,
 			cancellationToken);
 		var dtos = await Connection.QueryAsync<UserDto>(command);

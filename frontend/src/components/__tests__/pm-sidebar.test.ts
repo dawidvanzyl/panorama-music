@@ -212,3 +212,58 @@ describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['2
     expect(relationshipsLinkOn('#/').hidden).toBe(true);
   });
 });
+
+describe('pm-sidebar — Teacher Management link gated by role and section', { tags: ['231UC10'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function teachersLinkOn(hash: string): HTMLAnchorElement {
+    document.body.appendChild(el);
+    window.location.hash = hash;
+    window.dispatchEvent(new Event('hashchange'));
+    return el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement;
+  }
+
+  it('shows the link inside the Students section for a Coordinator', () => {
+    grantRoles('Coordinator');
+
+    expect(teachersLinkOn('#/students').hidden).toBe(false);
+  });
+
+  it('shows the link inside the Students section for an Admin', () => {
+    grantRoles('Admin');
+
+    expect(teachersLinkOn('#/students').hidden).toBe(false);
+  });
+
+  it('hides the link while on the Dashboard section, even for an Admin', () => {
+    grantRoles('Admin');
+
+    expect(teachersLinkOn('#/').hidden).toBe(true);
+  });
+
+  it('hides the link from a Teacher who is neither Coordinator nor Admin', () => {
+    grantRoles('Teacher');
+
+    expect(teachersLinkOn('#/students').hidden).toBe(true);
+  });
+
+  // A /teachers route maps to the Students section, so navigating straight to
+  // it must keep the link visible rather than hiding the entry point the user
+  // just used.
+  it('stays visible and marks itself active while on a /teachers route', () => {
+    grantRoles('Admin');
+
+    const link = teachersLinkOn('#/teachers');
+    expect(link.hidden).toBe(false);
+    expect(link.classList.contains('sidebar__link--active')).toBe(true);
+  });
+});

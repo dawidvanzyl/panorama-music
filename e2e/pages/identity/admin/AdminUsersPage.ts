@@ -16,6 +16,8 @@ export class AdminUsersPage extends BasePage {
   readonly deactivateModalConfirmButton: Locator;
   readonly deleteModalConfirmInput: Locator;
   readonly deleteModalConfirmButton: Locator;
+  /** The full-width banner a rejected role save inserts above the user's row. */
+  readonly roleError: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -23,12 +25,13 @@ export class AdminUsersPage extends BasePage {
     this.roleTeacherCheckbox = page.locator('#roleTeacher');
     this.roleCoordinatorCheckbox = page.locator('#roleCoordinator');
     this.roleAdminCheckbox = page.locator('#roleAdmin');
-    this.submitButton = page.locator('#submitBtn');
+    this.submitButton = page.locator('pm-create-user-form').locator('#submitBtn');
     this.userCreatedInviteUrl = page.locator('#userCreatedBanner').locator('#inviteUrl');
     this.reinviteUrl = page.locator('#reinviteBanner').locator('#inviteUrl');
     this.deactivateModalConfirmButton = page.locator('#deactivateModal').locator('#deactivateBtn');
     this.deleteModalConfirmInput = page.locator('#deleteModal').locator('#confirmInput');
     this.deleteModalConfirmButton = page.locator('#deleteModal').locator('#deleteBtn');
+    this.roleError = page.locator('.users-table__row-error');
   }
 
   async gotoAdminUsers(): Promise<void> {

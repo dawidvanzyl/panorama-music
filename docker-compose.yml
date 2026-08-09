@@ -81,6 +81,8 @@ services:
       Smtp__Port: ${Smtp__Port:-25}
       AppBaseUrl: ${AppBaseUrl:-http://localhost:${QA_API_PORT:-3000}}
       Hibp__Enabled: ${Hibp__Enabled:-false}
+      DataProtection__KeyProtection: ${DataProtection__KeyProtection:-None}
+      DataProtection__ApplicationName: ${DataProtection__ApplicationName:-PanoramaMusic}
     ports:
       - "${QA_API_PORT:-3000}:3000"
     depends_on:

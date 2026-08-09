@@ -36,7 +36,7 @@ All jobs run in parallel. Formatting, lint, or E2E spec failures will block the 
 
 The API uses two database connection strings:
 
-- `ConnectionStrings:DefaultConnection` — the application's runtime connection. It must connect as the restricted `panorama_app` role, which holds full DML on the `identity` and `students` schemas but only `INSERT`/`SELECT` on the append-only `audit.audit_events` table.
+- `ConnectionStrings:DefaultConnection` — the application's runtime connection. It must connect as the restricted `panorama_app` role, which holds full DML on the `identity`, `students`, and `teachers` schemas but only `INSERT`/`SELECT` on the append-only `audit.audit_events` table.
 - `ConnectionStrings:Migrations` — a privileged (superuser/owner) connection used only at startup to run DbUp migrations and provision the `panorama_app` role. The role's credentials are taken from `DefaultConnection`, so the role is created/updated automatically on startup.
 
 For local development, `appsettings.Development.json` is pre-configured for a Docker PostgreSQL instance:
@@ -122,7 +122,7 @@ curl http://localhost:3000/api/health
 
 To start a feature test against a clean database, set `RESET_DB=true` before bringing the stack up. On boot the API will:
 
-1. Drop and recreate the `public`, `audit`, `identity`, and `students` schemas (all tables and data across every bounded context are wiped)
+1. Drop and recreate the `public`, `audit`, `identity`, `students`, and `teachers` schemas (all tables and data across every bounded context are wiped)
 2. Re-run all DbUp migrations from scratch
 3. Execute all seed scripts from `Persistence/Seeds/` in filename order
 
@@ -183,6 +183,9 @@ The application is deployed to [Render](https://render.com) as a Docker Web Serv
 | `Email__Provider` | `Maileroo` in Production — Render's free tier blocks outbound SMTP, so password-reset email is sent via the Maileroo HTTP API instead |
 | `Email__From` / `Email__ReplyTo` / `Email__FromDisplayName` | Sender/reply-to address and display name used for outbound email regardless of transport |
 | `Maileroo__ApiKey` | Maileroo API key (secret); sent as an `Authorization: Bearer` header, required when `Email__Provider=Maileroo` |
+| `DataProtection__KeyProtection` | `Certificate` in Production — the Data Protection keyring persisted in PostgreSQL must be encrypted with a key held outside the database |
+| `DataProtection__CertificateBase64` / `DataProtection__CertificatePassword` | Base64-encoded PFX certificate (secret) and its password (secret), used to encrypt the keyring at rest; required when `DataProtection__KeyProtection=Certificate`. The certificate is not covered by the database provider's backups and must be stored durably outside the hosting platform — losing it makes every previously protected value unrecoverable |
+| `DataProtection__ApplicationName` | Stable application name used for Data Protection key isolation (`PanoramaMusic`) |
 
 ### Logging
 
@@ -193,6 +196,8 @@ On startup, DbUp automatically runs all pending migrations against the Neon data
 In Production, the seeded admin account is created with a forced credential rotation: its first successful login is denied normal access and directed into the password-reset flow instead, so the documented seed password (`Admin__Password`) cannot remain valid indefinitely if left unchanged.
 
 Outbound email (e.g. password reset) goes through an injectable `IMailSender` transport selected by `Email__Provider`, chosen purely by configuration — no code change is required to switch transports. Production uses `Maileroo` (the Maileroo HTTP API), since Render's free tier blocks outbound SMTP on ports 25/587. Development and QA use `Smtp` against a local docker mail catcher (smtp4dev). Email content (subject, reset link, expiry copy) is built once in `EmailService` and is identical regardless of which transport sends it.
+
+The ASP.NET Core Data Protection keyring is persisted to PostgreSQL (`PanoramaMusic.DataProtection`) rather than the container filesystem, so protected values (e.g. encrypted banking details, introduced later in this milestone) remain decryptable across restarts, redeploys and Render's free-tier spin-downs — a filesystem-backed keyring would be silently destroyed on every one of those. Protection-at-rest is chosen purely by `DataProtection__KeyProtection`: `None` for Development/QA, `Certificate` for Production. When `Certificate` is selected, startup fails fast with a descriptive error if the certificate or its password is missing — it never falls back to an unprotected keyring.
 
 #### Adding seed data
 
