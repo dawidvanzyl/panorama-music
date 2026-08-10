@@ -6,9 +6,13 @@ import type { SessionResult } from '../services/sessions';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     /* Wider than the shared 420px default: the sessions table carries five
-       columns, and anything narrower wraps every row onto three lines. */
+       columns, and anything narrower wraps every row onto three lines. Sized to
+       match the student wizard — the same width calculation, so the two widest
+       dialogs in the application line up rather than each picking a number. */
     .modal__card {
-      max-width: 720px;
+      box-sizing: border-box;
+      max-width: none;
+      width: calc(100% - var(--pm-sidebar-width, 240px) - (2 * var(--pm-content-padding, 1cm)));
       max-height: calc(100vh - 64px);
       overflow-y: auto;
     }
