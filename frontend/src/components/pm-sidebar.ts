@@ -1,4 +1,4 @@
-import { isAuthenticated, logout } from '../services/auth';
+import { isAuthenticated } from '../services/auth';
 import { hasRole, hasAnyRole } from '../services/token-storage';
 import { updateActiveNavSection } from '../services/nav-section';
 
@@ -29,14 +29,6 @@ styles.replaceSync(`
       flex-direction: column;
       gap: 4px;
     }
-    .sidebar__bottom {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      border-top: 1px solid var(--pm-border);
-      padding-top: 12px;
-      margin-top: auto;
-    }
     .sidebar__link {
       display: flex;
       align-items: center;
@@ -57,25 +49,6 @@ styles.replaceSync(`
       font-family: 'Material Symbols Outlined', sans-serif;
       font-size: 20px;
       flex-shrink: 0;
-    }
-    .sidebar__logout {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      text-align: left;
-      padding: 10px 12px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: transparent;
-      color: var(--pm-danger, #e05252);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .sidebar__logout:hover {
-      background: rgba(224, 82, 82, 0.1);
     }
   `);
 
@@ -108,16 +81,6 @@ template.innerHTML = `
         <span>Activity Log</span>
       </a>
     </div>
-    <div class="sidebar__bottom">
-      <a href="#/sessions" class="sidebar__link" id="sessionsLink">
-        <span class="sidebar__icon">manage_accounts</span>
-        <span>Active Sessions</span>
-      </a>
-      <button type="button" class="sidebar__logout" id="logoutBtn">
-        <span class="sidebar__icon">logout</span>
-        <span>Logout</span>
-      </button>
-    </div>
   </nav>
 `;
 
@@ -128,8 +91,6 @@ export class PmSidebar extends HTMLElement {
   private userManagementLink: HTMLAnchorElement | null = null;
   private adminSessionsLink: HTMLAnchorElement | null = null;
   private activityLogLink: HTMLAnchorElement | null = null;
-  private sessionsLink: HTMLAnchorElement | null = null;
-  private logoutBtn: HTMLButtonElement | null = null;
 
   constructor() {
     super();
@@ -145,16 +106,12 @@ export class PmSidebar extends HTMLElement {
     this.userManagementLink = this.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
     this.adminSessionsLink = this.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
     this.activityLogLink = this.shadowRoot!.getElementById('activityLogLink') as HTMLAnchorElement;
-    this.sessionsLink = this.shadowRoot!.getElementById('sessionsLink') as HTMLAnchorElement;
-    this.logoutBtn = this.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
 
-    this.logoutBtn.addEventListener('click', this.handleLogout);
     this.updateVisibility();
     window.addEventListener('hashchange', this.updateVisibility);
   }
 
   disconnectedCallback(): void {
-    this.logoutBtn?.removeEventListener('click', this.handleLogout);
     window.removeEventListener('hashchange', this.updateVisibility);
   }
 
@@ -183,15 +140,6 @@ export class PmSidebar extends HTMLElement {
     this.userManagementLink!.classList.toggle('sidebar__link--active', basePath === '/admin/users');
     this.adminSessionsLink!.classList.toggle('sidebar__link--active', basePath === '/admin/sessions');
     this.activityLogLink!.classList.toggle('sidebar__link--active', basePath === '/admin/activity-log');
-    this.sessionsLink!.classList.toggle('sidebar__link--active', basePath === '/sessions');
-  };
-
-  private handleLogout = async (): Promise<void> => {
-    // The session caches are cleared by clearTokens(), which logout() reaches
-    // on every path — the same clearing a session expiry gets.
-    await logout();
-    this.updateVisibility();
-    window.location.hash = '#/login';
   };
 }
 

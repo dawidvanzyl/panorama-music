@@ -111,6 +111,10 @@ export default defineConfig({
       { name: '235UC10', description: 'My Details shows the employment classification locked, with the reason it cannot be changed there' },
       { name: '235UC11', description: 'My Details offers no account-link control and no deactivate, reactivate or delete action' },
       { name: '235UC12', description: 'My Details banking section offers edit, delete, reveal and activity, with the account number masked until revealed' },
+      { name: '247UC1', description: 'The account chip offers Active Sessions to every signed-in user, with no role gate and no request per page load' },
+      { name: '247UC2', description: 'Choosing Active Sessions opens a dialog mounted on the document, which stays open once the dropdown that offered it closes' },
+      { name: '247UC3', description: 'The sidebar offers neither Active Sessions nor Logout, on any route and for any role' },
+      { name: '247UC4', description: 'Logout from the account chip calls logout once and redirects to the login screen only after it completes' },
     ],
   },
 })

@@ -60,34 +60,6 @@ describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] 
     expect(adminLink.classList.contains('nav-bar__section-link--active')).toBe(true);
   });
 
-  it('keeps the Dashboard section highlighted when navigating to Active Sessions from Dashboard', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-
-    window.location.hash = '#/sessions';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const dashboardLink = el.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
-    const adminLink = el.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
-
-    expect(dashboardLink.classList.contains('nav-bar__section-link--active')).toBe(true);
-    expect(adminLink.classList.contains('nav-bar__section-link--active')).toBe(false);
-  });
-
-  it('keeps the Admin section highlighted when navigating to Active Sessions from Admin', () => {
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
-
-    window.location.hash = '#/sessions';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const dashboardLink = el.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
-    const adminLink = el.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
-
-    expect(dashboardLink.classList.contains('nav-bar__section-link--active')).toBe(false);
-    expect(adminLink.classList.contains('nav-bar__section-link--active')).toBe(true);
-  });
-
   it('shows the logged-in user email in the account chip', () => {
     window.location.hash = '#/';
     window.dispatchEvent(new Event('hashchange'));

@@ -32,7 +32,7 @@ test.describe('My Active Sessions', () => {
       );
 
       const sessionsPage = new SessionsPage(page);
-      await sessionsPage.gotoSessions();
+      await sessionsPage.openSessions();
       await expect(sessionsPage.heading).toBeVisible();
       await expect(sessionsPage.rows).toHaveCount(2);
       await expect(sessionsPage.currentRow()).toHaveCount(1);

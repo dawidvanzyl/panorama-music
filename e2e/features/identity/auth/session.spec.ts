@@ -16,6 +16,10 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
 
     await expect(page).toHaveURL(/#\/$/);
     await expect(dashboardPage.heading).toBeVisible();
+    // Logout now lives behind the account chip, so the chip is what says the
+    // session is live; the button itself is only rendered once it is opened.
+    await expect(dashboardPage.accountChip).toBeVisible();
+    await dashboardPage.accountChip.click();
     await expect(dashboardPage.logoutButton).toBeVisible();
   });
 
@@ -85,7 +89,7 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
 
     await expect(page).toHaveURL(/#\/$/);
     await expect(dashboardPage.heading).toBeVisible();
-    await expect(dashboardPage.logoutButton).toBeVisible();
+    await expect(dashboardPage.accountChip).toBeVisible();
   });
 });
 
