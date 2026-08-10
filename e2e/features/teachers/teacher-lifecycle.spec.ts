@@ -3,6 +3,7 @@ import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../f
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeachersPage } from '../../pages/teachers/TeachersPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
+import { landingUrl } from '../../fixtures/navigation';
 
 const PASSWORD = 'TeacherLifecyclePass123!';
 const ACCOUNT_NUMBER = '1234567890';
@@ -159,7 +160,7 @@ test.describe('A Coordinator maintains the teacher, not their lifecycle or money
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(coordinatorEmail, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Coordinator'));
 
     const coordinatorTeachers = new TeachersPage(page);
     await coordinatorTeachers.gotoTeachers();

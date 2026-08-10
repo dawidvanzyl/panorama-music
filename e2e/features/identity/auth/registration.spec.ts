@@ -2,7 +2,7 @@ import { test, expect } from '../../../fixtures/base';
 import { expireInviteToken } from '../../../fixtures/db';
 import { uniqueTestEmail, inviteUser } from '../../../fixtures/testUsers';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
+import { landingUrl } from '../../../fixtures/navigation';
 import { RegistrationPage } from '../../../pages/identity/auth/RegistrationPage';
 
 const TEST_PASSWORD = 'TestPass123';
@@ -20,11 +20,9 @@ test.describe('Registration Flow', { tag: '@M1.2IT2' }, () => {
     await expect(page).toHaveURL(/#\/login\?registered=true$/);
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.login(email, TEST_PASSWORD);
 
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
   });
 
   test('rejects an expired invite token and does not create or activate the account', async ({ page }) => {
@@ -61,9 +59,8 @@ test.describe('Registration Flow', { tag: '@M1.2IT2' }, () => {
     await expect(registrationPage.errorText).toHaveText('Invite link is invalid or expired');
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, TEST_PASSWORD);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
   });
 });

@@ -19,7 +19,12 @@ import './features/teachers/pages/pm-teacher-detail-page';
 import './features/teachers/components/pm-my-details-menu';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
+import { resolveLandingPath } from './services/nav-entries';
 
+// These guards are the enforcement point, and `NAV_ENTRIES` only decides what
+// is offered — so a path's guard here must stay no stricter than the roles the
+// matching entry is offered to, or `/` would resolve to a screen the guard
+// refuses and bounce straight back.
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
 const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
@@ -41,7 +46,9 @@ const ROUTES: Record<string, () => string> = {
   '/students': () => '<pm-students-page></pm-students-page>',
   '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
   '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
-  '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
+  // `/` renders nothing of its own — it is resolved to a landing screen below
+  // before any route lookup happens.
+  '/': () => '',
 };
 
 const TEACHER_DETAIL_PATTERN = /^\/teachers\/([^/]+)$/;
@@ -73,6 +80,18 @@ async function render(): Promise<void> {
     if (outcome === 'failed') {
       app.innerHTML = '<p>Unable to verify your session. Retrying…</p>';
       retryTimer = window.setTimeout(() => void render(), REFRESH_RETRY_DELAY_MS);
+      return;
+    }
+  }
+
+  // `/` is a pure redirector to the topmost sidebar entry the signed-in user's
+  // roles permit, which is also where a guard's refusal below ends up. Every
+  // user holds at least Teacher, so an unresolved landing path is unreachable;
+  // falling through to an empty shell is only there to rule out a loop.
+  if (basePath === '/') {
+    const landingPath = resolveLandingPath();
+    if (landingPath !== null) {
+      window.location.hash = '#' + landingPath;
       return;
     }
   }

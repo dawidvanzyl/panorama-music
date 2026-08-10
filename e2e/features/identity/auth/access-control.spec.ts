@@ -5,7 +5,7 @@ import {
   goToAdminUsersPage,
 } from '../../../fixtures/testUsers';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
+import { landingUrl, sidebarEntry } from '../../../fixtures/navigation';
 
 const PASSWORD = 'NonAdminPass123';
 
@@ -17,17 +17,18 @@ test.describe('Role-Based Access Control', { tag: '@M1.2IT6' }, () => {
     await createRegisteredUser(page, email, PASSWORD, ['Teacher']);
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     await page.goto('/#/admin/users');
 
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
     await expect(page.getByText('User Management').first()).toBeHidden();
-    await expect(page.locator('#adminLink')).toBeHidden();
+    await expect(sidebarEntry(page, 'userManagementLink')).toBeHidden();
+    // The entry the Teacher's own role permits is still offered, so the
+    // refusal is the guard's doing and not a sidebar that renders nothing.
+    await expect(sidebarEntry(page, 'studentManagementLink')).toBeVisible();
   });
 
   test('rejects an admin-only API call from a non-admin session with no state change', async ({
@@ -39,7 +40,7 @@ test.describe('Role-Based Access Control', { tag: '@M1.2IT6' }, () => {
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
     const attemptedEmail = uniqueTestEmail('rbac-api-target');

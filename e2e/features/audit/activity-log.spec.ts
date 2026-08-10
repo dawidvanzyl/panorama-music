@@ -1,8 +1,8 @@
 import { test, expect } from '../../fixtures/base';
 import { uniqueTestEmail, createRegisteredUser, goToAdminUsersPage } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../pages/identity/auth/DashboardPage';
 import { ActivityLogPage } from '../../pages/identity/admin/ActivityLogPage';
+import { landingUrl, sidebarEntry } from '../../fixtures/navigation';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -36,7 +36,7 @@ test.describe('Admin Activity Log — authentication events', { tag: '@M1.5IT2' 
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     await page.evaluate(() => localStorage.clear());
     await loginPage.gotoLogin();
@@ -45,7 +45,7 @@ test.describe('Admin Activity Log — authentication events', { tag: '@M1.5IT2' 
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Admin'));
 
     const activityLogPage = new ActivityLogPage(page);
     await activityLogPage.gotoActivityLog();
@@ -76,14 +76,13 @@ test.describe('Admin Activity Log — admin-only access', { tag: '@M1.5IT3' }, (
     await createRegisteredUser(page, email, PASSWORD, ['Teacher']);
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     await page.goto('/#/admin/activity-log');
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
+    await expect(sidebarEntry(page, 'activityLogLink')).toBeHidden();
     await expect(page.getByText('Activity Log').first()).toBeHidden();
 
     const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
@@ -109,7 +108,7 @@ test.describe('Admin Activity Log — filtering and pagination', { tag: ['@M1.5I
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     // 25 more successful logins for the same account, giving it 26
     // login_succeeded events total — one page (25) plus a second page (1).
@@ -118,7 +117,7 @@ test.describe('Admin Activity Log — filtering and pagination', { tag: ['@M1.5I
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Admin'));
 
     const activityLogPage = new ActivityLogPage(page);
     await activityLogPage.gotoActivityLog();

@@ -2,7 +2,7 @@ import { test, expect } from '../../../fixtures/base';
 import { uniqueTestEmail, createRegisteredUser, goToAdminUsersPage } from '../../../fixtures/testUsers';
 import { extractTokenFromUrl } from '../../../fixtures/url';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
+import { landingUrl, sidebarEntry } from '../../../fixtures/navigation';
 
 const ORIGINAL_PASSWORD = 'OriginalPass123';
 
@@ -71,12 +71,11 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
     await expect(adminUsersPage.status(email)).toHaveText('Active');
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, ORIGINAL_PASSWORD);
 
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
+    await expect(sidebarEntry(page, 'studentManagementLink')).toBeVisible();
   });
 });
 

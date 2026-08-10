@@ -5,7 +5,7 @@ import {
   goToTeachersPage,
 } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../pages/identity/auth/DashboardPage';
+import { landingUrl, sidebarEntry } from '../../fixtures/navigation';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
 
 const PASSWORD = 'TeacherMgmtPass123!';
@@ -111,14 +111,13 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
     await createRegisteredUser(page, email, PASSWORD, ['Teacher']);
 
     const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     await page.goto('/#/teachers');
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Teacher'));
+    await expect(sidebarEntry(page, 'teachersLink')).toBeHidden();
     await expect(page.getByText('Teacher Management').first()).toBeHidden();
 
     const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
