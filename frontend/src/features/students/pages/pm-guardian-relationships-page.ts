@@ -22,29 +22,11 @@ styles.replaceSync(`
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
     }
-    .guardian-relationships__header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
     .guardian-relationships__title {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--pm-text);
-      margin: 0;
-    }
-    .guardian-relationships__create-btn {
-      height: 40px;
-      padding: 0 20px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
+      margin: 0 0 24px;
     }
     .guardian-relationships__error {
       margin-bottom: 16px;
@@ -64,18 +46,14 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <div class="guardian-relationships__header">
-    <h1 class="guardian-relationships__title">Guardian Relationships</h1>
-    <button type="button" class="guardian-relationships__create-btn" id="createBtn">Create Relationship</button>
-  </div>
+  <h1 class="guardian-relationships__title">Guardian Relationships</h1>
   <div class="guardian-relationships__error" id="error"></div>
-  <pm-relationship-form id="form" hidden></pm-relationship-form>
+  <pm-relationship-form id="form"></pm-relationship-form>
   <pm-relationship-list id="list"></pm-relationship-list>
   <pm-delete-relationship-modal id="deleteModal"></pm-delete-relationship-modal>
 `;
 
 export class PmGuardianRelationshipsPage extends HTMLElement {
-  private createBtn: HTMLButtonElement | null = null;
   private relationshipForm: PmRelationshipForm | null = null;
   private relationshipList: PmRelationshipList | null = null;
   private deleteModal: PmDeleteRelationshipModal | null = null;
@@ -89,15 +67,12 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
   }
 
   connectedCallback(): void {
-    this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.relationshipForm = this.shadowRoot!.getElementById('form') as unknown as PmRelationshipForm;
     this.relationshipList = this.shadowRoot!.getElementById('list') as unknown as PmRelationshipList;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteRelationshipModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
-    this.createBtn.addEventListener('click', this.handleCreateClicked);
     this.shadowRoot!.addEventListener('relationship-form-submitted', this.handleFormSubmitted);
-    this.shadowRoot!.addEventListener('relationship-form-cancelled', this.handleFormCancelled);
     this.shadowRoot!.addEventListener('relationship-edit-saved', this.handleEditSaved);
     this.shadowRoot!.addEventListener('relationship-delete-clicked', this.handleDeleteClicked);
     this.shadowRoot!.addEventListener('relationship-delete-confirmed', this.handleDeleteConfirmed);
@@ -109,23 +84,11 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    this.createBtn?.removeEventListener('click', this.handleCreateClicked);
     this.shadowRoot!.removeEventListener('relationship-form-submitted', this.handleFormSubmitted);
-    this.shadowRoot!.removeEventListener('relationship-form-cancelled', this.handleFormCancelled);
     this.shadowRoot!.removeEventListener('relationship-edit-saved', this.handleEditSaved);
     this.shadowRoot!.removeEventListener('relationship-delete-clicked', this.handleDeleteClicked);
     this.shadowRoot!.removeEventListener('relationship-delete-confirmed', this.handleDeleteConfirmed);
   }
-
-  private handleCreateClicked = (): void => {
-    this.clearError();
-    this.relationshipForm!.reset();
-    this.relationshipForm!.hidden = false;
-  };
-
-  private handleFormCancelled = (): void => {
-    this.relationshipForm!.hidden = true;
-  };
 
   private handleFormSubmitted = async (event: Event): Promise<void> => {
     const { name } = (event as CustomEvent<{ name: string }>).detail;
@@ -133,7 +96,7 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
 
     try {
       await createGuardianRelationship(name);
-      this.relationshipForm!.hidden = true;
+      this.relationshipForm!.reset();
       await this.loadRelationships();
     } catch (err) {
       this.showError(err);

@@ -123,6 +123,9 @@ export default defineConfig({
       { name: '239UC6', description: 'A user arriving at / is taken to the topmost sidebar entry their roles permit, with no Dashboard rendered' },
       { name: '239UC7', description: 'The entry a user lands on from / differs by role set, always being the topmost one their own roles permit' },
       { name: '239UC8', description: 'A route refused by the guard redirects via / to the topmost permitted entry without rendering the refused screen' },
+      { name: '240UC1', description: 'The Guardian Relationships page renders the create form on load, with no reveal control and no form cancel control' },
+      { name: '240UC2', description: 'A successful relationship create leaves the form visible with its input cleared, ready for a further entry' },
+      { name: '240UC3', description: 'A failed relationship create surfaces the error and leaves the entered value in the form' },
     ],
   },
 })
