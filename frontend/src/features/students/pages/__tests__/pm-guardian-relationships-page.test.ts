@@ -129,27 +129,31 @@ describe('pm-guardian-relationships-page — opens with the create form ready', 
   });
 });
 
-describe('pm-guardian-relationships-page — creates a relationship type and keeps the form ready', { tags: ['214UC8', '240UC2'] }, () => {
-  let el: HTMLElement;
+describe(
+  'pm-guardian-relationships-page — creates a relationship type and keeps the form ready',
+  { tags: ['214UC8', '240UC2'] },
+  () => {
+    let el: HTMLElement;
 
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
 
-  it('clears the input and leaves the form in place once the type is created', async () => {
-    const created: GuardianRelationship = { guardianRelationshipId: 'r3', name: 'Foster Parent' };
-    vi.mocked(createGuardianRelationship).mockResolvedValue(created);
-    el = await mountPage();
-    mockGetGuardianRelationships.mockResolvedValue([mother, father, created]);
+    it('clears the input and leaves the form in place once the type is created', async () => {
+      const created: GuardianRelationship = { guardianRelationshipId: 'r3', name: 'Foster Parent' };
+      vi.mocked(createGuardianRelationship).mockResolvedValue(created);
+      el = await mountPage();
+      mockGetGuardianRelationships.mockResolvedValue([mother, father, created]);
 
-    await submitCreateForm(el, 'Foster Parent');
+      await submitCreateForm(el, 'Foster Parent');
 
-    expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
-    expect(rowNamesOf(el)).toContain('Foster Parent');
-    expect(formOf(el)).not.toBeNull();
-    expect(nameInputOf(el).value).toBe('');
-  });
-});
+      expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
+      expect(rowNamesOf(el)).toContain('Foster Parent');
+      expect(formOf(el)).not.toBeNull();
+      expect(nameInputOf(el).value).toBe('');
+    });
+  },
+);
 
 describe('pm-guardian-relationships-page — keeps the entered value after a failed create', { tags: ['240UC3'] }, () => {
   let el: HTMLElement;
