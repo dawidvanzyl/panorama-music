@@ -2,7 +2,6 @@ import { type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 
 export class GuardianRelationshipsPage extends BasePage {
-  readonly createButton: Locator;
   readonly relationshipForm: Locator;
   readonly relationshipList: Locator;
   readonly errorBanner: Locator;
@@ -10,7 +9,6 @@ export class GuardianRelationshipsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.createButton = page.locator('#createBtn');
     this.relationshipForm = page.locator('#form');
     this.relationshipList = page.locator('#list');
     // Scoped to the page's own component: the account menu's Active Sessions
@@ -29,7 +27,6 @@ export class GuardianRelationshipsPage extends BasePage {
   }
 
   async createRelationship(name: string): Promise<void> {
-    await this.createButton.click();
     await this.relationshipForm.locator('#name').fill(name);
     await this.relationshipForm.locator('#saveBtn').click();
   }

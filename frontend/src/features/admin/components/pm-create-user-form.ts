@@ -11,12 +11,6 @@ styles.replaceSync(`
       border-radius: var(--pm-radius);
       padding: 24px;
     }
-    .create-user__title {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--pm-text);
-      margin-bottom: 16px;
-    }
     .create-user__row {
       display: flex;
       gap: 24px;
@@ -118,7 +112,6 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="create-user__card">
-    <h2 class="create-user__title">Create User</h2>
     <form id="createUserForm">
       <div class="create-user__row">
         <div class="create-user__field">

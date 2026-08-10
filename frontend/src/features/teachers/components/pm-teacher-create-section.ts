@@ -21,12 +21,6 @@ styles.replaceSync(`
          expanded create section sits evenly between header and filter bar. */
       margin-bottom: 24px;
     }
-    .create-section__title {
-      margin: 0 0 16px;
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--pm-text);
-    }
     .create-section__grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -178,7 +172,6 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="create-section__card">
-    <h2 class="create-section__title">Create Teacher</h2>
     <div class="create-section__grid">
       <div class="create-section__field">
         <label for="firstName">First name</label>
