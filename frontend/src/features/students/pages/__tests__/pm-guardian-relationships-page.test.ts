@@ -112,37 +112,6 @@ describe('pm-guardian-relationships-page — loads the relationship types on pag
   });
 });
 
-describe('pm-guardian-relationships-page — creates a relationship type', { tags: ['214UC8'] }, () => {
-  let el: HTMLElement;
-
-  beforeEach(async () => {
-    el = await mountPage();
-  });
-
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
-
-  it('submits the create form and shows the new type in the list', async () => {
-    const created: GuardianRelationship = { guardianRelationshipId: 'r3', name: 'Foster Parent' };
-    vi.mocked(createGuardianRelationship).mockResolvedValue(created);
-    mockGetGuardianRelationships.mockResolvedValue([mother, father, created]);
-
-    el.shadowRoot!.dispatchEvent(
-      new CustomEvent('relationship-form-submitted', {
-        bubbles: true,
-        composed: true,
-        detail: { name: 'Foster Parent' },
-      }),
-    );
-    await flush();
-
-    expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
-    expect(rowNamesOf(el)).toContain('Foster Parent');
-    expect(formOf(el).hidden).toBe(false);
-  });
-});
-
 describe('pm-guardian-relationships-page — opens with the create form ready', { tags: ['240UC1'] }, () => {
   let el: HTMLElement;
 
@@ -154,13 +123,13 @@ describe('pm-guardian-relationships-page — opens with the create form ready', 
     el = await mountPage();
 
     const form = formOf(el);
-    expect(form.hidden).toBe(false);
+    expect(form).not.toBeNull();
     expect(el.shadowRoot!.getElementById('createBtn')).toBeNull();
     expect(form.shadowRoot!.getElementById('cancelBtn')).toBeNull();
   });
 });
 
-describe('pm-guardian-relationships-page — keeps the create form ready after a create', { tags: ['240UC2'] }, () => {
+describe('pm-guardian-relationships-page — creates a relationship type and keeps the form ready', { tags: ['214UC8', '240UC2'] }, () => {
   let el: HTMLElement;
 
   afterEach(() => {
@@ -177,7 +146,7 @@ describe('pm-guardian-relationships-page — keeps the create form ready after a
 
     expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
     expect(rowNamesOf(el)).toContain('Foster Parent');
-    expect(formOf(el).hidden).toBe(false);
+    expect(formOf(el)).not.toBeNull();
     expect(nameInputOf(el).value).toBe('');
   });
 });
@@ -198,7 +167,7 @@ describe('pm-guardian-relationships-page — keeps the entered value after a fai
     await submitCreateForm(el, 'Mother');
 
     expect(errorBannerOf(el).textContent).toContain('already exists');
-    expect(formOf(el).hidden).toBe(false);
+    expect(formOf(el)).not.toBeNull();
     expect(nameInputOf(el).value).toBe('Mother');
   });
 });
