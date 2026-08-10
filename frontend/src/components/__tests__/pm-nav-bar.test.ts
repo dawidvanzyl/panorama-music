@@ -29,7 +29,7 @@ vi.mock('../../features/admin/services/admin', () => ({
 
 import '../pm-nav-bar';
 
-describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] }, () => {
+describe('pm-nav-bar — brand and account chip only', { tags: ['239UC3'] }, () => {
   let el: HTMLElement;
 
   beforeEach(() => {
@@ -43,25 +43,8 @@ describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] 
     document.body.removeChild(el);
   });
 
-  it('marks Dashboard active on the dashboard route and Admin active under /admin', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const dashboardLink = el.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
-    const adminLink = el.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
-
-    expect(dashboardLink.classList.contains('nav-bar__section-link--active')).toBe(true);
-    expect(adminLink.classList.contains('nav-bar__section-link--active')).toBe(false);
-
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
-
-    expect(dashboardLink.classList.contains('nav-bar__section-link--active')).toBe(false);
-    expect(adminLink.classList.contains('nav-bar__section-link--active')).toBe(true);
-  });
-
   it('shows the logged-in user email in the account chip', () => {
-    window.location.hash = '#/';
+    window.location.hash = '#/students';
     window.dispatchEvent(new Event('hashchange'));
 
     const accountChip = el.shadowRoot!.getElementById('accountChip') as HTMLElement;
@@ -71,56 +54,19 @@ describe('pm-nav-bar — active section and account chip', { tags: ['M1.4UC12'] 
     expect(accountEmail.textContent).toBe('admin@panorama-music.com');
   });
 
-  it('hides the Admin link for a non-admin user', () => {
-    grantRoles('Teacher');
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const adminLink = el.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
-    expect(adminLink.hidden).toBe(true);
-  });
-});
-
-describe('pm-nav-bar — Students entry point per role', { tags: ['214UC7'] }, () => {
-  let el: HTMLElement;
-
-  beforeEach(() => {
-    mockIsAuthenticated.mockReturnValue(true);
-    el = document.createElement('pm-nav-bar');
+  it('keeps the brand', () => {
+    expect(el.shadowRoot!.querySelector('.nav-bar__brand')!.textContent).toBe('Panorama Music');
   });
 
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
+  it.each(['#/students', '#/teachers', '#/admin/users'])(
+    'exposes no navigation link at all on %s, for a user holding every role',
+    (hash) => {
+      window.location.hash = hash;
+      window.dispatchEvent(new Event('hashchange'));
 
-  function studentsLinkAfterRender(): HTMLAnchorElement {
-    document.body.appendChild(el);
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-    return el.shadowRoot!.getElementById('studentsLink') as HTMLAnchorElement;
-  }
-
-  it('points a Teacher at the student roster', () => {
-    grantRoles('Teacher');
-
-    const studentsLink = studentsLinkAfterRender();
-    expect(studentsLink.hidden).toBe(false);
-    expect(studentsLink.getAttribute('href')).toBe('#/students');
-  });
-
-  // A Coordinator who is not also a Teacher cannot open the roster, so the
-  // Students entry point takes them to the screen they can actually maintain.
-  it('points a Coordinator who is not a Teacher at the relationship screen', () => {
-    grantRoles('Coordinator');
-
-    const studentsLink = studentsLinkAfterRender();
-    expect(studentsLink.hidden).toBe(false);
-    expect(studentsLink.getAttribute('href')).toBe('#/students/guardian-relationships');
-  });
-
-  it('hides the Students link from a user with none of those roles', () => {
-    grantRoles();
-
-    expect(studentsLinkAfterRender().hidden).toBe(true);
-  });
+      expect(el.shadowRoot!.querySelectorAll('a')).toHaveLength(0);
+      expect(el.shadowRoot!.getElementById('sections')).toBeNull();
+      expect(el.shadowRoot!.textContent).not.toContain('Dashboard');
+    },
+  );
 });

@@ -3,6 +3,7 @@ import { uniqueTestEmail, createRegisteredUser } from '../../../fixtures/testUse
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
 import { SessionsPage } from '../../../pages/identity/auth/SessionsPage';
 import { AdminSessionsPage } from '../../../pages/identity/admin/AdminSessionsPage';
+import { landingUrl } from '../../../fixtures/navigation';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -19,14 +20,14 @@ test.describe('My Active Sessions', () => {
       const loginPage = new LoginPage(page);
       await loginPage.gotoLogin();
       await loginPage.login(email, password);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Teacher'));
 
       const otherContext = await browser.newContext();
       const otherPage = await otherContext.newPage();
       const otherLoginPage = new LoginPage(otherPage);
       await otherLoginPage.gotoLogin();
       await otherLoginPage.login(email, password);
-      await expect(otherPage).toHaveURL(/#\/$/);
+      await expect(otherPage).toHaveURL(landingUrl('Teacher'));
       const otherAccessToken = await otherPage.evaluate(() =>
         localStorage.getItem('pm_access_token')
       );
@@ -65,7 +66,7 @@ test.describe('Global Session Management', () => {
       const userLoginPage = new LoginPage(userPage);
       await userLoginPage.gotoLogin();
       await userLoginPage.login(email, password);
-      await expect(userPage).toHaveURL(/#\/$/);
+      await expect(userPage).toHaveURL(landingUrl('Teacher'));
       const userAccessToken = await userPage.evaluate(() =>
         localStorage.getItem('pm_access_token')
       );
@@ -73,7 +74,7 @@ test.describe('Global Session Management', () => {
       const adminLoginPage = new LoginPage(page);
       await adminLoginPage.gotoLogin();
       await adminLoginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Admin'));
 
       const adminSessionsPage = new AdminSessionsPage(page);
       await adminSessionsPage.gotoAdminSessions();
@@ -108,7 +109,7 @@ test.describe('Global Session Management', () => {
       const userLoginPage = new LoginPage(userPage);
       await userLoginPage.gotoLogin();
       await userLoginPage.login(email, password);
-      await expect(userPage).toHaveURL(/#\/$/);
+      await expect(userPage).toHaveURL(landingUrl('Teacher'));
       const userAccessToken = await userPage.evaluate(() =>
         localStorage.getItem('pm_access_token')
       );
@@ -116,7 +117,7 @@ test.describe('Global Session Management', () => {
       const adminLoginPage = new LoginPage(page);
       await adminLoginPage.gotoLogin();
       await adminLoginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Admin'));
       const adminAccessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
 
       const adminSessionsPage = new AdminSessionsPage(page);

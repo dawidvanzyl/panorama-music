@@ -1,6 +1,5 @@
 import { isAuthenticated } from '../services/auth';
-import { hasRole, hasAnyRole, getEmail } from '../services/token-storage';
-import { updateActiveNavSection } from '../services/nav-section';
+import { getEmail } from '../services/token-storage';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -31,26 +30,6 @@ styles.replaceSync(`
       font-size: 1.25rem;
       letter-spacing: -0.02em;
       color: var(--pm-text);
-    }
-    .nav-bar__sections {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .nav-bar__section-link {
-      color: var(--pm-text-muted);
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      padding-bottom: 2px;
-      border-bottom: 2px solid transparent;
-    }
-    .nav-bar__section-link:hover {
-      color: var(--pm-text);
-    }
-    .nav-bar__section-link--active {
-      color: var(--pm-accent);
-      border-bottom-color: var(--pm-accent);
     }
     /* The chip is the anchor the account menu hangs off, so the wrapper is the
        positioning context rather than the nav itself. */
@@ -105,11 +84,6 @@ template.innerHTML = `
   <nav>
     <div class="nav-bar__left">
       <span class="nav-bar__brand">Panorama Music</span>
-      <div class="nav-bar__sections" id="sections" hidden>
-        <a href="#/" class="nav-bar__section-link" id="dashboardLink">Dashboard</a>
-        <a href="#/students" class="nav-bar__section-link" id="studentsLink" hidden>Students</a>
-        <a href="#/admin/users" class="nav-bar__section-link" id="adminLink" hidden>Admin</a>
-      </div>
     </div>
     <div class="nav-bar__account-area" id="accountArea">
       <button type="button" class="nav-bar__account" id="accountChip" hidden aria-haspopup="menu" aria-expanded="false">
@@ -125,10 +99,6 @@ template.innerHTML = `
 `;
 
 export class PmNavBar extends HTMLElement {
-  private sections: HTMLElement | null = null;
-  private dashboardLink: HTMLAnchorElement | null = null;
-  private studentsLink: HTMLAnchorElement | null = null;
-  private adminLink: HTMLAnchorElement | null = null;
   private accountChip: HTMLButtonElement | null = null;
   private accountEmail: HTMLElement | null = null;
   private accountChevron: HTMLElement | null = null;
@@ -143,10 +113,6 @@ export class PmNavBar extends HTMLElement {
   }
 
   connectedCallback(): void {
-    this.sections = this.shadowRoot!.getElementById('sections') as HTMLElement;
-    this.dashboardLink = this.shadowRoot!.getElementById('dashboardLink') as HTMLAnchorElement;
-    this.studentsLink = this.shadowRoot!.getElementById('studentsLink') as HTMLAnchorElement;
-    this.adminLink = this.shadowRoot!.getElementById('adminLink') as HTMLAnchorElement;
     this.accountChip = this.shadowRoot!.getElementById('accountChip') as HTMLButtonElement;
     this.accountEmail = this.shadowRoot!.getElementById('accountEmail') as HTMLElement;
     this.accountChevron = this.shadowRoot!.getElementById('accountChevron') as HTMLElement;
@@ -173,25 +139,10 @@ export class PmNavBar extends HTMLElement {
     window.removeEventListener('hashchange', this.updateVisibility);
   }
 
+  // Navigation belongs to the sidebar alone; the nav bar carries the brand and
+  // the account chip and nothing that navigates between screens.
   private updateVisibility = (): void => {
     const authed = isAuthenticated();
-    const isAdmin = authed && hasRole('Admin');
-    const isTeacherOrAdmin = authed && hasAnyRole(['Teacher', 'Admin']);
-    const isCoordinatorOrAdmin = authed && hasAnyRole(['Coordinator', 'Admin']);
-    const basePath = window.location.hash.slice(1).split('?')[0];
-    const activeSection = updateActiveNavSection(basePath);
-
-    this.sections!.hidden = !authed;
-    // A Coordinator who is not also a Teacher can reach the Students section,
-    // but only its relationship-maintenance screen — so the entry point points
-    // straight there rather than at the roster they cannot open.
-    this.studentsLink!.hidden = !isTeacherOrAdmin && !isCoordinatorOrAdmin;
-    this.studentsLink!.href = isTeacherOrAdmin ? '#/students' : '#/students/guardian-relationships';
-    this.adminLink!.hidden = !isAdmin;
-
-    this.dashboardLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'dashboard');
-    this.studentsLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'students');
-    this.adminLink!.classList.toggle('nav-bar__section-link--active', activeSection === 'admin');
 
     this.accountChip!.hidden = !authed;
     this.accountEmail!.textContent = authed ? getEmail() : '';

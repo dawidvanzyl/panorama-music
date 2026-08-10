@@ -5,6 +5,7 @@ import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
 import { SessionsPage } from '../../../pages/identity/auth/SessionsPage';
 import { AdminUsersPage } from '../../../pages/identity/admin/AdminUsersPage';
 import { MyDetailsPage } from '../../../pages/teachers/MyDetailsPage';
+import { landingUrl } from '../../../fixtures/navigation';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -38,10 +39,10 @@ test.describe('Own sessions from the account menu', () => {
       const loginPage = new LoginPage(page);
       await loginPage.gotoLogin();
       await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Admin'));
 
-      // Any screen other than the dashboard will do — the point is that opening
-      // the dialog is not a navigation.
+      // Any screen other than the one signing in lands on will do — the point
+      // is that opening the dialog is not a navigation.
       const adminUsersPage = new AdminUsersPage(page);
       await adminUsersPage.gotoAdminUsers();
       await expect(adminUsersPage.emailInput).toBeVisible();
@@ -79,7 +80,7 @@ test.describe('Logout from the account menu', () => {
       // the account menu reads on every page.
       await loginPage.gotoLogin();
       await loginPage.login(first.email, PASSWORD);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Teacher'));
       await myDetails.open();
       await expect(myDetails.firstName()).toHaveText(first.firstName);
       await myDetails.close();
@@ -89,7 +90,7 @@ test.describe('Logout from the account menu', () => {
 
       // The second teacher signs in on the same tab, with no reload in between.
       await loginPage.login(second.email, PASSWORD);
-      await expect(page).toHaveURL(/#\/$/);
+      await expect(page).toHaveURL(landingUrl('Teacher'));
       await myDetails.open();
 
       await expect(myDetails.firstName()).toHaveText(second.firstName);

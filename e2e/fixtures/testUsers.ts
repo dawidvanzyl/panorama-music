@@ -7,6 +7,7 @@ import { AdminUsersPage, type UserRole } from '../pages/identity/admin/AdminUser
 import { StudentsPage } from '../pages/students/StudentsPage';
 import { GuardianRelationshipsPage } from '../pages/students/GuardianRelationshipsPage';
 import { TeachersPage } from '../pages/teachers/TeachersPage';
+import { landingUrl } from './navigation';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -19,7 +20,7 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(landingUrl('Admin'));
 
   const adminUsersPage = new AdminUsersPage(page);
   await adminUsersPage.gotoAdminUsers();
@@ -30,7 +31,7 @@ export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(landingUrl('Admin'));
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();
@@ -41,7 +42,7 @@ export async function goToGuardianRelationshipsPage(page: Page): Promise<Guardia
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(landingUrl('Admin'));
 
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
   await guardianRelationshipsPage.gotoGuardianRelationships();
@@ -52,7 +53,7 @@ export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(landingUrl('Admin'));
 
   const teachersPage = new TeachersPage(page);
   await teachersPage.gotoTeachers();

@@ -32,7 +32,10 @@ export class ActivityLogPage extends BasePage {
     this.applyButton = page.locator('#applyBtn');
     this.clearButton = page.locator('#clearBtn');
     this.rows = page.locator('table tbody tr');
-    this.emptyState = page.locator('#empty');
+    // Scoped to the page's own component: the account menu's Active Sessions
+    // dialog is mounted on the document and carries an `#empty` of its own, so
+    // an unscoped id matches twice and trips Playwright's strict mode.
+    this.emptyState = page.locator('pm-admin-activity-log-page #empty');
     this.nextButton = page.getByRole('button', { name: 'Next' });
     this.prevButton = page.getByRole('button', { name: 'Previous' });
     this.footerLabel = page.locator('#footerLabel');

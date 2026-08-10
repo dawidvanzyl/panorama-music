@@ -23,12 +23,80 @@ function grantRoles(...roles: string[]): void {
 
 import '../pm-sidebar';
 
-describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC12'] }, () => {
+const ALL_LINK_IDS = [
+  'userManagementLink',
+  'adminSessionsLink',
+  'activityLogLink',
+  'studentManagementLink',
+  'teachersLink',
+  'guardianRelationshipsLink',
+];
+
+/** The ids of the entries currently offered, in markup order. */
+function visibleLinkIds(el: HTMLElement): string[] {
+  return ALL_LINK_IDS.filter((id) => !(el.shadowRoot!.getElementById(id) as HTMLAnchorElement).hidden);
+}
+
+function renderOn(hash: string): void {
+  window.location.hash = hash;
+  window.dispatchEvent(new Event('hashchange'));
+}
+
+describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () => {
   let el: HTMLElement;
 
   beforeEach(() => {
     mockIsAuthenticated.mockReturnValue(true);
-    grantRoles('Teacher', 'Coordinator', 'Admin');
+    el = document.createElement('pm-sidebar');
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it.each([
+    {
+      roles: ['Admin'],
+      expected: [
+        'userManagementLink',
+        'adminSessionsLink',
+        'activityLogLink',
+        'studentManagementLink',
+        'teachersLink',
+        'guardianRelationshipsLink',
+      ],
+    },
+    { roles: ['Teacher'], expected: ['studentManagementLink'] },
+    { roles: ['Coordinator'], expected: ['teachersLink', 'guardianRelationshipsLink'] },
+    {
+      roles: ['Teacher', 'Coordinator'],
+      expected: ['studentManagementLink', 'teachersLink', 'guardianRelationshipsLink'],
+    },
+  ])('offers exactly the entries $roles permits', ({ roles, expected }) => {
+    grantRoles(...roles);
+    document.body.appendChild(el);
+
+    renderOn('#/students');
+
+    expect(visibleLinkIds(el)).toEqual(expected);
+  });
+
+  it('offers nothing at all to a user who is not signed in', () => {
+    mockIsAuthenticated.mockReturnValue(false);
+    grantRoles('Admin');
+    document.body.appendChild(el);
+
+    renderOn('#/students');
+
+    expect(visibleLinkIds(el)).toEqual([]);
+  });
+});
+
+describe('pm-sidebar — the visible set does not depend on the route', { tags: ['239UC2'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
     el = document.createElement('pm-sidebar');
     document.body.appendChild(el);
   });
@@ -37,78 +105,151 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
     document.body.removeChild(el);
   });
 
-  it('hides User Management / User Sessions while on the Dashboard section, even for an admin', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
+  // An unrelated area, a nested route, an unrecognised path and the bare root
+  // all have to agree: the old model hid entries outside their section and
+  // left a stale section active for a path it did not recognise.
+  it.each(['#/students', '#/teachers', '#/teachers/abc', '#/admin/users', '#/nowhere-at-all', '#/'])(
+    'offers an Admin the same entries on %s as everywhere else',
+    (hash) => {
+      grantRoles('Admin');
 
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
+      renderOn(hash);
 
-    expect(userManagementLink.hidden).toBe(true);
-    expect(adminSessionsLink.hidden).toBe(true);
+      expect(visibleLinkIds(el)).toEqual(ALL_LINK_IDS);
+    },
+  );
+
+  it('offers a Coordinator the same entries on an admin route as on their own', () => {
+    grantRoles('Coordinator');
+
+    renderOn('#/students/guardian-relationships');
+    const onOwnRoute = visibleLinkIds(el);
+
+    renderOn('#/admin/users');
+
+    expect(visibleLinkIds(el)).toEqual(onOwnRoute);
   });
 
-  it('shows User Management / User Sessions once inside the Admin section for an admin', () => {
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
+  it('offers the same entries when a route is reached by direct URL entry rather than navigation', () => {
+    grantRoles('Admin');
+    // A fresh element connecting on an already-set hash is what a direct URL
+    // entry looks like — no hashchange ever fires.
+    window.location.hash = '#/admin/activity-log';
+    const direct = document.createElement('pm-sidebar');
+    document.body.appendChild(direct);
 
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
+    expect(visibleLinkIds(direct)).toEqual(ALL_LINK_IDS);
 
-    expect(userManagementLink.hidden).toBe(false);
-    expect(adminSessionsLink.hidden).toBe(false);
+    document.body.removeChild(direct);
+  });
+});
+
+describe('pm-sidebar — active entry marking', { tags: ['239UC4'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    grantRoles('Admin');
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
   });
 
-  it('never shows admin links for a non-admin even inside an /admin route', () => {
-    grantRoles('Teacher');
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    expect(userManagementLink.hidden).toBe(true);
+  afterEach(() => {
+    document.body.removeChild(el);
   });
 
-  it('marks the current route link as active and clears the others', () => {
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
+  function activeLinkIds(): string[] {
+    return ALL_LINK_IDS.filter((id) =>
+      (el.shadowRoot!.getElementById(id) as HTMLAnchorElement).classList.contains('sidebar__link--active'),
+    );
+  }
 
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
+  it.each([
+    { hash: '#/students', active: 'studentManagementLink' },
+    { hash: '#/students/guardian-relationships', active: 'guardianRelationshipsLink' },
+    { hash: '#/teachers', active: 'teachersLink' },
+    { hash: '#/admin/users', active: 'userManagementLink' },
+    { hash: '#/admin/sessions', active: 'adminSessionsLink' },
+    { hash: '#/admin/activity-log', active: 'activityLogLink' },
+  ])('marks only $active on $hash', ({ hash, active }) => {
+    renderOn(hash);
 
-    expect(userManagementLink.classList.contains('sidebar__link--active')).toBe(true);
-    expect(adminSessionsLink.classList.contains('sidebar__link--active')).toBe(false);
-
-    window.location.hash = '#/admin/sessions';
-    window.dispatchEvent(new Event('hashchange'));
-
-    expect(userManagementLink.classList.contains('sidebar__link--active')).toBe(false);
-    expect(adminSessionsLink.classList.contains('sidebar__link--active')).toBe(true);
+    expect(activeLinkIds()).toEqual([active]);
   });
 
-  it('hides Student Management while on the Dashboard section, even for a teacher or admin', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
+  it('keeps the owning entry active on a route nested beneath it', () => {
+    renderOn('#/teachers/some-teacher-id');
 
-    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
-    expect(studentManagementLink.hidden).toBe(true);
+    expect(activeLinkIds()).toEqual(['teachersLink']);
+  });
+});
+
+describe('pm-sidebar — the admin group is separated from the rest', () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
   });
 
-  it('shows Student Management once inside the Students section for a teacher or admin', () => {
-    window.location.hash = '#/students';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
-    expect(studentManagementLink.hidden).toBe(false);
-    expect(studentManagementLink.classList.contains('sidebar__link--active')).toBe(true);
+  afterEach(() => {
+    document.body.removeChild(el);
   });
 
-  it('never shows Student Management for a user without Teacher or Admin, even inside the Students section', () => {
-    grantRoles();
-    window.location.hash = '#/students';
-    window.dispatchEvent(new Event('hashchange'));
+  function divider(): HTMLElement {
+    return el.shadowRoot!.getElementById('studentManagementLinkDivider') as HTMLElement;
+  }
 
-    const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
-    expect(studentManagementLink.hidden).toBe(true);
+  it('draws the rule between the admin entries and the rest for an Admin', () => {
+    grantRoles('Admin');
+
+    renderOn('#/admin/users');
+
+    expect(divider().hidden).toBe(false);
+    // The rule sits directly above the first entry of the second group.
+    expect(divider().nextElementSibling!.id).toBe('studentManagementLink');
+  });
+
+  it.each([['Teacher'], ['Coordinator']])('draws no rule for a %s, who sees only one group', (role) => {
+    grantRoles(role);
+
+    renderOn('#/students');
+
+    expect(divider().hidden).toBe(true);
+  });
+});
+
+describe('pm-sidebar — Teacher Management is offered to Admins and Coordinators only', { tags: ['239UC5'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it.each(['#/students', '#/teachers', '#/admin/users', '#/'])(
+    'offers no Teacher Management entry to a plain Teacher on %s',
+    (hash) => {
+      grantRoles('Teacher');
+
+      renderOn(hash);
+
+      expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(true);
+    },
+  );
+
+  it.each([['Coordinator'], ['Admin']])('offers the Teacher Management entry to a %s', (role) => {
+    grantRoles(role);
+
+    renderOn('#/');
+
+    expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(false);
   });
 });
 
@@ -150,7 +291,7 @@ describe('pm-sidebar — account actions are not the sidebar’s to offer', { ta
   });
 });
 
-describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['214UC7'] }, () => {
+describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['239UC1', '239UC2'] }, () => {
   let el: HTMLElement;
 
   beforeEach(() => {
@@ -169,7 +310,7 @@ describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['2
     return el.shadowRoot!.getElementById('guardianRelationshipsLink') as HTMLAnchorElement;
   }
 
-  it('shows the link inside the Students section for a Coordinator who is not a Teacher', () => {
+  it('shows the link to a Coordinator who is not a Teacher', () => {
     grantRoles('Coordinator');
 
     expect(relationshipsLinkOn('#/students/guardian-relationships').hidden).toBe(false);
@@ -188,64 +329,9 @@ describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['2
     expect(relationshipsLinkOn('#/students').hidden).toBe(true);
   });
 
-  it('hides the link outside the Students section, even for an Admin', () => {
+  it('shows the link to an Admin outside the Students area', () => {
     grantRoles('Admin');
 
-    expect(relationshipsLinkOn('#/').hidden).toBe(true);
-  });
-});
-
-describe('pm-sidebar — Teacher Management link gated by role and section', { tags: ['231UC10'] }, () => {
-  let el: HTMLElement;
-
-  beforeEach(() => {
-    mockIsAuthenticated.mockReturnValue(true);
-    el = document.createElement('pm-sidebar');
-  });
-
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
-
-  function teachersLinkOn(hash: string): HTMLAnchorElement {
-    document.body.appendChild(el);
-    window.location.hash = hash;
-    window.dispatchEvent(new Event('hashchange'));
-    return el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement;
-  }
-
-  it('shows the link inside the Students section for a Coordinator', () => {
-    grantRoles('Coordinator');
-
-    expect(teachersLinkOn('#/students').hidden).toBe(false);
-  });
-
-  it('shows the link inside the Students section for an Admin', () => {
-    grantRoles('Admin');
-
-    expect(teachersLinkOn('#/students').hidden).toBe(false);
-  });
-
-  it('hides the link while on the Dashboard section, even for an Admin', () => {
-    grantRoles('Admin');
-
-    expect(teachersLinkOn('#/').hidden).toBe(true);
-  });
-
-  it('hides the link from a Teacher who is neither Coordinator nor Admin', () => {
-    grantRoles('Teacher');
-
-    expect(teachersLinkOn('#/students').hidden).toBe(true);
-  });
-
-  // A /teachers route maps to the Students section, so navigating straight to
-  // it must keep the link visible rather than hiding the entry point the user
-  // just used.
-  it('stays visible and marks itself active while on a /teachers route', () => {
-    grantRoles('Admin');
-
-    const link = teachersLinkOn('#/teachers');
-    expect(link.hidden).toBe(false);
-    expect(link.classList.contains('sidebar__link--active')).toBe(true);
+    expect(relationshipsLinkOn('#/admin/users').hidden).toBe(false);
   });
 });

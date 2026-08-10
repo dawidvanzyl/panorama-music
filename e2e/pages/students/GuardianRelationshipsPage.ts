@@ -13,7 +13,10 @@ export class GuardianRelationshipsPage extends BasePage {
     this.createButton = page.locator('#createBtn');
     this.relationshipForm = page.locator('#form');
     this.relationshipList = page.locator('#list');
-    this.errorBanner = page.locator('#error');
+    // Scoped to the page's own component: the account menu's Active Sessions
+    // dialog is mounted on the document and carries an `#error` of its own, so
+    // an unscoped id matches twice and trips Playwright's strict mode.
+    this.errorBanner = page.locator('pm-guardian-relationships-page #error');
     this.deleteModal = page.locator('#deleteModal');
   }
 

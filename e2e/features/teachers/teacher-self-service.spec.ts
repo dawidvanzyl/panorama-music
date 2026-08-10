@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures/base';
 import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { MyDetailsPage } from '../../pages/teachers/MyDetailsPage';
+import { landingUrl } from '../../fixtures/navigation';
 
 const PASSWORD = 'TeacherSelfServicePass123!';
 const ACCOUNT_NUMBER = '1122334455';
@@ -40,7 +41,7 @@ async function signInAsLinkedTeacher(
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(email, PASSWORD);
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(landingUrl('Teacher'));
 
   return { email, firstName, surname };
 }
@@ -124,7 +125,7 @@ test.describe('A linked teacher maintains their own record', { tag: ['@7IT12'] }
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     const myDetails = new MyDetailsPage(page);
     await expect(myDetails.accountChip).toBeVisible();

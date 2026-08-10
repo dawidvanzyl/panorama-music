@@ -3,7 +3,7 @@ import { uniqueTestEmail, createRegisteredUser } from '../../../fixtures/testUse
 import { waitForPasswordResetLink } from '../../../fixtures/mailbox';
 import { extractTokenFromUrl } from '../../../fixtures/url';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
-import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
+import { landingUrl } from '../../../fixtures/navigation';
 import { ForgotPasswordPage } from '../../../pages/identity/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../../../pages/identity/auth/ResetPasswordPage';
 
@@ -48,11 +48,9 @@ test.describe('Identity Request Validation', () => {
       await expect(page).toHaveURL(/#\/login$/);
 
       const loginPage = new LoginPage(page);
-      const dashboardPage = new DashboardPage(page);
       await loginPage.login(email, NEW_PASSWORD);
 
-      await expect(page).toHaveURL(/#\/$/);
-      await expect(dashboardPage.heading).toBeVisible();
+      await expect(page).toHaveURL(landingUrl('Teacher'));
     }
   );
 });
