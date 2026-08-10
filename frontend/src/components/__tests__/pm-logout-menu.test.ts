@@ -57,4 +57,35 @@ describe('account chip — Logout ends the session and returns to the login scre
 
     expect(window.location.hash).toBe('#/login');
   });
+
+  it('still returns to the login screen when the logout request fails', async () => {
+    // `logout()` clears the tokens in a `finally` before rethrowing, so the
+    // session is over either way — staying put would strand the user on an
+    // authenticated screen with no session.
+    mockLogout.mockRejectedValue(new Error('network down'));
+
+    (el.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement).click();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(window.location.hash).toBe('#/login');
+  });
+
+  it('ignores a second click while the first logout is still in flight', async () => {
+    let endSession: (() => void) | undefined;
+    mockLogout.mockReturnValue(
+      new Promise<void>((resolve) => {
+        endSession = resolve;
+      }),
+    );
+
+    const logoutBtn = el.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
+    logoutBtn.click();
+    logoutBtn.click();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+
+    endSession!();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  });
 });

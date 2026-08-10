@@ -30,7 +30,10 @@ export class SessionsPage extends BasePage {
 
   /** Opens the dialog from the account menu, whatever page the user is on. */
   async openSessions(): Promise<void> {
-    await this.accountChip.click();
+    // The chip toggles, so clicking it with the menu already open would close it.
+    if (!(await this.accountMenu.isVisible())) {
+      await this.accountChip.click();
+    }
     await this.sessionsItem.click();
     // The host element wraps a fixed-position backdrop and so has no geometry
     // of its own; the card inside it is what actually becomes visible.

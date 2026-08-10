@@ -89,8 +89,8 @@ export class PmOwnSessionsMenu extends HTMLElement {
   }
 
   /** The mounted dialog, for tests and for anything that needs to drive it directly. */
-  get dialogHost(): HTMLElement {
-    return this.dialogHostElement!;
+  get dialogHost(): HTMLElement | null {
+    return this.dialogHostElement;
   }
 
   private mountDialog(): void {

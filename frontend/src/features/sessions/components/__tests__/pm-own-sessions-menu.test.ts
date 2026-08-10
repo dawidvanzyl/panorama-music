@@ -56,8 +56,15 @@ function openBtnOf(el: PmOwnSessionsMenu): HTMLButtonElement {
   return el.shadowRoot!.getElementById('openBtn') as HTMLButtonElement;
 }
 
+/** The mounted dialog host, which only exists while the menu item is connected. */
+function hostOf(el: PmOwnSessionsMenu): HTMLElement {
+  const host = el.dialogHost;
+  if (!host) throw new Error('the dialog host is not mounted');
+  return host;
+}
+
 function modalOf(el: PmOwnSessionsMenu): PmOwnSessionsModal {
-  return el.dialogHost.querySelector('#modal') as unknown as PmOwnSessionsModal;
+  return hostOf(el).querySelector('#modal') as unknown as PmOwnSessionsModal;
 }
 
 function tableOf(modal: PmOwnSessionsModal): PmSessionsTable {
@@ -110,8 +117,8 @@ describe('account chip — Active Sessions opens a dialog mounted on the documen
   it('mounts the dialog on the document rather than inside the menu item', () => {
     // The dropdown closes on the very click that opens the dialog, so a dialog
     // nested inside it would be hidden along with it.
-    expect(el.dialogHost.parentElement).toBe(document.body);
-    expect(el.contains(el.dialogHost)).toBe(false);
+    expect(hostOf(el).parentElement).toBe(document.body);
+    expect(el.contains(hostOf(el))).toBe(false);
     expect(el.shadowRoot!.querySelector('pm-own-sessions-modal')).toBeNull();
   });
 
@@ -129,10 +136,11 @@ describe('account chip — Active Sessions opens a dialog mounted on the documen
   });
 
   it('removes the mounted dialog when the menu item leaves the page', () => {
-    const host = el.dialogHost;
+    const host = hostOf(el);
     document.body.removeChild(el);
 
     expect(host.isConnected).toBe(false);
+    expect(el.dialogHost).toBeNull();
 
     document.body.appendChild(el);
   });

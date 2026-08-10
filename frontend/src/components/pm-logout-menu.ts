@@ -53,6 +53,7 @@ template.innerHTML = `
  */
 export class PmLogoutMenu extends HTMLElement {
   private logoutBtn: HTMLButtonElement | null = null;
+  private logoutPending = false;
 
   constructor() {
     super();
@@ -70,9 +71,24 @@ export class PmLogoutMenu extends HTMLElement {
     this.logoutBtn?.removeEventListener('click', this.handleLogout);
   }
 
+  // `logout()` rethrows a failed request after its `finally { clearTokens() }`,
+  // so the session is over either way and the login screen is where the user
+  // belongs on both paths. The in-flight guard keeps a double-click from
+  // issuing a second POST /logout.
   private handleLogout = async (): Promise<void> => {
-    await logout();
-    window.location.hash = '#/login';
+    if (this.logoutPending) return;
+    this.logoutPending = true;
+    this.logoutBtn!.disabled = true;
+    try {
+      await logout();
+    } catch {
+      // Swallowed deliberately: the tokens are already gone, so there is
+      // nothing to retry and nothing useful to say on the way out.
+    } finally {
+      window.location.hash = '#/login';
+      this.logoutPending = false;
+      this.logoutBtn!.disabled = false;
+    }
   };
 }
 
