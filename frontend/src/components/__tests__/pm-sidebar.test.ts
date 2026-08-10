@@ -3,7 +3,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const mockIsAuthenticated = vi.fn();
 vi.mock('../../services/auth', () => ({
   isAuthenticated: () => mockIsAuthenticated(),
-  logout: vi.fn(),
 }));
 
 // Both stubs receive the roles they were asked about, so a test can grant a
@@ -21,14 +20,6 @@ function grantRoles(...roles: string[]): void {
   mockHasRole.mockImplementation((role: string) => roles.includes(role));
   mockHasAnyRole.mockImplementation((asked: string[]) => asked.some((role) => roles.includes(role)));
 }
-
-vi.mock('../../features/admin/services/admin', () => ({
-  clearUsersCache: vi.fn(),
-}));
-
-vi.mock('../../features/students/services/students', () => ({
-  clearStudentsCache: vi.fn(),
-}));
 
 import '../pm-sidebar';
 
@@ -68,51 +59,6 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
     expect(adminSessionsLink.hidden).toBe(false);
   });
 
-  it('keeps User Management / User Sessions visible when navigating to Active Sessions from the Admin section', () => {
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
-
-    window.location.hash = '#/sessions';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
-
-    expect(userManagementLink.hidden).toBe(false);
-    expect(adminSessionsLink.hidden).toBe(false);
-  });
-
-  it('keeps User Management / User Sessions hidden when navigating to Active Sessions from Dashboard', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-
-    window.location.hash = '#/sessions';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
-
-    expect(userManagementLink.hidden).toBe(true);
-    expect(adminSessionsLink.hidden).toBe(true);
-  });
-
-  it('always shows Active Sessions and Logout regardless of section', () => {
-    window.location.hash = '#/';
-    window.dispatchEvent(new Event('hashchange'));
-
-    const sessionsLink = el.shadowRoot!.getElementById('sessionsLink') as HTMLAnchorElement;
-    const logoutBtn = el.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
-
-    expect(sessionsLink.hidden).toBe(false);
-    expect(logoutBtn.hidden).toBe(false);
-
-    window.location.hash = '#/admin/users';
-    window.dispatchEvent(new Event('hashchange'));
-
-    expect(sessionsLink.hidden).toBe(false);
-    expect(logoutBtn.hidden).toBe(false);
-  });
-
   it('never shows admin links for a non-admin even inside an /admin route', () => {
     grantRoles('Teacher');
     window.location.hash = '#/admin/users';
@@ -128,17 +74,15 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
 
     const userManagementLink = el.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
     const adminSessionsLink = el.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
-    const sessionsLink = el.shadowRoot!.getElementById('sessionsLink') as HTMLAnchorElement;
 
     expect(userManagementLink.classList.contains('sidebar__link--active')).toBe(true);
     expect(adminSessionsLink.classList.contains('sidebar__link--active')).toBe(false);
-    expect(sessionsLink.classList.contains('sidebar__link--active')).toBe(false);
 
-    window.location.hash = '#/sessions';
+    window.location.hash = '#/admin/sessions';
     window.dispatchEvent(new Event('hashchange'));
 
     expect(userManagementLink.classList.contains('sidebar__link--active')).toBe(false);
-    expect(sessionsLink.classList.contains('sidebar__link--active')).toBe(true);
+    expect(adminSessionsLink.classList.contains('sidebar__link--active')).toBe(true);
   });
 
   it('hides Student Management while on the Dashboard section, even for a teacher or admin', () => {
@@ -165,6 +109,44 @@ describe('pm-sidebar — admin links gated by active section', { tags: ['M1.4UC1
 
     const studentManagementLink = el.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
     expect(studentManagementLink.hidden).toBe(true);
+  });
+});
+
+describe('pm-sidebar — account actions are not the sidebar’s to offer', { tags: ['247UC3'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    grantRoles('Teacher', 'Coordinator', 'Admin');
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it.each(['#/', '#/students', '#/admin/users'])(
+    'offers neither Active Sessions nor Logout on %s, for a user holding every role',
+    (hash) => {
+      window.location.hash = hash;
+      window.dispatchEvent(new Event('hashchange'));
+
+      expect(el.shadowRoot!.getElementById('sessionsLink')).toBeNull();
+      expect(el.shadowRoot!.getElementById('logoutBtn')).toBeNull();
+      expect(el.shadowRoot!.textContent).not.toContain('Logout');
+      expect(el.shadowRoot!.textContent).not.toContain('Active Sessions');
+    },
+  );
+
+  it('keeps no account group in its markup', () => {
+    expect(el.shadowRoot!.querySelector('.sidebar__bottom')).toBeNull();
+  });
+
+  it('links nowhere near the removed /sessions route', () => {
+    const hrefs = Array.from(el.shadowRoot!.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+
+    expect(hrefs).not.toContain('#/sessions');
   });
 });
 

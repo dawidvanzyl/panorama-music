@@ -62,6 +62,11 @@ export class MyDetailsPage extends BasePage {
     await this.modal.locator('.modal__card').waitFor({ state: 'visible' });
   }
 
+  async close(): Promise<void> {
+    await this.modal.locator('#closeBtn').click();
+    await this.modal.locator('.modal__card').waitFor({ state: 'hidden' });
+  }
+
   async editNames(firstName: string, surname: string): Promise<void> {
     await this.editButton.click();
     await this.editForm.locator('#firstName').fill(firstName);
