@@ -174,16 +174,36 @@ requirement will land, without having written a single line yet.
 - Run frontend checks (lint, typecheck, vitest) if story has frontend scope.
 - Fix all failures before proceeding.
 
-### 5) Verify implementation
+### 5) Verify implementation (gauntlet loop)
 
-- Invoke the `verify-implementation` skill.
-- Allow `verify-implementation` to capture the working tree diff, read
-  standards, run automated checks, review code, and present its report
-  independently.
-- After `verify-implementation` completes, the user will have chosen one of:
-  - Dismiss report and proceed — move to step 6.
-  - Fix specific items — verify re-runs until resolved.
-- Do not proceed to step 6 until the verify step is resolved.
+Commit your work before verifying. Then run up to **3** verify cycles.
+
+For each cycle, invoke `verify-implementation` in a sub-agent, passing:
+
+- `issue_number`
+- `base_branch`
+- `mode: subagent`
+- `cycle` — 1, 2, or 3
+- `prev_verify_sha` — the `VERIFIED_SHA` from the previous cycle (omit on
+  cycle 1)
+- `prev_report` — the previous cycle's report (omit on cycle 1)
+
+Act on the verdict:
+
+- **`PASS`** — proceed to step 6. Warnings are advisory; address any you agree
+  with, or leave them.
+- **`BLOCKED (n)`** — for each blocker, either fix it and commit, or mark it
+  invalid with a reason. Carry both into the next cycle's `prev_report` — fixed
+  items so verify can confirm them, invalid items annotated
+  `INVALID: {reason}` so verify can adjudicate. Do not mark an item invalid to
+  avoid work; the reason must cite the issue, the codebase, or a standards doc.
+- **`NEEDS_HUMAN (n)`** — stop. Present the open questions and disputed
+  findings to the developer. Once the developer rules, record the decision as
+  `RESOLVED_BY: developer` in `prev_report`, apply any required fix, and resume
+  the loop. Settled items are never re-raised.
+
+If cycle 3 does not return `PASS`, stop and hand the outstanding report to the
+developer. Do not proceed to step 6.
 
 ### 6) Open PR
 
@@ -217,4 +237,8 @@ requirement will land, without having written a single line yet.
   Constraints` without raising it with the user first.
 - Never implement outside `## Functional Requirements` / `## Out of Scope`.
 - Never assume missing information.
+- The verify loop is capped at 3 cycles. `implement-issue` owns the count;
+  `verify-implementation` is stateless.
+- Never dismiss a verify blocker silently. Fix it, or mark it invalid with a
+  cited reason and let verify adjudicate.
 - Keep communication concise and actionable.
