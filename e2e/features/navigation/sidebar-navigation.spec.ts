@@ -3,6 +3,7 @@ import { uniqueTestEmail, createRegisteredUser } from '../../fixtures/testUsers'
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import {
   SIDEBAR_ENTRIES,
+  escapeRegExp,
   landingUrl,
   permittedEntries,
   sidebarEntry,
@@ -63,7 +64,7 @@ test.describe('Sidebar navigation is gated by role alone', { tag: '@239IT1' }, (
       // direct URL entry: the offered set may not vary between them.
       for (const entry of permitted) {
         await page.goto(`/#${entry.path}`);
-        await expect(page).toHaveURL(new RegExp(entry.path.replace(/\//g, '\\/') + '$'));
+        await expect(page).toHaveURL(new RegExp(escapeRegExp(entry.path) + '$'));
         await expectExactlyPermittedEntries(page, roles);
         await expect(sidebarEntry(page, entry.id)).toHaveClass(/sidebar__link--active/);
       }

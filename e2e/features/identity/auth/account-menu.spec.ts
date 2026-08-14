@@ -24,7 +24,7 @@ async function createLinkedTeacher(
 
   const teachersPage = await goToTeachersPage(page);
   const firstName = `E2E-${label}`;
-  const surname = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const surname = `${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
   await teachersPage.createTeacher({ firstName, surname, linkedAccountEmail: email });
   await expect(teachersPage.row(`${firstName} ${surname}`)).toBeVisible();
 

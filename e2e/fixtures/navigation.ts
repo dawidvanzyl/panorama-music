@@ -35,10 +35,15 @@ export function permittedEntries(...roles: UserRole[]): SidebarEntry[] {
   return SIDEBAR_ENTRIES.filter((entry) => entry.roles.some((role) => roles.includes(role)));
 }
 
+/** Escapes all regex metacharacters so a literal path can be embedded in a RegExp. */
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** The URL a user holding these roles reaches after signing in. */
 export function landingUrl(...roles: UserRole[]): RegExp {
   const landing = permittedEntries(...roles)[0];
-  return new RegExp('#' + landing.path.replace(/\//g, '\\/') + '$');
+  return new RegExp('#' + escapeRegExp(landing.path) + '$');
 }
 
 export function sidebarEntry(page: Page, id: string): Locator {
