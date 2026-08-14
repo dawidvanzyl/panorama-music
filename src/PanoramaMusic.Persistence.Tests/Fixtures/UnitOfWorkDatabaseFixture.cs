@@ -34,8 +34,7 @@ namespace PanoramaMusic.Persistence.Tests.Fixtures;
 /// </summary>
 public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 {
-	private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-		.WithImage("postgres:16")
+	private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16")
 		.Build();
 
 	public string ApplicationConnectionString { get; private set; } = string.Empty;
