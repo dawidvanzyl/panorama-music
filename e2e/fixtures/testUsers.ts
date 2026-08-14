@@ -13,7 +13,7 @@ const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
 
 export function uniqueTestEmail(label: string): string {
-  return `e2e-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@panorama-music.qa`;
+  return `e2e-${label}-${Date.now()}-${crypto.randomUUID()}@panorama-music.qa`;
 }
 
 export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
