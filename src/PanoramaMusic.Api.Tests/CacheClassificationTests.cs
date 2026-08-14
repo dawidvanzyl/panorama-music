@@ -67,6 +67,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// Relationship types are a reference lookup; the count is an aggregate. Neither
 		// identifies anybody.
 		["GetGuardianRelationships"] = CacheExpectation.Cacheable,
+		["GetLessonStructures"] = CacheExpectation.Cacheable,
 		["CreateGuardianRelationship"] = CacheExpectation.Cacheable,
 		["RenameGuardianRelationship"] = CacheExpectation.Cacheable,
 		["CountGuardianRelationship"] = CacheExpectation.Cacheable,

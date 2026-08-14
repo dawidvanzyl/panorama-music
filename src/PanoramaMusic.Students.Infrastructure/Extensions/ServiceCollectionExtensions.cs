@@ -5,6 +5,7 @@ using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
+using PanoramaMusic.Students.Application.Handlers.LessonStructures;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Interfaces;
@@ -46,6 +47,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IGuardianRepository, GuardianRepository>();
 		services.AddTransient<IStudentGuardianRepository, StudentGuardianRepository>();
 		services.AddTransient<IGuardianRelationshipRepository, GuardianRelationshipRepository>();
+		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -69,6 +71,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<RenameGuardianRelationshipHandler>();
 		services.AddTransient<DeleteGuardianRelationshipHandler>();
 		services.AddTransient<CountGuardianRelationshipHandler>();
+		services.AddTransient<GetLessonStructuresHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
