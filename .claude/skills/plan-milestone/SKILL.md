@@ -182,7 +182,12 @@ This file is the ONLY source of truth for sub-issue structure. It must record,
 per sub-issue:
 
 * Proposed title (without milestone prefix yet)
-* Proposed labels
+* Proposed labels — chosen **only** from labels that already exist in the
+  repository. Run `gh label list --json name` and take the label set of two or
+  three comparable recent issues (`gh issue list --state all --json
+  number,title,labels`) as the pattern to follow; match their granularity
+  rather than inventing a coarser umbrella name. Step 4 refuses to create
+  labels, so a name invented here becomes a blocked hand-off later.
 * Blocking relationships / dependencies
 * Whether it has testable behaviour (or is flagged empty)
 
@@ -384,10 +389,30 @@ epic only (Step 6).
 
 ## 3.5 Approval Loop
 
-For each sub-issue, present the full drafted body to the user exactly as it
-will appear on GitHub, then ask:
+Drafts are reviewed **on disk, never pasted into the conversation**. Issue
+bodies run to hundreds of lines; echoing each revision of each sub-issue burns
+the context this workflow needs for the phases that follow.
 
-> "Does this look correct, or do you have changes?"
+For each sub-issue:
+
+1. Write the full snapshot to `issues/{id}/draft-vN.md` **before** saying
+   anything about it.
+2. Give the user the absolute path to that file and ask:
+
+   > "Does this look correct, or do you have changes?"
+
+3. Alongside the path, add a short summary — a few lines at most:
+   * what the story covers, in one sentence
+   * any judgement call worth the user's attention: an assumption made where
+     the inputs were silent, a conflict found between the inputs and the
+     current source, or a place where a design reference and the brief
+     disagree
+   * nothing else — no section-by-section recap, no restating requirements
+     that are in the file
+
+Never render the drafted body, or excerpts of it, into the conversation. If
+the user asks about a specific part, answer the question rather than quoting
+the section back.
 
 Wait for the user's response, then proceed according to one of:
 
@@ -401,15 +426,28 @@ Wait for the user's response, then proceed according to one of:
 ### MODIFY
 
 * incorporate all feedback
-* generate new full snapshot version
-* store as draft-vN.md
-* re-present full issue body
+* generate a new full snapshot version, stored as `draft-vN.md`
+* propagate the feedback to every artifact it touches, not just the draft in
+  hand — `00-skeleton.md`, the affected `test-intents.json`, `ui.md`, and any
+  later sub-issue carrying the same assumption. A role change, a renamed
+  screen, or a new filter is rarely confined to one file.
+* re-present per the numbered steps above: path plus a short note naming only
+  what changed
 * repeat 3.5 until approved
 
 ### CLARIFY
 
 * ask one question
 * no file changes
+
+### Verifying a suggestion before adopting it
+
+When the user proposes a technical approach, check it against the current
+source before writing it into a draft. If the codebase already settles the
+question, say so with the evidence — file and line — recommend the option
+that matches what is there, and let the user decide. Adopting a suggestion
+that quietly contradicts an established convention costs more to unwind later
+than the question costs to ask now.
 
 ---
 
@@ -425,11 +463,22 @@ Step 3 is complete only when:
 
 Only after ALL approved:
 
-* **Pre-flight: verify all labels exist on GitHub.**
-  * Scan all `final.md` sub-issue bodies and collect every unique label.
+* **Pre-flight: verify every planned label already exists on GitHub.**
+  * Collect every unique label across the sub-issues from `00-skeleton.md`.
   * Run `gh label list --json name` and parse the existing labels.
-  * For any missing label, notify and create it:
-    `gh label create "<name>"`
+  * Every planned label must match an existing one exactly. A label that does
+    not exist is a planning error, not a gap to fill — it almost always means
+    a coarser or invented name was chosen over the taxonomy the repo already
+    uses (e.g. a single `layer: backend` where the repo distinguishes
+    `layer: domain`, `layer: application`, `layer: api`, `layer: db`,
+    `layer: infrastructure`).
+  * On any mismatch, stop and resolve it with the user before creating
+    anything: show the unmatched label alongside the closest existing labels
+    and the sets used by comparable recent issues, and recommend a
+    replacement drawn from what exists. Never run `gh label create` on your
+    own initiative — create a label only if the user explicitly asks for it.
+  * Correct `00-skeleton.md` and the manifest to the agreed labels before
+    proceeding, so the artifacts match what is actually applied.
 * Create issues via `gh issue create` — iterate over the `final.md` bodies in
   order:
   * Run `gh issue create` with `--title`, `--milestone "{milestone_title}"`

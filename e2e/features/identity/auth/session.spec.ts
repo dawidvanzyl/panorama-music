@@ -2,20 +2,24 @@ import { test, expect } from '../../../fixtures/base';
 import { uniqueTestEmail, createRegisteredUser, goToAdminUsersPage } from '../../../fixtures/testUsers';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
 import { DashboardPage } from '../../../pages/identity/auth/DashboardPage';
+import { landingUrl } from '../../../fixtures/navigation';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
 
 test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
-  test('logs in with valid credentials and reaches the dashboard', async ({ page }) => {
+  test('logs in with valid credentials and lands on the topmost entry their role permits', async ({ page }) => {
     const loginPage = new LoginPage(page);
     const dashboardPage = new DashboardPage(page);
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Admin'));
+    // Logout now lives behind the account chip, so the chip is what says the
+    // session is live; the button itself is only rendered once it is opened.
+    await expect(dashboardPage.accountChip).toBeVisible();
+    await dashboardPage.accountChip.click();
     await expect(dashboardPage.logoutButton).toBeVisible();
   });
 
@@ -53,7 +57,7 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Admin'));
 
     await dashboardPage.logout();
     await expect(page).toHaveURL(/#\/login$/);
@@ -70,7 +74,7 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Admin'));
 
     // Simulate the 15-minute access token lifetime elapsing while the real,
     // DB-backed refresh token (7-day lifetime) remains valid — waiting out
@@ -80,12 +84,11 @@ test.describe('Session Flow', { tag: '@M1.2IT1' }, () => {
     });
 
     // Reload so the router re-evaluates auth state from scratch — a plain
-    // goto() back to the same '#/' hash would be a no-op (no hashchange).
+    // goto() back to the same hash would be a no-op (no hashchange).
     await page.reload();
 
-    await expect(page).toHaveURL(/#\/$/);
-    await expect(dashboardPage.heading).toBeVisible();
-    await expect(dashboardPage.logoutButton).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Admin'));
+    await expect(dashboardPage.accountChip).toBeVisible();
   });
 });
 
@@ -96,7 +99,7 @@ test.describe('Token Revocation', () => {
 
     await loginPage.gotoLogin();
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(dashboardPage.heading).toBeVisible();
+    await expect(page).toHaveURL(landingUrl('Admin'));
 
     const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
 
@@ -118,10 +121,9 @@ test.describe('Token Revocation', () => {
     const userContext = await browser.newContext();
     const userPage = await userContext.newPage();
     const userLoginPage = new LoginPage(userPage);
-    const userDashboardPage = new DashboardPage(userPage);
     await userLoginPage.gotoLogin();
     await userLoginPage.login(email, password);
-    await expect(userDashboardPage.heading).toBeVisible();
+    await expect(userPage).toHaveURL(landingUrl('Teacher'));
 
     const accessToken = await userPage.evaluate(() => localStorage.getItem('pm_access_token'));
 

@@ -2,14 +2,15 @@ import './styles/global.css';
 import './components/pm-nav-bar';
 import './components/pm-sidebar';
 import './components/pm-app-footer';
+import './components/pm-logout-menu';
 import './components/pm-password-strength-indicator';
 import './features/authentication/pages/pm-login-page';
 import './features/authentication/pages/pm-registration-page';
 import './features/admin/pages/pm-admin-users-page';
 import './features/authentication/pages/pm-forgot-password-page';
 import './features/authentication/pages/pm-reset-password-page';
-import './features/sessions/pages/pm-sessions-page';
 import './features/sessions/pages/pm-admin-sessions-page';
+import './features/sessions/components/pm-own-sessions-menu';
 import './features/admin/pages/pm-admin-activity-log-page';
 import './features/students/pages/pm-students-page';
 import './features/students/pages/pm-guardian-relationships-page';
@@ -18,7 +19,12 @@ import './features/teachers/pages/pm-teacher-detail-page';
 import './features/teachers/components/pm-my-details-menu';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
+import { resolveLandingPath } from './services/nav-entries';
 
+// These guards are the enforcement point, and `NAV_ENTRIES` only decides what
+// is offered — so a path's guard here must stay no stricter than the roles the
+// matching entry is offered to, or `/` would resolve to a screen the guard
+// refuses and bounce straight back.
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
 const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
@@ -37,11 +43,12 @@ const ROUTES: Record<string, () => string> = {
   '/admin/users': () => '<pm-admin-users-page></pm-admin-users-page>',
   '/admin/sessions': () => '<pm-admin-sessions-page></pm-admin-sessions-page>',
   '/admin/activity-log': () => '<pm-admin-activity-log-page></pm-admin-activity-log-page>',
-  '/sessions': () => '<pm-sessions-page></pm-sessions-page>',
   '/students': () => '<pm-students-page></pm-students-page>',
   '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
   '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
-  '/': () => '<h1>Welcome to Panorama Music</h1><p>Dashboard coming soon.</p>',
+  // `/` renders nothing of its own — it is resolved to a landing screen below
+  // before any route lookup happens.
+  '/': () => '',
 };
 
 const TEACHER_DETAIL_PATTERN = /^\/teachers\/([^/]+)$/;
@@ -77,6 +84,18 @@ async function render(): Promise<void> {
     }
   }
 
+  // `/` is a pure redirector to the topmost sidebar entry the signed-in user's
+  // roles permit, which is also where a guard's refusal below ends up. Every
+  // user holds at least Teacher, so an unresolved landing path is unreachable;
+  // falling through to an empty shell is only there to rule out a loop.
+  if (basePath === '/') {
+    const landingPath = resolveLandingPath();
+    if (landingPath !== null) {
+      window.location.hash = '#' + landingPath;
+      return;
+    }
+  }
+
   if (ADMIN_ONLY_PATHS.has(basePath) && !hasRole('Admin')) {
     window.location.hash = '#/';
     return;
@@ -107,7 +126,11 @@ async function render(): Promise<void> {
     : // The account menu is composed into the nav bar's slot from here: the shell
       // knows which features contribute an entry, and the shared nav bar stays
       // free of any one feature's screens.
-      '<div class="pm-app-shell"><pm-nav-bar><pm-my-details-menu slot="account-menu"></pm-my-details-menu></pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
+      '<div class="pm-app-shell"><pm-nav-bar>' +
+      '<pm-my-details-menu slot="account-menu"></pm-my-details-menu>' +
+      '<pm-own-sessions-menu slot="account-menu"></pm-own-sessions-menu>' +
+      '<pm-logout-menu slot="account-menu"></pm-logout-menu>' +
+      '</pm-nav-bar><div class="pm-shell"><pm-sidebar></pm-sidebar><main>' +
       route() +
       '</main></div><pm-app-footer></pm-app-footer></div>';
 }

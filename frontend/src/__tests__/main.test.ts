@@ -7,12 +7,23 @@ vi.mock('../services/auth', () => ({
   tryRefresh: () => mockTryRefresh(),
 }));
 
+// Both stubs receive the roles they were asked about, so a test can grant a
+// specific role set (e.g. Coordinator but not Admin) rather than a single
+// blanket boolean — which matters now that where `/` lands depends on which
+// entries a user's roles permit.
 const mockHasRole = vi.fn();
+const mockHasAnyRole = vi.fn();
 vi.mock('../services/token-storage', () => ({
-  hasRole: () => mockHasRole(),
-  hasAnyRole: () => mockHasRole(),
+  hasRole: (role: string) => mockHasRole(role),
+  hasAnyRole: (roles: string[]) => mockHasAnyRole(roles),
   getEmail: () => 'test@example.com',
 }));
+
+/** Grants exactly the given roles to both role checks. */
+function grantRoles(...roles: string[]): void {
+  mockHasRole.mockImplementation((role: string) => roles.includes(role));
+  mockHasAnyRole.mockImplementation((asked: string[]) => asked.some((role) => roles.includes(role)));
+}
 
 describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }, () => {
   // main.ts pulls in component modules that call customElements.define() at
@@ -29,7 +40,7 @@ describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }
     vi.resetAllMocks();
     document.body.innerHTML = '<div id="app"></div>';
     mockIsAuthenticated.mockReturnValue(false);
-    mockHasRole.mockReturnValue(false);
+    grantRoles();
     // A public page as the neutral baseline: it skips the refresh-check
     // block entirely, so navigating to it can never trigger a stray
     // tryRefresh() call carrying over leftover mock state from a prior test.
@@ -88,9 +99,9 @@ describe('main router — persistent sidebar', { tags: ['M1.4UC12'] }, () => {
     mockIsAuthenticated.mockReturnValue(true);
   });
 
-  it('renders the sidebar alongside the nav bar on the dashboard route', async () => {
-    mockHasRole.mockReturnValue(false);
-    window.location.hash = '#/';
+  it('renders the sidebar alongside the nav bar on the students route', async () => {
+    grantRoles('Teacher');
+    window.location.hash = '#/students';
 
     await vi.waitFor(() => {
       const app = document.getElementById('app')!;
@@ -100,7 +111,7 @@ describe('main router — persistent sidebar', { tags: ['M1.4UC12'] }, () => {
   });
 
   it('renders the sidebar alongside the nav bar on the pre-existing admin users route', async () => {
-    mockHasRole.mockReturnValue(true);
+    grantRoles('Admin');
     window.location.hash = '#/admin/users';
 
     await vi.waitFor(() => {
@@ -118,12 +129,14 @@ describe('main router — Activity Log admin guard', { tags: ['M1.5UC17'] }, () 
     mockIsAuthenticated.mockReturnValue(true);
   });
 
-  it('redirects a non-admin navigating directly to the Activity Log route to / and renders no audit data', async () => {
-    mockHasRole.mockReturnValue(false);
+  it('redirects a non-admin navigating directly to the Activity Log route away and renders no audit data', async () => {
+    // A role is granted so the refusal has somewhere to resolve to: the guard
+    // still bounces to `/`, which then lands on the user's topmost entry.
+    grantRoles('Teacher');
     window.location.hash = '#/admin/activity-log';
 
     await vi.waitFor(() => {
-      expect(window.location.hash).toBe('#/');
+      expect(window.location.hash).toBe('#/students');
     });
 
     const app = document.getElementById('app')!;
@@ -131,12 +144,87 @@ describe('main router — Activity Log admin guard', { tags: ['M1.5UC17'] }, () 
   });
 
   it('allows an admin to reach the Activity Log route', async () => {
-    mockHasRole.mockReturnValue(true);
+    grantRoles('Admin');
     window.location.hash = '#/admin/activity-log';
 
     await vi.waitFor(() => {
       const app = document.getElementById('app')!;
       expect(app.innerHTML).toContain('<pm-admin-activity-log-page>');
     });
+  });
+});
+
+describe('main router — `/` resolves to the topmost permitted entry', { tags: ['239UC6', '239UC7'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it.each([
+    { roles: ['Admin'], landing: '#/admin/users' },
+    { roles: ['Teacher'], landing: '#/students' },
+    { roles: ['Coordinator'], landing: '#/teachers' },
+  ])('takes a $roles user arriving at / to $landing', async ({ roles, landing }) => {
+    grantRoles(...roles);
+    window.location.hash = '#/';
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe(landing);
+    });
+  });
+
+  it('renders no Dashboard content at any point on the way there', async () => {
+    grantRoles('Teacher');
+    const app = document.getElementById('app')!;
+    window.location.hash = '#/';
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe('#/students');
+    });
+
+    expect(app.innerHTML).not.toContain('Welcome to Panorama Music');
+    expect(app.innerHTML).not.toContain('Dashboard');
+  });
+});
+
+describe('main router — a refused route lands on the topmost permitted entry', { tags: ['239UC8'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it.each([
+    { roles: ['Teacher'], refused: '#/teachers', page: '<pm-teachers-page>', landing: '#/students' },
+    {
+      roles: ['Coordinator'],
+      refused: '#/students',
+      page: '<pm-students-page>',
+      landing: '#/teachers',
+    },
+    {
+      roles: ['Teacher'],
+      refused: '#/admin/users',
+      page: '<pm-admin-users-page>',
+      landing: '#/students',
+    },
+  ])('bounces a $roles user off $refused onto $landing', async ({ roles, refused, page, landing }) => {
+    grantRoles(...roles);
+    // A public page as the neutral baseline: without it, a case whose refused
+    // route is where the previous case landed would set an unchanged hash and
+    // no render would run at all.
+    window.location.hash = '#/login';
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-login-page>');
+    });
+
+    window.location.hash = refused;
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe(landing);
+    });
+
+    expect(document.getElementById('app')!.innerHTML).not.toContain(page);
   });
 });

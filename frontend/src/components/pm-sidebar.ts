@@ -1,6 +1,8 @@
-import { isAuthenticated, logout } from '../services/auth';
-import { hasRole, hasAnyRole } from '../services/token-storage';
-import { updateActiveNavSection } from '../services/nav-section';
+import { NAV_ENTRIES, isNavEntryActive, isNavEntryPermitted, type NavEntry } from '../services/nav-entries';
+
+function dividerId(entry: NavEntry): string {
+  return `${entry.id}Divider`;
+}
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -29,14 +31,6 @@ styles.replaceSync(`
       flex-direction: column;
       gap: 4px;
     }
-    .sidebar__bottom {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      border-top: 1px solid var(--pm-border);
-      padding-top: 12px;
-      margin-top: auto;
-    }
     .sidebar__link {
       display: flex;
       align-items: center;
@@ -58,24 +52,10 @@ styles.replaceSync(`
       font-size: 20px;
       flex-shrink: 0;
     }
-    .sidebar__logout {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      text-align: left;
-      padding: 10px 12px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: transparent;
-      color: var(--pm-danger, #e05252);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .sidebar__logout:hover {
-      background: rgba(224, 82, 82, 0.1);
+    .sidebar__divider {
+      margin: 8px 12px;
+      border: 0;
+      border-top: 1px solid var(--pm-border);
     }
   `);
 
@@ -83,53 +63,20 @@ const template = document.createElement('template');
 template.innerHTML = `
   <nav>
     <div class="sidebar__links">
-      <a href="#/students" class="sidebar__link" id="studentManagementLink" hidden>
-        <span class="sidebar__icon">group</span>
-        <span>Student Management</span>
-      </a>
-      <a href="#/teachers" class="sidebar__link" id="teachersLink" hidden>
-        <span class="sidebar__icon">school</span>
-        <span>Teacher Management</span>
-      </a>
-      <a href="#/students/guardian-relationships" class="sidebar__link" id="guardianRelationshipsLink" hidden>
-        <span class="sidebar__icon">family_restroom</span>
-        <span>Guardian Relationships</span>
-      </a>      
-      <a href="#/admin/users" class="sidebar__link" id="userManagementLink" hidden>
-        <span class="sidebar__icon">group</span>
-        <span>User Management</span>
-      </a>
-      <a href="#/admin/sessions" class="sidebar__link" id="adminSessionsLink" hidden>
-        <span class="sidebar__icon">history</span>
-        <span>User Sessions</span>
-      </a>
-      <a href="#/admin/activity-log" class="sidebar__link" id="activityLogLink" hidden>
-        <span class="sidebar__icon">receipt_long</span>
-        <span>Activity Log</span>
-      </a>
-    </div>
-    <div class="sidebar__bottom">
-      <a href="#/sessions" class="sidebar__link" id="sessionsLink">
-        <span class="sidebar__icon">manage_accounts</span>
-        <span>Active Sessions</span>
-      </a>
-      <button type="button" class="sidebar__logout" id="logoutBtn">
-        <span class="sidebar__icon">logout</span>
-        <span>Logout</span>
-      </button>
+      ${NAV_ENTRIES.map(
+        (entry) => `${entry.startsGroup ? `\n      <hr class="sidebar__divider" id="${dividerId(entry)}" hidden>` : ''}
+      <a href="#${entry.path}" class="sidebar__link" id="${entry.id}" hidden>
+        <span class="sidebar__icon">${entry.icon}</span>
+        <span>${entry.label}</span>
+      </a>`,
+      ).join('')}
     </div>
   </nav>
 `;
 
 export class PmSidebar extends HTMLElement {
-  private studentManagementLink: HTMLAnchorElement | null = null;
-  private guardianRelationshipsLink: HTMLAnchorElement | null = null;
-  private teachersLink: HTMLAnchorElement | null = null;
-  private userManagementLink: HTMLAnchorElement | null = null;
-  private adminSessionsLink: HTMLAnchorElement | null = null;
-  private activityLogLink: HTMLAnchorElement | null = null;
-  private sessionsLink: HTMLAnchorElement | null = null;
-  private logoutBtn: HTMLButtonElement | null = null;
+  private links = new Map<string, HTMLAnchorElement>();
+  private dividers = new Map<string, HTMLElement>();
 
   constructor() {
     super();
@@ -139,59 +86,38 @@ export class PmSidebar extends HTMLElement {
   }
 
   connectedCallback(): void {
-    this.studentManagementLink = this.shadowRoot!.getElementById('studentManagementLink') as HTMLAnchorElement;
-    this.guardianRelationshipsLink = this.shadowRoot!.getElementById('guardianRelationshipsLink') as HTMLAnchorElement;
-    this.teachersLink = this.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement;
-    this.userManagementLink = this.shadowRoot!.getElementById('userManagementLink') as HTMLAnchorElement;
-    this.adminSessionsLink = this.shadowRoot!.getElementById('adminSessionsLink') as HTMLAnchorElement;
-    this.activityLogLink = this.shadowRoot!.getElementById('activityLogLink') as HTMLAnchorElement;
-    this.sessionsLink = this.shadowRoot!.getElementById('sessionsLink') as HTMLAnchorElement;
-    this.logoutBtn = this.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
+    for (const entry of NAV_ENTRIES) {
+      this.links.set(entry.id, this.shadowRoot!.getElementById(entry.id) as HTMLAnchorElement);
+      if (entry.startsGroup) {
+        this.dividers.set(entry.id, this.shadowRoot!.getElementById(dividerId(entry)) as HTMLElement);
+      }
+    }
 
-    this.logoutBtn.addEventListener('click', this.handleLogout);
     this.updateVisibility();
     window.addEventListener('hashchange', this.updateVisibility);
   }
 
   disconnectedCallback(): void {
-    this.logoutBtn?.removeEventListener('click', this.handleLogout);
     window.removeEventListener('hashchange', this.updateVisibility);
   }
 
   private updateVisibility = (): void => {
     const basePath = window.location.hash.slice(1).split('?')[0];
-    const activeSection = updateActiveNavSection(basePath);
 
-    const showAdminLinks = isAuthenticated() && hasRole('Admin') && activeSection === 'admin';
-    const showStudentLinks = isAuthenticated() && hasAnyRole(['Teacher', 'Admin']) && activeSection === 'students';
-    const showRelationshipLinks =
-      isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
-    const showTeachersLink = isAuthenticated() && hasAnyRole(['Coordinator', 'Admin']) && activeSection === 'students';
-    this.studentManagementLink!.hidden = !showStudentLinks;
-    this.guardianRelationshipsLink!.hidden = !showRelationshipLinks;
-    this.teachersLink!.hidden = !showTeachersLink;
-    this.userManagementLink!.hidden = !showAdminLinks;
-    this.adminSessionsLink!.hidden = !showAdminLinks;
-    this.activityLogLink!.hidden = !showAdminLinks;
+    for (const entry of NAV_ENTRIES) {
+      const link = this.links.get(entry.id)!;
+      link.hidden = !isNavEntryPermitted(entry);
+      link.classList.toggle('sidebar__link--active', isNavEntryActive(entry, basePath));
+    }
 
-    this.studentManagementLink!.classList.toggle('sidebar__link--active', basePath === '/students');
-    this.guardianRelationshipsLink!.classList.toggle(
-      'sidebar__link--active',
-      basePath === '/students/guardian-relationships',
-    );
-    this.teachersLink!.classList.toggle('sidebar__link--active', basePath.startsWith('/teachers'));
-    this.userManagementLink!.classList.toggle('sidebar__link--active', basePath === '/admin/users');
-    this.adminSessionsLink!.classList.toggle('sidebar__link--active', basePath === '/admin/sessions');
-    this.activityLogLink!.classList.toggle('sidebar__link--active', basePath === '/admin/activity-log');
-    this.sessionsLink!.classList.toggle('sidebar__link--active', basePath === '/sessions');
-  };
-
-  private handleLogout = async (): Promise<void> => {
-    // The session caches are cleared by clearTokens(), which logout() reaches
-    // on every path — the same clearing a session expiry gets.
-    await logout();
-    this.updateVisibility();
-    window.location.hash = '#/login';
+    // A rule only earns its place with something offered on both sides of it,
+    // so a user who sees only one group is shown no divider at all.
+    for (const [id, divider] of this.dividers) {
+      const index = NAV_ENTRIES.findIndex((entry) => entry.id === id);
+      const above = NAV_ENTRIES.slice(0, index).some(isNavEntryPermitted);
+      const below = NAV_ENTRIES.slice(index).some(isNavEntryPermitted);
+      divider.hidden = !above || !below;
+    }
   };
 }
 

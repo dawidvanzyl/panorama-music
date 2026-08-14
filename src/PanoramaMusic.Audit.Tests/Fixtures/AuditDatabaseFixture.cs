@@ -18,8 +18,7 @@ public sealed class AuditDatabaseFixture : IAsyncLifetime
 
 	public AuditDatabaseFixture()
 	{
-		_postgres = new PostgreSqlBuilder()
-			.WithImage("postgres:16")
+		_postgres = new PostgreSqlBuilder("postgres:16")
 			.Build();
 	}
 

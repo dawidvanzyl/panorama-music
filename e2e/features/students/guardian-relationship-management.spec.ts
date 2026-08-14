@@ -7,6 +7,7 @@ import {
 } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { GuardianRelationshipsPage } from '../../pages/students/GuardianRelationshipsPage';
+import { landingUrl } from '../../fixtures/navigation';
 
 function uniqueRelationshipName(label: string): string {
   return `E2E-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -118,12 +119,13 @@ test.describe('Guardian Relationship Management', { tag: ['@6IT8'] }, () => {
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(teacherEmail, password);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
-    // The route itself is closed to a Teacher, who is bounced back to the dashboard.
+    // The route itself is closed to a Teacher, who is bounced back via `/` to
+    // the topmost entry their own role permits.
     const relationshipsPage = new GuardianRelationshipsPage(page);
     await relationshipsPage.gotoGuardianRelationships();
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     // The endpoints themselves reject the Teacher too. Issued from inside the page
     // so the request carries the signed-in Teacher's bearer token — page.request

@@ -2,7 +2,6 @@ import { type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 
 export class GuardianRelationshipsPage extends BasePage {
-  readonly createButton: Locator;
   readonly relationshipForm: Locator;
   readonly relationshipList: Locator;
   readonly errorBanner: Locator;
@@ -10,10 +9,12 @@ export class GuardianRelationshipsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.createButton = page.locator('#createBtn');
     this.relationshipForm = page.locator('#form');
     this.relationshipList = page.locator('#list');
-    this.errorBanner = page.locator('#error');
+    // Scoped to the page's own component: the account menu's Active Sessions
+    // dialog is mounted on the document and carries an `#error` of its own, so
+    // an unscoped id matches twice and trips Playwright's strict mode.
+    this.errorBanner = page.locator('pm-guardian-relationships-page #error');
     this.deleteModal = page.locator('#deleteModal');
   }
 
@@ -26,7 +27,6 @@ export class GuardianRelationshipsPage extends BasePage {
   }
 
   async createRelationship(name: string): Promise<void> {
-    await this.createButton.click();
     await this.relationshipForm.locator('#name').fill(name);
     await this.relationshipForm.locator('#saveBtn').click();
   }

@@ -3,6 +3,7 @@ import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../f
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeachersPage } from '../../pages/teachers/TeachersPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
+import { landingUrl } from '../../fixtures/navigation';
 
 const PASSWORD = 'TeacherBankingPass123!';
 const ACCOUNT_NUMBER = '1234567890';
@@ -132,7 +133,7 @@ test.describe('The account number is masked and revealed only deliberately', { t
     // Wait for the post-login redirect before navigating, as every fixture
     // helper does. Without it the next navigation races the login, and the
     // app's own redirect lands part-way through the assertions below.
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Coordinator'));
 
     const coordinatorTeachers = new TeachersPage(page);
     await coordinatorTeachers.gotoTeachers();

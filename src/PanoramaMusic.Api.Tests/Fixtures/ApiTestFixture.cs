@@ -24,8 +24,7 @@ namespace PanoramaMusic.Api.Tests.Fixtures;
 /// </summary>
 public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-	private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-		.WithImage("postgres:16")
+	private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16")
 		.Build();
 
 	private readonly string _webRoot = Directory.CreateTempSubdirectory("panorama-api-tests-wwwroot-").FullName;

@@ -46,6 +46,17 @@ function formOf(el: HTMLElement): PmRelationshipForm {
   return el.shadowRoot!.getElementById('form') as unknown as PmRelationshipForm;
 }
 
+function nameInputOf(el: HTMLElement): HTMLInputElement {
+  return formOf(el).shadowRoot!.getElementById('name') as HTMLInputElement;
+}
+
+/** Drives the real form controls so the input state after submit can be asserted. */
+async function submitCreateForm(el: HTMLElement, name: string): Promise<void> {
+  nameInputOf(el).value = name;
+  formOf(el).shadowRoot!.getElementById('saveBtn')!.dispatchEvent(new MouseEvent('click'));
+  await flush();
+}
+
 function deleteModalOf(el: HTMLElement): PmDeleteRelationshipModal {
   return el.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteRelationshipModal;
 }
@@ -101,34 +112,67 @@ describe('pm-guardian-relationships-page — loads the relationship types on pag
   });
 });
 
-describe('pm-guardian-relationships-page — creates a relationship type', { tags: ['214UC8'] }, () => {
+describe('pm-guardian-relationships-page — opens with the create form ready', { tags: ['240UC1'] }, () => {
   let el: HTMLElement;
-
-  beforeEach(async () => {
-    el = await mountPage();
-  });
 
   afterEach(() => {
     document.body.removeChild(el);
   });
 
-  it('submits the create form and shows the new type in the list', async () => {
-    const created: GuardianRelationship = { guardianRelationshipId: 'r3', name: 'Foster Parent' };
-    vi.mocked(createGuardianRelationship).mockResolvedValue(created);
-    mockGetGuardianRelationships.mockResolvedValue([mother, father, created]);
+  it('renders the create form on load with no reveal or cancel control', async () => {
+    el = await mountPage();
 
-    el.shadowRoot!.dispatchEvent(
-      new CustomEvent('relationship-form-submitted', {
-        bubbles: true,
-        composed: true,
-        detail: { name: 'Foster Parent' },
-      }),
+    const form = formOf(el);
+    expect(form).not.toBeNull();
+    expect(el.shadowRoot!.getElementById('createBtn')).toBeNull();
+    expect(form.shadowRoot!.getElementById('cancelBtn')).toBeNull();
+  });
+});
+
+describe(
+  'pm-guardian-relationships-page — creates a relationship type and keeps the form ready',
+  { tags: ['214UC8', '240UC2'] },
+  () => {
+    let el: HTMLElement;
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('clears the input and leaves the form in place once the type is created', async () => {
+      const created: GuardianRelationship = { guardianRelationshipId: 'r3', name: 'Foster Parent' };
+      vi.mocked(createGuardianRelationship).mockResolvedValue(created);
+      el = await mountPage();
+      mockGetGuardianRelationships.mockResolvedValue([mother, father, created]);
+
+      await submitCreateForm(el, 'Foster Parent');
+
+      expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
+      expect(rowNamesOf(el)).toContain('Foster Parent');
+      expect(formOf(el)).not.toBeNull();
+      expect(nameInputOf(el).value).toBe('');
+    });
+  },
+);
+
+describe('pm-guardian-relationships-page — keeps the entered value after a failed create', { tags: ['240UC3'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('shows the error and leaves the typed name in the form for correction', async () => {
+    vi.mocked(createGuardianRelationship).mockRejectedValue(
+      new GuardiansError("Guardian relationship 'Mother' already exists.", 400),
     );
-    await flush();
+    el = await mountPage();
 
-    expect(createGuardianRelationship).toHaveBeenCalledWith('Foster Parent');
-    expect(rowNamesOf(el)).toContain('Foster Parent');
-    expect(formOf(el).hidden).toBe(true);
+    await submitCreateForm(el, 'Mother');
+
+    expect(errorBannerOf(el).textContent).toContain('already exists');
+    expect(formOf(el)).not.toBeNull();
+    expect(nameInputOf(el).value).toBe('Mother');
   });
 });
 

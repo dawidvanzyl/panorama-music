@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures/base';
 import { uniqueTestEmail, createRegisteredUser, goToTeachersPage, goToAdminUsersPage } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
+import { landingUrl } from '../../fixtures/navigation';
 
 const PASSWORD = 'TeacherLinkPass123!';
 
@@ -96,7 +97,7 @@ test.describe('Teacher account linking', { tag: ['@7IT5', '@7IT6', '@7IT7'] }, (
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(teacherOnlyEmail, PASSWORD);
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(landingUrl('Teacher'));
 
     const accessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
     const headers = { Authorization: `Bearer ${accessToken}` };
