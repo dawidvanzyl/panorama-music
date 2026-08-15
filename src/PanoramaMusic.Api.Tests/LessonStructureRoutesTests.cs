@@ -43,12 +43,13 @@ public sealed class LessonStructureRoutesTests(ApiTestFixture fixture)
 		var response = await client.Client.SendAsync(
 			client.AuthorizedGetRequest("/api/lesson-structures"), TestContext.Current.CancellationToken);
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-		var structures = JsonSerializer.Deserialize<List<LessonStructureResult>>(payload, _jsonOptions);
+		var structures = JsonSerializer.Deserialize<List<LessonStructureResult>>(payload, _jsonOptions)
+			.ShouldNotBeNull();
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
-			() => structures.ShouldNotBeNull().Count.ShouldBe(_seededCombinations.Length),
-			() => structures.ShouldNotBeNull()
+			() => structures.Count.ShouldBe(_seededCombinations.Length),
+			() => structures
 				.Select(s => (s.LessonType, s.DurationType, s.OccurrenceType))
 				.ShouldBe(_seededCombinations, ignoreOrder: true));
 	}

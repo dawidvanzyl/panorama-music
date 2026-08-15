@@ -67,10 +67,12 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// Relationship types are a reference lookup; the count is an aggregate. Neither
 		// identifies anybody.
 		["GetGuardianRelationships"] = CacheExpectation.Cacheable,
-		["GetLessonStructures"] = CacheExpectation.Cacheable,
 		["CreateGuardianRelationship"] = CacheExpectation.Cacheable,
 		["RenameGuardianRelationship"] = CacheExpectation.Cacheable,
 		["CountGuardianRelationship"] = CacheExpectation.Cacheable,
+
+		// Lesson structures are fixed seeded reference data; the payload names no person.
+		["GetLessonStructures"] = CacheExpectation.Cacheable,
 
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
