@@ -70,13 +70,25 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+let _coursesCache: Course[] | null = null;
+
+export function clearCoursesCache(): void {
+  _coursesCache = null;
+}
+
+registerSessionCache(clearCoursesCache);
+
 /**
- * The whole catalogue in one read. Narrowing it is a client-side concern, the
- * same as it is for students — see `filter-courses.ts`.
+ * The whole catalogue in one read, held for the session. Narrowing it is a
+ * client-side concern applied over this cached list, the same as it is for
+ * students — see `filter-courses.ts`.
  */
 export async function getCourses(): Promise<Course[]> {
+  if (_coursesCache) return _coursesCache;
+
   const response = await fetch(COURSES_BASE, { headers: authHeaders() });
-  return handleResponse<Course[]>(response);
+  _coursesCache = await handleResponse<Course[]>(response);
+  return _coursesCache;
 }
 
 export async function createCourse(input: CourseInput): Promise<Course> {
@@ -91,7 +103,9 @@ export async function createCourse(input: CourseInput): Promise<Course> {
       lessonStructureId: input.lessonStructureId,
     }),
   });
-  return handleResponse<Course>(response);
+  const result = await handleResponse<Course>(response);
+  clearCoursesCache();
+  return result;
 }
 
 let _lessonStructuresCache: LessonStructure[] | null = null;
