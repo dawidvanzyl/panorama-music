@@ -27,6 +27,16 @@ export class CourseManagementPage extends BasePage {
     await this.goto('/#/courses');
   }
 
+  /**
+   * Re-fetches the catalogue from the server. Navigating to '/#/courses' while
+   * already there is a same-document hash change, so it leaves the rendered
+   * table — and any edit in progress — exactly as it was; only a reload proves
+   * what was actually persisted.
+   */
+  async reloadCourses(): Promise<void> {
+    await this.page.reload();
+  }
+
   /** Rows are matched on their rendered display text, never on an enum member. */
   row(...cellTexts: string[]): Locator {
     return cellTexts.reduce<Locator>(

@@ -35,7 +35,7 @@ test.describe('Course Management — creating and reading courses', { tag: ['@8I
     await expect(row).toContainText('Group · Hour');
     await expect(row).toContainText('During School');
 
-    await coursesPage.gotoCourses();
+    await coursesPage.reloadCourses();
 
     await expect(coursesPage.row('Grade 2 Recorder', `R ${cost}`)).toBeVisible();
   });
@@ -145,7 +145,7 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
     await expect(coursesPage.row('Theory', `R ${cost}`)).toHaveCount(0);
 
     // Still the exact amount after a reload, not a rounded approximation of it.
-    await coursesPage.gotoCourses();
+    await coursesPage.reloadCourses();
     await expect(coursesPage.row('Theory', `R ${corrected}`)).toBeVisible();
   });
 
@@ -166,7 +166,7 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
     await coursesPage.saveCost();
 
     await expect(coursesPage.rowError()).toBeVisible();
-    await coursesPage.gotoCourses();
+    await coursesPage.reloadCourses();
     await expect(coursesPage.row('Grade 1 Enrichment', `R ${cost}`)).toBeVisible();
   });
 });
@@ -222,7 +222,7 @@ test.describe('Course Management — removing a course', { tag: ['@8IT1'] }, () 
     await coursesPage.confirmDelete();
 
     await expect(coursesPage.row('Grade 2 Recorder', `R ${cost}`)).toHaveCount(0);
-    await coursesPage.gotoCourses();
+    await coursesPage.reloadCourses();
     await expect(coursesPage.row('Grade 2 Recorder', `R ${cost}`)).toHaveCount(0);
   });
 });
