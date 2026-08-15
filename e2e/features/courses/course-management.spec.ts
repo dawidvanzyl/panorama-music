@@ -138,8 +138,8 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
     await expect(row).toBeVisible();
 
     await coursesPage.startCostEdit(row);
-    await coursesPage.enterCost(row, corrected);
-    await coursesPage.saveCost(row);
+    await coursesPage.enterCost(corrected);
+    await coursesPage.saveCost();
 
     await expect(coursesPage.row('Theory', `R ${corrected}`)).toBeVisible();
     await expect(coursesPage.row('Theory', `R ${cost}`)).toHaveCount(0);
@@ -162,8 +162,8 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
     await expect(row).toBeVisible();
 
     await coursesPage.startCostEdit(row);
-    await coursesPage.enterCost(row, '120.005');
-    await coursesPage.saveCost(row);
+    await coursesPage.enterCost('120.005');
+    await coursesPage.saveCost();
 
     await expect(coursesPage.rowError()).toBeVisible();
     await coursesPage.gotoCourses();
@@ -186,8 +186,8 @@ test.describe('Course Management — a cost change never moves the lesson struct
     await expect(row).toBeVisible();
 
     await coursesPage.startCostEdit(row);
-    await coursesPage.enterCost(row, corrected);
-    await coursesPage.saveCost(row);
+    await coursesPage.enterCost(corrected);
+    await coursesPage.saveCost();
 
     const updated = coursesPage.row('Instrument', `R ${corrected}`);
     await expect(updated).toBeVisible();

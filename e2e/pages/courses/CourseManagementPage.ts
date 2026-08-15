@@ -59,16 +59,25 @@ export class CourseManagementPage extends BasePage {
     await row.getByRole('button', { name: 'Edit Cost' }).click();
   }
 
-  async enterCost(row: Locator, cost: string): Promise<void> {
-    await row.locator('#costInput').fill(cost);
+  /**
+   * The row under edit, which no longer shows its cost as text — the cell holds
+   * the input instead, so a row matched on its displayed cost stops resolving
+   * the moment the edit starts. Only one row is ever editable at a time.
+   */
+  editingRow(): Locator {
+    return this.courseTable.locator('tbody tr').filter({ has: this.page.locator('#costInput') });
   }
 
-  async saveCost(row: Locator): Promise<void> {
-    await row.getByRole('button', { name: 'Save' }).click();
+  async enterCost(cost: string): Promise<void> {
+    await this.editingRow().locator('#costInput').fill(cost);
   }
 
-  async cancelCostEdit(row: Locator): Promise<void> {
-    await row.getByRole('button', { name: 'Cancel' }).click();
+  async saveCost(): Promise<void> {
+    await this.editingRow().getByRole('button', { name: 'Save' }).click();
+  }
+
+  async cancelCostEdit(): Promise<void> {
+    await this.editingRow().getByRole('button', { name: 'Cancel' }).click();
   }
 
   async startDelete(row: Locator): Promise<void> {
