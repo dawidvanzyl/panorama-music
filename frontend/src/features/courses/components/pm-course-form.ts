@@ -20,7 +20,7 @@ styles.replaceSync(`
     }
     .course-form__row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1.4fr;
+      grid-template-columns: 1fr 1fr 1.4fr auto;
       gap: 20px;
       align-items: start;
     }
@@ -69,12 +69,10 @@ styles.replaceSync(`
     .course-form__error--visible {
       display: flex;
     }
-    .course-form__actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
     .course-form__submit {
+      /* Sits in the input row rather than under it, so it lines up with the
+         controls' bottom edge below the labels. */
+      align-self: end;
       height: 44px;
       padding: 0 24px;
       border: none;
@@ -93,8 +91,6 @@ styles.replaceSync(`
 
 const template = document.createElement('template');
 template.innerHTML = `
-
-  <h2 class="course-form__heading">Create Course</h2>
   <div class="course-form__row">
     <div class="course-form__field">
       <label class="course-form__label" for="courseType">Course Type</label>
@@ -112,11 +108,9 @@ template.innerHTML = `
         <option value="">Select a lesson structure</option>
       </select>
     </div>
-  </div>
-  <div class="course-form__error" id="error"></div>
-  <div class="course-form__actions">
     <button type="button" class="course-form__submit" id="createBtn">Create Course</button>
   </div>
+  <div class="course-form__error" id="error"></div>
 `;
 
 const COST_PATTERN = /^\d+(\.\d{1,2})?$/;
