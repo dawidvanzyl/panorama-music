@@ -74,6 +74,11 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// Lesson structures are fixed seeded reference data; the payload names no person.
 		["GetLessonStructures"] = CacheExpectation.Cacheable,
 
+		// Courses are the school's own catalogue — a course type, a price and a lesson
+		// structure. The payload names no person.
+		["GetCourses"] = CacheExpectation.Cacheable,
+		["CreateCourse"] = CacheExpectation.Cacheable,
+
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
 		["IsGuardianShared"] = CacheExpectation.Cacheable,

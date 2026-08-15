@@ -7,6 +7,7 @@ using PanoramaMusic.Api.Routes.Audit;
 using PanoramaMusic.Api.Routes.Identity;
 using PanoramaMusic.Api.Routes.Students;
 using PanoramaMusic.Api.Routes.Teachers;
+using PanoramaMusic.Api.Serialization;
 using PanoramaMusic.Audit.Infrastructure.Extensions;
 using PanoramaMusic.DataProtection.Extensions;
 using PanoramaMusic.Identity.Infrastructure.Extensions;
@@ -89,7 +90,13 @@ builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddValidation();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
-builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+	options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+	// Money crosses the wire as a string so it never becomes a double in a
+	// consumer that parses JSON numbers as one.
+	options.SerializerOptions.Converters.Add(new DecimalAsStringJsonConverter());
+});
 
 var app = builder.Build();
 
@@ -136,6 +143,7 @@ app.MapStudentRoutes();
 app.MapGuardianRoutes();
 app.MapGuardianRelationshipRoutes();
 app.MapLessonStructureRoutes();
+app.MapCourseRoutes();
 app.MapTeacherRoutes();
 app.MapTeacherBankingRoutes();
 app.MapTeacherSelfServiceRoutes();
