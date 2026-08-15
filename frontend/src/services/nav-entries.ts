@@ -70,6 +70,13 @@ export const NAV_ENTRIES: NavEntry[] = [
     matchesNested: true,
   },
   {
+    id: 'courseManagementLink',
+    path: '/courses',
+    icon: 'library_music',
+    label: 'Course Management',
+    roles: ['Teacher', 'Coordinator', 'Admin'],
+  },
+  {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',
     icon: 'family_restroom',

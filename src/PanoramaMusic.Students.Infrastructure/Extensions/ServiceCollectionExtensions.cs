@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Students.Application.Handlers.Courses;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.LessonStructures;
@@ -14,6 +15,7 @@ using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Contexts;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Repositories;
+using PanoramaMusic.Students.Infrastructure.Translators.Courses;
 using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
@@ -48,6 +50,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IStudentGuardianRepository, StudentGuardianRepository>();
 		services.AddTransient<IGuardianRelationshipRepository, GuardianRelationshipRepository>();
 		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
+		services.AddTransient<ICourseRepository, CourseRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -72,6 +75,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteGuardianRelationshipHandler>();
 		services.AddTransient<CountGuardianRelationshipHandler>();
 		services.AddTransient<GetLessonStructuresHandler>();
+		services.AddTransient<CreateCourseHandler>();
+		services.AddTransient<GetCoursesHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -88,6 +93,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipRenamedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipDeletedTranslator>();
+		services.AddTransient<IAuditEventTranslator, CourseCreatedTranslator>();
 
 		return services;
 	}

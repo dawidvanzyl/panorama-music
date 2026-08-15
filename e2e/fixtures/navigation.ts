@@ -24,6 +24,12 @@ export const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { id: 'studentManagementLink', path: '/students', label: 'Student Management', roles: ['Teacher', 'Admin'] },
   { id: 'teachersLink', path: '/teachers', label: 'Teacher Management', roles: ['Coordinator', 'Admin'] },
   {
+    id: 'courseManagementLink',
+    path: '/courses',
+    label: 'Course Management',
+    roles: ['Teacher', 'Coordinator', 'Admin'],
+  },
+  {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',
     label: 'Guardian Relationships',

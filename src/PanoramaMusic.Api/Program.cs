@@ -136,6 +136,7 @@ app.MapStudentRoutes();
 app.MapGuardianRoutes();
 app.MapGuardianRelationshipRoutes();
 app.MapLessonStructureRoutes();
+app.MapCourseRoutes();
 app.MapTeacherRoutes();
 app.MapTeacherBankingRoutes();
 app.MapTeacherSelfServiceRoutes();
