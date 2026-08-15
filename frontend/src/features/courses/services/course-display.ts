@@ -48,10 +48,11 @@ export function lessonStructureColumnText(course: Course): string {
   return `${LESSON_TYPE_LABELS[course.lessonType]} · ${DURATION_TYPE_LABELS[course.durationType]}`;
 }
 
-export function costText(cost: number): string {
-  return `R ${cost.toFixed(2)}`;
-}
-
-export function resultSummaryText(shown: number, total: number): string {
-  return `${shown} of ${total} courses`;
+/**
+ * Cost arrives as the server's exact decimal text and is padded to two places
+ * as text — never through `Number`, which would make it a double.
+ */
+export function costText(cost: string): string {
+  const [whole, fraction = ''] = cost.split('.');
+  return `R ${whole}.${fraction.padEnd(2, '0').slice(0, 2)}`;
 }

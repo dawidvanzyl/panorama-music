@@ -23,12 +23,7 @@ export const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { id: 'activityLogLink', path: '/admin/activity-log', label: 'Activity Log', roles: ['Admin'] },
   { id: 'studentManagementLink', path: '/students', label: 'Student Management', roles: ['Teacher', 'Admin'] },
   { id: 'teachersLink', path: '/teachers', label: 'Teacher Management', roles: ['Coordinator', 'Admin'] },
-  {
-    id: 'courseManagementLink',
-    path: '/courses',
-    label: 'Course Management',
-    roles: ['Teacher', 'Coordinator', 'Admin'],
-  },
+  { id: 'courseManagementLink', path: '/courses', label: 'Course Management', roles: ['Teacher', 'Coordinator', 'Admin'] },
   {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',

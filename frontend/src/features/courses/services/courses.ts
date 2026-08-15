@@ -20,8 +20,11 @@ export interface LessonStructure {
 export interface Course {
   courseId: string;
   courseType: CourseType;
-  /** An exact decimal amount; kept as the server's string-free number only for display. */
-  cost: number;
+  /**
+   * An exact decimal amount, kept as the server's own text. It is never put
+   * through `Number`, which would make a monetary value an IEEE-754 double.
+   */
+  cost: string;
   lessonStructureId: string;
   lessonType: LessonType;
   durationType: DurationType;
@@ -32,13 +35,6 @@ export interface CourseInput {
   courseType: CourseType;
   cost: string;
   lessonStructureId: string;
-}
-
-export interface CourseFilter {
-  courseType?: CourseType;
-  lessonType?: LessonType;
-  durationType?: DurationType;
-  occurrenceType?: OccurrenceType;
 }
 
 export class CoursesError extends Error {
@@ -74,24 +70,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function toQuery(filter: CourseFilter): string {
-  const params = new URLSearchParams();
-  if (filter.courseType) params.set('courseType', filter.courseType);
-  if (filter.lessonType) params.set('lessonType', filter.lessonType);
-  if (filter.durationType) params.set('durationType', filter.durationType);
-  if (filter.occurrenceType) params.set('occurrenceType', filter.occurrenceType);
-
-  const query = params.toString();
-  return query ? `?${query}` : '';
-}
-
 /**
- * Filtering is a server concern here rather than a client one — the endpoint
- * combines the four dimensions itself, so each selection is a fresh read rather
- * than a narrowing of a cached list.
+ * The whole catalogue in one read. Narrowing it is a client-side concern, the
+ * same as it is for students — see `filter-courses.ts`.
  */
-export async function getCourses(filter: CourseFilter = {}): Promise<Course[]> {
-  const response = await fetch(`${COURSES_BASE}${toQuery(filter)}`, { headers: authHeaders() });
+export async function getCourses(): Promise<Course[]> {
+  const response = await fetch(COURSES_BASE, { headers: authHeaders() });
   return handleResponse<Course[]>(response);
 }
 
@@ -101,9 +85,9 @@ export async function createCourse(input: CourseInput): Promise<Course> {
     headers: authHeaders(),
     body: JSON.stringify({
       courseType: input.courseType,
-      // Sent as a JSON number so the server binds it to a decimal; the form
-      // holds the typed text until this point so no rounding happens earlier.
-      cost: Number(input.cost),
+      // Sent as the typed text, not a JSON number — the server binds the string
+      // straight to a decimal, so the amount never becomes a double in transit.
+      cost: input.cost,
       lessonStructureId: input.lessonStructureId,
     }),
   });

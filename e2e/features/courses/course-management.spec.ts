@@ -5,11 +5,18 @@ import { CourseManagementPage } from '../../pages/courses/CourseManagementPage';
 import { landingUrl } from '../../fixtures/navigation';
 
 /**
- * A course has no name of its own, so a run is told apart by its cost — a value
- * no other run in the same database will have used.
+ * A course has no name of its own, so a run is told apart by its cost. The
+ * whole part is the clock in milliseconds, and the cents carry the worker index
+ * and a per-worker counter — so two costs from one worker can never match, and
+ * two workers would have to create inside the same millisecond to. The column
+ * is NUMERIC(10, 2), so the whole part is kept to eight digits.
  */
+let _costSequence = 0;
+
 function uniqueCost(): string {
-  return `${1000 + Math.floor(Math.random() * 8999)}.${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+  const whole = Date.now() % 100_000_000;
+  const cents = ((test.info().workerIndex % 10) * 10 + _costSequence++ % 10).toString().padStart(2, '0');
+  return `${whole}.${cents}`;
 }
 
 test.describe('Course Management — creating and reading courses', { tag: ['@8IT1'] }, () => {
@@ -58,7 +65,6 @@ test.describe('Course Management — filtering by course type', { tag: ['@8IT4']
 
     await expect(coursesPage.row('Instrument', `R ${instrumentCost}`)).toBeVisible();
     await expect(coursesPage.row('Theory', `R ${theoryCost}`)).toHaveCount(0);
-    await expect(coursesPage.summary).toContainText('courses');
   });
 });
 
@@ -104,7 +110,7 @@ test.describe('Course Management — a non-maintainer reads but cannot create', 
         },
         body: JSON.stringify({
           courseType: 'Theory',
-          cost: 100.0,
+          cost: '100.00',
           lessonStructureId: '00000000-0000-0000-0000-000000000001',
         }),
       });

@@ -1,15 +1,14 @@
 -- get_courses
 -- Joins each course to its lesson structure so the whole list, structure detail
 -- included, is assembled in one query rather than one lookup per course.
--- Every filter is optional; a NULL leaves that dimension unfiltered, so passing
--- several narrows the result by all of them together.
+-- Narrowing the catalogue is a client-side concern, as it is for students, so
+-- the read takes no filters.
 
-CREATE OR REPLACE FUNCTION students.get_courses(
-    p_course_type     TEXT DEFAULT NULL,
-    p_lesson_type     TEXT DEFAULT NULL,
-    p_duration_type   TEXT DEFAULT NULL,
-    p_occurrence_type TEXT DEFAULT NULL
-)
+-- The filtered signature never shipped; drop it so the no-argument call cannot
+-- resolve to a leftover overload in a database that already ran the old script.
+DROP FUNCTION IF EXISTS students.get_courses(TEXT, TEXT, TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION students.get_courses()
 RETURNS TABLE(
     course_id           UUID,
     course_type         TEXT,
@@ -27,10 +26,6 @@ BEGIN
            ls.lesson_type, ls.duration_type, ls.occurrence_type
     FROM students.courses c
     JOIN students.lesson_structures ls ON ls.lesson_structure_id = c.lesson_structure_id
-    WHERE (p_course_type IS NULL OR c.course_type = p_course_type)
-      AND (p_lesson_type IS NULL OR ls.lesson_type = p_lesson_type)
-      AND (p_duration_type IS NULL OR ls.duration_type = p_duration_type)
-      AND (p_occurrence_type IS NULL OR ls.occurrence_type = p_occurrence_type)
     ORDER BY c.course_type, ls.lesson_type, ls.duration_type, ls.occurrence_type;
 END;
 $$;

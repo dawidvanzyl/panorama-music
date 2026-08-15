@@ -12,13 +12,15 @@ public static class CourseRoutes
 	{
 		// Reading the catalogue is open to every staff role — a Teacher needs to
 		// see what the school offers. Defining a course is Coordinator-or-Admin.
+		// The list is unfiltered; narrowing it is the screen's concern, as it is
+		// for students.
 		app
 			.MapGroup("/api/courses")
 			.WithTags("Courses")
 			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy")
-			.MapGet("/", async ([AsParameters] GetCoursesRequest request, GetCoursesHandler handler, CancellationToken ct) =>
+			.MapGet("/", async (GetCoursesHandler handler, CancellationToken ct) =>
 			{
-				var result = await handler.HandleAsync(request, ct);
+				var result = await handler.HandleAsync(ct);
 				return Results.Ok(result);
 			})
 			.WithName("GetCourses")

@@ -2,8 +2,9 @@ import '../components/pm-course-form';
 import '../components/pm-course-filter-bar';
 import '../components/pm-course-table';
 import { hasAnyRole } from '../../../services/token-storage';
-import { resultSummaryText } from '../services/course-display';
-import { CoursesError, createCourse, getCourses, getLessonStructures, type CourseFilter } from '../services/courses';
+import { CoursesError, createCourse, getCourses, getLessonStructures, type Course } from '../services/courses';
+import { filterCourses, type CourseFilters } from '../services/filter-courses';
+import type { PmCourseFilterBar } from '../components/pm-course-filter-bar';
 import type { PmCourseForm } from '../components/pm-course-form';
 import type { PmCourseTable } from '../components/pm-course-table';
 
@@ -36,12 +37,6 @@ styles.replaceSync(`
     .course-management__error--visible {
       display: block;
     }
-    .course-management__summary {
-      font-size: 11px;
-      letter-spacing: 0.02em;
-      color: var(--pm-text-muted);
-      margin: 0;
-    }
     [hidden] {
       display: none !important;
     }
@@ -55,18 +50,16 @@ template.innerHTML = `
   <pm-course-form id="form" hidden></pm-course-form>
   <pm-course-filter-bar id="filterBar" hidden></pm-course-filter-bar>
   <pm-course-table id="table"></pm-course-table>
-  <p class="course-management__summary" id="summary" hidden></p>
 `;
 
 export class PmCourseManagementPage extends HTMLElement {
   private courseForm: PmCourseForm | null = null;
-  private filterBar: HTMLElement | null = null;
+  private filterBar: PmCourseFilterBar | null = null;
   private courseTable: PmCourseTable | null = null;
-  private summary: HTMLElement | null = null;
   private errorBanner: HTMLElement | null = null;
-  private filter: CourseFilter = {};
-  /** The unfiltered count the result summary reports against. */
-  private totalCount = 0;
+  private filters: CourseFilters = {};
+  /** The whole catalogue, read once and narrowed in place by the filter bar. */
+  private courses: Course[] = [];
 
   constructor() {
     super();
@@ -77,9 +70,8 @@ export class PmCourseManagementPage extends HTMLElement {
 
   connectedCallback(): void {
     this.courseForm = this.shadowRoot!.getElementById('form') as unknown as PmCourseForm;
-    this.filterBar = this.shadowRoot!.getElementById('filterBar') as HTMLElement;
+    this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmCourseFilterBar;
     this.courseTable = this.shadowRoot!.getElementById('table') as unknown as PmCourseTable;
-    this.summary = this.shadowRoot!.getElementById('summary') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     // A user who may not maintain courses gets no create form, no filter bar
@@ -87,8 +79,7 @@ export class PmCourseManagementPage extends HTMLElement {
     // answer them.
     const canMaintain = hasAnyRole(MAINTAINER_ROLES);
     (this.courseForm as unknown as HTMLElement).hidden = !canMaintain;
-    this.filterBar.hidden = !canMaintain;
-    this.summary.hidden = !canMaintain;
+    (this.filterBar as unknown as HTMLElement).hidden = !canMaintain;
     this.courseTable.showActions = canMaintain;
 
     this.shadowRoot!.addEventListener('course-form-submitted', this.handleFormSubmitted);
@@ -114,7 +105,12 @@ export class PmCourseManagementPage extends HTMLElement {
         lessonStructureId: detail.lessonStructureId,
       });
       this.courseForm!.reset();
-      await this.loadCourses(true);
+      // Filters are cleared alongside the form: a create that landed outside
+      // the current selection would otherwise be indistinguishable from one
+      // that silently failed.
+      this.filterBar!.reset();
+      this.filters = {};
+      await this.loadCourses();
     } catch (err) {
       // The reason belongs on the form itself, beside the values the user
       // entered — which stay put so the create can be corrected and retried.
@@ -122,9 +118,9 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
-  private handleFilterChanged = async (event: Event): Promise<void> => {
-    this.filter = (event as CustomEvent<CourseFilter>).detail;
-    await this.loadCourses();
+  private handleFilterChanged = (event: Event): void => {
+    this.filters = (event as CustomEvent<CourseFilters>).detail;
+    this.renderCourses();
   };
 
   private loadStructures = async (): Promise<void> => {
@@ -135,27 +131,18 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
-  /**
-   * `refreshTotal` re-reads the whole catalogue for the summary's denominator.
-   * Only the events that can change it — the first load and a create — pay for
-   * that second request; a filter change re-reads the narrowed list alone.
-   */
-  private loadCourses = async (refreshTotal = false): Promise<void> => {
+  /** Reads the catalogue; only a create or the first render needs a round trip. */
+  private loadCourses = async (): Promise<void> => {
     try {
-      const courses = await getCourses(this.filter);
-      this.courseTable!.courses = courses;
-
-      if (refreshTotal || !this.hasFilter()) {
-        this.totalCount = this.hasFilter() ? (await getCourses()).length : courses.length;
-      }
-      this.summary!.textContent = resultSummaryText(courses.length, this.totalCount);
+      this.courses = await getCourses();
+      this.renderCourses();
     } catch (err) {
       this.showError(this.messageFor(err));
     }
   };
 
-  private hasFilter(): boolean {
-    return Object.values(this.filter).some((value) => value !== undefined);
+  private renderCourses(): void {
+    this.courseTable!.courses = filterCourses(this.courses, this.filters);
   }
 
   private messageFor(err: unknown): string {

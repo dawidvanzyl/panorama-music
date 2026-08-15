@@ -13,14 +13,12 @@ export class CourseManagementPage extends BasePage {
   readonly courseForm: Locator;
   readonly filterBar: Locator;
   readonly courseTable: Locator;
-  readonly summary: Locator;
 
   constructor(page: Page) {
     super(page);
     this.courseForm = page.locator('#form');
     this.filterBar = page.locator('#filterBar');
     this.courseTable = page.locator('#table');
-    this.summary = page.locator('pm-course-management-page #summary');
   }
 
   async gotoCourses(): Promise<void> {

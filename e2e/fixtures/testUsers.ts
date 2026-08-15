@@ -17,11 +17,19 @@ export function uniqueTestEmail(label: string): string {
   return `e2e-${label}-${Date.now()}-${crypto.randomUUID()}@panorama-music.qa`;
 }
 
-export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
+/**
+ * Signs the seeded Admin in and leaves the browser on the Admin landing page.
+ * Every `goTo*Page` helper starts here, so the sign-in sequence is written once.
+ */
+export async function loginAsAdmin(page: Page): Promise<void> {
   const loginPage = new LoginPage(page);
   await loginPage.gotoLogin();
   await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
   await expect(page).toHaveURL(landingUrl('Admin'));
+}
+
+export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
+  await loginAsAdmin(page);
 
   const adminUsersPage = new AdminUsersPage(page);
   await adminUsersPage.gotoAdminUsers();
@@ -29,10 +37,7 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
 }
 
 export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(landingUrl('Admin'));
+  await loginAsAdmin(page);
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();
@@ -40,10 +45,7 @@ export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
 }
 
 export async function goToGuardianRelationshipsPage(page: Page): Promise<GuardianRelationshipsPage> {
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(landingUrl('Admin'));
+  await loginAsAdmin(page);
 
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
   await guardianRelationshipsPage.gotoGuardianRelationships();
@@ -51,10 +53,7 @@ export async function goToGuardianRelationshipsPage(page: Page): Promise<Guardia
 }
 
 export async function goToCourseManagementPage(page: Page): Promise<CourseManagementPage> {
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(landingUrl('Admin'));
+  await loginAsAdmin(page);
 
   const courseManagementPage = new CourseManagementPage(page);
   await courseManagementPage.gotoCourses();
@@ -62,10 +61,7 @@ export async function goToCourseManagementPage(page: Page): Promise<CourseManage
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page).toHaveURL(landingUrl('Admin'));
+  await loginAsAdmin(page);
 
   const teachersPage = new TeachersPage(page);
   await teachersPage.gotoTeachers();

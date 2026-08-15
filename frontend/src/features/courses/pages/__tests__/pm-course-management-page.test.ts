@@ -9,7 +9,7 @@ vi.mock('../../services/courses', async () => {
   const actual = await vi.importActual<typeof import('../../services/courses')>('../../services/courses');
   return {
     ...actual,
-    getCourses: (filter?: unknown) => mockGetCourses(filter),
+    getCourses: () => mockGetCourses(),
     getLessonStructures: () => mockGetLessonStructures(),
     createCourse: vi.fn(),
   };
@@ -43,7 +43,7 @@ const individualHalfAfter: LessonStructure = {
 const theory: Course = {
   courseId: 'c1',
   courseType: 'Theory',
-  cost: 120,
+  cost: '120.00',
   lessonStructureId: 'ls1',
   lessonType: 'Group',
   durationType: 'Hour',
@@ -53,7 +53,7 @@ const theory: Course = {
 const instrument: Course = {
   courseId: 'c2',
   courseType: 'Instrument',
-  cost: 450.5,
+  cost: '450.50',
   lessonStructureId: 'ls2',
   lessonType: 'Individual',
   durationType: 'HalfHour',
@@ -80,10 +80,6 @@ function tableOf(el: HTMLElement): PmCourseTable {
 
 function filterBarOf(el: HTMLElement): HTMLElement {
   return el.shadowRoot!.getElementById('filterBar') as HTMLElement;
-}
-
-function summaryOf(el: HTMLElement): HTMLElement {
-  return el.shadowRoot!.getElementById('summary') as HTMLElement;
 }
 
 function formErrorOf(el: HTMLElement): HTMLElement {
@@ -113,8 +109,12 @@ async function submitCreateForm(el: HTMLElement, courseType: string, cost: strin
   await flush();
 }
 
+function filterSelectOf(el: HTMLElement, id: string): HTMLSelectElement {
+  return filterBarOf(el).shadowRoot!.getElementById(id) as HTMLSelectElement;
+}
+
 async function changeFilter(el: HTMLElement, id: string, value: string): Promise<void> {
-  const select = filterBarOf(el).shadowRoot!.getElementById(id) as HTMLSelectElement;
+  const select = filterSelectOf(el, id);
   select.value = value;
   select.dispatchEvent(new Event('change'));
   await flush();
@@ -182,7 +182,7 @@ describe('pm-course-management-page — creates a course and keeps the form read
   afterEach(() => document.body.removeChild(el));
 
   it('lists the new course and clears the form for the next one', async () => {
-    const created: Course = { ...instrument, courseId: 'c3', cost: 850 };
+    const created: Course = { ...instrument, courseId: 'c3', cost: '850.00' };
     vi.mocked(createCourse).mockResolvedValue(created);
     el = await mountPage();
     mockGetCourses.mockResolvedValue([theory, instrument, created]);
@@ -198,6 +198,22 @@ describe('pm-course-management-page — creates a course and keeps the form read
     expect(selectIn(el, 'courseType').value).toBe('');
     expect(costInputOf(el).value).toBe('');
     expect(selectIn(el, 'lessonStructure').value).toBe('');
+  });
+
+  it('clears the filters so a course created outside the current selection is still shown', async () => {
+    const created: Course = { ...instrument, courseId: 'c3', cost: '850.00' };
+    vi.mocked(createCourse).mockResolvedValue(created);
+    el = await mountPage();
+    mockGetCourses.mockResolvedValue([theory, instrument, created]);
+
+    // A filter that the course about to be created does not match.
+    await changeFilter(el, 'courseType', 'Theory');
+    expect(rowTextsOf(el)).toHaveLength(1);
+
+    await submitCreateForm(el, 'Instrument', '850.00', 'ls2');
+
+    expect(filterSelectOf(el, 'courseType').value).toBe('');
+    expect(rowTextsOf(el)).toHaveLength(3);
   });
 });
 
@@ -248,38 +264,24 @@ describe('pm-course-management-page — narrows the list by the filter selection
 
   afterEach(() => document.body.removeChild(el));
 
-  it('re-reads with the selected course type and reports how many are shown', async () => {
+  it('narrows the cached catalogue to the selected course type without re-reading it', async () => {
     el = await mountPage();
-    mockGetCourses.mockImplementation((filter?: { courseType?: string }) =>
-      Promise.resolve(filter?.courseType === 'Instrument' ? [instrument] : [theory, instrument]),
-    );
+    const readsOnLoad = mockGetCourses.mock.calls.length;
 
     await changeFilter(el, 'courseType', 'Instrument');
 
-    expect(mockGetCourses).toHaveBeenCalledWith({
-      courseType: 'Instrument',
-      lessonType: undefined,
-      durationType: undefined,
-      occurrenceType: undefined,
-    });
     expect(rowTextsOf(el)).toEqual([['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50', '']]);
-    expect(summaryOf(el).textContent).toBe('1 of 2 courses');
+    expect(mockGetCourses.mock.calls.length).toBe(readsOnLoad);
   });
 
-  it('combines a lesson type, duration and occurrence selection into one read', async () => {
+  it('combines a lesson type, duration and occurrence selection', async () => {
     el = await mountPage();
-    mockGetCourses.mockResolvedValue([theory]);
 
     await changeFilter(el, 'lessonType', 'Group');
     await changeFilter(el, 'durationType', 'Hour');
     await changeFilter(el, 'occurrenceType', 'DuringSchool');
 
-    expect(mockGetCourses).toHaveBeenLastCalledWith({
-      courseType: undefined,
-      lessonType: 'Group',
-      durationType: 'Hour',
-      occurrenceType: 'DuringSchool',
-    });
+    expect(rowTextsOf(el)).toEqual([['Theory', 'Group · Hour', 'During School', 'R 120.00', '']]);
   });
 });
 
@@ -290,7 +292,6 @@ describe('pm-course-management-page — shows an empty state when nothing matche
 
   it('renders the empty state in place of rows', async () => {
     el = await mountPage();
-    mockGetCourses.mockResolvedValue([]);
 
     await changeFilter(el, 'courseType', 'G2Recorder');
 
@@ -310,7 +311,6 @@ describe('pm-course-management-page — read-only for a non-maintainer', { tags:
 
     expect(formOf(el).hidden).toBe(true);
     expect(filterBarOf(el).hidden).toBe(true);
-    expect(summaryOf(el).hidden).toBe(true);
     expect(tableOf(el).shadowRoot!.getElementById('actionsHeader')!.hidden).toBe(true);
     // The list itself is still read.
     expect(rowTextsOf(el)).toEqual([

@@ -17,7 +17,6 @@ public sealed class CourseCreatedTranslator(IAuditContext auditContext, IUserCon
 	public AuditEvent Translate(IDomainEvent domainEvent)
 	{
 		var course = ((CourseCreated)domainEvent).Course;
-		var structure = course.LessonStructure;
 
 		return new AuditEvent(
 			Guid.NewGuid(),
@@ -33,7 +32,7 @@ public sealed class CourseCreatedTranslator(IAuditContext auditContext, IUserCon
 			null,
 			new Dictionary<string, object?>
 			{
-				["targetDisplay"] = $"{course.CourseType} · {structure.LessonType} · {structure.DurationType} · {structure.OccurrenceType}",
+				["targetDisplay"] = $"{course.CourseType} · {course.LessonStructure}",
 			});
 	}
 }

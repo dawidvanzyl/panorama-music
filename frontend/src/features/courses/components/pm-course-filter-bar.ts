@@ -8,6 +8,7 @@ import {
   OCCURRENCE_TYPES,
   OCCURRENCE_TYPE_LABELS,
 } from '../services/course-display';
+import { appendOptions } from './select-options';
 import type { CourseType, DurationType, LessonType, OccurrenceType } from '../services/courses';
 
 const styles = new CSSStyleSheet();
@@ -57,15 +58,6 @@ template.innerHTML = `
   </div>
 `;
 
-function appendOptions<T extends string>(select: HTMLSelectElement, values: T[], labels: Record<T, string>): void {
-  for (const value of values) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = labels[value];
-    select.appendChild(option);
-  }
-}
-
 export class PmCourseFilterBar extends HTMLElement {
   private courseTypeSelect: HTMLSelectElement | null = null;
   private lessonTypeSelect: HTMLSelectElement | null = null;
@@ -101,6 +93,15 @@ export class PmCourseFilterBar extends HTMLElement {
     this.lessonTypeSelect?.removeEventListener('change', this.handleChange);
     this.durationSelect?.removeEventListener('change', this.handleChange);
     this.occurrenceSelect?.removeEventListener('change', this.handleChange);
+  }
+
+  /** Returns every select to "All …" without announcing a filter change. */
+  reset(): void {
+    if (!this.courseTypeSelect) return;
+    this.courseTypeSelect.value = '';
+    this.lessonTypeSelect!.value = '';
+    this.durationSelect!.value = '';
+    this.occurrenceSelect!.value = '';
   }
 
   private handleChange = (): void => {

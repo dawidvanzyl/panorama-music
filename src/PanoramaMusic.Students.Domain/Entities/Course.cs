@@ -1,7 +1,6 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Courses;
-using PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Students.Domain.Entities;
 
@@ -14,9 +13,6 @@ public sealed class Course : AggregateRoot
 {
 	public Course(Guid courseId, CourseType courseType, decimal cost, LessonStructure lessonStructure)
 	{
-		if (cost < 0)
-			throw new DomainException("A course cost cannot be negative.");
-
 		CourseId = courseId;
 		CourseType = courseType;
 		Cost = cost;

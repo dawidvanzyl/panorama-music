@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Serialization;
 using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;
@@ -19,9 +20,11 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 {
 	private const string _password = "TestPass123!";
 
+	// Cost crosses the wire as a string, so the client reads it back the same way
+	// the API writes it.
 	private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
 	{
-		Converters = { new JsonStringEnumConverter() },
+		Converters = { new JsonStringEnumConverter(), new DecimalAsStringJsonConverter() },
 	};
 
 	[Fact]
@@ -33,7 +36,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 
 		var created = await CreateCourseAsync(client, CourseType.Instrument, 450.55m, structure.LessonStructureId);
 
-		var listed = await GetCoursesAsync(client, $"?courseType={CourseType.Instrument}");
+		var (listed, payload) = await GetCoursesAsync(client);
 		var readBack = listed.Single(c => c.CourseId == created.CourseId);
 
 		ShouldlyHelpers.Satisfy(
@@ -41,7 +44,10 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 			() => readBack.Cost.ShouldBe(450.55m),
 			// The scale survives the round trip unshifted — 450.55m, not 45055
 			// scaled back, and not a rounded binary approximation.
-			() => decimal.GetBits(readBack.Cost)[3].ShouldBe(2 << 16));
+			() => decimal.GetBits(readBack.Cost)[3].ShouldBe(2 << 16),
+			// And it leaves the API as a string, so no consumer that parses JSON
+			// numbers as doubles can turn it into one.
+			() => payload.ShouldContain("\"cost\":\"450.55\""));
 	}
 
 	[Fact]
@@ -64,34 +70,27 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "257UC5")]
-	[Trait("AC", "257UC6")]
-	[Trait("AC", "257UC7")]
-	public async Task GetCourses_Filters_NarrowTheListAndCombine()
+	public async Task GetCourses_ReturnsEveryCourseWithItsLessonStructureDetail()
 	{
-		var client = await SignInAsync("courses-filters-admin", Role.Admin, "10.0.70.3");
+		var client = await SignInAsync("courses-list-admin", Role.Admin, "10.0.70.3");
 		var groupHourDuring = await GetStructureAsync(client, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool);
 		var individualHalfAfter = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
 		var theory = await CreateCourseAsync(client, CourseType.Theory, 120.00m, groupHourDuring.LessonStructureId);
 		var instrument = await CreateCourseAsync(client, CourseType.Instrument, 850.00m, individualHalfAfter.LessonStructureId);
 
-		var unfiltered = await GetCoursesAsync(client, string.Empty);
-		var byCourseType = await GetCoursesAsync(client, $"?courseType={CourseType.Theory}");
-		var combined = await GetCoursesAsync(
-			client,
-			$"?lessonType={LessonType.Individual}&durationType={DurationType.HalfHour}&occurrenceType={OccurrenceType.AfterSchool}");
+		var (listed, _) = await GetCoursesAsync(client);
 
 		ShouldlyHelpers.Satisfy(
-			() => unfiltered.ShouldContain(c => c.CourseId == theory.CourseId),
-			() => unfiltered.ShouldContain(c => c.CourseId == instrument.CourseId),
+			() => listed.ShouldContain(c => c.CourseId == theory.CourseId),
+			() => listed.ShouldContain(c => c.CourseId == instrument.CourseId),
 			// The lesson structure detail travels with each row, not just its id.
-			() => unfiltered.Single(c => c.CourseId == theory.CourseId).LessonType.ShouldBe(LessonType.Group),
-			() => unfiltered.Single(c => c.CourseId == theory.CourseId).DurationType.ShouldBe(DurationType.Hour),
-			() => unfiltered.Single(c => c.CourseId == theory.CourseId).OccurrenceType.ShouldBe(OccurrenceType.DuringSchool),
-			() => byCourseType.ShouldAllBe(c => c.CourseType == CourseType.Theory),
-			() => byCourseType.ShouldContain(c => c.CourseId == theory.CourseId),
-			() => combined.ShouldContain(c => c.CourseId == instrument.CourseId),
-			() => combined.ShouldNotContain(c => c.CourseId == theory.CourseId));
+			() => listed.Single(c => c.CourseId == theory.CourseId).LessonType.ShouldBe(LessonType.Group),
+			() => listed.Single(c => c.CourseId == theory.CourseId).DurationType.ShouldBe(DurationType.Hour),
+			() => listed.Single(c => c.CourseId == theory.CourseId).OccurrenceType.ShouldBe(OccurrenceType.DuringSchool),
+			() => listed.Single(c => c.CourseId == instrument.CourseId).LessonType.ShouldBe(LessonType.Individual),
+			() => listed.Single(c => c.CourseId == instrument.CourseId).DurationType.ShouldBe(DurationType.HalfHour),
+			() => listed.Single(c => c.CourseId == instrument.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
 	}
 
 	[Fact]
@@ -140,13 +139,13 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	{
 		var client = await SignInAsync("courses-unknown-structure-admin", Role.Admin, "10.0.70.6");
 
-		var before = await GetCoursesAsync(client, string.Empty);
+		var (before, _) = await GetCoursesAsync(client);
 		var response = await client.Client.SendAsync(
 			client.AuthorizedPostRequest(
 				"/api/courses",
 				new CreateCourseRequest(CourseType.Theory, 120.00m, Guid.NewGuid())),
 			TestContext.Current.CancellationToken);
-		var after = await GetCoursesAsync(client, string.Empty);
+		var (after, _) = await GetCoursesAsync(client);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
@@ -191,13 +190,14 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		return JsonSerializer.Deserialize<CourseResult>(payload, _jsonOptions).ShouldNotBeNull();
 	}
 
-	private static async Task<List<CourseResult>> GetCoursesAsync(IsolatedHttpClient client, string query)
+	/// <summary>The deserialised list and the raw payload it came from.</summary>
+	private static async Task<(List<CourseResult> Courses, string Payload)> GetCoursesAsync(IsolatedHttpClient client)
 	{
 		var response = await client.Client.SendAsync(
-			client.AuthorizedGetRequest($"/api/courses{query}"), TestContext.Current.CancellationToken);
+			client.AuthorizedGetRequest("/api/courses"), TestContext.Current.CancellationToken);
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-		return JsonSerializer.Deserialize<List<CourseResult>>(payload, _jsonOptions).ShouldNotBeNull();
+		return (JsonSerializer.Deserialize<List<CourseResult>>(payload, _jsonOptions).ShouldNotBeNull(), payload);
 	}
 }

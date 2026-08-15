@@ -12,21 +12,11 @@ namespace PanoramaMusic.Students.Infrastructure.Repositories;
 public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
 	: RepositoryBase(unitOfWork), ICourseRepository
 {
-	public async Task<IList<Course>> GetAllAsync(CourseFilter filter, CancellationToken cancellationToken)
+	public async Task<IList<Course>> GetAllAsync(CancellationToken cancellationToken)
 	{
 		// The function joins the lesson structures itself, so the whole list
 		// arrives resolved in this one round trip.
-		var command = CreateCommandDefinition(
-			"students.get_courses",
-			new
-			{
-				p_course_type = filter.CourseType?.ToString(),
-				p_lesson_type = filter.LessonType?.ToString(),
-				p_duration_type = filter.DurationType?.ToString(),
-				p_occurrence_type = filter.OccurrenceType?.ToString(),
-			},
-			Transaction,
-			cancellationToken);
+		var command = CreateCommandDefinition("students.get_courses", null, Transaction, cancellationToken);
 		var dtos = await Connection.QueryAsync<CourseDto>(command);
 
 		return [.. dtos.Select(dto => dto.MapToCourse())];

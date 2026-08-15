@@ -1,4 +1,5 @@
 import { COURSE_TYPES, COURSE_TYPE_LABELS, lessonStructureOptionLabel } from '../services/course-display';
+import { appendOptions } from './select-options';
 import type { CourseType, LessonStructure } from '../services/courses';
 
 const styles = new CSSStyleSheet();
@@ -144,12 +145,7 @@ export class PmCourseForm extends HTMLElement {
     this.errorSlot = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
 
-    for (const courseType of COURSE_TYPES) {
-      const option = document.createElement('option');
-      option.value = courseType;
-      option.textContent = COURSE_TYPE_LABELS[courseType];
-      this.courseTypeSelect.appendChild(option);
-    }
+    appendOptions(this.courseTypeSelect, COURSE_TYPES, COURSE_TYPE_LABELS);
 
     this.renderStructures();
     this.createBtn.addEventListener('click', this.handleCreate);
