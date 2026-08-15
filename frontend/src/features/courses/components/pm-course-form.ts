@@ -1,4 +1,10 @@
-import { COST_ERROR, COURSE_TYPES, COURSE_TYPE_LABELS, isValidCost, lessonStructureOptionLabel } from '../services/course-display';
+import {
+  COST_ERROR,
+  COURSE_TYPES,
+  COURSE_TYPE_LABELS,
+  isValidCost,
+  lessonStructureOptionLabel,
+} from '../services/course-display';
 import { appendOptions } from './select-options';
 import type { CourseType, LessonStructure } from '../services/courses';
 
