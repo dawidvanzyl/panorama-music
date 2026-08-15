@@ -1,4 +1,4 @@
-import { COURSE_TYPES, COURSE_TYPE_LABELS, lessonStructureOptionLabel } from '../services/course-display';
+import { COST_ERROR, COURSE_TYPES, COURSE_TYPE_LABELS, isValidCost, lessonStructureOptionLabel } from '../services/course-display';
 import { appendOptions } from './select-options';
 import type { CourseType, LessonStructure } from '../services/courses';
 
@@ -113,8 +113,6 @@ template.innerHTML = `
   <div class="course-form__error" id="error"></div>
 `;
 
-const COST_PATTERN = /^\d+(\.\d{1,2})?$/;
-const COST_ERROR = 'Cost must be an amount with at most two decimals.';
 const MISSING_ERROR = 'Select a course type and a lesson structure.';
 
 export class PmCourseForm extends HTMLElement {
@@ -196,7 +194,7 @@ export class PmCourseForm extends HTMLElement {
       this.showError(MISSING_ERROR);
       return;
     }
-    if (!COST_PATTERN.test(cost)) {
+    if (!isValidCost(cost)) {
       this.showError(COST_ERROR);
       return;
     }

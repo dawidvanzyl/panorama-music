@@ -1,7 +1,9 @@
 import {
+  COST_ERROR,
   COURSE_TYPE_LABELS,
   OCCURRENCE_TYPE_LABELS,
   costText,
+  isValidCost,
   lessonStructureColumnText,
 } from '../services/course-display';
 import type { Course } from '../services/courses';
@@ -47,6 +49,82 @@ styles.replaceSync(`
       text-align: right;
       width: 220px;
     }
+    .course-table__actions {
+      white-space: nowrap;
+    }
+    /* The reason a save or delete failed sits inside the row it concerns,
+       above its cells, so it is never mistaken for another row's. */
+    .course-table__error-cell {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .course-table__error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(224, 82, 82, 0.1);
+      border: 1px solid var(--pm-danger);
+      border-radius: var(--pm-radius);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pm-danger);
+    }
+    .course-table__cost-input {
+      box-sizing: border-box;
+      width: 100%;
+      height: 38px;
+      padding: 0 8px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .course-table__btn {
+      border: 1px solid transparent;
+      border-radius: var(--pm-radius);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .course-table__btn + .course-table__btn {
+      margin-left: 6px;
+    }
+    .course-table__btn--edit {
+      background: var(--pm-surface-2);
+      border-color: var(--pm-border);
+      color: var(--pm-text);
+    }
+    .course-table__btn--edit:hover:not(:disabled) {
+      filter: brightness(1.2);
+    }
+    .course-table__btn--delete {
+      background: var(--pm-danger);
+      color: #fff;
+    }
+    .course-table__btn--save {
+      background: var(--pm-accent);
+      color: #fff;
+    }
+    .course-table__btn--cancel {
+      background: transparent;
+      color: var(--pm-text-muted);
+    }
+    .course-table__btn--cancel:hover {
+      background: var(--pm-surface-2);
+    }
+    .course-table__btn--delete:hover:not(:disabled),
+    .course-table__btn--save:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+    .course-table__btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
     .course-table__empty {
       color: var(--pm-text-muted);
       font-size: 14px;
@@ -80,6 +158,11 @@ export class PmCourseTable extends HTMLElement {
   private actionsHeader: HTMLElement | null = null;
   private _courses: Course[] = [];
   private _showActions = false;
+  private _editingCourseId: string | null = null;
+  /** The value currently in the cost input, kept so a re-render does not lose it. */
+  private _costDraft = '';
+  private _errorCourseId: string | null = null;
+  private _errorMessage = '';
 
   constructor() {
     super();
@@ -103,6 +186,11 @@ export class PmCourseTable extends HTMLElement {
 
   set courses(value: Course[]) {
     this._courses = value;
+    // A fresh list is what a completed save or delete produces, so any edit and
+    // any row error it might have carried are done with.
+    this._editingCourseId = null;
+    this._costDraft = '';
+    this.clearRowError();
     this.render();
   }
 
@@ -113,12 +201,27 @@ export class PmCourseTable extends HTMLElement {
   /**
    * Whether the actions column exists at all. A staff user who may not maintain
    * courses gets no column rather than a disabled one, matching how the
-   * endpoints answer. The column stays empty until the row actions land with
-   * the change-and-remove story.
+   * endpoints answer.
    */
   set showActions(value: boolean) {
     this._showActions = value;
     this.render();
+  }
+
+  /**
+   * Reports a failed save or delete against the row it concerns. A row being
+   * edited stays in edit mode with the entered value, so the change can be
+   * corrected and retried.
+   */
+  showRowError(courseId: string, message: string): void {
+    this._errorCourseId = courseId;
+    this._errorMessage = message;
+    this.render();
+  }
+
+  clearRowError(): void {
+    this._errorCourseId = null;
+    this._errorMessage = '';
   }
 
   private upgradeProperty(name: string): void {
@@ -138,12 +241,38 @@ export class PmCourseTable extends HTMLElement {
     this.rowsBody.innerHTML = '';
 
     for (const course of this._courses) {
+      if (course.courseId === this._errorCourseId) {
+        this.rowsBody.appendChild(this.buildErrorRow());
+      }
       this.rowsBody.appendChild(this.buildRow(course));
     }
   }
 
-  private buildRow(course: Course): HTMLTableRowElement {
+  private buildErrorRow(): HTMLTableRowElement {
     const row = document.createElement('tr');
+    row.classList.add('course-table__error-row');
+    row.dataset.courseId = this._errorCourseId ?? '';
+
+    const cell = document.createElement('td');
+    cell.classList.add('course-table__error-cell');
+    cell.colSpan = this._showActions ? 5 : 4;
+
+    const banner = document.createElement('div');
+    banner.classList.add('course-table__error');
+    banner.textContent = this._errorMessage;
+    cell.appendChild(banner);
+
+    row.appendChild(cell);
+    return row;
+  }
+
+  private buildRow(course: Course): HTMLTableRowElement {
+    const isEditing = course.courseId === this._editingCourseId;
+    const row = document.createElement('tr');
+    // The course is identified to a human by its type, structure and
+    // occurrence, none of which is unique; the row carries its identifier so a
+    // caller can address exactly one row regardless of what it currently shows.
+    row.dataset.courseId = course.courseId;
 
     const typeCell = document.createElement('td');
     typeCell.textContent = COURSE_TYPE_LABELS[course.courseType];
@@ -157,17 +286,121 @@ export class PmCourseTable extends HTMLElement {
     occurrenceCell.textContent = OCCURRENCE_TYPE_LABELS[course.occurrenceType];
 
     const costCell = document.createElement('td');
-    costCell.textContent = costText(course.cost);
+    if (isEditing) {
+      costCell.appendChild(this.buildCostInput());
+    } else {
+      costCell.textContent = costText(course.cost);
+    }
 
     row.append(typeCell, structureCell, occurrenceCell, costCell);
 
     if (this._showActions) {
-      const actionsCell = document.createElement('td');
-      actionsCell.classList.add('course-table__actions');
-      row.appendChild(actionsCell);
+      row.appendChild(isEditing ? this.buildEditActions(course) : this.buildDisplayActions(course));
     }
 
     return row;
+  }
+
+  private buildCostInput(): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'costInput';
+    input.classList.add('course-table__cost-input');
+    input.inputMode = 'decimal';
+    input.value = this._costDraft;
+    input.addEventListener('input', () => {
+      this._costDraft = input.value;
+    });
+    return input;
+  }
+
+  private buildDisplayActions(course: Course): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    cell.classList.add('course-table__actions');
+
+    // Another row's edit is in progress; leaving these live would abandon it.
+    const isAnotherRowEditing = this._editingCourseId !== null;
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.classList.add('course-table__btn', 'course-table__btn--edit');
+    editBtn.textContent = 'Edit Cost';
+    editBtn.disabled = isAnotherRowEditing;
+    editBtn.addEventListener('click', () => this.handleEditClicked(course));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.classList.add('course-table__btn', 'course-table__btn--delete');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.disabled = isAnotherRowEditing;
+    deleteBtn.addEventListener('click', () => this.handleDeleteClicked(course));
+
+    cell.append(editBtn, deleteBtn);
+    return cell;
+  }
+
+  private buildEditActions(course: Course): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    cell.classList.add('course-table__actions');
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.classList.add('course-table__btn', 'course-table__btn--save');
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', () => this.handleSaveClicked(course));
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.classList.add('course-table__btn', 'course-table__btn--cancel');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => this.handleCancelClicked());
+
+    cell.append(saveBtn, cancelBtn);
+    return cell;
+  }
+
+  private handleEditClicked(course: Course): void {
+    this._editingCourseId = course.courseId;
+    this._costDraft = course.cost;
+    this.clearRowError();
+    this.render();
+  }
+
+  private handleCancelClicked(): void {
+    this._editingCourseId = null;
+    this._costDraft = '';
+    this.clearRowError();
+    this.render();
+  }
+
+  private handleSaveClicked(course: Course): void {
+    const cost = this._costDraft.trim();
+
+    if (!isValidCost(cost)) {
+      this.showRowError(course.courseId, COST_ERROR);
+      return;
+    }
+
+    this.clearRowError();
+    this.dispatchEvent(
+      new CustomEvent('course-cost-save-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { courseId: course.courseId, cost },
+      }),
+    );
+  }
+
+  private handleDeleteClicked(course: Course): void {
+    this.clearRowError();
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent('course-delete-clicked', {
+        bubbles: true,
+        composed: true,
+        detail: { course },
+      }),
+    );
   }
 }
 

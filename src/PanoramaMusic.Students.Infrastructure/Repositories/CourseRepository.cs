@@ -22,6 +22,18 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 		return [.. dtos.Select(dto => dto.MapToCourse())];
 	}
 
+	public async Task<Course?> GetByIdAsync(Guid courseId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_course_by_id",
+			new { p_course_id = courseId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<CourseDto>(command);
+
+		return dto?.MapToCourse();
+	}
+
 	public async Task CreateAsync(Course course, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
@@ -33,6 +45,36 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 				p_cost = course.Cost,
 				p_lesson_structure_id = course.LessonStructure.LessonStructureId,
 			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(course);
+	}
+
+	public async Task UpdateCostAsync(Course course, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.update_course_cost",
+			new
+			{
+				p_course_id = course.CourseId,
+				p_cost = course.Cost,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(course);
+	}
+
+	public async Task DeleteAsync(Course course, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_course",
+			new { p_course_id = course.CourseId },
 			Transaction,
 			cancellationToken);
 

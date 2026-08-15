@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoursesError, createCourse, type Course, type LessonStructure } from '../../services/courses';
+import {
+  CoursesError,
+  createCourse,
+  deleteCourse,
+  updateCourseCost,
+  type Course,
+  type LessonStructure,
+} from '../../services/courses';
 
 const mockGetCourses = vi.fn();
 const mockGetLessonStructures = vi.fn();
@@ -12,6 +19,8 @@ vi.mock('../../services/courses', async () => {
     getCourses: () => mockGetCourses(),
     getLessonStructures: () => mockGetLessonStructures(),
     createCourse: vi.fn(),
+    updateCourseCost: vi.fn(),
+    deleteCourse: vi.fn(),
   };
 });
 
@@ -25,6 +34,7 @@ vi.mock('../../../../services/token-storage', async () => {
 import '../pm-course-management-page';
 import type { PmCourseForm } from '../../components/pm-course-form';
 import type { PmCourseTable } from '../../components/pm-course-table';
+import type { PmDeleteCourseModal } from '../../components/pm-delete-course-modal';
 
 const groupHourDuring: LessonStructure = {
   lessonStructureId: 'ls1',
@@ -95,8 +105,48 @@ function costInputOf(el: HTMLElement): HTMLInputElement {
 }
 
 function rowTextsOf(el: HTMLElement): string[][] {
-  const rows = tableOf(el).shadowRoot!.querySelectorAll('tbody tr');
-  return [...rows].map((row) => [...row.querySelectorAll('td')].map((cell) => cell.textContent ?? ''));
+  return dataRowsOf(el).map((row) => [...row.querySelectorAll('td')].map((cell) => cell.textContent ?? ''));
+}
+
+/** The course rows, leaving out any row carrying an inline error banner. */
+function dataRowsOf(el: HTMLElement): HTMLTableRowElement[] {
+  const rows = tableOf(el).shadowRoot!.querySelectorAll('tbody tr:not(.course-table__error-row)');
+  return [...rows] as HTMLTableRowElement[];
+}
+
+function rowErrorOf(el: HTMLElement): string | null {
+  return tableOf(el).shadowRoot!.querySelector('.course-table__error')?.textContent ?? null;
+}
+
+function actionsOf(el: HTMLElement, rowIndex: number): string[] {
+  const buttons = dataRowsOf(el)[rowIndex].querySelectorAll('button');
+  return [...buttons].map((button) => button.textContent ?? '');
+}
+
+function clickRowAction(el: HTMLElement, rowIndex: number, label: string): void {
+  const buttons = [...dataRowsOf(el)[rowIndex].querySelectorAll('button')];
+  buttons.find((button) => button.textContent === label)!.dispatchEvent(new MouseEvent('click'));
+}
+
+function costInputInRow(el: HTMLElement, rowIndex: number): HTMLInputElement | null {
+  return dataRowsOf(el)[rowIndex].querySelector('input');
+}
+
+async function typeCost(el: HTMLElement, rowIndex: number, value: string): Promise<void> {
+  const input = costInputInRow(el, rowIndex)!;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  await flush();
+}
+
+function deleteModalOf(el: HTMLElement): PmDeleteCourseModal {
+  return el.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteCourseModal;
+}
+
+async function clickModalButton(el: HTMLElement, id: string): Promise<void> {
+  (deleteModalOf(el) as unknown as HTMLElement).shadowRoot!.getElementById(id)!.dispatchEvent(new MouseEvent('click'));
+  await flush();
+  await flush();
 }
 
 /** Drives the real form controls so the field state after submit can be asserted. */
@@ -129,6 +179,8 @@ beforeEach(() => {
   mockGetLessonStructures.mockReset();
   mockGetLessonStructures.mockResolvedValue([groupHourDuring, individualHalfAfter]);
   vi.mocked(createCourse).mockReset();
+  vi.mocked(updateCourseCost).mockReset();
+  vi.mocked(deleteCourse).mockReset();
 });
 
 describe('pm-course-management-page — opens with the create form already open', { tags: ['257UC11'] }, () => {
@@ -270,7 +322,9 @@ describe('pm-course-management-page — narrows the list by the filter selection
 
     await changeFilter(el, 'courseType', 'Instrument');
 
-    expect(rowTextsOf(el)).toEqual([['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50', '']]);
+    expect(rowTextsOf(el)).toEqual([
+      ['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50', 'Edit CostDelete'],
+    ]);
     expect(mockGetCourses.mock.calls.length).toBe(readsOnLoad);
   });
 
@@ -281,7 +335,7 @@ describe('pm-course-management-page — narrows the list by the filter selection
     await changeFilter(el, 'durationType', 'Hour');
     await changeFilter(el, 'occurrenceType', 'DuringSchool');
 
-    expect(rowTextsOf(el)).toEqual([['Theory', 'Group · Hour', 'During School', 'R 120.00', '']]);
+    expect(rowTextsOf(el)).toEqual([['Theory', 'Group · Hour', 'During School', 'R 120.00', 'Edit CostDelete']]);
   });
 });
 
@@ -318,5 +372,176 @@ describe('pm-course-management-page — read-only for a non-maintainer', { tags:
       ['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50'],
     ]);
     expect(mockGetLessonStructures).not.toHaveBeenCalled();
+  });
+});
+
+describe('pm-course-management-page — turns one row into a cost edit', { tags: ['258UC9'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('swaps that row cost for a prefilled input and its actions for Save and Cancel', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+
+    expect(costInputInRow(el, 0)!.value).toBe('120.00');
+    expect(actionsOf(el, 0)).toEqual(['Save', 'Cancel']);
+    // The other row is untouched: still its cost text, still its own actions.
+    expect(costInputInRow(el, 1)).toBeNull();
+    expect(actionsOf(el, 1)).toEqual(['Edit Cost', 'Delete']);
+  });
+});
+
+describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC10'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('updates the cost and returns the row to display mode showing it', async () => {
+    vi.mocked(updateCourseCost).mockResolvedValue({ ...theory, cost: '150.00' });
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '150.00');
+    mockGetCourses.mockResolvedValue([{ ...theory, cost: '150.00' }, instrument]);
+    clickRowAction(el, 0, 'Save');
+    await flush();
+    await flush();
+
+    expect(updateCourseCost).toHaveBeenCalledWith('c1', '150.00');
+    expect(costInputInRow(el, 0)).toBeNull();
+    expect(rowTextsOf(el)[0]).toContain('R 150.00');
+    expect(actionsOf(el, 0)).toEqual(['Edit Cost', 'Delete']);
+  });
+});
+
+describe('pm-course-management-page — abandons a cost edit on Cancel', { tags: ['258UC11'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('restores the original cost and sends nothing', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '999.99');
+    clickRowAction(el, 0, 'Cancel');
+
+    expect(costInputInRow(el, 0)).toBeNull();
+    expect(rowTextsOf(el)[0]).toContain('R 120.00');
+    expect(updateCourseCost).not.toHaveBeenCalled();
+  });
+});
+
+describe('pm-course-management-page — reports a refused cost against its row', { tags: ['258UC12'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('shows an inline row error and sends nothing when the entered cost is invalid', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '120.345');
+    clickRowAction(el, 0, 'Save');
+    await flush();
+
+    expect(rowErrorOf(el)).toContain('two decimals');
+    expect(updateCourseCost).not.toHaveBeenCalled();
+    expect(costInputInRow(el, 0)!.value).toBe('120.345');
+  });
+
+  it('shows the reason inline and stays in edit mode when the save is rejected', async () => {
+    vi.mocked(updateCourseCost).mockRejectedValue(new CoursesError('Course c1 was not found.', 404));
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '150.00');
+    clickRowAction(el, 0, 'Save');
+    await flush();
+    await flush();
+
+    expect(rowErrorOf(el)).toContain('was not found');
+    expect(costInputInRow(el, 0)!.value).toBe('150.00');
+    expect(actionsOf(el, 0)).toEqual(['Save', 'Cancel']);
+  });
+});
+
+describe('pm-course-management-page — confirms a course deletion', { tags: ['258UC13'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('names the course by its type, lesson structure and occurrence', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+
+    const modal = deleteModalOf(el) as unknown as HTMLElement;
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('modalName')!.textContent).toBe(
+      'Instrument · Individual · Half Hour, After School',
+    );
+    expect(modal.shadowRoot!.querySelector('.modal__body')!.textContent).toContain(
+      'no longer be available for enrolment',
+    );
+  });
+});
+
+describe('pm-course-management-page — deletes on confirmation', { tags: ['258UC14'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('removes the course from the list', async () => {
+    vi.mocked(deleteCourse).mockResolvedValue(undefined);
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+    mockGetCourses.mockResolvedValue([theory]);
+    await clickModalButton(el, 'deleteBtn');
+
+    expect(deleteCourse).toHaveBeenCalledWith('c2');
+    expect(rowTextsOf(el)).toHaveLength(1);
+    expect(rowTextsOf(el)[0]).toContain('Theory');
+  });
+});
+
+describe('pm-course-management-page — leaves the course alone on cancel', { tags: ['258UC15'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('closes the confirmation with the course still listed', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+    await clickModalButton(el, 'cancelBtn');
+
+    expect((deleteModalOf(el) as unknown as HTMLElement).hasAttribute('open')).toBe(false);
+    expect(deleteCourse).not.toHaveBeenCalled();
+    expect(rowTextsOf(el)).toHaveLength(2);
+  });
+});
+
+describe('pm-course-management-page — reports a refused deletion against its row', { tags: ['258UC16'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('shows the reason against the row and leaves the course listed', async () => {
+    vi.mocked(deleteCourse).mockRejectedValue(new CoursesError('Course c2 was not found.', 404));
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+    await clickModalButton(el, 'deleteBtn');
+
+    expect(rowErrorOf(el)).toContain('was not found');
+    expect(rowTextsOf(el)).toHaveLength(2);
   });
 });

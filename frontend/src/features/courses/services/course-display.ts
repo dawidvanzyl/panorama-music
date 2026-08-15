@@ -56,3 +56,21 @@ export function costText(cost: string): string {
   const [whole, fraction = ''] = cost.split('.');
   return `R ${whole}.${fraction.padEnd(2, '0').slice(0, 2)}`;
 }
+
+const COST_PATTERN = /^\d+(\.\d{1,2})?$/;
+
+export const COST_ERROR = 'Cost must be an amount with at most two decimals.';
+
+/**
+ * Whether the entered text is an amount the server would accept, checked as
+ * text so a cost is never put through `Number` to be validated. Shared by the
+ * create form and the row's cost edit.
+ */
+export function isValidCost(cost: string): boolean {
+  return COST_PATTERN.test(cost);
+}
+
+/** How a course is named to a human — course type, lesson structure, occurrence. */
+export function courseName(course: Course): string {
+  return `${COURSE_TYPE_LABELS[course.courseType]} · ${LESSON_TYPE_LABELS[course.lessonType]} · ${DURATION_TYPE_LABELS[course.durationType]}, ${OCCURRENCE_TYPE_LABELS[course.occurrenceType]}`;
+}

@@ -23,7 +23,7 @@ public sealed class Course : AggregateRoot
 
 	public CourseType CourseType { get; }
 
-	public decimal Cost { get; }
+	public decimal Cost { get; private set; }
 
 	public LessonStructure LessonStructure { get; }
 
@@ -33,5 +33,23 @@ public sealed class Course : AggregateRoot
 
 		course.Raise(new CourseCreated(course));
 		return course;
+	}
+
+	/// <summary>
+	/// The cost is the whole of a course's mutable state — its type and the
+	/// structure it is delivered under are settled at creation and stay put.
+	/// </summary>
+	public void UpdateCost(decimal cost)
+	{
+		var before = new Course(CourseId, CourseType, Cost, LessonStructure);
+
+		Cost = cost;
+
+		Raise(new CourseCostUpdated(before, this));
+	}
+
+	public void MarkDeleted()
+	{
+		Raise(new CourseDeleted(this));
 	}
 }

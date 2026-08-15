@@ -29,10 +29,12 @@ public static class CourseRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
-		app
+		var maintenanceGroup = app
 			.MapGroup("/api/courses")
 			.WithTags("Courses")
-			.RequireAuthorization("CoordinatorOrAdminPolicy")
+			.RequireAuthorization("CoordinatorOrAdminPolicy");
+
+		maintenanceGroup
 			.MapPost("/", async (CreateCourseRequest request, CreateCourseHandler handler, CancellationToken ct) =>
 			{
 				var command = new CreateCourseCommand(request);
@@ -45,5 +47,35 @@ public static class CourseRoutes
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
+
+		// Cost is the whole of a course's mutable state, so the update is a PUT
+		// carrying a full representation of it rather than a partial one.
+		maintenanceGroup
+			.MapPut("/{courseId:guid}", async (Guid courseId, UpdateCourseRequest request, UpdateCourseCostHandler handler, CancellationToken ct) =>
+			{
+				var command = new UpdateCourseCostCommand(courseId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.AddEndpointFilter<ValidationFilter<UpdateCourseRequest>>()
+			.WithName("UpdateCourseCost")
+			.Produces<CourseResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		maintenanceGroup
+			.MapDelete("/{courseId:guid}", async (Guid courseId, DeleteCourseHandler handler, CancellationToken ct) =>
+			{
+				var command = new DeleteCourseCommand(courseId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("DeleteCourse")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }
