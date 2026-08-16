@@ -86,10 +86,6 @@ export class CourseManagementPage extends BasePage {
     await this.editingRow().getByRole('button', { name: 'Save' }).click();
   }
 
-  async cancelCostEdit(): Promise<void> {
-    await this.editingRow().getByRole('button', { name: 'Cancel' }).click();
-  }
-
   async startDelete(row: Locator): Promise<void> {
     await row.getByRole('button', { name: 'Delete' }).click();
   }

@@ -1,4 +1,4 @@
-﻿using PanoramaMusic.Api.Serialization;
+using PanoramaMusic.Api.Serialization;
 using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;

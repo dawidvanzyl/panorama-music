@@ -164,6 +164,8 @@ export class PmCourseTable extends HTMLElement {
   private _costDraft = '';
   private _errorCourseId: string | null = null;
   private _errorMessage = '';
+  /** A save is in flight; its actions stay dead until it lands, so one click sends one request. */
+  private _saving = false;
 
   constructor() {
     super();
@@ -191,6 +193,7 @@ export class PmCourseTable extends HTMLElement {
     // any row error it might have carried are done with.
     this._editingCourseId = null;
     this._costDraft = '';
+    this._saving = false;
     this.clearRowError();
     this.render();
   }
@@ -217,6 +220,7 @@ export class PmCourseTable extends HTMLElement {
   showRowError(courseId: string, message: string): void {
     this._errorCourseId = courseId;
     this._errorMessage = message;
+    this._saving = false;
     this.render();
   }
 
@@ -326,21 +330,16 @@ export class PmCourseTable extends HTMLElement {
     const cell = document.createElement('td');
     cell.classList.add('course-table__actions');
 
-    // Another row's edit is in progress; leaving these live would abandon it.
-    const isAnotherRowEditing = this._editingCourseId !== null;
-
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.classList.add('course-table__btn', 'course-table__btn--edit');
     editBtn.textContent = 'Edit Cost';
-    editBtn.disabled = isAnotherRowEditing;
     editBtn.addEventListener('click', () => this.handleEditClicked(course));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.classList.add('course-table__btn', 'course-table__btn--delete');
     deleteBtn.textContent = 'Delete';
-    deleteBtn.disabled = isAnotherRowEditing;
     deleteBtn.addEventListener('click', () => this.handleDeleteClicked(course));
 
     cell.append(editBtn, deleteBtn);
@@ -355,12 +354,14 @@ export class PmCourseTable extends HTMLElement {
     saveBtn.type = 'button';
     saveBtn.classList.add('course-table__btn', 'course-table__btn--save');
     saveBtn.textContent = 'Save';
+    saveBtn.disabled = this._saving;
     saveBtn.addEventListener('click', () => this.handleSaveClicked(course));
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.classList.add('course-table__btn', 'course-table__btn--cancel');
     cancelBtn.textContent = 'Cancel';
+    cancelBtn.disabled = this._saving;
     cancelBtn.addEventListener('click', () => this.handleCancelClicked());
 
     cell.append(saveBtn, cancelBtn);
@@ -377,11 +378,16 @@ export class PmCourseTable extends HTMLElement {
   private handleCancelClicked(): void {
     this._editingCourseId = null;
     this._costDraft = '';
+    this._saving = false;
     this.clearRowError();
     this.render();
   }
 
   private handleSaveClicked(course: Course): void {
+    // The disabled button is the visible half of this; the flag is the half
+    // that actually guarantees one save produces one request.
+    if (this._saving) return;
+
     const cost = this._costDraft.trim();
 
     if (!isValidCost(cost)) {
@@ -389,7 +395,11 @@ export class PmCourseTable extends HTMLElement {
       return;
     }
 
+    // Rendering here both retires any error the previous attempt left on screen
+    // and takes the row's actions out of service until the save lands.
     this.clearRowError();
+    this._saving = true;
+    this.render();
     this.dispatchEvent(
       new CustomEvent('course-cost-save-requested', {
         bubbles: true,

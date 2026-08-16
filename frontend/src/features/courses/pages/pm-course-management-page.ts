@@ -143,8 +143,13 @@ export class PmCourseManagementPage extends HTMLElement {
     this.clearError();
 
     try {
-      await updateCourseCost(courseId, cost);
-      await this.loadCourses();
+      const updated = await updateCourseCost(courseId, cost);
+      // The response is the updated course, so the list is corrected in place.
+      // A re-read would put a second call between the change and the row that
+      // reports it, and its failure would leave the row asserting a stale cost
+      // for a change that actually landed.
+      this.courses = this.courses.map((course) => (course.courseId === courseId ? updated : course));
+      this.renderCourses();
     } catch (err) {
       // The reason belongs against the row it concerns, which stays in edit
       // mode holding the entered value so the change can be corrected.
@@ -165,7 +170,10 @@ export class PmCourseManagementPage extends HTMLElement {
 
     try {
       await deleteCourse(courseId);
-      await this.loadCourses();
+      // Dropped from the list rather than re-read, for the same reason a cost
+      // update is applied in place.
+      this.courses = this.courses.filter((course) => course.courseId !== courseId);
+      this.renderCourses();
     } catch (err) {
       this.courseTable!.showRowError(courseId, this.messageFor(err));
     }
@@ -184,7 +192,8 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
-  /** Reads the catalogue; only a create or the first render needs a round trip. */
+  /** Reads the catalogue; only a create or the first render needs a round trip.
+   *  A cost update and a delete are applied to the list already in hand. */
   private loadCourses = async (): Promise<void> => {
     try {
       this.courses = await getCourses();

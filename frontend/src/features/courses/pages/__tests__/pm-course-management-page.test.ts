@@ -123,6 +123,11 @@ function actionsOf(el: HTMLElement, rowIndex: number): string[] {
   return [...buttons].map((button) => button.textContent ?? '');
 }
 
+function enabledActionsOf(el: HTMLElement, rowIndex: number): string[] {
+  const buttons = dataRowsOf(el)[rowIndex].querySelectorAll('button');
+  return [...buttons].filter((button) => !button.disabled).map((button) => button.textContent ?? '');
+}
+
 function clickRowAction(el: HTMLElement, rowIndex: number, label: string): void {
   const buttons = [...dataRowsOf(el)[rowIndex].querySelectorAll('button')];
   buttons.find((button) => button.textContent === label)!.dispatchEvent(new MouseEvent('click'));
@@ -387,9 +392,11 @@ describe('pm-course-management-page — turns one row into a cost edit', { tags:
 
     expect(costInputInRow(el, 0)!.value).toBe('120.00');
     expect(actionsOf(el, 0)).toEqual(['Save', 'Cancel']);
-    // The other row is untouched: still its cost text, still its own actions.
+    // The other row is untouched: still its cost text, still its own actions,
+    // and those actions stay live — an edit elsewhere does not disable them.
     expect(costInputInRow(el, 1)).toBeNull();
     expect(actionsOf(el, 1)).toEqual(['Edit Cost', 'Delete']);
+    expect(enabledActionsOf(el, 1)).toEqual(['Edit Cost', 'Delete']);
   });
 });
 
@@ -404,7 +411,6 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
 
     clickRowAction(el, 0, 'Edit Cost');
     await typeCost(el, 0, '150.00');
-    mockGetCourses.mockResolvedValue([{ ...theory, cost: '150.00' }, instrument]);
     clickRowAction(el, 0, 'Save');
     await flush();
     await flush();
@@ -413,6 +419,31 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
     expect(costInputInRow(el, 0)).toBeNull();
     expect(rowTextsOf(el)[0]).toContain('R 150.00');
     expect(actionsOf(el, 0)).toEqual(['Edit Cost', 'Delete']);
+  });
+
+  it('takes the row actions out of service while the save is in flight, so one click sends one request', async () => {
+    let settle: (course: Course) => void = () => {};
+    vi.mocked(updateCourseCost).mockReturnValue(
+      new Promise<Course>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '150.00');
+    clickRowAction(el, 0, 'Save');
+    await flush();
+
+    expect(enabledActionsOf(el, 0)).toEqual([]);
+    clickRowAction(el, 0, 'Save');
+    expect(updateCourseCost).toHaveBeenCalledTimes(1);
+
+    settle({ ...theory, cost: '150.00' });
+    await flush();
+    await flush();
+
+    expect(enabledActionsOf(el, 0)).toEqual(['Edit Cost', 'Delete']);
   });
 });
 
@@ -508,7 +539,6 @@ describe('pm-course-management-page — deletes on confirmation', { tags: ['258U
 
     clickRowAction(el, 1, 'Delete');
     await flush();
-    mockGetCourses.mockResolvedValue([theory]);
     await clickModalButton(el, 'deleteBtn');
 
     expect(deleteCourse).toHaveBeenCalledWith('c2');
