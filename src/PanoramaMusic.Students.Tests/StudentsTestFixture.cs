@@ -58,5 +58,7 @@ public sealed class StudentsTestFixture
 		services.AddTransient<CountGuardianRelationshipHandler>();
 		services.AddTransient<CreateCourseHandler>();
 		services.AddTransient<GetCoursesHandler>();
+		services.AddTransient<UpdateCourseCostHandler>();
+		services.AddTransient<DeleteCourseHandler>();
 	}
 }

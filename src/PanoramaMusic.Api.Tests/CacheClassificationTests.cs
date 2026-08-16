@@ -78,6 +78,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// structure. The payload names no person.
 		["GetCourses"] = CacheExpectation.Cacheable,
 		["CreateCourse"] = CacheExpectation.Cacheable,
+		["UpdateCourseCost"] = CacheExpectation.Cacheable,
 
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.

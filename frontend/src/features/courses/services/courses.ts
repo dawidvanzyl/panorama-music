@@ -108,6 +108,31 @@ export async function createCourse(input: CourseInput): Promise<Course> {
   return result;
 }
 
+/**
+ * Cost is the whole of a course's mutable state, so the update is a PUT of a
+ * full representation of it. The amount is sent as the typed text for the same
+ * reason a create's is — it never becomes a double in transit.
+ */
+export async function updateCourseCost(courseId: string, cost: string): Promise<Course> {
+  const response = await fetch(`${COURSES_BASE}/${courseId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ cost }),
+  });
+  const result = await handleResponse<Course>(response);
+  clearCoursesCache();
+  return result;
+}
+
+export async function deleteCourse(courseId: string): Promise<void> {
+  const response = await fetch(`${COURSES_BASE}/${courseId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearCoursesCache();
+}
+
 let _lessonStructuresCache: LessonStructure[] | null = null;
 
 export function clearLessonStructuresCache(): void {

@@ -9,4 +9,8 @@ namespace PanoramaMusic.Students.Application.Constants;
 public static class CourseAuditEventTypes
 {
 	public const string CourseCreated = "students.course.created";
+
+	public const string CourseCostUpdated = "students.course.cost_updated";
+
+	public const string CourseDeleted = "students.course.deleted";
 }

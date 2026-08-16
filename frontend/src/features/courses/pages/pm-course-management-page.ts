@@ -1,12 +1,23 @@
 import '../components/pm-course-form';
 import '../components/pm-course-filter-bar';
 import '../components/pm-course-table';
+import '../components/pm-delete-course-modal';
 import { hasAnyRole } from '../../../services/token-storage';
-import { CoursesError, createCourse, getCourses, getLessonStructures, type Course } from '../services/courses';
+import {
+  CoursesError,
+  createCourse,
+  deleteCourse,
+  getCourses,
+  getLessonStructures,
+  updateCourseCost,
+  type Course,
+} from '../services/courses';
+import { courseName } from '../services/course-display';
 import { filterCourses, type CourseFilters } from '../services/filter-courses';
 import type { PmCourseFilterBar } from '../components/pm-course-filter-bar';
 import type { PmCourseForm } from '../components/pm-course-form';
 import type { PmCourseTable } from '../components/pm-course-table';
+import type { PmDeleteCourseModal } from '../components/pm-delete-course-modal';
 
 const MAINTAINER_ROLES = ['Coordinator', 'Admin'];
 
@@ -50,12 +61,14 @@ template.innerHTML = `
   <pm-course-form id="form" hidden></pm-course-form>
   <pm-course-filter-bar id="filterBar" hidden></pm-course-filter-bar>
   <pm-course-table id="table"></pm-course-table>
+  <pm-delete-course-modal id="deleteModal"></pm-delete-course-modal>
 `;
 
 export class PmCourseManagementPage extends HTMLElement {
   private courseForm: PmCourseForm | null = null;
   private filterBar: PmCourseFilterBar | null = null;
   private courseTable: PmCourseTable | null = null;
+  private deleteModal: PmDeleteCourseModal | null = null;
   private errorBanner: HTMLElement | null = null;
   private filters: CourseFilters = {};
   /** The whole catalogue, read once and narrowed in place by the filter bar. */
@@ -72,6 +85,7 @@ export class PmCourseManagementPage extends HTMLElement {
     this.courseForm = this.shadowRoot!.getElementById('form') as unknown as PmCourseForm;
     this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmCourseFilterBar;
     this.courseTable = this.shadowRoot!.getElementById('table') as unknown as PmCourseTable;
+    this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteCourseModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     // A user who may not maintain courses gets no create form, no filter bar
@@ -84,6 +98,9 @@ export class PmCourseManagementPage extends HTMLElement {
 
     this.shadowRoot!.addEventListener('course-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.addEventListener('course-filter-changed', this.handleFilterChanged);
+    this.shadowRoot!.addEventListener('course-cost-save-requested', this.handleCostSaveRequested);
+    this.shadowRoot!.addEventListener('course-delete-clicked', this.handleDeleteClicked);
+    this.shadowRoot!.addEventListener('course-delete-confirmed', this.handleDeleteConfirmed);
 
     if (canMaintain) void this.loadStructures();
     void this.loadCourses();
@@ -92,6 +109,9 @@ export class PmCourseManagementPage extends HTMLElement {
   disconnectedCallback(): void {
     this.shadowRoot!.removeEventListener('course-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.removeEventListener('course-filter-changed', this.handleFilterChanged);
+    this.shadowRoot!.removeEventListener('course-cost-save-requested', this.handleCostSaveRequested);
+    this.shadowRoot!.removeEventListener('course-delete-clicked', this.handleDeleteClicked);
+    this.shadowRoot!.removeEventListener('course-delete-confirmed', this.handleDeleteConfirmed);
   }
 
   private handleFormSubmitted = async (event: Event): Promise<void> => {
@@ -118,6 +138,47 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
+  private handleCostSaveRequested = async (event: Event): Promise<void> => {
+    const { courseId, cost } = (event as CustomEvent<{ courseId: string; cost: string }>).detail;
+    this.clearError();
+
+    try {
+      const updated = await updateCourseCost(courseId, cost);
+      // The response is the updated course, so the list is corrected in place.
+      // A re-read would put a second call between the change and the row that
+      // reports it, and its failure would leave the row asserting a stale cost
+      // for a change that actually landed.
+      this.courses = this.courses.map((course) => (course.courseId === courseId ? updated : course));
+      this.renderCourses();
+    } catch (err) {
+      // The reason belongs against the row it concerns, which stays in edit
+      // mode holding the entered value so the change can be corrected.
+      this.courseTable!.showRowError(courseId, this.messageFor(err));
+    }
+  };
+
+  private handleDeleteClicked = (event: Event): void => {
+    const { course } = (event as CustomEvent<{ course: Course }>).detail;
+    this.clearError();
+
+    this.deleteModal!.show(course.courseId, courseName(course));
+  };
+
+  private handleDeleteConfirmed = async (event: Event): Promise<void> => {
+    const { courseId } = (event as CustomEvent<{ courseId: string }>).detail;
+    this.clearError();
+
+    try {
+      await deleteCourse(courseId);
+      // Dropped from the list rather than re-read, for the same reason a cost
+      // update is applied in place.
+      this.courses = this.courses.filter((course) => course.courseId !== courseId);
+      this.renderCourses();
+    } catch (err) {
+      this.courseTable!.showRowError(courseId, this.messageFor(err));
+    }
+  };
+
   private handleFilterChanged = (event: Event): void => {
     this.filters = (event as CustomEvent<CourseFilters>).detail;
     this.renderCourses();
@@ -131,7 +192,8 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
-  /** Reads the catalogue; only a create or the first render needs a round trip. */
+  /** Reads the catalogue; only a create or the first render needs a round trip.
+   *  A cost update and a delete are applied to the list already in hand. */
   private loadCourses = async (): Promise<void> => {
     try {
       this.courses = await getCourses();
