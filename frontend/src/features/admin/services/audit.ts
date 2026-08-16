@@ -73,6 +73,9 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'students.guardian_relationship.created', label: 'Guardian Relationship Created' },
       { value: 'students.guardian_relationship.renamed', label: 'Guardian Relationship Renamed' },
       { value: 'students.guardian_relationship.deleted', label: 'Guardian Relationship Deleted' },
+      { value: 'students.course.created', label: 'Course Created' },
+      { value: 'students.course.cost_updated', label: 'Course Cost Updated' },
+      { value: 'students.course.deleted', label: 'Course Deleted' },
     ],
   },
   {

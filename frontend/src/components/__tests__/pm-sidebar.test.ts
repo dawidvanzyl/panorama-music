@@ -29,6 +29,7 @@ const ALL_LINK_IDS = [
   'activityLogLink',
   'studentManagementLink',
   'teachersLink',
+  'courseManagementLink',
   'guardianRelationshipsLink',
 ];
 
@@ -63,14 +64,15 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
         'activityLogLink',
         'studentManagementLink',
         'teachersLink',
+        'courseManagementLink',
         'guardianRelationshipsLink',
       ],
     },
-    { roles: ['Teacher'], expected: ['studentManagementLink'] },
-    { roles: ['Coordinator'], expected: ['teachersLink', 'guardianRelationshipsLink'] },
+    { roles: ['Teacher'], expected: ['studentManagementLink', 'courseManagementLink'] },
+    { roles: ['Coordinator'], expected: ['teachersLink', 'courseManagementLink', 'guardianRelationshipsLink'] },
     {
       roles: ['Teacher', 'Coordinator'],
-      expected: ['studentManagementLink', 'teachersLink', 'guardianRelationshipsLink'],
+      expected: ['studentManagementLink', 'teachersLink', 'courseManagementLink', 'guardianRelationshipsLink'],
     },
   ])('offers exactly the entries $roles permits', ({ roles, expected }) => {
     grantRoles(...roles);
@@ -290,6 +292,77 @@ describe('pm-sidebar — account actions are not the sidebar’s to offer', { ta
     expect(hrefs).not.toContain('#/sessions');
   });
 });
+
+describe('pm-sidebar — Course Management is offered only to roles permitted to open it', { tags: ['257UC19'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function courseLink(): HTMLAnchorElement {
+    return el.shadowRoot!.getElementById('courseManagementLink') as HTMLAnchorElement;
+  }
+
+  it.each([['Teacher'], ['Coordinator'], ['Admin']])('offers the entry to a %s', (role) => {
+    grantRoles(role);
+
+    renderOn('#/');
+
+    expect(courseLink().hidden).toBe(false);
+  });
+
+  it('offers no entry to a signed-in user holding none of the permitted roles', () => {
+    grantRoles();
+
+    renderOn('#/');
+
+    expect(courseLink().hidden).toBe(true);
+  });
+
+  it('offers no entry to a user who is not signed in', () => {
+    mockIsAuthenticated.mockReturnValue(false);
+    grantRoles('Admin');
+
+    renderOn('#/');
+
+    expect(courseLink().hidden).toBe(true);
+  });
+});
+
+describe(
+  'pm-sidebar — Course Management sits between Teachers and Guardian Relationships',
+  { tags: ['257UC20'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(() => {
+      mockIsAuthenticated.mockReturnValue(true);
+      grantRoles('Admin');
+      el = document.createElement('pm-sidebar');
+      document.body.appendChild(el);
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('renders the entry directly after Teacher Management and directly before Guardian Relationships', () => {
+      renderOn('#/');
+
+      const link = el.shadowRoot!.getElementById('courseManagementLink') as HTMLAnchorElement;
+      expect(link.previousElementSibling!.id).toBe('teachersLink');
+      expect(link.nextElementSibling!.id).toBe('guardianRelationshipsLink');
+      expect(visibleLinkIds(el).indexOf('courseManagementLink')).toBe(visibleLinkIds(el).indexOf('teachersLink') + 1);
+    });
+  },
+);
 
 describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['239UC1', '239UC2'] }, () => {
   let el: HTMLElement;

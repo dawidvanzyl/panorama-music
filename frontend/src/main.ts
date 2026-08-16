@@ -14,6 +14,7 @@ import './features/sessions/components/pm-own-sessions-menu';
 import './features/admin/pages/pm-admin-activity-log-page';
 import './features/students/pages/pm-students-page';
 import './features/students/pages/pm-guardian-relationships-page';
+import './features/courses/pages/pm-course-management-page';
 import './features/teachers/pages/pm-teachers-page';
 import './features/teachers/pages/pm-teacher-detail-page';
 import './features/teachers/components/pm-my-details-menu';
@@ -29,6 +30,9 @@ const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
 const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
 const COORDINATOR_OR_ADMIN_PATHS = new Set(['/students/guardian-relationships']);
+// Open to every staff role — the screen itself is what narrows down to what a
+// non-maintainer may see, exactly as the endpoints do.
+const STAFF_PATHS = new Set(['/courses']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 function isCoordinatorOrAdminOnlyPath(basePath: string): boolean {
@@ -45,6 +49,7 @@ const ROUTES: Record<string, () => string> = {
   '/admin/activity-log': () => '<pm-admin-activity-log-page></pm-admin-activity-log-page>',
   '/students': () => '<pm-students-page></pm-students-page>',
   '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
+  '/courses': () => '<pm-course-management-page></pm-course-management-page>',
   '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
   // `/` renders nothing of its own — it is resolved to a landing screen below
   // before any route lookup happens.
@@ -102,6 +107,11 @@ async function render(): Promise<void> {
   }
 
   if (TEACHER_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Admin'])) {
+    window.location.hash = '#/';
+    return;
+  }
+
+  if (STAFF_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Coordinator', 'Admin'])) {
     window.location.hash = '#/';
     return;
   }

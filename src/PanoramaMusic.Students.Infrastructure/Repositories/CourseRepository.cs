@@ -1,0 +1,85 @@
+using Dapper;
+using PanoramaMusic.Persistence.Interfaces;
+using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Infrastructure.Dtos;
+using PanoramaMusic.Students.Infrastructure.Extensions;
+using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
+
+namespace PanoramaMusic.Students.Infrastructure.Repositories;
+
+public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
+	: RepositoryBase(unitOfWork), ICourseRepository
+{
+	public async Task<IList<Course>> GetAllAsync(CancellationToken cancellationToken)
+	{
+		// The function joins the lesson structures itself, so the whole list
+		// arrives resolved in this one round trip.
+		var command = CreateCommandDefinition("students.get_courses", null, Transaction, cancellationToken);
+		var dtos = await Connection.QueryAsync<CourseDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToCourse())];
+	}
+
+	public async Task<Course?> GetByIdAsync(Guid courseId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_course_by_id",
+			new { p_course_id = courseId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<CourseDto>(command);
+
+		return dto?.MapToCourse();
+	}
+
+	public async Task CreateAsync(Course course, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.create_course",
+			new
+			{
+				p_course_id = course.CourseId,
+				p_course_type = course.CourseType.ToString(),
+				p_cost = course.Cost,
+				p_lesson_structure_id = course.LessonStructure.LessonStructureId,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(course);
+	}
+
+	public async Task UpdateCostAsync(Course course, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.update_course_cost",
+			new
+			{
+				p_course_id = course.CourseId,
+				p_cost = course.Cost,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(course);
+	}
+
+	public async Task DeleteAsync(Course course, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_course",
+			new { p_course_id = course.CourseId },
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(course);
+	}
+}
