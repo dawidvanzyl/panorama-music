@@ -95,15 +95,16 @@ styles.replaceSync(`
       margin-left: 6px;
     }
     .course-table__btn--edit {
-      background: var(--pm-surface-2);
-      border-color: var(--pm-border);
-      color: var(--pm-text);
+      background: transparent;
+      border-color: var(--pm-accent);
+      color: var(--pm-accent);
     }
     .course-table__btn--edit:hover:not(:disabled) {
-      filter: brightness(1.2);
+      background: rgba(79, 124, 255, 0.1);
     }
     .course-table__btn--delete {
-      background: var(--pm-danger);
+      background: var(--pm-danger, #e05252);
+      border-color: var(--pm-danger, #e05252);
       color: #fff;
     }
     .course-table__btn--save {
@@ -308,7 +309,14 @@ export class PmCourseTable extends HTMLElement {
     input.classList.add('course-table__cost-input');
     input.inputMode = 'decimal';
     input.value = this._costDraft;
+    // A cost is never negative, so a minus sign is dropped as it is typed
+    // rather than being accepted and then refused on save.
     input.addEventListener('input', () => {
+      if (input.value.includes('-')) {
+        const caret = (input.selectionStart ?? input.value.length) - 1;
+        input.value = input.value.replaceAll('-', '');
+        input.setSelectionRange(caret, caret);
+      }
       this._costDraft = input.value;
     });
     return input;

@@ -22,11 +22,11 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card">
       <div class="modal__header">
-        <span class="modal__icon">warning</span>
+        <span class="modal__icon">delete_forever</span>
         <h2 class="modal__title">Delete Course</h2>
       </div>
       <p class="modal__body">
-        Are you sure you want to delete the course <span class="modal__name" id="modalName"></span>? It will no longer be available for enrolment.
+        This action cannot be undone. The course <span class="modal__name" id="modalName"></span> will be permanently removed.
       </p>
       <div class="modal__actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>

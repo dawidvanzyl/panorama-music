@@ -72,5 +72,10 @@ export function isValidCost(cost: string): boolean {
 
 /** How a course is named to a human — course type, lesson structure, occurrence. */
 export function courseName(course: Course): string {
-  return `${COURSE_TYPE_LABELS[course.courseType]} · ${LESSON_TYPE_LABELS[course.lessonType]} · ${DURATION_TYPE_LABELS[course.durationType]}, ${OCCURRENCE_TYPE_LABELS[course.occurrenceType]}`;
+  return [
+    COURSE_TYPE_LABELS[course.courseType],
+    LESSON_TYPE_LABELS[course.lessonType],
+    DURATION_TYPE_LABELS[course.durationType],
+    OCCURRENCE_TYPE_LABELS[course.occurrenceType],
+  ].join(' · ');
 }

@@ -211,8 +211,8 @@ test.describe('Course Management — removing a course', { tag: ['@8IT1'] }, () 
 
     await coursesPage.startDelete(row);
     await expect(coursesPage.deleteModal).toContainText('Delete Course');
-    await expect(coursesPage.deleteModal).toContainText('Grade 2 Recorder · Group · Hour, After School');
-    await expect(coursesPage.deleteModal).toContainText('no longer be available for enrolment');
+    await expect(coursesPage.deleteModal).toContainText('Grade 2 Recorder · Group · Hour · After School');
+    await expect(coursesPage.deleteModal).toContainText('permanently removed');
 
     // Cancelling leaves the course exactly where it was.
     await coursesPage.cancelDelete();

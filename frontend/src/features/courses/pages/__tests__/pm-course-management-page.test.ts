@@ -452,6 +452,15 @@ describe('pm-course-management-page — reports a refused cost against its row',
     expect(costInputInRow(el, 0)!.value).toBe('120.345');
   });
 
+  it('drops a minus sign as it is typed, so no negative cost can be entered', async () => {
+    el = await mountPage();
+
+    clickRowAction(el, 0, 'Edit Cost');
+    await typeCost(el, 0, '-50.00');
+
+    expect(costInputInRow(el, 0)!.value).toBe('50.00');
+  });
+
   it('shows the reason inline and stays in edit mode when the save is rejected', async () => {
     vi.mocked(updateCourseCost).mockRejectedValue(new CoursesError('Course c1 was not found.', 404));
     el = await mountPage();
@@ -482,11 +491,9 @@ describe('pm-course-management-page — confirms a course deletion', { tags: ['2
     const modal = deleteModalOf(el) as unknown as HTMLElement;
     expect(modal.hasAttribute('open')).toBe(true);
     expect(modal.shadowRoot!.getElementById('modalName')!.textContent).toBe(
-      'Instrument · Individual · Half Hour, After School',
+      'Instrument · Individual · Half Hour · After School',
     );
-    expect(modal.shadowRoot!.querySelector('.modal__body')!.textContent).toContain(
-      'no longer be available for enrolment',
-    );
+    expect(modal.shadowRoot!.querySelector('.modal__body')!.textContent).toContain('permanently removed');
   });
 });
 
