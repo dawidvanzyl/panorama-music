@@ -9,6 +9,7 @@ import { GuardianRelationshipsPage } from '../pages/students/GuardianRelationshi
 import { TeachersPage } from '../pages/teachers/TeachersPage';
 import { CourseManagementPage } from '../pages/courses/CourseManagementPage';
 import { landingUrl } from './navigation';
+import { seedEnrollmentTarget } from './enrollment';
 
 const ADMIN_EMAIL = process.env.Admin__Email ?? 'admin@panorama-music.com';
 const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
@@ -36,8 +37,15 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
   return adminUsersPage;
 }
 
+/**
+ * A student must be enrolled in at least one course, so a course and a teacher
+ * are seeded before the screen is opened — the enroll form reads both once on
+ * mount and holds them for the session, so seeding after navigation would leave
+ * its selects empty.
+ */
 export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
   await loginAsAdmin(page);
+  await seedEnrollmentTarget(page);
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();

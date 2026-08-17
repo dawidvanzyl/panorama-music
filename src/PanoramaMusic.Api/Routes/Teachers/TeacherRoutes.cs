@@ -25,7 +25,17 @@ public static class TeacherRoutes
 			.WithTags("Teachers")
 			.RequireAuthorization("AdminPolicy");
 
-		group
+		// Reading the roster is open to a Teacher too — assigning a teacher to a
+		// student's enrollment on Student Management needs it, and seeing who
+		// teaches is not the same as maintaining teachers. The rest of the record
+		// keeps its narrower boundary, on the same reasoning already recorded for
+		// the course catalogue read.
+		var rosterGroup = app
+			.MapGroup("/api/teachers")
+			.WithTags("Teachers")
+			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy");
+
+		rosterGroup
 			.MapGet("/", async (GetTeachersHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(ct);

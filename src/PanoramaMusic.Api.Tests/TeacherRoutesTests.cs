@@ -122,7 +122,10 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => getResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// The roster read is the one exception: a Teacher assigning a teacher to
+			// a student's enrollment needs it, and seeing who teaches is not the same
+			// as maintaining teachers.
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => profileResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => classificationResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}

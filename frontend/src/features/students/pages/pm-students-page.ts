@@ -31,6 +31,14 @@ import {
   type GuardianInput,
   type GuardianResult,
 } from '../services/guardians';
+import {
+  getStudentCourses,
+  enrollStudent,
+  getEnrollableCourses,
+  getAssignableTeachers,
+  EnrollmentsError,
+  type EnrollmentInput,
+} from '../services/enrollments';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
@@ -149,10 +157,13 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
     this.shadowRoot!.addEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
     this.shadowRoot!.addEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
+    this.shadowRoot!.addEventListener('courses-tab-activated', this.handleCoursesTabActivated);
+    this.shadowRoot!.addEventListener('enrollment-add-requested', this.handleEnrollmentAddRequested);
 
     clearStudentsCache();
     void this.loadStudents();
     void this.loadGuardianRelationships();
+    void this.loadEnrollmentLookups();
   }
 
   disconnectedCallback(): void {
@@ -177,6 +188,8 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
     this.shadowRoot!.removeEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
     this.shadowRoot!.removeEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
+    this.shadowRoot!.removeEventListener('courses-tab-activated', this.handleCoursesTabActivated);
+    this.shadowRoot!.removeEventListener('enrollment-add-requested', this.handleEnrollmentAddRequested);
   }
 
   private handleCreateClick = (): void => {
@@ -211,8 +224,18 @@ export class PmStudentsPage extends HTMLElement {
   };
 
   private handleCreateRequested = async (event: Event): Promise<void> => {
-    const { input, pendingSiblingIds, pendingGuardians } = (
-      event as CustomEvent<{ input: StudentInput; pendingSiblingIds: string[]; pendingGuardians: GuardianInput[] }>
+    const {
+      input,
+      pendingSiblingIds,
+      pendingGuardians = [],
+      pendingEnrollments = [],
+    } = (
+      event as CustomEvent<{
+        input: StudentInput;
+        pendingSiblingIds: string[];
+        pendingGuardians?: GuardianInput[];
+        pendingEnrollments?: EnrollmentInput[];
+      }>
     ).detail;
     this.clearError();
     try {
@@ -224,6 +247,9 @@ export class PmStudentsPage extends HTMLElement {
       }
       if (pendingGuardians.length > 0) {
         await this.linkPendingGuardians(created.studentId, pendingGuardians);
+      }
+      if (pendingEnrollments.length > 0) {
+        await this.createPendingEnrollments(created.studentId, pendingEnrollments);
       }
     } catch (err) {
       this.wizardModal!.showStudentError(err instanceof StudentsError ? err.message : 'An unexpected error occurred');
@@ -253,6 +279,22 @@ export class PmStudentsPage extends HTMLElement {
     try {
       for (const guardian of guardians) {
         await addGuardian(studentId, guardian);
+      }
+    } catch (err) {
+      this.showError(err);
+    }
+  }
+
+  /**
+   * Runs last, once the student and its related records exist. Like the staged
+   * siblings and guardians, the student is already created and visible by this
+   * point, so a failure surfaces on the page banner rather than reopening the
+   * (now-closed) wizard.
+   */
+  private async createPendingEnrollments(studentId: string, enrollments: EnrollmentInput[]): Promise<void> {
+    try {
+      for (const enrollment of enrollments) {
+        await enrollStudent(studentId, enrollment);
       }
     } catch (err) {
       this.showError(err);
@@ -296,12 +338,18 @@ export class PmStudentsPage extends HTMLElement {
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
     try {
-      const [siblings, guardians] = await Promise.all([getSiblings(studentId), getGuardians(studentId)]);
+      const [siblings, guardians, enrollments] = await Promise.all([
+        getSiblings(studentId),
+        getGuardians(studentId),
+        getStudentCourses(studentId),
+      ]);
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
+      this.studentsTable!.setCoursesSummary(studentId, enrollments);
     } catch {
       this.studentsTable!.setSiblingsSummary(studentId, []);
       this.studentsTable!.setGuardiansSummary(studentId, []);
+      this.studentsTable!.setCoursesSummary(studentId, []);
     }
   };
 
@@ -454,6 +502,45 @@ export class PmStudentsPage extends HTMLElement {
     }
   };
 
+  private handleCoursesTabActivated = async (event: Event): Promise<void> => {
+    const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    await this.refreshWizardEnrollments(studentId);
+  };
+
+  private handleEnrollmentAddRequested = async (event: Event): Promise<void> => {
+    const { studentId, input } = (event as CustomEvent<{ studentId: string; input: EnrollmentInput }>).detail;
+    try {
+      await enrollStudent(studentId, input);
+      await this.refreshWizardEnrollments(studentId);
+      this.wizardModal!.closeEnrollmentForm();
+    } catch (err) {
+      this.wizardModal!.showCoursesError(
+        err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private refreshWizardEnrollments = async (studentId: string): Promise<void> => {
+    try {
+      this.wizardModal!.enrollments = await getStudentCourses(studentId);
+    } catch (err) {
+      this.wizardModal!.showCoursesError(
+        err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  /** The course catalogue and teacher roster the enroll form chooses from. */
+  private async loadEnrollmentLookups(): Promise<void> {
+    try {
+      const [courses, teachers] = await Promise.all([getEnrollableCourses(), getAssignableTeachers()]);
+      this.wizardModal!.enrollableCourses = courses;
+      this.wizardModal!.assignableTeachers = teachers;
+    } catch (err) {
+      this.showError(err);
+    }
+  }
+
   private mergeGuardianLists(lists: GuardianResult[][]): GuardianResult[] {
     const seen = new Set<string>();
     const merged: GuardianResult[] = [];
@@ -494,7 +581,9 @@ export class PmStudentsPage extends HTMLElement {
 
   private showError(err: unknown): void {
     this.errorBanner!.textContent =
-      err instanceof StudentsError || err instanceof GuardiansError ? err.message : 'An unexpected error occurred';
+      err instanceof StudentsError || err instanceof GuardiansError || err instanceof EnrollmentsError
+        ? err.message
+        : 'An unexpected error occurred';
     this.errorBanner!.classList.add('students-page__error--visible');
   }
 

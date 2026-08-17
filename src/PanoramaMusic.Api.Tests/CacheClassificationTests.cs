@@ -49,6 +49,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetMissingSiblingGuardians"] = CacheExpectation.NoStore,
 		["UpdateGuardian"] = CacheExpectation.NoStore,
 
+		// Enrollment payloads name the assigned teacher and the enrolled student's course history.
+		["EnrollStudent"] = CacheExpectation.NoStore,
+		["GetStudentCourses"] = CacheExpectation.NoStore,
+
 		// Identity payloads carry email addresses, roles, invite URLs and tokens.
 		["GetUsers"] = CacheExpectation.NoStore,
 		["CreateUser"] = CacheExpectation.NoStore,

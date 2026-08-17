@@ -1,0 +1,117 @@
+import type {
+  CourseType,
+  DurationType,
+  EnrollableCourse,
+  EnrollmentResult,
+  InstrumentType,
+  LessonType,
+  OccurrenceType,
+  StepType,
+} from '../services/enrollments';
+
+/**
+ * How enrollment values are named and shown. The server returns enum members
+ * only, so the wording the design specifies lives here, in one place, rather
+ * than being spelled out in each component that renders it.
+ */
+
+export const INSTRUMENT_TYPES: InstrumentType[] = ['Piano', 'Guitar', 'Recorder', 'Keyboard', 'Voice', 'Other'];
+
+export const STEP_TYPES: StepType[] = [
+  'Step1A',
+  'Step1B',
+  'Step2A',
+  'Step2B',
+  'Step3A',
+  'Step3B',
+  'Step4A',
+  'Step4B',
+  'Other',
+];
+
+const COURSE_TYPE_LABELS: Record<CourseType, string> = {
+  Theory: 'Theory',
+  GREEnrichment: 'GR Enrichment',
+  G1Enrichment: 'Grade 1 Enrichment',
+  G2Recorder: 'Grade 2 Recorder',
+  Instrument: 'Instrument',
+};
+
+const LESSON_TYPE_LABELS: Record<LessonType, string> = {
+  Individual: 'Individual',
+  Group: 'Group',
+};
+
+const DURATION_TYPE_LABELS: Record<DurationType, string> = {
+  Hour: 'Hour',
+  HalfHour: 'Half Hour',
+};
+
+const OCCURRENCE_TYPE_LABELS: Record<OccurrenceType, string> = {
+  DuringSchool: 'During School',
+  AfterSchool: 'After School',
+};
+
+export const INSTRUMENT_TYPE_LABELS: Record<InstrumentType, string> = {
+  Piano: 'Piano',
+  Guitar: 'Guitar',
+  Recorder: 'Recorder',
+  Keyboard: 'Keyboard',
+  Voice: 'Voice',
+  Other: 'Other',
+};
+
+/** The bare step, as the table and the selects show it ("2A", not "Step 2A"). */
+export const STEP_TYPE_LABELS: Record<StepType, string> = {
+  Step1A: '1A',
+  Step1B: '1B',
+  Step2A: '2A',
+  Step2B: '2B',
+  Step3A: '3A',
+  Step3B: '3B',
+  Step4A: '4A',
+  Step4B: '4B',
+  Other: 'Other',
+};
+
+export const EM_DASH = '—';
+
+/**
+ * A course as a human reads it: course type, then the three dimensions of its
+ * lesson structure. Both an offered course and a recorded enrollment name their
+ * course this way, so the label is taken from the parts they have in common.
+ */
+export function courseLabel(course: EnrollableCourse | EnrollmentResult): string {
+  return [
+    COURSE_TYPE_LABELS[course.courseType],
+    LESSON_TYPE_LABELS[course.lessonType],
+    DURATION_TYPE_LABELS[course.durationType],
+    OCCURRENCE_TYPE_LABELS[course.occurrenceType],
+  ].join(' · ');
+}
+
+export function teacherLabel(enrollment: EnrollmentResult): string {
+  return `${enrollment.teacherFirstName} ${enrollment.teacherSurname}`.trim();
+}
+
+/**
+ * What the chosen course's type calls for. An instrument course records an
+ * instrument type and a step, a theory course a step alone, and every other
+ * course type neither — the same rule the domain enforces, applied here to
+ * decide which selects the form offers.
+ */
+export function recordsInstrumentType(courseType: CourseType): boolean {
+  return courseType === 'Instrument';
+}
+
+export function recordsStep(courseType: CourseType): boolean {
+  return courseType === 'Instrument' || courseType === 'Theory';
+}
+
+/** Today, as the `yyyy-mm-dd` a date input and the API both expect. */
+export function todayIsoDate(): string {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const day = `${now.getDate()}`.padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}

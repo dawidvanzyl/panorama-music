@@ -148,7 +148,9 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 		var unchanged = await GetTeacherAsync(admin, other.TeacherId);
 
 		ShouldlyHelpers.Satisfy(
-			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// The roster read is open to a Teacher — assigning a teacher to a
+			// student's enrollment needs it — but it names teachers and nothing more.
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => recordResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => profileResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => bankingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
