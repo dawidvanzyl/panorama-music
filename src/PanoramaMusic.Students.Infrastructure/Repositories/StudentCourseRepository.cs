@@ -30,6 +30,17 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 		return [.. dtos.Select(dto => dto.MapToStudentCourse())];
 	}
 
+	public async Task<int> CountByCourseAsync(Guid courseId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_enrollment_count_by_course",
+			new { p_course_id = courseId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.ExecuteScalarAsync<int>(command);
+	}
+
 	public async Task CreateAsync(StudentCourse enrollment, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

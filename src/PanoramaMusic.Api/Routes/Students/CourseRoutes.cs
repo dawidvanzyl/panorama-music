@@ -65,6 +65,24 @@ public static class CourseRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
+		// How many students are enrolled in the course — the same condition the
+		// delete below enforces, so the screen can tell the user a course is in
+		// use before offering a confirmation it would have to reject.
+		maintenanceGroup
+			.MapGet("/{courseId:guid}/enrollments/count", async (Guid courseId, CountCourseEnrollmentsHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(courseId, ct);
+				return Results.Ok(result);
+			})
+			.WithName("CountCourseEnrollments")
+			.Produces<CountCourseEnrollmentsResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Refused while any student is enrolled in the course. The interface does
+		// not offer the confirmation until then, but this endpoint is where the
+		// rule is actually enforced.
 		maintenanceGroup
 			.MapDelete("/{courseId:guid}", async (Guid courseId, DeleteCourseHandler handler, CancellationToken ct) =>
 			{

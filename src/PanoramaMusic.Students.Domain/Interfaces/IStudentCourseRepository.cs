@@ -12,6 +12,12 @@ public interface IStudentCourseRepository
 	Task<IList<StudentCourse>> GetByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
 
 	/// <summary>
+	/// How many students are enrolled in the course — the condition that blocks
+	/// deleting it.
+	/// </summary>
+	Task<int> CountByCourseAsync(Guid courseId, CancellationToken cancellationToken);
+
+	/// <summary>
 	/// Persists the enrollment and, when the course type records one, the
 	/// instrument and step that go with it.
 	/// </summary>

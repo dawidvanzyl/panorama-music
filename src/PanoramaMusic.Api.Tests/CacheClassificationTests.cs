@@ -75,6 +75,9 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["RenameGuardianRelationship"] = CacheExpectation.Cacheable,
 		["CountGuardianRelationship"] = CacheExpectation.Cacheable,
 
+		// An enrollment count is an aggregate over one course; it identifies nobody.
+		["CountCourseEnrollments"] = CacheExpectation.Cacheable,
+
 		// Lesson structures are fixed seeded reference data; the payload names no person.
 		["GetLessonStructures"] = CacheExpectation.Cacheable,
 

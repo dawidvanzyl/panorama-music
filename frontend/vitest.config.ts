@@ -161,6 +161,7 @@ export default defineConfig({
       { name: '268UC26', description: 'An expanded student row shows a Courses summary beneath Siblings and Guardians' },
       { name: '268UC27', description: 'The Courses summary reads as an empty state when the student holds no enrollments' },
       { name: '268UC28', description: 'Removing the only staged enrollment is refused and the requirement is stated' },
+      { name: '268UC30', description: 'Deleting a course any student is enrolled in is refused against the row, with no confirmation offered' },
     ],
   },
 })

@@ -82,6 +82,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetCoursesHandler>();
 		services.AddTransient<UpdateCourseCostHandler>();
 		services.AddTransient<DeleteCourseHandler>();
+		services.AddTransient<CountCourseEnrollmentsHandler>();
 		services.AddTransient<EnrollStudentHandler>();
 		services.AddTransient<GetStudentCoursesHandler>();
 

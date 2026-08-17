@@ -124,6 +124,21 @@ export async function updateCourseCost(courseId: string, cost: string): Promise<
   return result;
 }
 
+export interface CourseEnrollmentCount {
+  count: number;
+}
+
+/**
+ * How many students are enrolled in the course — the same condition the API
+ * enforces on delete. Lets the maintenance screen tell the user a course is in
+ * use before offering a confirmation it would have to reject.
+ */
+export async function countCourseEnrollments(courseId: string): Promise<CourseEnrollmentCount> {
+  const response = await fetch(`${COURSES_BASE}/${courseId}/enrollments/count`, { headers: authHeaders() });
+  return handleResponse<CourseEnrollmentCount>(response);
+}
+
+/** Rejected by the API with a 400 while any student is still enrolled in the course. */
 export async function deleteCourse(courseId: string): Promise<void> {
   const response = await fetch(`${COURSES_BASE}/${courseId}`, {
     method: 'DELETE',

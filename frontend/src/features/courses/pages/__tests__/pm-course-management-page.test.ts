@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   CoursesError,
+  countCourseEnrollments,
   createCourse,
   deleteCourse,
   updateCourseCost,
@@ -21,6 +22,7 @@ vi.mock('../../services/courses', async () => {
     createCourse: vi.fn(),
     updateCourseCost: vi.fn(),
     deleteCourse: vi.fn(),
+    countCourseEnrollments: vi.fn(),
   };
 });
 
@@ -186,6 +188,10 @@ beforeEach(() => {
   vi.mocked(createCourse).mockReset();
   vi.mocked(updateCourseCost).mockReset();
   vi.mocked(deleteCourse).mockReset();
+  // The common case: nothing is enrolled, so Delete goes straight to the
+  // confirmation. The in-use tests override this.
+  vi.mocked(countCourseEnrollments).mockReset();
+  vi.mocked(countCourseEnrollments).mockResolvedValue({ count: 0 });
 });
 
 describe('pm-course-management-page — opens with the create form already open', { tags: ['257UC11'] }, () => {
@@ -525,6 +531,26 @@ describe('pm-course-management-page — confirms a course deletion', { tags: ['2
       'Instrument · Individual · Half Hour · After School',
     );
     expect(modal.shadowRoot!.querySelector('.modal__body')!.textContent).toContain('permanently removed');
+  });
+});
+
+describe('pm-course-management-page — refuses to delete a course in use', { tags: ['268UC30'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('states how many students are enrolled against the row and never opens the confirmation', async () => {
+    vi.mocked(countCourseEnrollments).mockResolvedValue({ count: 4 });
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+
+    expect(countCourseEnrollments).toHaveBeenCalledWith('c2');
+    expect(rowErrorOf(el)).toContain('4 enrolled student(s) and cannot be deleted');
+    expect((deleteModalOf(el) as unknown as HTMLElement).hasAttribute('open')).toBe(false);
+    expect(deleteCourse).not.toHaveBeenCalled();
+    expect(rowTextsOf(el)).toHaveLength(2);
   });
 });
 
