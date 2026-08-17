@@ -4,6 +4,8 @@ import { expect } from './base';
 export interface SeededEnrollmentTarget {
   courseId: string;
   courseLabel: string;
+  /** The course's cost, which is what tells this run's course apart on Course Management. */
+  courseCost: string;
   teacherId: string;
   teacherName: string;
 }
@@ -68,6 +70,7 @@ export async function seedEnrollmentTarget(page: Page): Promise<SeededEnrollment
       teacherStatus: teacherResponse.status,
       courseStatus: courseResponse.status,
       courseId: course.courseId,
+      courseCost: cost,
       teacherId: teacher.teacherId,
       teacherName: `${teacher.firstName} ${teacher.surname}`,
     };
@@ -79,7 +82,81 @@ export async function seedEnrollmentTarget(page: Page): Promise<SeededEnrollment
   return {
     courseId: seeded.courseId,
     courseLabel: 'Grade 2 Recorder · Group · Half Hour · During School',
+    courseCost: seeded.courseCost,
     teacherId: seeded.teacherId,
     teacherName: seeded.teacherName,
   };
+}
+
+/**
+ * Creates a student already enrolled in the seeded course, through the API
+ * rather than the wizard, for a test whose subject is something else.
+ * <p>
+ * Both writes name the course by id: the label the enroll form offers is shared
+ * by every course of the same type and structure, so going through the wizard
+ * could enroll the student in a different course of the same shape — or in this
+ * very one, making the enrollment below a duplicate.
+ * </p>
+ */
+export async function seedEnrolledStudent(page: Page, target: SeededEnrollmentTarget): Promise<string> {
+  const surname = `Enrolled-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+
+  const seeded = await page.evaluate(
+    async ({ surname, courseId, teacherId }) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      };
+
+      const studentResponse = await fetch('/api/students', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          firstName: 'Amara',
+          lastName: surname,
+          dateOfBirth: '2014-05-12',
+          grade: 'Grade4',
+          class: 'A1',
+          phase: 'Junior',
+          language: 'English',
+        }),
+      });
+      const student = (await studentResponse.json()) as { studentId: string };
+
+      const enrollResponse = await fetch(`/api/students/${student.studentId}/courses`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          courseId,
+          teacherId,
+          instrumentType: null,
+          stepType: null,
+          enrolledDate: new Date().toISOString().slice(0, 10),
+        }),
+      });
+
+      return {
+        studentStatus: studentResponse.status,
+        enrollStatus: enrollResponse.status,
+        studentId: student.studentId,
+      };
+    },
+    { surname, courseId: target.courseId, teacherId: target.teacherId },
+  );
+
+  expect(seeded.studentStatus).toBe(201);
+  expect(seeded.enrollStatus).toBe(201);
+
+  return seeded.studentId;
+}
+
+/** The id of the student with this surname, read back from the roster. */
+export async function studentIdBySurname(page: Page, surname: string): Promise<string> {
+  return page.evaluate(async (lastName) => {
+    const response = await fetch('/api/students', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const students = (await response.json()) as { studentId: string; lastName: string }[];
+    return students.find((s) => s.lastName === lastName)!.studentId;
+  }, surname);
 }

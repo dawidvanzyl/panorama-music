@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/base';
 import { loginAsAdmin } from '../../fixtures/testUsers';
-import { seedEnrollmentTarget } from '../../fixtures/enrollment';
+import { seedEnrollmentTarget, studentIdBySurname } from '../../fixtures/enrollment';
 import { StudentsPage } from '../../pages/students/StudentsPage';
 
 /**
@@ -216,13 +216,7 @@ test.describe('Enrollment — the endpoints require authentication', { tag: ['@9
     await studentsPage.createStudent({ firstName: 'Sipho', lastName: surname, ...studentDefaults });
     await expect(studentsPage.row(surname)).toBeVisible();
 
-    const studentId = await page.evaluate(async (lastName) => {
-      const response = await fetch('/api/students', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
-      });
-      const students = (await response.json()) as { studentId: string; lastName: string }[];
-      return students.find((s) => s.lastName === lastName)!.studentId;
-    }, surname);
+    const studentId = await studentIdBySurname(page, surname);
 
     const listResponse = await page.request.get(`/api/students/${studentId}/courses`);
     const enrollResponse = await page.request.post(`/api/students/${studentId}/courses`, {
