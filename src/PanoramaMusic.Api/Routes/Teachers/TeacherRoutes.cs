@@ -30,12 +30,28 @@ public static class TeacherRoutes
 		// teaches is not the same as maintaining teachers. The rest of the record
 		// keeps its narrower boundary, on the same reasoning already recorded for
 		// the course catalogue read.
+		//
+		// It is its own route on its own projection rather than a widening of the
+		// list below: that one carries the linked account email and the banking
+		// details, which the widened boundary must not reach.
 		var rosterGroup = app
 			.MapGroup("/api/teachers")
 			.WithTags("Teachers")
 			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy");
 
 		rosterGroup
+			.MapGet("/roster", async (GetTeacherRosterHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("GetTeacherRoster")
+			.Produces<IList<TeacherRosterResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		group
 			.MapGet("/", async (GetTeachersHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(ct);

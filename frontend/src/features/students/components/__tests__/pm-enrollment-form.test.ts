@@ -29,8 +29,8 @@ const recorderCourse: EnrollableCourse = {
 
 const teacher: AssignableTeacher = {
   teacherId: 't1',
-  firstName: 'Dawid',
-  surname: 'van Zyl',
+  firstName: 'Thabo',
+  surname: 'Nkosi',
   isActive: true,
 };
 
@@ -80,7 +80,7 @@ describe('pm-enrollment-form fields offered on open', { tags: ['268UC16'] }, () 
       'Theory · Group · Hour · After School',
       'Grade 2 Recorder · Group · Half Hour · During School',
     ]);
-    expect(Array.from(select('teacher').options).filter((o) => o.value !== '')[0].textContent).toBe('Dawid van Zyl');
+    expect(Array.from(select('teacher').options).filter((o) => o.value !== '')[0].textContent).toBe('Thabo Nkosi');
   });
 });
 

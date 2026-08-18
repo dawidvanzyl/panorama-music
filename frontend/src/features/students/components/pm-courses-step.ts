@@ -343,20 +343,28 @@ export class PmCoursesStep extends HTMLElement {
   }
 
   private toStaged(studentCourseId: string, input: EnrollmentInput): EnrollmentResult {
+    // The form only ever offers ids out of these same two lists, so a miss is a
+    // programming error rather than a state a user can reach. Standing in a
+    // default course would give the staged row a fabricated label, render it
+    // under the wrong instrument and step rules, and still send it on save for
+    // the server to reject against the course's real type.
     const course = this._courses.find((c) => c.courseId === input.courseId);
+    if (!course) throw new Error(`Unknown course ${input.courseId}.`);
+
     const teacher = this._teachers.find((t) => t.teacherId === input.teacherId);
+    if (!teacher) throw new Error(`Unknown teacher ${input.teacherId}.`);
 
     return {
       studentCourseId,
       studentId: '',
       courseId: input.courseId,
-      courseType: course?.courseType ?? 'Theory',
-      lessonType: course?.lessonType ?? 'Group',
-      durationType: course?.durationType ?? 'Hour',
-      occurrenceType: course?.occurrenceType ?? 'DuringSchool',
+      courseType: course.courseType,
+      lessonType: course.lessonType,
+      durationType: course.durationType,
+      occurrenceType: course.occurrenceType,
       teacherId: input.teacherId,
-      teacherFirstName: teacher?.firstName ?? '',
-      teacherSurname: teacher?.surname ?? '',
+      teacherFirstName: teacher.firstName,
+      teacherSurname: teacher.surname,
       instrumentType: input.instrumentType,
       stepType: input.stepType,
       enrolledDate: input.enrolledDate,

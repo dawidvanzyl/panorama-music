@@ -1,10 +1,9 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
-import { registerSessionCache } from '../../../services/session-cache';
 
 const STUDENTS_BASE = '/api/students';
 const COURSES_BASE = '/api/courses';
-const TEACHERS_BASE = '/api/teachers';
+const TEACHERS_ROSTER = '/api/teachers/roster';
 
 export type CourseType = 'Theory' | 'GREEnrichment' | 'G1Enrichment' | 'G2Recorder' | 'Instrument';
 export type LessonType = 'Individual' | 'Group';
@@ -106,47 +105,31 @@ export async function enrollStudent(studentId: string, input: EnrollmentInput): 
   return handleResponse<EnrollmentResult>(response);
 }
 
-let _enrollableCoursesCache: EnrollableCourse[] | null = null;
-
-export function clearEnrollableCoursesCache(): void {
-  _enrollableCoursesCache = null;
-}
-
-registerSessionCache(clearEnrollableCoursesCache);
-
 /**
  * The catalogue the enroll form's Course select offers. This feature reads it
  * for itself rather than reaching into the courses feature's own service — a
  * feature communicates through the API, not through another feature's
- * internals — and holds it for the session as reference data.
+ * internals.
+ *
+ * Uncached, deliberately. A cache is invalidated by the service that owns the
+ * data, and the mutations that stale this one — creating, repricing and
+ * deleting a course — happen in the courses feature, which cannot reach in
+ * here to clear it. The read costs one call each time the wizard opens.
  */
 export async function getEnrollableCourses(): Promise<EnrollableCourse[]> {
-  if (_enrollableCoursesCache) return _enrollableCoursesCache;
-
   const response = await fetch(COURSES_BASE, { headers: authHeaders() });
-  _enrollableCoursesCache = await handleResponse<EnrollableCourse[]>(response);
-  return _enrollableCoursesCache;
+  return handleResponse<EnrollableCourse[]>(response);
 }
-
-let _assignableTeachersCache: AssignableTeacher[] | null = null;
-
-export function clearAssignableTeachersCache(): void {
-  _assignableTeachersCache = null;
-}
-
-registerSessionCache(clearAssignableTeachersCache);
 
 /**
  * The teachers the enroll form's Teacher select offers, narrowed to those still
  * in active service — a stood-down teacher is not someone to assign a new
- * enrollment to. Read for this feature's own use, for the same reason the
- * course catalogue is.
+ * enrollment to. Read for this feature's own use, and uncached for the same
+ * reason the course catalogue is: standing a teacher down happens in the
+ * teachers feature.
  */
 export async function getAssignableTeachers(): Promise<AssignableTeacher[]> {
-  if (_assignableTeachersCache) return _assignableTeachersCache;
-
-  const response = await fetch(TEACHERS_BASE, { headers: authHeaders() });
+  const response = await fetch(TEACHERS_ROSTER, { headers: authHeaders() });
   const teachers = await handleResponse<AssignableTeacher[]>(response);
-  _assignableTeachersCache = teachers.filter((teacher) => teacher.isActive);
-  return _assignableTeachersCache;
+  return teachers.filter((teacher) => teacher.isActive);
 }

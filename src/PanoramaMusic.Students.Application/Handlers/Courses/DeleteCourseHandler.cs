@@ -19,9 +19,9 @@ public sealed class DeleteCourseHandler(
 		var course = await courseRepository.GetByIdAsync(command.CourseId, cancellationToken)
 			?? throw new EntityNotFoundException($"Course {command.CourseId} was not found.");
 
-		var enrolledStudents = await studentCourseRepository.CountByCourseAsync(command.CourseId, cancellationToken);
+		var enrolledStudents = await studentCourseRepository.CountByCourseIdAsync(command.CourseId, cancellationToken);
 		if (enrolledStudents > 0)
-			throw new DomainException($"Course '{course.CourseType} · {course.LessonStructure}' has {enrolledStudents} enrolled student(s) and cannot be deleted.");
+			throw new DomainException($"Course '{course}' has {enrolledStudents} enrolled student(s) and cannot be deleted.");
 
 		course.MarkDeleted();
 

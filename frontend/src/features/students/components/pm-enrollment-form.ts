@@ -57,19 +57,6 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
-    .enrollment-form__message {
-      margin-top: 16px;
-      padding: 12px 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      display: none;
-    }
-    .enrollment-form__message--error {
-      display: block;
-      background: rgba(224, 82, 82, 0.1);
-      border: 1px solid var(--pm-danger);
-      color: var(--pm-danger);
-    }
     .enrollment-form__actions {
       display: flex;
       justify-content: flex-end;
@@ -122,7 +109,6 @@ template.innerHTML = `
         <input class="enrollment-form__input" type="date" id="enrolledDate" required />
       </div>
     </div>
-    <div class="enrollment-form__message" id="message"></div>
     <div class="enrollment-form__actions">
       <button type="button" class="enrollment-form__btn enrollment-form__btn--cancel" id="cancelBtn">Cancel</button>
       <button type="button" class="enrollment-form__btn enrollment-form__btn--primary" id="confirmBtn">Enroll</button>
@@ -139,7 +125,6 @@ export class PmEnrollmentForm extends HTMLElement {
   private stepField: HTMLElement | null = null;
   private stepSelect: HTMLSelectElement | null = null;
   private enrolledDateInput: HTMLInputElement | null = null;
-  private message: HTMLElement | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
   private confirmBtn: HTMLButtonElement | null = null;
 
@@ -162,7 +147,6 @@ export class PmEnrollmentForm extends HTMLElement {
     this.stepField = this.shadowRoot!.getElementById('stepField') as HTMLElement;
     this.stepSelect = this.shadowRoot!.getElementById('step') as HTMLSelectElement;
     this.enrolledDateInput = this.shadowRoot!.getElementById('enrolledDate') as HTMLInputElement;
-    this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
     this.cancelBtn = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
     this.confirmBtn = this.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
 
@@ -203,7 +187,6 @@ export class PmEnrollmentForm extends HTMLElement {
 
   /** Resets to a blank enroll form with the enrolled date defaulted to today. */
   resetForAdd(): void {
-    this.clearError();
     this.form!.reset();
     this.renderCourseOptions();
     this.renderTeacherOptions();
@@ -213,16 +196,6 @@ export class PmEnrollmentForm extends HTMLElement {
     this.stepSelect!.value = '';
     this.enrolledDateInput!.value = todayIsoDate();
     this.applyCourseTypeRules();
-  }
-
-  showError(message: string): void {
-    this.message!.textContent = message;
-    this.message!.classList.add('enrollment-form__message--error');
-  }
-
-  clearError(): void {
-    this.message!.textContent = '';
-    this.message!.className = 'enrollment-form__message';
   }
 
   private renderCourseOptions(): void {

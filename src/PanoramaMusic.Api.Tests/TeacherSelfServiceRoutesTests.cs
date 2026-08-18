@@ -127,6 +127,8 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 		await CaptureBankingAsync(admin, other.TeacherId);
 		var (_, teacherClient, _) = await CreateLinkedTeacherAsync(admin, "self-other", "10.0.63.8", "Naledi", "Sithole");
 
+		var rosterResponse = await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedGetRequest("/api/teachers/roster"), TestContext.Current.CancellationToken);
 		var listResponse = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedGetRequest("/api/teachers"), TestContext.Current.CancellationToken);
 		var recordResponse = await teacherClient.Client.SendAsync(
@@ -150,7 +152,10 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 		ShouldlyHelpers.Satisfy(
 			// The roster read is open to a Teacher — assigning a teacher to a
 			// student's enrollment needs it — but it names teachers and nothing more.
-			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			// The full list, which also carries account emails and banking, does not
+			// widen with it.
+			() => rosterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => recordResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => profileResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => bankingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),

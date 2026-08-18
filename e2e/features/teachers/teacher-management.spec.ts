@@ -124,6 +124,7 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
     const headers = { Authorization: `Bearer ${accessToken}` };
     const someId = '00000000-0000-0000-0000-000000000001';
 
+    const roster = await page.request.get('/api/teachers/roster', { headers });
     const list = await page.request.get('/api/teachers', { headers });
     const single = await page.request.get(`/api/teachers/${someId}`, { headers });
     const create = await page.request.post('/api/teachers', {
@@ -140,8 +141,10 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
     });
 
     // Reading the roster is open to a Teacher: assigning a teacher to a
-    // student's enrollment needs it. Maintaining the record is not.
-    expect(list.status()).toBe(200);
+    // student's enrollment needs it. Maintaining the record is not — nor is the
+    // full list, which also carries account emails and banking details.
+    expect(roster.status()).toBe(200);
+    expect(list.status()).toBe(403);
     expect(single.status()).toBe(403);
     expect(create.status()).toBe(403);
     expect(profile.status()).toBe(403);

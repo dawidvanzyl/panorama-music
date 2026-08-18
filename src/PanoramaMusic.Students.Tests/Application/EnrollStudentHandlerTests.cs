@@ -226,10 +226,10 @@ public class EnrollStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		var unknownStudent = await Should.ThrowAsync<EntityNotFoundException>(() => _handler.HandleAsync(
 			EnrollCommand(Guid.NewGuid(), course.CourseId, teacher.TeacherId),
 			TestContext.Current.CancellationToken));
-		var unknownCourse = await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+		var unknownCourse = await Should.ThrowAsync<EntityNotFoundException>(() => _handler.HandleAsync(
 			EnrollCommand(student.StudentId, Guid.NewGuid(), teacher.TeacherId),
 			TestContext.Current.CancellationToken));
-		var unknownTeacher = await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+		var unknownTeacher = await Should.ThrowAsync<EntityNotFoundException>(() => _handler.HandleAsync(
 			EnrollCommand(student.StudentId, course.CourseId, Guid.NewGuid()),
 			TestContext.Current.CancellationToken));
 
@@ -291,9 +291,11 @@ public class EnrollStudentHandlerTests : IClassFixture<StudentsTestFixture>
 
 	private void GivenExistingEnrollments(Guid studentId, params StudentCourse[] enrollments)
 	{
+		var enrolledCourseIds = enrollments.Select(enrollment => enrollment.Course.CourseId).ToHashSet();
+
 		_context.Repositories.StudentCourseRepositoryMock
-			.Setup(r => r.GetByStudentIdAsync(studentId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(enrollments);
+			.Setup(r => r.ExistsByStudentAndCourseAsync(studentId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((Guid _, Guid courseId, CancellationToken _) => enrolledCourseIds.Contains(courseId));
 	}
 
 	private void VerifyNothingPersisted() =>

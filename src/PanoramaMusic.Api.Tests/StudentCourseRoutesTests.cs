@@ -38,19 +38,24 @@ public sealed class StudentCourseRoutesTests(ApiTestFixture fixture)
 		await teacherClient.LoginAsync(teacherEmail, _password);
 
 		var rosterResponse = await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedGetRequest("/api/teachers/roster"), TestContext.Current.CancellationToken);
+		var listResponse = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedGetRequest("/api/teachers"), TestContext.Current.CancellationToken);
 		var maintenanceResponse = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedGetRequest($"/api/teachers/{created.TeacherId}"), TestContext.Current.CancellationToken);
 		var anonymousResponse = await fixture.CreateClient()
-			.GetAsync("/api/teachers", TestContext.Current.CancellationToken);
+			.GetAsync("/api/teachers/roster", TestContext.Current.CancellationToken);
 
-		var roster = await rosterResponse.Content.ReadFromJsonAsync<List<TeacherResult>>(
+		var roster = await rosterResponse.Content.ReadFromJsonAsync<List<TeacherRosterResult>>(
 			_jsonOptions, TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
 			() => rosterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => roster.ShouldNotBeNull().ShouldContain(t => t.TeacherId == created.TeacherId),
-			// Only the roster read widened; reading one teacher's record did not.
+			// Only the roster read widened. The full list carries the linked account
+			// email and the banking details, so it stayed closed along with the rest
+			// of the teacher record.
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => maintenanceResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => anonymousResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized));
 	}

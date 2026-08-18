@@ -93,6 +93,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 		// Teacher payloads carry names.
 		["GetTeachers"] = CacheExpectation.NoStore,
+		["GetTeacherRoster"] = CacheExpectation.NoStore,
 		["GetTeacherById"] = CacheExpectation.NoStore,
 		["CreateTeacher"] = CacheExpectation.NoStore,
 		["UpdateTeacherProfile"] = CacheExpectation.NoStore,

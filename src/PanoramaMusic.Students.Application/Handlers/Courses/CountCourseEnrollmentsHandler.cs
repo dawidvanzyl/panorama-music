@@ -18,7 +18,7 @@ public sealed class CountCourseEnrollmentsHandler(
 		_ = await courseRepository.GetByIdAsync(courseId, cancellationToken)
 			?? throw new EntityNotFoundException($"Course {courseId} was not found.");
 
-		var enrolledStudents = await studentCourseRepository.CountByCourseAsync(courseId, cancellationToken);
+		var enrolledStudents = await studentCourseRepository.CountByCourseIdAsync(courseId, cancellationToken);
 		return new CountCourseEnrollmentsResult(enrolledStudents);
 	}
 }

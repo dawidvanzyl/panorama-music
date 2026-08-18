@@ -52,7 +52,7 @@ public class DeleteCourseHandlerTests : IClassFixture<StudentsTestFixture>
 			.Setup(r => r.GetByIdAsync(course.CourseId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(course);
 		_context.Repositories.StudentCourseRepositoryMock
-			.Setup(r => r.CountByCourseAsync(course.CourseId, It.IsAny<CancellationToken>()))
+			.Setup(r => r.CountByCourseIdAsync(course.CourseId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(3);
 
 		var exception = await Should.ThrowAsync<DomainException>(

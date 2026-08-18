@@ -9,6 +9,9 @@ public sealed class GetStudentCoursesHandler(
 	IStudentCourseRepository studentCourseRepository,
 	ITeacherDirectory teacherDirectory)
 {
+	private const string _unknownTeacherFirstName = "Unknown";
+	private const string _unknownTeacherSurname = "teacher";
+
 	public async Task<IList<StudentCourseResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
 	{
 		var enrollments = await studentCourseRepository.GetByStudentIdAsync(studentId, cancellationToken);
@@ -29,12 +32,14 @@ public sealed class GetStudentCoursesHandler(
 	/// <summary>
 	/// A teacher the directory no longer answers for still leaves the enrollment
 	/// readable — the row names the assignment it holds rather than disappearing
-	/// from the list.
+	/// from the list. It is named rather than left blank: an empty name renders as
+	/// the same em dash the Instrument and Step columns use for "the course type
+	/// records nothing", which is a different thing entirely.
 	/// </summary>
 	private static DirectoryTeacher ResolveTeacher(
 		IReadOnlyDictionary<Guid, DirectoryTeacher> teachers,
 		Guid teacherId) =>
 		teachers.TryGetValue(teacherId, out var teacher)
 			? teacher
-			: new DirectoryTeacher(teacherId, string.Empty, string.Empty);
+			: new DirectoryTeacher(teacherId, _unknownTeacherFirstName, _unknownTeacherSurname);
 }

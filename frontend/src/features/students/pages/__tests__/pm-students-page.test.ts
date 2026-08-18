@@ -140,7 +140,7 @@ const recorderCourse: EnrollableCourse = {
   occurrenceType: 'DuringSchool',
 };
 
-const dawid: AssignableTeacher = { teacherId: 't1', firstName: 'Dawid', surname: 'van Zyl', isActive: true };
+const thabo: AssignableTeacher = { teacherId: 't1', firstName: 'Thabo', surname: 'Nkosi', isActive: true };
 
 const pianoEnrollment: EnrollmentResult = {
   studentCourseId: 'sc1',
@@ -151,8 +151,8 @@ const pianoEnrollment: EnrollmentResult = {
   durationType: 'HalfHour',
   occurrenceType: 'DuringSchool',
   teacherId: 't1',
-  teacherFirstName: 'Dawid',
-  teacherSurname: 'van Zyl',
+  teacherFirstName: 'Thabo',
+  teacherSurname: 'Nkosi',
   instrumentType: 'Piano',
   stepType: 'Step2A',
   enrolledDate: '2026-01-19',
@@ -258,7 +258,7 @@ beforeEach(() => {
   vi.mocked(getEnrollableCourses).mockReset();
   vi.mocked(getEnrollableCourses).mockResolvedValue([pianoCourse, recorderCourse]);
   vi.mocked(getAssignableTeachers).mockReset();
-  vi.mocked(getAssignableTeachers).mockResolvedValue([dawid]);
+  vi.mocked(getAssignableTeachers).mockResolvedValue([thabo]);
 });
 
 describe('pm-students-page — loads the roster on page load', { tags: ['200UC8'] }, () => {
@@ -381,7 +381,7 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
     // stages one before Save is offered.
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
-    enrollViaForm(wizard, recorderCourse.courseId, dawid.teacherId);
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
 
     (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
@@ -408,7 +408,7 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
-    enrollViaForm(wizard, recorderCourse.courseId, dawid.teacherId);
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
     (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
 
@@ -1095,7 +1095,7 @@ describe('pm-students-page — enrolls a student from the Courses tab', { tags: 
     const courseSelect = formShadow.getElementById('course') as HTMLSelectElement;
     courseSelect.value = pianoCourse.courseId;
     courseSelect.dispatchEvent(new Event('change'));
-    (formShadow.getElementById('teacher') as HTMLSelectElement).value = dawid.teacherId;
+    (formShadow.getElementById('teacher') as HTMLSelectElement).value = thabo.teacherId;
     (formShadow.getElementById('instrument') as HTMLSelectElement).value = 'Piano';
     (formShadow.getElementById('step') as HTMLSelectElement).value = 'Step2A';
     (formShadow.getElementById('confirmBtn') as HTMLButtonElement).click();
@@ -1105,7 +1105,7 @@ describe('pm-students-page — enrolls a student from the Courses tab', { tags: 
       's1',
       expect.objectContaining({
         courseId: pianoCourse.courseId,
-        teacherId: dawid.teacherId,
+        teacherId: thabo.teacherId,
         instrumentType: 'Piano',
         stepType: 'Step2A',
       }),
@@ -1177,7 +1177,7 @@ describe('pm-students-page — creates the staged enrollments once the student e
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
 
-    enrollViaForm(wizard, recorderCourse.courseId, dawid.teacherId);
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
     // Nothing is sent while the wizard is still open.
     expect(vi.mocked(enrollStudent)).not.toHaveBeenCalled();
 
@@ -1188,7 +1188,7 @@ describe('pm-students-page — creates the staged enrollments once the student e
     expect(vi.mocked(enrollStudent)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(enrollStudent)).toHaveBeenCalledWith(
       's3',
-      expect.objectContaining({ courseId: recorderCourse.courseId, teacherId: dawid.teacherId }),
+      expect.objectContaining({ courseId: recorderCourse.courseId, teacherId: thabo.teacherId }),
     );
   });
 });

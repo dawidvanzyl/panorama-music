@@ -54,6 +54,21 @@ public class TeacherRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		return [.. dtos.Select(dto => dto.MapToTeacher())];
 	}
 
+	public async Task<IList<Teacher>> GetByIdsAsync(IReadOnlyCollection<Guid> teacherIds, CancellationToken cancellationToken)
+	{
+		if (teacherIds.Count == 0)
+			return [];
+
+		var command = CreateCommandDefinition(
+			"teachers.get_teachers_by_ids",
+			new { p_teacher_ids = teacherIds.ToArray() },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<TeacherDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToTeacher())];
+	}
+
 	public async Task CreateAsync(Teacher teacher, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

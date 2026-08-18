@@ -316,6 +316,10 @@ export class PmEnrollmentList extends HTMLElement {
     );
     const instrumentCell = document.createElement('td');
     instrumentCell.appendChild(instrumentSelect);
+    // Stands in wherever the select is hidden, so a course type that records no
+    // instrument reads the same in an editable row as it does in a settled one.
+    const instrumentPlaceholder = buildPlaceholder();
+    instrumentCell.appendChild(instrumentPlaceholder);
 
     const stepSelect = this.buildSelect(
       STEP_TYPES.map((step) => ({ value: step, label: STEP_TYPE_LABELS[step] })),
@@ -323,6 +327,8 @@ export class PmEnrollmentList extends HTMLElement {
     );
     const stepCell = document.createElement('td');
     stepCell.appendChild(stepSelect);
+    const stepPlaceholder = buildPlaceholder();
+    stepCell.appendChild(stepPlaceholder);
 
     const enrolledCell = document.createElement('td');
     enrolledCell.textContent = enrollment.enrolledDate;
@@ -337,10 +343,12 @@ export class PmEnrollmentList extends HTMLElement {
 
       instrumentSelect.hidden = !offersInstrument;
       instrumentSelect.required = offersInstrument;
+      instrumentPlaceholder.hidden = offersInstrument;
       if (!offersInstrument) instrumentSelect.value = '';
 
       stepSelect.hidden = !offersStep;
       stepSelect.required = offersStep;
+      stepPlaceholder.hidden = offersStep;
       if (!offersStep) stepSelect.value = '';
     };
     courseSelect.addEventListener('change', applyCourseTypeRules);
@@ -429,6 +437,14 @@ export class PmEnrollmentList extends HTMLElement {
       }),
     );
   }
+}
+
+/** The em dash a settled row shows for a field the course type does not record. */
+function buildPlaceholder(): HTMLElement {
+  const placeholder = document.createElement('span');
+  placeholder.textContent = EM_DASH;
+  placeholder.hidden = true;
+  return placeholder;
 }
 
 customElements.define('pm-enrollment-list', PmEnrollmentList);

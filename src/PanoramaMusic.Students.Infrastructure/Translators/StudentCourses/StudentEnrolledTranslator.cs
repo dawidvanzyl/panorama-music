@@ -33,8 +33,7 @@ public sealed class StudentEnrolledTranslator(IAuditContext auditContext, IUserC
 			null,
 			new Dictionary<string, object?>
 			{
-				["targetDisplay"] =
-					$"{student.FirstName} {student.LastName} · {course.CourseType} · {course.LessonStructure} · {teacher}",
+				["targetDisplay"] = $"{student} · {course} · {teacher}",
 				["studentId"] = student.StudentId,
 				["courseId"] = course.CourseId,
 				["teacherId"] = teacher.TeacherId,

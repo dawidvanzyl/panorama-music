@@ -12,8 +12,8 @@ function enrollment(overrides: Partial<EnrollmentResult> = {}): EnrollmentResult
     durationType: 'HalfHour',
     occurrenceType: 'DuringSchool',
     teacherId: 't1',
-    teacherFirstName: 'Dawid',
-    teacherSurname: 'van Zyl',
+    teacherFirstName: 'Thabo',
+    teacherSurname: 'Nkosi',
     instrumentType: 'Piano',
     stepType: 'Step2A',
     enrolledDate: '2026-01-19',
@@ -52,7 +52,7 @@ describe('pm-student-courses-summary enrollment blocks', { tags: ['268UC26'] }, 
     expect(items[0].querySelector('.summary__item-heading')!.textContent).toBe(
       'Instrument · Individual · Half Hour · During School',
     );
-    expect(items[0].querySelector('.summary__item-assignment')!.textContent).toBe('Dawid van Zyl · Piano · Step 2A');
+    expect(items[0].querySelector('.summary__item-assignment')!.textContent).toBe('Thabo Nkosi · Piano · Step 2A');
     expect(items[0].querySelector('.summary__item-enrolled')!.textContent).toBe('Enrolled 2026-01-19');
 
     // A theory course records a step alone, so the instrument is simply absent
@@ -71,7 +71,7 @@ describe('pm-student-courses-summary enrollment blocks', { tags: ['268UC26'] }, 
     expect(summary.shadowRoot!.querySelector('.summary__item-heading')!.textContent).toBe(
       'Grade 2 Recorder · Group · Half Hour · During School',
     );
-    expect(summary.shadowRoot!.querySelector('.summary__item-assignment')!.textContent).toBe('Dawid van Zyl');
+    expect(summary.shadowRoot!.querySelector('.summary__item-assignment')!.textContent).toBe('Thabo Nkosi');
 
     document.body.removeChild(summary);
   });

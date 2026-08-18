@@ -27,14 +27,19 @@ public sealed class EnrollStudentHandler(
 		var student = await studentRepository.GetByIdAsync(command.StudentId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {command.StudentId} was not found.");
 
+		// A student, course or teacher the request names but that does not exist is
+		// one class of failure, so all three answer with the same status rather
+		// than the enrollment's own 404 and the other two's 400.
 		var course = await courseRepository.GetByIdAsync(courseId, cancellationToken)
-			?? throw new DomainException($"Course {courseId} was not found.");
+			?? throw new EntityNotFoundException($"Course {courseId} was not found.");
 
 		var teacher = await teacherDirectory.GetTeacherAsync(teacherId, cancellationToken)
-			?? throw new DomainException($"Teacher {teacherId} was not found.");
+			?? throw new EntityNotFoundException($"Teacher {teacherId} was not found.");
 
-		var existing = await studentCourseRepository.GetByStudentIdAsync(student.StudentId, cancellationToken);
-		if (existing.Any(enrollment => enrollment.Course.CourseId == courseId))
+		// A membership test rather than a read of every enrollment the student
+		// holds. The unique constraint is still what settles a race between two
+		// requests; this only buys the earlier, better-explained refusal.
+		if (await studentCourseRepository.ExistsByStudentAndCourseAsync(student.StudentId, courseId, cancellationToken))
 			throw new DomainException(StudentEnrollmentMessages.AlreadyEnrolled);
 
 		var enrollment = StudentCourse.Enroll(

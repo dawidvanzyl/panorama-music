@@ -52,4 +52,11 @@ public sealed class Course : AggregateRoot
 	{
 		Raise(new CourseDeleted(this));
 	}
+
+	/// <summary>
+	/// How a course reads wherever one has to be named to a person — an audit
+	/// event's target, a refusal message. Its type and the structure it is
+	/// delivered under, which is what the interface shows too.
+	/// </summary>
+	public override string ToString() => $"{CourseType} · {LessonStructure}";
 }

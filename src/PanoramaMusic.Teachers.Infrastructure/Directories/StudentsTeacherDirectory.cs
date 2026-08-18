@@ -31,13 +31,12 @@ public sealed class StudentsTeacherDirectory(ITeacherRepository teacherRepositor
 		if (teacherIds.Count == 0)
 			return new Dictionary<Guid, DirectoryTeacher>();
 
-		// One read of the roster, narrowed here — the alternative is a lookup per
-		// requested id, which is what this method exists to avoid.
-		var wanted = teacherIds.ToHashSet();
-		var teachers = await teacherRepository.GetAllAsync(cancellationToken);
+		// One read for the ids actually asked about — neither a lookup per id, nor
+		// a read of the whole roster narrowed afterwards, so the cost grows with
+		// the request rather than with the table.
+		var teachers = await teacherRepository.GetByIdsAsync(teacherIds, cancellationToken);
 
 		return teachers
-			.Where(teacher => wanted.Contains(teacher.TeacherId))
 			.ToDictionary(
 				teacher => teacher.TeacherId,
 				teacher => new DirectoryTeacher(teacher.TeacherId, teacher.FirstName, teacher.Surname));

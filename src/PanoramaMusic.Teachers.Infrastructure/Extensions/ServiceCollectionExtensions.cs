@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<CreateTeacherHandler>();
 		services.AddTransient<GetTeacherByIdHandler>();
 		services.AddTransient<GetTeachersHandler>();
+		services.AddTransient<GetTeacherRosterHandler>();
 		services.AddTransient<UpdateTeacherProfileHandler>();
 		services.AddTransient<UpdateTeacherClassificationHandler>();
 		services.AddTransient<GetLinkableAccountsHandler>();

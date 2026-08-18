@@ -18,7 +18,7 @@ const recorderCourse: EnrollableCourse = {
   occurrenceType: 'DuringSchool',
 };
 
-const dawid: AssignableTeacher = { teacherId: 't1', firstName: 'Dawid', surname: 'van Zyl', isActive: true };
+const thabo: AssignableTeacher = { teacherId: 't1', firstName: 'Thabo', surname: 'Nkosi', isActive: true };
 const lindiwe: AssignableTeacher = { teacherId: 't2', firstName: 'Lindiwe', surname: 'Mabaso', isActive: true };
 
 const persistedEnrollment: EnrollmentResult = {
@@ -30,8 +30,8 @@ const persistedEnrollment: EnrollmentResult = {
   durationType: 'HalfHour',
   occurrenceType: 'DuringSchool',
   teacherId: 't1',
-  teacherFirstName: 'Dawid',
-  teacherSurname: 'van Zyl',
+  teacherFirstName: 'Thabo',
+  teacherSurname: 'Nkosi',
   instrumentType: 'Piano',
   stepType: 'Step2A',
   enrolledDate: '2026-01-19',
@@ -75,7 +75,7 @@ beforeEach(() => {
   step = new PmCoursesStep();
   document.body.appendChild(step);
   step.courses = [instrumentCourse, recorderCourse];
-  step.teachers = [dawid, lindiwe];
+  step.teachers = [thabo, lindiwe];
 });
 
 afterEach(() => {
@@ -98,7 +98,7 @@ describe('pm-courses-step lists the student existing enrollments', { tags: ['268
 
     expect(cellsOf(rows()[0]).slice(0, 5)).toEqual([
       'Instrument · Individual · Half Hour · During School',
-      'Dawid van Zyl',
+      'Thabo Nkosi',
       'Piano',
       '2A',
       '2026-01-19',
@@ -125,20 +125,20 @@ describe('pm-courses-step stages enrollments in create mode', { tags: ['268UC21'
     step.addEventListener('enrollment-add-requested', (event) => requests.push(event));
 
     step.activateForCreate();
-    stageEnrollment(instrumentCourse.courseId, dawid.teacherId, 'Piano', 'Step2A');
+    stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
 
     expect(requests).toHaveLength(0);
     expect(rows()).toHaveLength(1);
     expect(cellsOf(rows()[0]).slice(0, 4)).toEqual([
       'Instrument · Individual · Half Hour · During School',
-      'Dawid van Zyl',
+      'Thabo Nkosi',
       'Piano',
       '2A',
     ]);
     expect(rows()[0].querySelector('.enrollment-list__btn--change')!.textContent).toBe('Change');
     expect(rows()[0].querySelector('.enrollment-list__btn--remove')!.textContent).toBe('Remove');
     expect(step.pendingEnrollments).toEqual([
-      expect.objectContaining({ courseId: instrumentCourse.courseId, teacherId: dawid.teacherId }),
+      expect.objectContaining({ courseId: instrumentCourse.courseId, teacherId: thabo.teacherId }),
     ]);
   });
 });
@@ -146,7 +146,7 @@ describe('pm-courses-step stages enrollments in create mode', { tags: ['268UC21'
 describe('pm-courses-step removes a staged enrollment', { tags: ['268UC24'] }, () => {
   it('drops the row from the staged list so it is not created on save', () => {
     step.activateForCreate();
-    stageEnrollment(instrumentCourse.courseId, dawid.teacherId, 'Piano', 'Step2A');
+    stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
     stageEnrollment(recorderCourse.courseId, lindiwe.teacherId);
     expect(rows()).toHaveLength(2);
 
@@ -160,7 +160,7 @@ describe('pm-courses-step removes a staged enrollment', { tags: ['268UC24'] }, (
 describe('pm-courses-step refuses to remove the only staged enrollment', { tags: ['268UC28'] }, () => {
   it('keeps the row staged and states the requirement', () => {
     step.activateForCreate();
-    stageEnrollment(instrumentCourse.courseId, dawid.teacherId, 'Piano', 'Step2A');
+    stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
 
     (rows()[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
 
@@ -176,7 +176,7 @@ describe('pm-courses-step changes a staged enrollment', { tags: ['268UC25'] }, (
     step.addEventListener('enrollment-add-requested', (event) => requests.push(event));
 
     step.activateForCreate();
-    stageEnrollment(instrumentCourse.courseId, dawid.teacherId, 'Piano', 'Step2A');
+    stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
 
     (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
 
@@ -201,7 +201,7 @@ describe('pm-courses-step changes a staged enrollment', { tags: ['268UC25'] }, (
 
   it('drops the instrument and step when the row is changed to a course type that records neither', () => {
     step.activateForCreate();
-    stageEnrollment(instrumentCourse.courseId, dawid.teacherId, 'Piano', 'Step2A');
+    stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
 
     (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
 
