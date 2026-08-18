@@ -139,7 +139,9 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
       data: { isPrivate: true },
     });
 
-    expect(list.status()).toBe(403);
+    // Reading the roster is open to a Teacher: assigning a teacher to a
+    // student's enrollment needs it. Maintaining the record is not.
+    expect(list.status()).toBe(200);
     expect(single.status()).toBe(403);
     expect(create.status()).toBe(403);
     expect(profile.status()).toBe(403);

@@ -96,7 +96,13 @@ test.describe('Enrollment — a student can hold several enrollments at once', {
     const { studentsPage, target, instrument } = await openStudentsWithCourses(page);
     const surname = uniqueSurname('Multi');
 
-    await studentsPage.createStudent({ firstName: 'Amara', lastName: surname, ...studentDefaults });
+    // The first enrollment names its course, because leaving the choice to the
+    // form would take whichever course happens to be offered first — any run's
+    // leftovers included — and the assertion below is about this one.
+    await studentsPage.createStudent(
+      { firstName: 'Amara', lastName: surname, ...studentDefaults },
+      { courseLabel: target.courseLabel, teacherName: target.teacherName },
+    );
     await expect(studentsPage.row(surname)).toBeVisible();
 
     await studentsPage.openCoursesTab(surname);
