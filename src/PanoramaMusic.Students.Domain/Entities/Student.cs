@@ -105,4 +105,10 @@ public sealed class Student : AggregateRoot
 	{
 		Raise(new StudentDeleted(this));
 	}
+
+	/// <summary>
+	/// How a student reads wherever one has to be named to a person — an audit
+	/// event's target, a refusal message.
+	/// </summary>
+	public override string ToString() => $"{FirstName} {LastName}";
 }

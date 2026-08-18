@@ -35,6 +35,14 @@ export interface GuardianInput {
   married?: boolean;
 }
 
+export interface EnrollmentInput {
+  courseLabel?: string;
+  teacherName?: string;
+  instrumentLabel?: string;
+  stepLabel?: string;
+  enrolledDate?: string;
+}
+
 export type GuardianDeleteScope = 'one' | 'all';
 
 export class StudentsPage extends BasePage {
@@ -64,16 +72,54 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * Steps the create wizard through all three tabs (Student → Siblings →
-   * Guardians) without adding any siblings or guardians. Save only appears on
-   * the final tab, so both Next clicks are required.
+   * Steps the create wizard through all four tabs (Student → Siblings →
+   * Guardians → Courses) without adding any siblings or guardians. Save only
+   * appears on the final tab, so all three Next clicks are required.
+   *
+   * A student must be enrolled in at least one course, so the Courses tab
+   * always stages one. Callers that do not care which pass no `enrollment` and
+   * get the first course and teacher on offer.
    */
-  async createStudent(input: StudentInput): Promise<void> {
+  async createStudent(input: StudentInput, enrollment?: EnrollmentInput): Promise<void> {
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
+    await this.wizardModal.locator('#nextBtn').click();
+    await this.enrollInCourse(enrollment);
     await this.wizardModal.locator('#saveBtn').click();
+  }
+
+  /**
+   * Opens the Courses tab's enroll panel, fills it in and confirms. In create
+   * mode this stages the enrollment; in edit mode it submits one.
+   */
+  async enrollInCourse(enrollment?: EnrollmentInput): Promise<void> {
+    const step = this.wizardModal.locator('#coursesStep');
+    await step.locator('#enrollBtn').click();
+
+    const form = step.locator('#enrollmentForm');
+    await this.selectOfferedOption(form.locator('#course'), enrollment?.courseLabel);
+    await this.selectOfferedOption(form.locator('#teacher'), enrollment?.teacherName);
+    if (enrollment?.instrumentLabel) {
+      await form.locator('#instrument').selectOption({ label: enrollment.instrumentLabel });
+    }
+    if (enrollment?.stepLabel) {
+      await form.locator('#step').selectOption({ label: enrollment.stepLabel });
+    }
+    if (enrollment?.enrolledDate) {
+      await form.locator('#enrolledDate').fill(enrollment.enrolledDate);
+    }
+    await form.locator('#confirmBtn').click();
+  }
+
+  /** Chooses the named option, or the first real one when the caller does not care which. */
+  private async selectOfferedOption(select: Locator, label?: string): Promise<void> {
+    if (label) {
+      await select.selectOption({ label });
+      return;
+    }
+    await select.selectOption({ index: 1 });
   }
 
   row(name: string): Locator {
@@ -199,6 +245,30 @@ export class StudentsPage extends BasePage {
   /** Read-only guardians summary for the currently-expanded row (same scoping rule as siblings). */
   visibleGuardiansSummary(): Locator {
     return this.page.locator('pm-student-guardians-summary:visible');
+  }
+
+  /** Opens the Edit wizard for `name` and switches to its Courses tab. */
+  async openCoursesTab(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await this.wizardModal.locator('#tabCourses').click();
+  }
+
+  enrollmentListRow(courseLabel: string): Locator {
+    return this.wizardModal
+      .locator('#coursesStep')
+      .locator('#enrollmentList')
+      .locator('tr')
+      .filter({ hasText: courseLabel });
+  }
+
+  /** The Courses step's own message area, where the at-least-one-course requirement is stated. */
+  coursesStepMessage(): Locator {
+    return this.wizardModal.locator('#coursesStep').locator('#message');
+  }
+
+  /** Read-only courses summary for the currently-expanded row (same scoping rule as siblings). */
+  visibleCoursesSummary(): Locator {
+    return this.page.locator('pm-student-courses-summary:visible');
   }
 
   /** Opens the Edit wizard for `name` and switches to its Guardians tab. */

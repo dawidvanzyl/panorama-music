@@ -30,5 +30,14 @@ public sealed class StudentsTestContext
 		public Mock<ILessonStructureRepository> LessonStructureRepositoryMock { get; } = new Mock<ILessonStructureRepository>();
 
 		public Mock<ICourseRepository> CourseRepositoryMock { get; } = new Mock<ICourseRepository>();
+
+		public Mock<IStudentCourseRepository> StudentCourseRepositoryMock { get; } = new Mock<IStudentCourseRepository>();
+
+		/// <summary>
+		/// Not a repository of this context's own, but the port it reads teachers
+		/// through — mocked here alongside them because that is what the handlers
+		/// under test resolve.
+		/// </summary>
+		public Mock<ITeacherDirectory> TeacherDirectoryMock { get; } = new Mock<ITeacherDirectory>();
 	}
 }

@@ -49,6 +49,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetMissingSiblingGuardians"] = CacheExpectation.NoStore,
 		["UpdateGuardian"] = CacheExpectation.NoStore,
 
+		// Enrollment payloads name the assigned teacher and the enrolled student's course history.
+		["EnrollStudent"] = CacheExpectation.NoStore,
+		["GetStudentCourses"] = CacheExpectation.NoStore,
+
 		// Identity payloads carry email addresses, roles, invite URLs and tokens.
 		["GetUsers"] = CacheExpectation.NoStore,
 		["CreateUser"] = CacheExpectation.NoStore,
@@ -71,6 +75,9 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["RenameGuardianRelationship"] = CacheExpectation.Cacheable,
 		["CountGuardianRelationship"] = CacheExpectation.Cacheable,
 
+		// An enrollment count is an aggregate over one course; it identifies nobody.
+		["CountCourseEnrollments"] = CacheExpectation.Cacheable,
+
 		// Lesson structures are fixed seeded reference data; the payload names no person.
 		["GetLessonStructures"] = CacheExpectation.Cacheable,
 
@@ -86,6 +93,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 		// Teacher payloads carry names.
 		["GetTeachers"] = CacheExpectation.NoStore,
+		["GetTeacherRoster"] = CacheExpectation.NoStore,
 		["GetTeacherById"] = CacheExpectation.NoStore,
 		["CreateTeacher"] = CacheExpectation.NoStore,
 		["UpdateTeacherProfile"] = CacheExpectation.NoStore,

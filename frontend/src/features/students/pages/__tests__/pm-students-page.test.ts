@@ -56,6 +56,27 @@ vi.mock('../../services/guardians', async () => {
   };
 });
 
+vi.mock('../../services/enrollments', async () => {
+  const actual = await vi.importActual<typeof import('../../services/enrollments')>('../../services/enrollments');
+  return {
+    ...actual,
+    getStudentCourses: vi.fn(),
+    enrollStudent: vi.fn(),
+    getEnrollableCourses: vi.fn(),
+    getAssignableTeachers: vi.fn(),
+  };
+});
+
+import {
+  getStudentCourses,
+  enrollStudent,
+  getEnrollableCourses,
+  getAssignableTeachers,
+  type AssignableTeacher,
+  type EnrollableCourse,
+  type EnrollmentResult,
+} from '../../services/enrollments';
+
 import '../pm-students-page';
 import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
@@ -63,6 +84,8 @@ import type { PmDeleteStudentModal } from '../../components/pm-delete-student-mo
 import type { PmDeleteGuardianModal } from '../../components/pm-delete-guardian-modal';
 import type { PmGuardianList } from '../../components/pm-guardian-list';
 import type { PmStudentGuardiansSummary } from '../../components/pm-student-guardians-summary';
+import type { PmStudentCoursesSummary } from '../../components/pm-student-courses-summary';
+import type { PmEnrollmentList } from '../../components/pm-enrollment-list';
 
 const alice: StudentResult = {
   studentId: 's1',
@@ -101,6 +124,40 @@ const nomvula: GuardianResult = {
   married: false,
 };
 
+const pianoCourse: EnrollableCourse = {
+  courseId: 'c1',
+  courseType: 'Instrument',
+  lessonType: 'Individual',
+  durationType: 'HalfHour',
+  occurrenceType: 'DuringSchool',
+};
+
+const recorderCourse: EnrollableCourse = {
+  courseId: 'c2',
+  courseType: 'G2Recorder',
+  lessonType: 'Group',
+  durationType: 'HalfHour',
+  occurrenceType: 'DuringSchool',
+};
+
+const thabo: AssignableTeacher = { teacherId: 't1', firstName: 'Thabo', surname: 'Nkosi', isActive: true };
+
+const pianoEnrollment: EnrollmentResult = {
+  studentCourseId: 'sc1',
+  studentId: 's1',
+  courseId: 'c1',
+  courseType: 'Instrument',
+  lessonType: 'Individual',
+  durationType: 'HalfHour',
+  occurrenceType: 'DuringSchool',
+  teacherId: 't1',
+  teacherFirstName: 'Thabo',
+  teacherSurname: 'Nkosi',
+  instrumentType: 'Piano',
+  stepType: 'Step2A',
+  enrolledDate: '2026-01-19',
+};
+
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 async function mountPage(): Promise<HTMLElement> {
@@ -135,6 +192,35 @@ function guardiansStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
   return wizard.shadowRoot!.getElementById('guardiansStep')!.shadowRoot!;
 }
 
+function coursesStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+  return wizard.shadowRoot!.getElementById('coursesStep')!.shadowRoot!;
+}
+
+/** Fills the Student tab with a valid new student, as every create flow must. */
+function fillStudentStep(wizard: PmStudentWizardModal): void {
+  const stepShadow = wizard.shadowRoot!.getElementById('studentStep')!.shadowRoot!;
+  (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+  (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+  (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+  (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+  (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+  (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
+  (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+}
+
+/** Opens the enroll panel on the Courses tab and confirms it, staging or submitting one enrollment. */
+function enrollViaForm(wizard: PmStudentWizardModal, courseId: string, teacherId: string): void {
+  const coursesShadow = coursesStepShadowOf(wizard);
+  (coursesShadow.getElementById('enrollBtn') as HTMLButtonElement).click();
+
+  const formShadow = coursesShadow.getElementById('enrollmentForm')!.shadowRoot!;
+  const courseSelect = formShadow.getElementById('course') as HTMLSelectElement;
+  courseSelect.value = courseId;
+  courseSelect.dispatchEvent(new Event('change'));
+  (formShadow.getElementById('teacher') as HTMLSelectElement).value = teacherId;
+  (formShadow.getElementById('confirmBtn') as HTMLButtonElement).click();
+}
+
 beforeEach(() => {
   mockGetStudents.mockReset();
   mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian]));
@@ -165,6 +251,14 @@ beforeEach(() => {
   // eager on-mount load resolves. Tests for the cold-cache fallback override this.
   vi.mocked(peekCachedGuardianRelationships).mockReset();
   vi.mocked(peekCachedGuardianRelationships).mockReturnValue([motherRelationship, fatherRelationship]);
+  vi.mocked(getStudentCourses).mockReset();
+  vi.mocked(getStudentCourses).mockResolvedValue([]);
+  vi.mocked(enrollStudent).mockReset();
+  vi.mocked(enrollStudent).mockResolvedValue(pianoEnrollment);
+  vi.mocked(getEnrollableCourses).mockReset();
+  vi.mocked(getEnrollableCourses).mockResolvedValue([pianoCourse, recorderCourse]);
+  vi.mocked(getAssignableTeachers).mockReset();
+  vi.mocked(getAssignableTeachers).mockResolvedValue([thabo]);
 });
 
 describe('pm-students-page — loads the roster on page load', { tags: ['200UC8'] }, () => {
@@ -268,14 +362,7 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
 
     const wizard = wizardModalOf(el);
     const wizardShadow = wizard.shadowRoot!;
-    const stepShadow = wizardShadow.getElementById('studentStep')!.shadowRoot!;
-    (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
-    (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
-    (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
-    (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
-    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
-    (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
-    (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+    fillStudentStep(wizard);
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
 
     const searchSelectShadow = wizardShadow
@@ -289,6 +376,12 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
     )!;
     aliceResult.click();
     (searchSelectShadow.getElementById('addBtn') as HTMLButtonElement).click();
+
+    // A student cannot be saved without at least one course, so the create flow
+    // stages one before Save is offered.
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
 
     (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
@@ -310,17 +403,12 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
 
     const wizard = wizardModalOf(el);
     const wizardShadow = wizard.shadowRoot!;
-    const studentStep = wizardShadow.getElementById('studentStep')!;
-    const stepShadow = studentStep.shadowRoot!;
-    (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
-    (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
-    (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
-    (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
-    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
-    (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
-    (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+    fillStudentStep(wizard);
 
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
     (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
     await flush();
 
@@ -980,3 +1068,158 @@ describe(
     });
   },
 );
+
+describe('pm-students-page — enrolls a student from the Courses tab', { tags: ['268UC18'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('submits the enrollment, closes the panel and shows the new row in the list', async () => {
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses).mockResolvedValueOnce([]).mockResolvedValueOnce([pianoEnrollment]);
+
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    (wizard.shadowRoot!.getElementById('tabCourses') as HTMLButtonElement).click();
+    await flush();
+
+    const coursesShadow = coursesStepShadowOf(wizard);
+    (coursesShadow.getElementById('enrollBtn') as HTMLButtonElement).click();
+    const formShadow = coursesShadow.getElementById('enrollmentForm')!.shadowRoot!;
+    const courseSelect = formShadow.getElementById('course') as HTMLSelectElement;
+    courseSelect.value = pianoCourse.courseId;
+    courseSelect.dispatchEvent(new Event('change'));
+    (formShadow.getElementById('teacher') as HTMLSelectElement).value = thabo.teacherId;
+    (formShadow.getElementById('instrument') as HTMLSelectElement).value = 'Piano';
+    (formShadow.getElementById('step') as HTMLSelectElement).value = 'Step2A';
+    (formShadow.getElementById('confirmBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(enrollStudent)).toHaveBeenCalledWith(
+      's1',
+      expect.objectContaining({
+        courseId: pianoCourse.courseId,
+        teacherId: thabo.teacherId,
+        instrumentType: 'Piano',
+        stepType: 'Step2A',
+      }),
+    );
+
+    const list = coursesShadow.getElementById('enrollmentList') as unknown as PmEnrollmentList;
+    expect(list.enrollments.map((e) => e.studentCourseId)).toEqual(['sc1']);
+
+    const formPanel = coursesShadow.getElementById('formPanel') as HTMLElement;
+    expect(formPanel.classList.contains('courses-step__form-panel--expanded')).toBe(false);
+    expect((coursesShadow.getElementById('enrollBtn') as HTMLButtonElement).hidden).toBe(false);
+  });
+});
+
+describe('pm-students-page — a student cannot be saved with no course', { tags: ['268UC22'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('refuses the save, states the requirement on the Courses tab, and creates nothing', async () => {
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(createStudent)).not.toHaveBeenCalled();
+    expect(wizard.hasAttribute('open')).toBe(true);
+    expect((coursesStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
+      'A student must be enrolled in at least one course before they can be saved.',
+    );
+  });
+});
+
+describe('pm-students-page — creates the staged enrollments once the student exists', { tags: ['268UC23'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('creates each staged enrollment against the newly created student', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
+
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
+    // Nothing is sent while the wizard is still open.
+    expect(vi.mocked(enrollStudent)).not.toHaveBeenCalled();
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(createStudent)).toHaveBeenCalled();
+    expect(vi.mocked(enrollStudent)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enrollStudent)).toHaveBeenCalledWith(
+      's3',
+      expect.objectContaining({ courseId: recorderCourse.courseId, teacherId: thabo.teacherId }),
+    );
+  });
+});
+
+describe('pm-students-page — expanded row shows a read-only courses summary', { tags: ['268UC26'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('fetches the enrollments and shows them beneath the siblings and guardians summaries', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+
+    const tableShadow = (el.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable).shadowRoot!;
+    (tableShadow.querySelector('.students-table__chevron-btn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(getStudentCourses)).toHaveBeenCalledWith('s1');
+    const wrapper = tableShadow.querySelector('.students-table__summary-wrapper')!;
+    expect([...wrapper.children].map((child) => child.tagName.toLowerCase())).toEqual([
+      'pm-student-siblings-summary',
+      'pm-student-guardians-summary',
+      'pm-student-courses-summary',
+    ]);
+
+    const summary = tableShadow.querySelector('pm-student-courses-summary') as PmStudentCoursesSummary;
+    expect(summary.enrollments.map((e) => e.studentCourseId)).toEqual(['sc1']);
+  });
+});

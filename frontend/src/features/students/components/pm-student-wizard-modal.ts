@@ -1,15 +1,19 @@
 import './pm-student-step';
 import './pm-siblings-step';
 import './pm-guardians-step';
+import './pm-courses-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { AT_LEAST_ONE_COURSE_TO_SAVE } from './pm-courses-step';
 import type { StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
+import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
 import type { PmStudentStep } from './pm-student-step';
 import type { PmSiblingsStep } from './pm-siblings-step';
 import type { PmGuardiansStep } from './pm-guardians-step';
+import type { PmCoursesStep } from './pm-courses-step';
 
 type Mode = 'create' | 'edit';
-type Step = 'student' | 'siblings' | 'guardians';
+type Step = 'student' | 'siblings' | 'guardians' | 'courses';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -119,6 +123,7 @@ template.innerHTML = `
         <button type="button" class="wizard__tab wizard__tab--active" id="tabStudent" role="tab" aria-selected="true" aria-controls="stepStudent">Student</button>
         <button type="button" class="wizard__tab" id="tabSiblings" role="tab" aria-selected="false" aria-controls="stepSiblings">Siblings</button>
         <button type="button" class="wizard__tab" id="tabGuardians" role="tab" aria-selected="false" aria-controls="stepGuardians">Guardians</button>
+        <button type="button" class="wizard__tab" id="tabCourses" role="tab" aria-selected="false" aria-controls="stepCourses">Courses</button>
       </div>
       <div class="wizard__step wizard__step--visible" id="stepStudent" role="tabpanel" aria-labelledby="tabStudent">
         <pm-student-step id="studentStep"></pm-student-step>
@@ -132,6 +137,9 @@ template.innerHTML = `
       </div>
       <div class="wizard__step" id="stepGuardians" role="tabpanel" aria-labelledby="tabGuardians">
         <pm-guardians-step id="guardiansStep"></pm-guardians-step>
+      </div>
+      <div class="wizard__step" id="stepCourses" role="tabpanel" aria-labelledby="tabCourses">
+        <pm-courses-step id="coursesStep"></pm-courses-step>
       </div>
       <div class="wizard__actions">
         <button type="button" class="wizard__btn wizard__btn--cancel" id="cancelBtn">Cancel</button>
@@ -148,12 +156,15 @@ export class PmStudentWizardModal extends HTMLElement {
   private tabStudent: HTMLButtonElement | null = null;
   private tabSiblings: HTMLButtonElement | null = null;
   private tabGuardians: HTMLButtonElement | null = null;
+  private tabCourses: HTMLButtonElement | null = null;
   private stepStudentEl: HTMLElement | null = null;
   private stepSiblingsEl: HTMLElement | null = null;
   private stepGuardiansEl: HTMLElement | null = null;
+  private stepCoursesEl: HTMLElement | null = null;
   private studentStep: PmStudentStep | null = null;
   private siblingsStep: PmSiblingsStep | null = null;
   private guardiansStep: PmGuardiansStep | null = null;
+  private coursesStep: PmCoursesStep | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
   private previousBtn: HTMLButtonElement | null = null;
   private nextBtn: HTMLButtonElement | null = null;
@@ -180,7 +191,10 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabGuardians = this.shadowRoot!.getElementById('tabGuardians') as HTMLButtonElement;
     this.stepStudentEl = this.shadowRoot!.getElementById('stepStudent') as HTMLElement;
     this.stepSiblingsEl = this.shadowRoot!.getElementById('stepSiblings') as HTMLElement;
+    this.tabCourses = this.shadowRoot!.getElementById('tabCourses') as HTMLButtonElement;
     this.stepGuardiansEl = this.shadowRoot!.getElementById('stepGuardians') as HTMLElement;
+    this.stepCoursesEl = this.shadowRoot!.getElementById('stepCourses') as HTMLElement;
+    this.coursesStep = this.shadowRoot!.getElementById('coursesStep') as unknown as PmCoursesStep;
     this.studentStep = this.shadowRoot!.getElementById('studentStep') as unknown as PmStudentStep;
     this.siblingsStep = this.shadowRoot!.getElementById('siblingsStep') as unknown as PmSiblingsStep;
     this.guardiansStep = this.shadowRoot!.getElementById('guardiansStep') as unknown as PmGuardiansStep;
@@ -195,6 +209,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabStudent.addEventListener('click', () => this.goToStep('student'));
     this.tabSiblings.addEventListener('click', () => this.handleSiblingsTabClick());
     this.tabGuardians.addEventListener('click', () => this.handleGuardiansTabClick());
+    this.tabCourses.addEventListener('click', () => this.handleCoursesTabClick());
     this.cancelBtn.addEventListener('click', () => this.close());
     this.previousBtn.addEventListener('click', () => this.handlePrevious());
     this.nextBtn.addEventListener('click', () => this.handleNext());
@@ -210,6 +225,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.studentStep!.reset();
     this.siblingsStep!.activateForCreate(candidates);
     this.guardiansStep!.activateForCreate();
+    this.coursesStep!.activateForCreate();
     this.saveBtn!.disabled = false;
     this.studentSaveBtn!.disabled = false;
     this.goToStep('student');
@@ -249,9 +265,18 @@ export class PmStudentWizardModal extends HTMLElement {
     this.guardiansStep!.showError(message);
   }
 
+  showCoursesError(message: string): void {
+    this.coursesStep!.showError(message);
+  }
+
   /** Collapses the Guardians step's Add/Edit form panel (if open) and returns to the list view. */
   closeGuardianForm(): void {
     this.guardiansStep!.closeForm();
+  }
+
+  /** Collapses the Courses step's enroll form panel (if open) and returns to the list view. */
+  closeEnrollmentForm(): void {
+    this.coursesStep!.closeForm();
   }
 
   set siblings(value: StudentResult[]) {
@@ -274,6 +299,23 @@ export class PmStudentWizardModal extends HTMLElement {
     this.guardiansStep!.hasMissingSiblingGuardians = value;
   }
 
+  set enrollments(value: EnrollmentResult[]) {
+    this.coursesStep!.enrollments = value;
+  }
+
+  set enrollableCourses(value: EnrollableCourse[]) {
+    this.coursesStep!.courses = value;
+  }
+
+  set assignableTeachers(value: AssignableTeacher[]) {
+    this.coursesStep!.teachers = value;
+  }
+
+  /** Enrollments staged during create mode, to be created once the student is saved. */
+  get pendingEnrollments() {
+    return this.coursesStep!.pendingEnrollments;
+  }
+
   /** Read-only preview of the currently-staged siblings' guardians (create mode only). */
   setInheritedGuardiansForCreate(guardians: GuardianResult[]): void {
     this.guardiansStep!.setInheritedGuardians(guardians);
@@ -294,18 +336,26 @@ export class PmStudentWizardModal extends HTMLElement {
     this.goToStep('guardians');
   }
 
+  private handleCoursesTabClick(): void {
+    if (this._mode === 'create') return;
+    this.goToStep('courses');
+  }
+
   private goToStep(step: Step): void {
     this._activeStep = step;
 
     this.stepStudentEl!.classList.toggle('wizard__step--visible', step === 'student');
     this.stepSiblingsEl!.classList.toggle('wizard__step--visible', step === 'siblings');
     this.stepGuardiansEl!.classList.toggle('wizard__step--visible', step === 'guardians');
+    this.stepCoursesEl!.classList.toggle('wizard__step--visible', step === 'courses');
     this.tabStudent!.classList.toggle('wizard__tab--active', step === 'student');
     this.tabSiblings!.classList.toggle('wizard__tab--active', step === 'siblings');
     this.tabGuardians!.classList.toggle('wizard__tab--active', step === 'guardians');
+    this.tabCourses!.classList.toggle('wizard__tab--active', step === 'courses');
     this.tabStudent!.setAttribute('aria-selected', String(step === 'student'));
     this.tabSiblings!.setAttribute('aria-selected', String(step === 'siblings'));
     this.tabGuardians!.setAttribute('aria-selected', String(step === 'guardians'));
+    this.tabCourses!.setAttribute('aria-selected', String(step === 'courses'));
 
     if (step === 'siblings' && this._mode === 'edit' && this._studentId) {
       this.siblingsStep!.activate(this._studentId);
@@ -329,6 +379,17 @@ export class PmStudentWizardModal extends HTMLElement {
       );
     }
 
+    if (step === 'courses' && this._mode === 'edit' && this._studentId) {
+      this.coursesStep!.activate(this._studentId);
+      this.dispatchEvent(
+        new CustomEvent('courses-tab-activated', {
+          bubbles: true,
+          composed: true,
+          detail: { studentId: this._studentId },
+        }),
+      );
+    }
+
     this.updateFooter();
   }
 
@@ -345,16 +406,21 @@ export class PmStudentWizardModal extends HTMLElement {
 
     this.tabSiblings!.disabled = isCreate;
     this.tabGuardians!.disabled = isCreate;
+    this.tabCourses!.disabled = isCreate;
 
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
-    this.nextBtn!.hidden = !(isCreate && this._activeStep !== 'guardians');
-    this.saveBtn!.hidden = isCreate ? this._activeStep !== 'guardians' : true;
+    this.nextBtn!.hidden = !(isCreate && this._activeStep !== 'courses');
+    this.saveBtn!.hidden = isCreate ? this._activeStep !== 'courses' : true;
     this.cancelBtn!.hidden = !isCreate && onStudentTab;
     this.cancelBtn!.textContent = isCreate ? 'Cancel' : 'Close';
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
   }
 
   private handlePrevious(): void {
+    if (this._activeStep === 'courses') {
+      this.goToStep('guardians');
+      return;
+    }
     if (this._activeStep === 'guardians') {
       this.goToStep('siblings');
       return;
@@ -379,12 +445,25 @@ export class PmStudentWizardModal extends HTMLElement {
         }),
       );
       this.goToStep('guardians');
+      return;
+    }
+    if (this._activeStep === 'guardians') {
+      this.goToStep('courses');
     }
   }
 
   private handleSave(): void {
     if (!this.studentStep!.reportValidity()) {
       this.goToStep('student');
+      return;
+    }
+
+    // A student must be enrolled in at least one course, so the create flow
+    // cannot save one with nothing staged — stated on the Courses tab rather
+    // than failing silently.
+    if (this._mode === 'create' && !this.coursesStep!.hasPendingEnrollments) {
+      this.goToStep('courses');
+      this.coursesStep!.showError(AT_LEAST_ONE_COURSE_TO_SAVE);
       return;
     }
 
@@ -401,6 +480,7 @@ export class PmStudentWizardModal extends HTMLElement {
             input,
             pendingSiblingIds: this.siblingsStep!.pendingSiblingIds,
             pendingGuardians: this.guardiansStep!.pendingGuardians,
+            pendingEnrollments: this.coursesStep!.pendingEnrollments,
           },
         }),
       );
