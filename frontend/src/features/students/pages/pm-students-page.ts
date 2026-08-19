@@ -574,9 +574,8 @@ export class PmStudentsPage extends HTMLElement {
   };
 
   private handleEnrollmentWithdrawConfirmed = async (event: Event): Promise<void> => {
-    const { studentId, studentCourseId } = (
-      event as CustomEvent<{ studentId: string; studentCourseId: string }>
-    ).detail;
+    const { studentId, studentCourseId } = (event as CustomEvent<{ studentId: string; studentCourseId: string }>)
+      .detail;
     try {
       await withdrawEnrollment(studentId, studentCourseId);
       await this.refreshWizardEnrollments(studentId);

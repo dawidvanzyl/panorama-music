@@ -329,9 +329,8 @@ export class PmCoursesStep extends HTMLElement {
    * the page to be submitted rather than being applied in memory here.
    */
   private handleUpdateSaved = (event: Event): void => {
-    const { studentCourseId, input } = (
-      event as CustomEvent<{ studentCourseId: string; input: EnrollmentUpdateInput }>
-    ).detail;
+    const { studentCourseId, input } = (event as CustomEvent<{ studentCourseId: string; input: EnrollmentUpdateInput }>)
+      .detail;
 
     this.clearError();
     this.dispatchEvent(

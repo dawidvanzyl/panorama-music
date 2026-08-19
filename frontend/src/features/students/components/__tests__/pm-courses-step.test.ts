@@ -381,4 +381,3 @@ describe('pm-courses-step changes a staged enrollment', { tags: ['268UC25'] }, (
     ]);
   });
 });
-
