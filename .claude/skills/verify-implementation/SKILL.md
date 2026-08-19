@@ -20,19 +20,18 @@ At the start of execution, always post a visible message to the user:
 
 ## Role
 
-You are a senior developer verifying that an implementation satisfies the issue
-it was written for. Your scope is the issue — not the codebase at large, and not
-what the code could become.
+You are a senior developer performing a critical review of a peer's
+implementation. Be thorough, direct, and constructive. Do not rubber-stamp —
+question assumptions, spot edge cases, and hold the code to the requirements in
+the issue and the standards documented in the project.
 
-Every finding must quote the text it violates: an issue section, a standards
-rule, or a failing check. If you cannot quote a source, it is not a finding.
+Every finding must be justified. If something looks wrong, say why. If something
+looks suspicious but you cannot prove it is wrong, flag it as a Question. An
+out-of-scope observation worth noting for a future issue is a Suggestion — never
+a Blocker.
 
-Do not report: refactors the issue did not ask for, performance not specified in
-the issue, test coverage beyond the UC/IT codes, naming or style not covered by
-a standards doc, anything under `## Out of Scope`, or anything that would
-properly be a separate issue. These are the failure mode this skill exists to
-avoid — a clean report on a correct implementation is the expected outcome, not
-a sign you reviewed lazily.
+Never report a Blocker or Warning that asks for work listed under
+`## Out of Scope`; if it is worth recording at all, it is a Suggestion.
 
 ## Inputs
 
@@ -44,8 +43,9 @@ a sign you reviewed lazily.
 - `cycle` — integer, default `1`.
 - `prev_verify_sha` — the `VERIFIED_SHA` from the previous cycle. Absent on
   cycle 1.
-- `prev_report` — the previous cycle's report, including any items marked
-  invalid by the implementer and any items marked `RESOLVED_BY: developer`.
+- `prev_report` — the previous cycle's report with the implementer's
+  disposition on every finding of every severity: `ACTIONED`, `DEFERRED`,
+  `INVALID`, or `RESOLVED_BY: developer`.
 
 If `issue_number` is not available, ask: "What is the issue number to verify?"
 
@@ -102,8 +102,22 @@ Read `prev_report`. For each finding:
   - Reason holds → drop the finding. Record it under Withdrawn.
   - Reason does not hold → keep the finding, add `DISPUTED` to its row with a
     one-line rebuttal, and set the verdict to `NEEDS_HUMAN`.
+- Marked `ACTIONED: {what}` → check the delta for the fix. Confirmed → drop it.
+  Not present in the delta → carry it forward with `NOT CONFIRMED` in its row.
+- Marked `DEFERRED: {reason}` → keep it, restated as a 💡 Suggestion, and note
+  the reason. Do not escalate it back to a Blocker or Warning.
+- Marked `INVALID: {reason}` → adjudicate as above. This applies to warnings,
+  suggestions, and questions exactly as it does to blockers.
 - Otherwise → check the delta for evidence it was resolved. Unresolved findings
-  carry forward unchanged.
+  carry forward unchanged, whatever their severity.
+
+**Carry every severity forward.** Warnings, suggestions, and questions survive
+across cycles until they are actioned, withdrawn, or settled — they are never
+silently dropped just because they did not gate the verdict. A cycle-2 report
+that omits a cycle-1 suggestion with no disposition is wrong.
+
+Any finding of any severity that arrives with no disposition at all → carry it
+forward unchanged and add `NO DISPOSITION` to its row.
 
 On cycles 2+, do not re-run the full requirements sweep from step 5. Confirm
 prior findings and check the delta for new violations only.
@@ -131,64 +145,16 @@ whether it is clean.
 
 ### 3) Read relevant standards
 
-Read the standards doc(s) for the affected scopes plus `.editorconfig`:
+Read `.claude/shared/review-severity.md` — it defines the severity
+levels, the standards docs to read, the security delegation, and the report
+column rules used from here on.
 
-- Always read: `docs/coding-standards.md` (shared conventions)
-- Backend scope: `docs/coding-standards-backend.md`
-- Frontend scope: `docs/coding-standards-frontend.md`
-- Backend Formatting rules: `src/.editorconfig`
-- Frontend Formatting rules: `frontend/.editorconfig`
-
-If a standards doc does not exist for the relevant scope, note it and skip.
+Then read the standards doc(s) it lists for the scopes detected in step 1.
 
 ### 4) Run automated checks
 
-Run **all** checks applicable to the detected scopes. Record pass/fail.
-
-Backend checks (always run when `src/` is changed):
-
-```bash
-dotnet build src/PanoramaMusic.slnx 2>&1
-dotnet format src/PanoramaMusic.slnx --verify-no-changes 2>&1
-find src -iname "*Tests*.csproj" -o -iname "*Test*.csproj" | sort -u | while read -r proj; do
-  echo "--- Testing: $proj ---"
-  dotnet test "$proj" 2>&1
-done
-```
-
-> If no test projects are found under `src/`, note "No backend test projects
-> found" in the report instead of a pass/fail line.
-
-Frontend checks (run when `frontend/` is changed):
-
-- Read `frontend/package.json` to discover available scripts.
-- Run:
-  - `npm run lint` if `lint` exists.
-  - `npm run format:check` if `format:check` exists.
-  - `npm run typecheck` if `typecheck` exists.
-  - `npm run build` if `build` exists.
-- If a `test` script exists, run:
-
-```bash
-npm run test
-```
-
-- Otherwise attempt:
-
-```bash
-npx vitest run --reporter=verbose 2>&1
-```
-
-- If Vitest is not configured, not installed, or the command is unavailable,
-  skip gracefully and note it in the report.
-- Do not install dependencies or tooling.
-
-If none of the frontend checks produce meaningful output (e.g. no scripts
-defined), note:
-
-> No frontend checks configured
-
-in the report.
+Read `.claude/shared/automated-checks.md` and run the checks it defines for the
+scopes detected in step 1, recording pass/fail per check.
 
 **Short-circuit.** If any automated check fails, stop here. Emit a report
 containing only the check results, the failing output (last ~50 lines per
@@ -209,35 +175,36 @@ requirement. For each section — `## Functional Requirements`,
 `## Acceptance Criteria (G/W/T)`, and `## Notes` — ask: does the diff satisfy
 this? Is there anything missing, wrong, or inconsistent?
 
-Apply these severity levels. Every finding quotes its source.
+Additionally, check `## Out of Scope`: does the diff implement anything listed
+there? If so → ❌ Blocker: "Diff implements work explicitly excluded in Out of
+Scope: {item}."
 
-❌ **Blocker** — the diff fails a requirement, deviates from the API / interface
-contract, breaks a rule in `## Context & Constraints` or `## Domain & Data`,
-misses a UC/IT test, or violates a documented standards rule. Quote the text it
-violates. Gating.
+Apply the severity levels defined in
+`.claude/shared/review-severity.md` — read that file now if you have not
+already. Gating behaviour, which is specific to this skill:
 
-⚠️ **Warning** — a concrete risk you can describe but cannot cite: a missing
-safeguard, a fragile pattern, an unhandled edge case. Non-gating; reported for
-the implementer's judgement. If you can cite a source, it is a Blocker, not a
-Warning. If you cannot describe a concrete failure it would cause, it is not a
-finding at all.
-
-❓ **Question** — genuine ambiguity. Before raising one, attempt resolution from
-the issue, the existing codebase, and the standards docs. Raise it only if all
-three are silent and guessing wrong would produce incorrect behaviour. Gating
-via `NEEDS_HUMAN`.
+- ❌ Blocker → gating (`BLOCKED`).
+- ❓ Question → gating via `NEEDS_HUMAN`.
+- ⚠️ Warning and 💡 Suggestion → non-gating, but each still requires a
+  disposition from the implementer and is carried across cycles per step 1.5.
 
 If a section referenced above is absent or empty in the issue, state that in one
 line under Requirements Verification. It is not a finding.
 
 ### 6) Standards review
 
-For each file in the diff, systematically check every applicable rule in the
-relevant standards doc. Treat each rule at face value — if the doc says
-"always do X" and the code does Y, that is a violation regardless of intent.
+Follow the *Standards docs to read* rules in
+`.claude/shared/review-severity.md`, applied to every file in the diff.
 
-- ❌ **Blocker** = violation of a documented rule. Cite doc + section.
-- Undocumented style preferences are not findings. Do not report them.
+**Security review:** run the delegation described under *Security review* in
+that same file, passing the diff already captured in step 1. Merge its rows into
+the severity tables built in step 7.
+
+Run it on every cycle, not just cycle 1 — a fix applied in response to a blocker
+can introduce a new hole. The cost is bounded because the diff passed in on
+cycles 2+ is only the delta since `prev_verify_sha`, so later passes are far
+smaller than the first. Do not re-report a security finding the previous cycle
+already raised; those flow through step 1.5 like any other finding.
 
 ### 7) Build the report
 
@@ -249,15 +216,7 @@ Use flat markdown headings and tables. Omit any section that has 0 items.
 ````markdown
 ## Verify Report — #{issue_number} — {issue_title} — cycle {cycle}
 
-**Automated checks:**
-- dotnet build: {passed/failed}
-- dotnet format: {passed/failed}
-- dotnet test: {per-project pass/fail, e.g. "PanoramaMusic.Domain.Tests: 12/12 passed", or "No backend test projects found"}
-- npm run lint: {passed/failed}
-- npm run format:check: {passed/failed}
-- npm run typecheck: {passed/failed}
-- npm run build: {passed/failed}
-- npm run test / vitest: {passed/failed}
+{Automated checks summary lines — see `.claude/shared/automated-checks.md`}
 
 ### Requirements Verification
 
@@ -275,6 +234,9 @@ Use flat markdown headings and tables. Omit any section that has 0 items.
 | 2 | —          | Requirements | Functional requirement not addressed: "When X occurs, Y must happen" |
 
 ### ⚠️ Warning
+(same structure; non-gating)
+
+### 💡 Suggestions
 (same structure; non-gating)
 
 ### ❓ Questions
@@ -297,17 +259,14 @@ VERDICT: {PASS | BLOCKED (n) | NEEDS_HUMAN (n)}
 VERIFIED_SHA: {sha}
 ````
 
-Column rules:
-- **file:line** — filename and line number, e.g. `Song.cs:42`. Use `—` for
-  requirement-level findings with no single source line.
-- **Category** — one word: Standards, Requirements, Correctness, Contract.
-- **Detail** — quote the source (doc + section, or requirement text) and explain
-  concisely. Add `DISPUTED — {rebuttal}` when rejecting an implementer's
-  invalid-marking.
+Column rules: as defined under *Report column rules* in
+`.claude/shared/review-severity.md`. In addition, this skill annotates
+the **Detail** cell with `DISPUTED — {rebuttal}` when rejecting an implementer's
+`INVALID` marking, and with `NOT CONFIRMED` / `NO DISPOSITION` per step 1.5.
 
 Verdict rules:
-- `PASS` — zero blockers, zero questions, no disputed findings. Warnings may be
-  present.
+- `PASS` — zero blockers, zero questions, no disputed findings. Warnings and
+  suggestions may be present.
 - `BLOCKED (n)` — n blockers, no questions and no disputed findings.
 - `NEEDS_HUMAN (n)` — any open question, or any finding marked `DISPUTED`.
 
@@ -333,7 +292,7 @@ owns the loop.
 `interactive` mode only:
 
 > "Verify complete for #{issue_number}. {n} blocker(s), {n} warning(s),
-> {n} question(s)."
+> {n} question(s), {n} suggestion(s)."
 
 `subagent` mode — the verdict block is the summary. Add nothing.
 
@@ -343,14 +302,10 @@ owns the loop.
 - **Do not push, commit, or check out branches.** Only use `git diff`,
   `git fetch`, and `git rev-parse`.
 - **Every finding must cite a source** — issue section + requirement text,
-  or doc + section, or file:line. If you cannot point to a specific source,
-  it is a Warning only if you can describe a concrete failure, otherwise it is
-  not a finding.
-- **"I'm not sure" goes in Questions** — but only after checking the issue, the
-  codebase, and the standards docs. Ambiguity resolvable by reading two existing
-  files is not a Question.
-- **Never widen scope.** A correct implementation with no findings is a valid
-  and expected result.
+  or doc + section, or file:line. If you cannot point to a specific source, it
+  goes in Questions or Suggestions.
+- **"I'm not sure" goes in Questions.** Do not guess.
+- **Out-of-scope work goes in Suggestions**, never in Blockers or Warnings.
 - **Never re-raise a settled item.** Anything marked `RESOLVED_BY: developer`
   is closed permanently.
 - **If a standards doc does not exist** for the relevant scope, note it and

@@ -94,49 +94,9 @@ git fetch origin {base_branch} && git diff origin/{base_branch}...HEAD   # other
 
 ### 4) Run automated checks	
 
-Backend checks (always run when `src/` is changed):
-
-```bash
-dotnet build src/PanoramaMusic.slnx 2>&1
-dotnet format src/PanoramaMusic.slnx --verify-no-changes 2>&1
-find src -iname "*Tests*.csproj" -o -iname "*Test*.csproj" | sort -u | while read -r proj; do
-  echo "--- Testing: $proj ---"
-  dotnet test "$proj" 2>&1
-done
-```
->If no test projects are found under src/, note "No backend test projects found" in the report instead of a pass/fail line.
-
-Frontend checks (run when `frontend/` is changed):
-
-- Read `frontend/package.json` to discover available scripts.
-- Run:
-  - `npm run lint` if `lint` exists.
-  - `npm run typecheck` if `typecheck` exists.
-  - `npm run build` if `build` exists.
-- If a `test` script exists, run:
-
-```bash
-npm run test
-```
-
-- Otherwise attempt:
-
-```bash
-npx vitest run --reporter=verbose 2>&1
-```
-
-- If Vitest is not configured, not installed, or the command is unavailable,
-  skip gracefully and note it in the report.
-- Do not install dependencies or tooling.
-
-If none of the frontend checks produce meaningful output (e.g. no scripts
-defined), note:
-
-> No frontend checks configured
-
-in the report.
-
-- Record pass/fail per check. Capture output for the report.
+Read `.claude/shared/automated-checks.md` and run the checks it defines for the
+scopes detected in step 3, recording pass/fail per check and capturing output
+for the report.
 
 ### 5) Check branch sync
 
@@ -155,43 +115,18 @@ Using the issue content extracted in step 2, review the diff against each requir
 
 Additionally, check ## Out of Scope: does the diff implement anything listed there? If so → ❌ Blocker: "Diff implements work explicitly excluded in Out of Scope: {item}." 
 
-Apply these severity levels to every finding:
-
-- **❌ Blocker** — the implementation is incorrect, incomplete, or violates an
-  explicit requirement or constraint. Must be resolved before merging.
-- **⚠️ Warning** — a soft concern: a missing safeguard, a questionable pattern,
-  or something that works now but is likely to cause problems.
-- **❓ Question** — something ambiguous, underspecified, or inconsistent that
-  cannot be judged without clarification. Do not guess; raise it.
-- **💡 Suggestion** — an out-of-scope observation worth noting for a future
-  issue.
+Read `.claude/shared/review-severity.md` and apply the severity levels it
+defines. That file also carries the standards-doc list, the security
+delegation, and the report column rules used in steps 7 and 8.
 
 ### 7) Standards review
 
-Read the relevant coding standards doc(s) for the affected scopes plus
-`.editorconfig`:
+Follow the *Standards docs to read* rules in
+`.claude/shared/review-severity.md`, applied to every file in the diff.
 
-- Always read: `docs/coding-standards.md` (shared conventions)
-- Backend scope: `docs/coding-standards-backend.md`
-- Frontend scope: `docs/coding-standards-frontend.md`
-- Backend Formatting rules: `src/.editorconfig`
-- Frontend Formatting rules: `frontend/.editorconfig`
-
-For each file in the diff, systematically check every applicable rule in the
-relevant doc. Treat each rule at face value — if the doc says "always do X"
-and the code does Y, that is a violation regardless of intent.
-
-Use the same severity levels as step 6. Cite the doc and section for every
-finding.
-
-**Security review:** invoke the `asvs-security-review` skill in `delegated`
-mode, passing the diff already captured in step 3 (do not re-fetch it). It
-performs the `docs/security-standards.md` rule walk, scoped to the sections
-the diff actually touches, and returns findings in the same
-`# | file:line | Category | Detail` row shape used below (with `Category`
-set to `Security`). Merge its rows directly into the severity tables built
-in step 8 — do not print its output as a separate report. If it reports "no
-security-relevant code paths touched," note that and move on.
+**Security review:** run the delegation described under *Security review* in
+that same file, passing the diff already captured in step 3 (do not re-fetch
+it). Merge its rows into the severity tables built in step 8.
 
 ### 8) Build the report
 
@@ -205,14 +140,7 @@ section that has 0 items.
 
 ### Summary
 
-**Automated checks:**
-- dotnet build: {passed/failed}
-- dotnet format: {passed/failed}
-- dotnet test: {per-project pass/fail, e.g. "PanoramaMusic.Domain.Tests: 12/12 passed", or "No backend test projects found"}
-- npm run lint: {passed/failed}
-- npm run typecheck: {passed/failed}
-- npm run build: {passed/failed}
-- npm run test / vitest: {passed/failed}
+{Automated checks summary lines — see `.claude/shared/automated-checks.md`}
 
 ### ❌ Blocker
 | # | file:line | Category | Detail |
@@ -232,12 +160,8 @@ section that has 0 items.
 | 1 | Rating.cs:22 | Should ratings accept decimals or only integers? | Issue says "rating 1–5" but doesn't specify type |
 ```
 
-Column rules:
-- **file:line** — filename and line number, e.g. `Song.cs:42`. Use `—` for
-  requirement-level findings with no single source line.
-- **Category** — one word: Standards, Requirements, Correctness, Design, etc.
-- **Detail** — cite the source (doc + section, or requirement text) and explain
-  concisely.
+Column rules: as defined under *Report column rules* in
+`.claude/shared/review-severity.md`.
 
 ### 9) Post feedback to PR
 
@@ -317,6 +241,9 @@ PR #{pr_number}."
   doc + section, or file:line. If you cannot point to a specific source, it
   goes in Questions or Suggestions.
 - **"I'm not sure" goes in Questions.** Do not guess.
+- **Non-gating is not optional.** Warnings, suggestions, and questions are all
+  expected to be evaluated and answered or actioned if valid — say so in the
+  step 10 disposition rather than letting them lapse.
 - **If a standards doc does not exist** for the relevant scope, note it and
   skip.
 - **Keep communication concise and direct.** No emojis except severity
