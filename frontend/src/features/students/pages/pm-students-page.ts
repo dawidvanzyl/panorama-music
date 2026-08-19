@@ -579,6 +579,10 @@ export class PmStudentsPage extends HTMLElement {
     try {
       await withdrawEnrollment(studentId, studentCourseId);
       await this.refreshWizardEnrollments(studentId);
+      // Another row may have been open for editing when this withdrawal was
+      // confirmed; the refreshed list would otherwise re-seed it from server
+      // data and drop the selections made in it without saying so.
+      this.wizardModal!.closeEnrollmentForm();
     } catch (err) {
       this.wizardModal!.showCoursesError(
         err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
