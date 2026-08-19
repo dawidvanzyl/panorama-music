@@ -1177,7 +1177,7 @@ describe('pm-students-page — corrects an enrollment from the Courses tab', { t
       .mockResolvedValueOnce([corrected, recorderEnrollment]);
 
     const wizard = await openCoursesTab(el);
-    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const editRow = enrollmentRowsOf(wizard)[0];
     const [, instrumentSelect, stepSelect] = [...editRow.querySelectorAll('select')];
@@ -1218,7 +1218,7 @@ describe('pm-students-page — withdraws a student from a course', { tags: ['269
     vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
 
     const wizard = await openCoursesTab(el);
-    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
     const modal = withdrawEnrollmentModalOf(el);
     expect(modal.hasAttribute('open')).toBe(true);
@@ -1248,7 +1248,7 @@ describe('pm-students-page — confirming a withdrawal removes the enrollment', 
       .mockResolvedValueOnce([recorderEnrollment]);
 
     const wizard = await openCoursesTab(el);
-    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
     const modal = withdrawEnrollmentModalOf(el);
     (modal.shadowRoot!.getElementById('withdrawBtn') as HTMLButtonElement).click();
@@ -1278,7 +1278,7 @@ describe('pm-students-page — cancelling a withdrawal keeps the enrollment', { 
     vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
 
     const wizard = await openCoursesTab(el);
-    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
     const modal = withdrawEnrollmentModalOf(el);
     (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();

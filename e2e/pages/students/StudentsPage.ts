@@ -271,7 +271,7 @@ export class StudentsPage extends BasePage {
     changes: { teacherName?: string; instrumentLabel?: string; stepLabel?: string },
   ): Promise<void> {
     const row = this.enrollmentListRow(courseLabel);
-    await row.locator('.enrollment-list__btn--change').click();
+    await row.locator('.enrollment-list__btn--edit').click();
 
     // The course cell stays text, so the row is still found by its label.
     const selects = row.locator('select');
@@ -288,7 +288,7 @@ export class StudentsPage extends BasePage {
    * the requirement instead, so callers testing that path pass `confirm: false`.
    */
   async withdrawEnrollment(courseLabel: string, confirm = true): Promise<void> {
-    await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--remove').click();
+    await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--withdraw').click();
     if (confirm) {
       await this.withdrawEnrollmentModal.locator('#withdrawBtn').click();
     }

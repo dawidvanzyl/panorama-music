@@ -107,7 +107,7 @@ describe('pm-courses-step edits a persisted enrollment in place', { tags: ['269U
   it('makes teacher, instrument and step editable while the course and enrolled date stay fixed', () => {
     activateWith(persistedEnrollment, recorderEnrollment);
 
-    (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const editRow = rows()[0];
     const [teacherSelect, instrumentSelect, stepSelect] = selectsOf(editRow);
@@ -128,7 +128,7 @@ describe('pm-courses-step edits a persisted enrollment in place', { tags: ['269U
   it('offers neither instrument nor step on a course type that records neither', () => {
     activateWith(persistedEnrollment, recorderEnrollment);
 
-    (rows()[1].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[1].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const [, instrumentSelect, stepSelect] = selectsOf(rows()[1]);
     expect(instrumentSelect.hidden).toBe(true);
@@ -142,7 +142,7 @@ describe('pm-courses-step submits a persisted enrollment edit', { tags: ['269UC1
     step.addEventListener('enrollment-update-requested', (event) => requests.push(event as CustomEvent));
 
     activateWith(persistedEnrollment, recorderEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const editRow = rows()[0];
     const [teacherSelect, instrumentSelect, stepSelect] = selectsOf(editRow);
@@ -166,7 +166,7 @@ describe('pm-courses-step refuses an incomplete persisted enrollment edit', { ta
     step.addEventListener('enrollment-update-requested', (event) => requests.push(event));
 
     activateWith(persistedEnrollment, recorderEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const editRow = rows()[0];
     const [, instrumentSelect] = selectsOf(editRow);
@@ -186,7 +186,7 @@ describe('pm-courses-step cancels a persisted enrollment edit', { tags: ['269UC1
     step.addEventListener('enrollment-update-requested', (event) => requests.push(event));
 
     activateWith(persistedEnrollment, recorderEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     const editRow = rows()[0];
     const [teacherSelect] = selectsOf(editRow);
@@ -205,10 +205,10 @@ describe('pm-courses-step edits one persisted row at a time', { tags: ['269UC15'
     step.addEventListener('enrollment-update-requested', (event) => requests.push(event));
 
     activateWith(persistedEnrollment, recorderEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
     selectsOf(rows()[0])[0].value = lindiwe.teacherId;
 
-    (rows()[1].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+    (rows()[1].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
 
     expect(requests).toHaveLength(0);
     expect(selectsOf(rows()[0])).toHaveLength(0);
@@ -224,7 +224,7 @@ describe('pm-courses-step asks to confirm a withdrawal', { tags: ['269UC16'] }, 
     step.addEventListener('enrollment-withdraw-requested', (event) => requests.push(event as CustomEvent));
 
     activateWith(persistedEnrollment, recorderEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
     expect(requests).toHaveLength(1);
     expect(requests[0].detail).toEqual({ studentId: 's1', enrollment: persistedEnrollment });
@@ -238,7 +238,7 @@ describe('pm-courses-step refuses to withdraw the only enrollment', { tags: ['26
     step.addEventListener('enrollment-withdraw-requested', (event) => requests.push(event));
 
     activateWith(persistedEnrollment);
-    (rows()[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+    (rows()[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
     expect(requests).toHaveLength(0);
     expect(rows()).toHaveLength(1);

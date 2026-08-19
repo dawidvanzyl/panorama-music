@@ -86,16 +86,23 @@ styles.replaceSync(`
       cursor: not-allowed;
       opacity: 0.5;
     }
-    .enrollment-list__btn--change {
+    /* A staged row's Change and a persisted row's Edit read the same and differ
+       only in what they act on, as do Remove and Withdraw — so each pair shares
+       its styling while keeping the class name of the action it actually is. */
+    .enrollment-list__btn--change,
+    .enrollment-list__btn--edit {
       color: var(--pm-accent);
     }
-    .enrollment-list__btn--change:hover:not(:disabled) {
+    .enrollment-list__btn--change:hover:not(:disabled),
+    .enrollment-list__btn--edit:hover:not(:disabled) {
       background: rgba(79, 124, 255, 0.1);
     }
-    .enrollment-list__btn--remove {
+    .enrollment-list__btn--remove,
+    .enrollment-list__btn--withdraw {
       color: var(--pm-danger, #e05252);
     }
-    .enrollment-list__btn--remove:hover:not(:disabled) {
+    .enrollment-list__btn--remove:hover:not(:disabled),
+    .enrollment-list__btn--withdraw:hover:not(:disabled) {
       background: rgba(224, 82, 82, 0.1);
     }
     .enrollment-list__btn--cancel {
@@ -272,7 +279,7 @@ export class PmEnrollmentList extends HTMLElement {
       // the first without submitting, rather than being refused.
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--change');
+      editBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--edit');
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => this.handleChangeClicked(enrollment));
       actionsCell.appendChild(editBtn);
@@ -282,7 +289,7 @@ export class PmEnrollmentList extends HTMLElement {
       // confirming, which the Courses step decides rather than this list.
       const withdrawBtn = document.createElement('button');
       withdrawBtn.type = 'button';
-      withdrawBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--remove');
+      withdrawBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--withdraw');
       withdrawBtn.textContent = 'Withdraw';
       withdrawBtn.addEventListener('click', () => this.handleWithdrawClicked(enrollment));
       actionsCell.appendChild(withdrawBtn);
@@ -448,7 +455,7 @@ export class PmEnrollmentList extends HTMLElement {
 
     // A persisted row corrects a record that already exists, so it carries only
     // what may still change; a staged one is still the whole enrollment.
-    if (!inputs.courseSelect) {
+    if (this._isPersisted) {
       const update: EnrollmentUpdateInput = { teacherId: inputs.teacherSelect.value, instrumentType, stepType };
 
       this.dispatchEvent(
@@ -461,8 +468,9 @@ export class PmEnrollmentList extends HTMLElement {
       return;
     }
 
+    // Only a staged row is built with a course select, so it is present here.
     const input: EnrollmentInput = {
-      courseId: inputs.courseSelect.value,
+      courseId: inputs.courseSelect!.value,
       teacherId: inputs.teacherSelect.value,
       instrumentType,
       stepType,
