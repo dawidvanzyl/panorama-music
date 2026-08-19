@@ -19,4 +19,7 @@ public static class StudentEnrollmentMessages
 	public const string CourseRecordsNoStep = "An enrollment in this course type records no step.";
 
 	public const string AlreadyEnrolled = "The student is already enrolled in this course.";
+
+	public const string LastEnrollmentCannotBeWithdrawn =
+		"A student must remain enrolled in at least one course, so their last enrollment cannot be withdrawn.";
 }

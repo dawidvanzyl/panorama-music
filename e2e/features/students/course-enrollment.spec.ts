@@ -214,6 +214,60 @@ test.describe('Enrollment — the enrolled date is recorded', { tag: ['@9IT4'] }
   });
 });
 
+test.describe('Enrollment — withdrawal removes the enrollment record', { tag: ['@9IT5'] }, () => {
+  test('drops the withdrawn enrollment and leaves the student others in place', async ({ page }) => {
+    const { studentsPage, target, instrument } = await openStudentsWithCourses(page);
+    const surname = uniqueSurname('Withdraw');
+
+    await studentsPage.createStudent(
+      { firstName: 'Kagiso', lastName: surname, ...studentDefaults },
+      { courseLabel: target.courseLabel, teacherName: target.teacherName },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    // A second enrollment, because a student must remain enrolled in at least
+    // one course and their last one cannot be withdrawn.
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.enrollInCourse({
+      courseLabel: instrument,
+      teacherName: target.teacherName,
+      instrumentLabel: 'Piano',
+      stepLabel: '2A',
+    });
+    await expect(studentsPage.enrollmentListRow(instrument)).toBeVisible();
+
+    await studentsPage.withdrawEnrollment(instrument);
+
+    await expect(studentsPage.enrollmentListRow(instrument)).toHaveCount(0);
+    await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
+
+    // Gone from the record itself, not merely from the rendered list.
+    await studentsPage.closeWizard();
+    await studentsPage.openCoursesTab(surname);
+    await expect(studentsPage.enrollmentListRow(instrument)).toHaveCount(0);
+  });
+
+  test('refuses to withdraw the student last remaining enrollment', async ({ page }) => {
+    const { studentsPage, target } = await openStudentsWithCourses(page);
+    const surname = uniqueSurname('LastOne');
+
+    await studentsPage.createStudent(
+      { firstName: 'Naledi', lastName: surname, ...studentDefaults },
+      { courseLabel: target.courseLabel, teacherName: target.teacherName },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.withdrawEnrollment(target.courseLabel, false);
+
+    await expect(studentsPage.withdrawEnrollmentModal).not.toHaveAttribute('open', '');
+    await expect(studentsPage.coursesStepMessage()).toContainText(
+      'A student must remain enrolled in at least one course.',
+    );
+    await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
+  });
+});
+
 test.describe('Enrollment — the endpoints require authentication', { tag: ['@9IT6'] }, () => {
   test('refuses an anonymous read and an anonymous enrollment', async ({ page }) => {
     const { studentsPage, target } = await openStudentsWithCourses(page);
@@ -235,7 +289,17 @@ test.describe('Enrollment — the endpoints require authentication', { tag: ['@9
       },
     });
 
+    // The enrollment these two name need not exist: an anonymous caller is
+    // refused before anything is looked up, which is the point being asserted.
+    const enrollmentPath = `/api/students/${studentId}/courses/${crypto.randomUUID()}`;
+    const updateResponse = await page.request.put(enrollmentPath, {
+      data: { teacherId: target.teacherId, instrumentType: null, stepType: null },
+    });
+    const withdrawResponse = await page.request.delete(enrollmentPath);
+
     expect(listResponse.status()).toBe(401);
     expect(enrollResponse.status()).toBe(401);
+    expect(updateResponse.status()).toBe(401);
+    expect(withdrawResponse.status()).toBe(401);
   });
 });

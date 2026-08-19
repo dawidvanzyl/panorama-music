@@ -3,6 +3,7 @@ import '../components/pm-students-table';
 import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-student-modal';
 import '../components/pm-delete-guardian-modal';
+import '../components/pm-withdraw-enrollment-modal';
 import {
   getStudents,
   createStudent,
@@ -34,16 +35,22 @@ import {
 import {
   getStudentCourses,
   enrollStudent,
+  updateEnrollment,
+  withdrawEnrollment,
   getEnrollableCourses,
   getAssignableTeachers,
   EnrollmentsError,
   type EnrollmentInput,
+  type EnrollmentResult,
+  type EnrollmentUpdateInput,
 } from '../services/enrollments';
+import { courseLabel } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
+import type { PmWithdrawEnrollmentModal } from '../components/pm-withdraw-enrollment-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -110,6 +117,7 @@ template.innerHTML = `
   <pm-student-wizard-modal id="wizardModal"></pm-student-wizard-modal>
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
   <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
+  <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal"></pm-withdraw-enrollment-modal>
 `;
 
 export class PmStudentsPage extends HTMLElement {
@@ -117,6 +125,7 @@ export class PmStudentsPage extends HTMLElement {
   private wizardModal: PmStudentWizardModal | null = null;
   private deleteModal: PmDeleteStudentModal | null = null;
   private deleteGuardianModal: PmDeleteGuardianModal | null = null;
+  private withdrawEnrollmentModal: PmWithdrawEnrollmentModal | null = null;
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
   private _allStudents: StudentResult[] = [];
@@ -136,6 +145,9 @@ export class PmStudentsPage extends HTMLElement {
     this.deleteGuardianModal = this.shadowRoot!.getElementById(
       'deleteGuardianModal',
     ) as unknown as PmDeleteGuardianModal;
+    this.withdrawEnrollmentModal = this.shadowRoot!.getElementById(
+      'withdrawEnrollmentModal',
+    ) as unknown as PmWithdrawEnrollmentModal;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
@@ -159,6 +171,9 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
     this.shadowRoot!.addEventListener('courses-tab-activated', this.handleCoursesTabActivated);
     this.shadowRoot!.addEventListener('enrollment-add-requested', this.handleEnrollmentAddRequested);
+    this.shadowRoot!.addEventListener('enrollment-update-requested', this.handleEnrollmentUpdateRequested);
+    this.shadowRoot!.addEventListener('enrollment-withdraw-requested', this.handleEnrollmentWithdrawRequested);
+    this.shadowRoot!.addEventListener('enrollment-withdraw-confirmed', this.handleEnrollmentWithdrawConfirmed);
 
     clearStudentsCache();
     void this.loadStudents();
@@ -190,6 +205,9 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
     this.shadowRoot!.removeEventListener('courses-tab-activated', this.handleCoursesTabActivated);
     this.shadowRoot!.removeEventListener('enrollment-add-requested', this.handleEnrollmentAddRequested);
+    this.shadowRoot!.removeEventListener('enrollment-update-requested', this.handleEnrollmentUpdateRequested);
+    this.shadowRoot!.removeEventListener('enrollment-withdraw-requested', this.handleEnrollmentWithdrawRequested);
+    this.shadowRoot!.removeEventListener('enrollment-withdraw-confirmed', this.handleEnrollmentWithdrawConfirmed);
   }
 
   private handleCreateClick = (): void => {
@@ -513,6 +531,55 @@ export class PmStudentsPage extends HTMLElement {
       await enrollStudent(studentId, input);
       await this.refreshWizardEnrollments(studentId);
       this.wizardModal!.closeEnrollmentForm();
+    } catch (err) {
+      this.wizardModal!.showCoursesError(
+        err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  private handleEnrollmentUpdateRequested = async (event: Event): Promise<void> => {
+    const { studentId, studentCourseId, input } = (
+      event as CustomEvent<{ studentId: string; studentCourseId: string; input: EnrollmentUpdateInput }>
+    ).detail;
+    try {
+      await updateEnrollment(studentId, studentCourseId, input);
+      await this.refreshWizardEnrollments(studentId);
+      // Returns the corrected row to its read-only form, the same way the
+      // enroll panel is closed after a successful add.
+      this.wizardModal!.closeEnrollmentForm();
+    } catch (err) {
+      this.wizardModal!.showCoursesError(
+        err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+      );
+    }
+  };
+
+  /**
+   * Naming the student is the page's answer rather than the wizard's — the
+   * roster it already holds is where the name comes from, exactly as the
+   * guardian delete confirmation reads its own.
+   */
+  private handleEnrollmentWithdrawRequested = (event: Event): void => {
+    const { studentId, enrollment } = (event as CustomEvent<{ studentId: string; enrollment: EnrollmentResult }>)
+      .detail;
+    const student = this._allStudents.find((s) => s.studentId === studentId);
+
+    this.withdrawEnrollmentModal!.show(
+      studentId,
+      enrollment.studentCourseId,
+      student ? `${student.firstName} ${student.lastName}` : 'This student',
+      courseLabel(enrollment),
+    );
+  };
+
+  private handleEnrollmentWithdrawConfirmed = async (event: Event): Promise<void> => {
+    const { studentId, studentCourseId } = (
+      event as CustomEvent<{ studentId: string; studentCourseId: string }>
+    ).detail;
+    try {
+      await withdrawEnrollment(studentId, studentCourseId);
+      await this.refreshWizardEnrollments(studentId);
     } catch (err) {
       this.wizardModal!.showCoursesError(
         err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',

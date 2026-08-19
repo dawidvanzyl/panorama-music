@@ -9,4 +9,8 @@ namespace PanoramaMusic.Students.Application.Constants;
 public static class StudentCourseAuditEventTypes
 {
 	public const string StudentEnrolled = "students.student_course.enrolled";
+
+	public const string StudentEnrollmentUpdated = "students.student_course.updated";
+
+	public const string StudentWithdrawn = "students.student_course.withdrawn";
 }

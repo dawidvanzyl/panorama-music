@@ -1,6 +1,12 @@
 import './pm-enrollment-form';
 import './pm-enrollment-list';
-import type { AssignableTeacher, EnrollableCourse, EnrollmentInput, EnrollmentResult } from '../services/enrollments';
+import type {
+  AssignableTeacher,
+  EnrollableCourse,
+  EnrollmentInput,
+  EnrollmentResult,
+  EnrollmentUpdateInput,
+} from '../services/enrollments';
 import type { PmEnrollmentForm } from './pm-enrollment-form';
 import type { PmEnrollmentList } from './pm-enrollment-list';
 
@@ -11,6 +17,10 @@ export const AT_LEAST_ONE_COURSE_TO_SAVE =
   'A student must be enrolled in at least one course before they can be saved.';
 
 export const AT_LEAST_ONE_COURSE = 'A student must be enrolled in at least one course.';
+
+/** Why the student's sole remaining enrollment cannot be withdrawn, and what to do first. */
+export const AT_LEAST_ONE_COURSE_TO_WITHDRAW =
+  'A student must remain enrolled in at least one course. Enroll in another course before withdrawing this one.';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -116,6 +126,7 @@ export class PmCoursesStep extends HTMLElement {
   private _teachers: AssignableTeacher[] = [];
   private _pendingEnrollments: EnrollmentResult[] = [];
   private _pendingCounter = 0;
+  private _enrollments: EnrollmentResult[] = [];
 
   constructor() {
     super();
@@ -141,7 +152,9 @@ export class PmCoursesStep extends HTMLElement {
     this.shadowRoot!.addEventListener('enrollment-edit-started', this.handleEditStarted);
     this.shadowRoot!.addEventListener('enrollment-edit-cancelled', this.handleEditCancelled);
     this.shadowRoot!.addEventListener('enrollment-edit-saved', this.handleEditSaved);
+    this.shadowRoot!.addEventListener('enrollment-update-saved', this.handleUpdateSaved);
     this.shadowRoot!.addEventListener('enrollment-remove-clicked', this.handleRemoveClicked);
+    this.shadowRoot!.addEventListener('enrollment-withdraw-clicked', this.handleWithdrawClicked);
   }
 
   disconnectedCallback(): void {
@@ -151,7 +164,9 @@ export class PmCoursesStep extends HTMLElement {
     this.shadowRoot!.removeEventListener('enrollment-edit-started', this.handleEditStarted);
     this.shadowRoot!.removeEventListener('enrollment-edit-cancelled', this.handleEditCancelled);
     this.shadowRoot!.removeEventListener('enrollment-edit-saved', this.handleEditSaved);
+    this.shadowRoot!.removeEventListener('enrollment-update-saved', this.handleUpdateSaved);
     this.shadowRoot!.removeEventListener('enrollment-remove-clicked', this.handleRemoveClicked);
+    this.shadowRoot!.removeEventListener('enrollment-withdraw-clicked', this.handleWithdrawClicked);
   }
 
   /** The course catalogue the enroll form and the row edit offer. */
@@ -191,6 +206,7 @@ export class PmCoursesStep extends HTMLElement {
     this.enrollmentForm!.isPersisted = true;
     this.showListView();
 
+    this._enrollments = [];
     this.enrollmentList!.enrollments = [];
 
     this.section!.classList.add('courses-step__section--visible');
@@ -203,6 +219,9 @@ export class PmCoursesStep extends HTMLElement {
    * race a form the user just opened.
    */
   set enrollments(value: EnrollmentResult[]) {
+    // Kept alongside the list's own copy because how many the student holds is
+    // what decides whether a withdrawal may be confirmed at all.
+    this._enrollments = value;
     this.enrollmentList!.enrollments = value;
   }
 
@@ -303,6 +322,48 @@ export class PmCoursesStep extends HTMLElement {
     this.updatePendingEnrollment(studentCourseId, input);
     this.showListView();
     this.renderPendingList();
+  };
+
+  /**
+   * A persisted row's edit corrects a record that already exists, so it goes to
+   * the page to be submitted rather than being applied in memory here.
+   */
+  private handleUpdateSaved = (event: Event): void => {
+    const { studentCourseId, input } = (
+      event as CustomEvent<{ studentCourseId: string; input: EnrollmentUpdateInput }>
+    ).detail;
+
+    this.clearError();
+    this.dispatchEvent(
+      new CustomEvent('enrollment-update-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { studentId: this._studentId, studentCourseId, input },
+      }),
+    );
+  };
+
+  /**
+   * The student's sole remaining enrollment cannot be withdrawn, so no
+   * confirmation is offered for it — the requirement is stated instead, and
+   * nothing is submitted.
+   */
+  private handleWithdrawClicked = (event: Event): void => {
+    const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
+
+    if (this._enrollments.length <= 1) {
+      this.showError(AT_LEAST_ONE_COURSE_TO_WITHDRAW);
+      return;
+    }
+
+    this.clearError();
+    this.dispatchEvent(
+      new CustomEvent('enrollment-withdraw-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { studentId: this._studentId, enrollment },
+      }),
+    );
   };
 
   /**

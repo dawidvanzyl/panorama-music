@@ -85,6 +85,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<CountCourseEnrollmentsHandler>();
 		services.AddTransient<EnrollStudentHandler>();
 		services.AddTransient<GetStudentCoursesHandler>();
+		services.AddTransient<UpdateEnrollmentHandler>();
+		services.AddTransient<WithdrawEnrollmentHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -105,6 +107,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, CourseCostUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, CourseDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentEnrolledTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
 
 		return services;
 	}

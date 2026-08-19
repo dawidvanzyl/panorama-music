@@ -62,6 +62,8 @@ vi.mock('../../services/enrollments', async () => {
     ...actual,
     getStudentCourses: vi.fn(),
     enrollStudent: vi.fn(),
+    updateEnrollment: vi.fn(),
+    withdrawEnrollment: vi.fn(),
     getEnrollableCourses: vi.fn(),
     getAssignableTeachers: vi.fn(),
   };
@@ -70,6 +72,8 @@ vi.mock('../../services/enrollments', async () => {
 import {
   getStudentCourses,
   enrollStudent,
+  updateEnrollment,
+  withdrawEnrollment,
   getEnrollableCourses,
   getAssignableTeachers,
   type AssignableTeacher,
@@ -82,6 +86,7 @@ import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal } from '../../components/pm-delete-guardian-modal';
+import type { PmWithdrawEnrollmentModal } from '../../components/pm-withdraw-enrollment-modal';
 import type { PmGuardianList } from '../../components/pm-guardian-list';
 import type { PmStudentGuardiansSummary } from '../../components/pm-student-guardians-summary';
 import type { PmStudentCoursesSummary } from '../../components/pm-student-courses-summary';
@@ -158,6 +163,17 @@ const pianoEnrollment: EnrollmentResult = {
   enrolledDate: '2026-01-19',
 };
 
+const recorderEnrollment: EnrollmentResult = {
+  ...pianoEnrollment,
+  studentCourseId: 'sc2',
+  courseId: 'c2',
+  courseType: 'G2Recorder',
+  lessonType: 'Group',
+  instrumentType: null,
+  stepType: null,
+  enrolledDate: '2026-02-10',
+};
+
 const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 async function mountPage(): Promise<HTMLElement> {
@@ -194,6 +210,24 @@ function guardiansStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
 
 function coursesStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
   return wizard.shadowRoot!.getElementById('coursesStep')!.shadowRoot!;
+}
+
+function withdrawEnrollmentModalOf(el: HTMLElement): PmWithdrawEnrollmentModal {
+  return el.shadowRoot!.getElementById('withdrawEnrollmentModal') as unknown as PmWithdrawEnrollmentModal;
+}
+
+function enrollmentRowsOf(wizard: PmStudentWizardModal): HTMLTableRowElement[] {
+  const listShadow = coursesStepShadowOf(wizard).getElementById('enrollmentList')!.shadowRoot!;
+  return [...listShadow.querySelectorAll('tbody tr')] as HTMLTableRowElement[];
+}
+
+/** Opens the Edit wizard on the Courses tab with the enrollments the fetch answers with. */
+async function openCoursesTab(el: HTMLElement): Promise<PmStudentWizardModal> {
+  const wizard = wizardModalOf(el);
+  wizard.openForEdit(alice);
+  (wizard.shadowRoot!.getElementById('tabCourses') as HTMLButtonElement).click();
+  await flush();
+  return wizard;
 }
 
 /** Fills the Student tab with a valid new student, as every create flow must. */
@@ -255,6 +289,10 @@ beforeEach(() => {
   vi.mocked(getStudentCourses).mockResolvedValue([]);
   vi.mocked(enrollStudent).mockReset();
   vi.mocked(enrollStudent).mockResolvedValue(pianoEnrollment);
+  vi.mocked(updateEnrollment).mockReset();
+  vi.mocked(updateEnrollment).mockResolvedValue(pianoEnrollment);
+  vi.mocked(withdrawEnrollment).mockReset();
+  vi.mocked(withdrawEnrollment).mockResolvedValue(undefined);
   vi.mocked(getEnrollableCourses).mockReset();
   vi.mocked(getEnrollableCourses).mockResolvedValue([pianoCourse, recorderCourse]);
   vi.mocked(getAssignableTeachers).mockReset();
@@ -1117,6 +1155,138 @@ describe('pm-students-page — enrolls a student from the Courses tab', { tags: 
     const formPanel = coursesShadow.getElementById('formPanel') as HTMLElement;
     expect(formPanel.classList.contains('courses-step__form-panel--expanded')).toBe(false);
     expect((coursesShadow.getElementById('enrollBtn') as HTMLButtonElement).hidden).toBe(false);
+  });
+});
+
+describe('pm-students-page — corrects an enrollment from the Courses tab', { tags: ['269UC12'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('submits the update and returns the row to its read-only form with the new values', async () => {
+    const corrected: EnrollmentResult = { ...pianoEnrollment, instrumentType: 'Guitar', stepType: 'Step3B' };
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses)
+      .mockResolvedValueOnce([pianoEnrollment, recorderEnrollment])
+      .mockResolvedValueOnce([corrected, recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--change') as HTMLButtonElement).click();
+
+    const editRow = enrollmentRowsOf(wizard)[0];
+    const [, instrumentSelect, stepSelect] = [...editRow.querySelectorAll('select')];
+    instrumentSelect.value = 'Guitar';
+    stepSelect.value = 'Step3B';
+    (editRow.querySelector('.enrollment-list__btn--save') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(updateEnrollment)).toHaveBeenCalledWith('s1', 'sc1', {
+      teacherId: 't1',
+      instrumentType: 'Guitar',
+      stepType: 'Step3B',
+    });
+
+    const settledRow = enrollmentRowsOf(wizard)[0];
+    expect(settledRow.querySelectorAll('select')).toHaveLength(0);
+    expect([...settledRow.querySelectorAll('td')].slice(1, 4).map((cell) => cell.textContent)).toEqual([
+      'Thabo Nkosi',
+      'Guitar',
+      '3B',
+    ]);
+  });
+});
+
+describe('pm-students-page — withdraws a student from a course', { tags: ['269UC16'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('opens a confirmation naming the student and the course, and submits nothing yet', async () => {
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+
+    const modal = withdrawEnrollmentModalOf(el);
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('studentName')!.textContent).toBe('Alice Vance');
+    expect(modal.shadowRoot!.getElementById('courseName')!.textContent).toBe(
+      'Instrument · Individual · Half Hour · During School',
+    );
+    expect(vi.mocked(withdrawEnrollment)).not.toHaveBeenCalled();
+  });
+});
+
+describe('pm-students-page — confirming a withdrawal removes the enrollment', { tags: ['269UC17'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('submits the withdrawal and drops the row from the list', async () => {
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses)
+      .mockResolvedValueOnce([pianoEnrollment, recorderEnrollment])
+      .mockResolvedValueOnce([recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+
+    const modal = withdrawEnrollmentModalOf(el);
+    (modal.shadowRoot!.getElementById('withdrawBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(withdrawEnrollment)).toHaveBeenCalledWith('s1', 'sc1');
+    expect(modal.hasAttribute('open')).toBe(false);
+
+    const list = coursesStepShadowOf(wizard).getElementById('enrollmentList') as unknown as PmEnrollmentList;
+    expect(list.enrollments.map((e) => e.studentCourseId)).toEqual(['sc2']);
+  });
+});
+
+describe('pm-students-page — cancelling a withdrawal keeps the enrollment', { tags: ['269UC18'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('closes the confirmation with nothing submitted and the enrollment still listed', async () => {
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
+
+    const modal = withdrawEnrollmentModalOf(el);
+    (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(withdrawEnrollment)).not.toHaveBeenCalled();
+    expect(modal.hasAttribute('open')).toBe(false);
+    expect(enrollmentRowsOf(wizard)).toHaveLength(2);
   });
 });
 

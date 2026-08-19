@@ -30,6 +30,29 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 		return [.. dtos.Select(dto => dto.MapToStudentCourse())];
 	}
 
+	public async Task<StudentCourse?> GetByIdAsync(Guid studentId, Guid studentCourseId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_student_course_by_id",
+			new { p_student_id = studentId, p_student_course_id = studentCourseId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<StudentCourseDto>(command);
+
+		return dto?.MapToStudentCourse();
+	}
+
+	public async Task<int> CountByStudentIdAsync(Guid studentId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_enrollment_count_by_student",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.ExecuteScalarAsync<int>(command);
+	}
+
 	public async Task<bool> ExistsByStudentAndCourseAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
@@ -83,22 +106,77 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 		// The instrument and step belong to the enrollment, so they are their own
 		// single-purpose write on the same ambient transaction rather than a
 		// second operation folded into the function above.
-		if (enrollment.Instrument is not null)
-		{
-			var instrumentCommand = CreateCommandDefinition(
-				"students.create_student_instrument",
-				new
-				{
-					p_student_course_id = enrollment.StudentCourseId,
-					p_instrument_type = enrollment.Instrument.InstrumentType?.ToString(),
-					p_step_type = enrollment.Instrument.StepType.ToString(),
-				},
-				Transaction,
-				cancellationToken);
-			await Connection.ExecuteAsync(instrumentCommand);
-		}
+		await CreateInstrumentAsync(enrollment, cancellationToken);
 
 		domainEventCollector.Collect(enrollment);
+	}
+
+	public async Task UpdateAsync(StudentCourse enrollment, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.update_student_course",
+			new
+			{
+				p_student_course_id = enrollment.StudentCourseId,
+				p_teacher_id = enrollment.TeacherId,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		// What the enrollment records is replaced outright rather than amended:
+		// the course type may record fewer fields than the row already holds, so
+		// dropping the old row first is what leaves nothing stale behind. Both
+		// writes run on the request's ambient transaction.
+		var deleteInstrumentCommand = CreateCommandDefinition(
+			"students.delete_student_instrument",
+			new { p_student_course_id = enrollment.StudentCourseId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(deleteInstrumentCommand);
+
+		await CreateInstrumentAsync(enrollment, cancellationToken);
+
+		domainEventCollector.Collect(enrollment);
+	}
+
+	public async Task DeleteAsync(StudentCourse enrollment, CancellationToken cancellationToken)
+	{
+		// The instrument and step go with the enrollment through the cascade on
+		// student_instruments, so this stays a single delete.
+		var command = CreateCommandDefinition(
+			"students.delete_student_course",
+			new { p_student_course_id = enrollment.StudentCourseId },
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(enrollment);
+	}
+
+	/// <summary>
+	/// Writes the instrument and step the enrollment records, if its course type
+	/// records either. Nothing is written for a course type that records neither.
+	/// </summary>
+	private async Task CreateInstrumentAsync(StudentCourse enrollment, CancellationToken cancellationToken)
+	{
+		if (enrollment.Instrument is null)
+			return;
+
+		var command = CreateCommandDefinition(
+			"students.create_student_instrument",
+			new
+			{
+				p_student_course_id = enrollment.StudentCourseId,
+				p_instrument_type = enrollment.Instrument.InstrumentType?.ToString(),
+				p_step_type = enrollment.Instrument.StepType.ToString(),
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
 	}
 
 	private static bool IsDuplicateEnrollment(PostgresException exception) =>

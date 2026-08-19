@@ -261,6 +261,43 @@ export class StudentsPage extends BasePage {
       .filter({ hasText: courseLabel });
   }
 
+  /**
+   * Corrects an enrollment on its own table row. Clicking Edit swaps the
+   * teacher, instrument and step cells for selects — the course and the enrolled
+   * date stay read-only text — and its Edit/Withdraw buttons for Cancel/Save.
+   */
+  async editEnrollment(
+    courseLabel: string,
+    changes: { teacherName?: string; instrumentLabel?: string; stepLabel?: string },
+  ): Promise<void> {
+    const row = this.enrollmentListRow(courseLabel);
+    await row.locator('.enrollment-list__btn--change').click();
+
+    // The course cell stays text, so the row is still found by its label.
+    const selects = row.locator('select');
+    if (changes.teacherName) await selects.nth(0).selectOption({ label: changes.teacherName });
+    if (changes.instrumentLabel) await selects.nth(1).selectOption({ label: changes.instrumentLabel });
+    if (changes.stepLabel) await selects.nth(2).selectOption({ label: changes.stepLabel });
+
+    await row.locator('.enrollment-list__btn--save').click();
+  }
+
+  /**
+   * Withdraws the student from the named course. Confirmation is offered only
+   * while the student holds another enrollment; on their last one the tab states
+   * the requirement instead, so callers testing that path pass `confirm: false`.
+   */
+  async withdrawEnrollment(courseLabel: string, confirm = true): Promise<void> {
+    await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--remove').click();
+    if (confirm) {
+      await this.withdrawEnrollmentModal.locator('#withdrawBtn').click();
+    }
+  }
+
+  get withdrawEnrollmentModal(): Locator {
+    return this.page.locator('#withdrawEnrollmentModal');
+  }
+
   /** The Courses step's own message area, where the at-least-one-course requirement is stated. */
   coursesStepMessage(): Locator {
     return this.wizardModal.locator('#coursesStep').locator('#message');

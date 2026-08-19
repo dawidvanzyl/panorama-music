@@ -14,6 +14,7 @@ import type {
   EnrollableCourse,
   EnrollmentInput,
   EnrollmentResult,
+  EnrollmentUpdateInput,
   InstrumentType,
   StepType,
 } from '../services/enrollments';
@@ -163,7 +164,8 @@ template.innerHTML = `
 `;
 
 interface EditRowInputs {
-  courseSelect: HTMLSelectElement;
+  /** Absent on a persisted row: its course is settled at enrollment and stays read-only text. */
+  courseSelect?: HTMLSelectElement;
   teacherSelect: HTMLSelectElement;
   instrumentSelect: HTMLSelectElement;
   stepSelect: HTMLSelectElement;
@@ -213,8 +215,8 @@ export class PmEnrollmentList extends HTMLElement {
   /**
    * Whether these enrollments are already persisted (edit mode) or only staged
    * in memory until the student is saved (create mode). A staged row offers
-   * Change and Remove; a persisted row's own actions — Edit and Withdraw — are
-   * the follow-up story's, so it offers none yet.
+   * Change and Remove; a persisted row offers Edit and Withdraw, which act on a
+   * record that already exists.
    */
   set isPersisted(value: boolean) {
     this._isPersisted = value;
@@ -265,7 +267,26 @@ export class PmEnrollmentList extends HTMLElement {
     const actionsCell = document.createElement('td');
     actionsCell.classList.add('enrollment-list__actions');
 
-    if (!this._isPersisted) {
+    if (this._isPersisted) {
+      // Edit stays available on every row: choosing it on a second row closes
+      // the first without submitting, rather than being refused.
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--change');
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => this.handleChangeClicked(enrollment));
+      actionsCell.appendChild(editBtn);
+
+      // Withdrawing the student's last remaining enrollment is refused, but the
+      // action is still offered — choosing it states the requirement instead of
+      // confirming, which the Courses step decides rather than this list.
+      const withdrawBtn = document.createElement('button');
+      withdrawBtn.type = 'button';
+      withdrawBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--remove');
+      withdrawBtn.textContent = 'Withdraw';
+      withdrawBtn.addEventListener('click', () => this.handleWithdrawClicked(enrollment));
+      actionsCell.appendChild(withdrawBtn);
+    } else {
       const isAnotherRowEditing = this._editingId !== null;
 
       const changeBtn = document.createElement('button');
@@ -293,12 +314,20 @@ export class PmEnrollmentList extends HTMLElement {
     const row = document.createElement('tr');
     row.dataset.studentCourseId = enrollment.studentCourseId;
 
-    const courseSelect = this.buildSelect(
-      this._courses.map((course) => ({ value: course.courseId, label: courseLabel(course) })),
-      enrollment.courseId,
-    );
+    // A persisted enrollment's course is settled at enrollment, so it stays
+    // read-only text; a staged one may still be changed to another course.
+    const courseSelect = this._isPersisted
+      ? undefined
+      : this.buildSelect(
+          this._courses.map((course) => ({ value: course.courseId, label: courseLabel(course) })),
+          enrollment.courseId,
+        );
     const courseCell = document.createElement('td');
-    courseCell.appendChild(courseSelect);
+    if (courseSelect) {
+      courseCell.appendChild(courseSelect);
+    } else {
+      courseCell.textContent = courseLabel(enrollment);
+    }
 
     const teacherSelect = this.buildSelect(
       this._teachers.map((teacher) => ({
@@ -334,12 +363,15 @@ export class PmEnrollmentList extends HTMLElement {
     enrolledCell.textContent = enrollment.enrolledDate;
 
     const inputs: EditRowInputs = { courseSelect, teacherSelect, instrumentSelect, stepSelect };
-    // The row's own course select decides what the row records, exactly as the
-    // form panel's does.
+    // What the row records follows its course type — chosen in the row's own
+    // course select while the course is still changeable, and fixed at the
+    // enrollment's own course once it is not.
     const applyCourseTypeRules = (): void => {
-      const course = this._courses.find((c) => c.courseId === courseSelect.value);
-      const offersInstrument = course !== undefined && recordsInstrumentType(course.courseType);
-      const offersStep = course !== undefined && recordsStep(course.courseType);
+      const courseType = courseSelect
+        ? this._courses.find((c) => c.courseId === courseSelect.value)?.courseType
+        : enrollment.courseType;
+      const offersInstrument = courseType !== undefined && recordsInstrumentType(courseType);
+      const offersStep = courseType !== undefined && recordsStep(courseType);
 
       instrumentSelect.hidden = !offersInstrument;
       instrumentSelect.required = offersInstrument;
@@ -351,7 +383,7 @@ export class PmEnrollmentList extends HTMLElement {
       stepPlaceholder.hidden = offersStep;
       if (!offersStep) stepSelect.value = '';
     };
-    courseSelect.addEventListener('change', applyCourseTypeRules);
+    courseSelect?.addEventListener('change', applyCourseTypeRules);
     applyCourseTypeRules();
 
     const actionsCell = document.createElement('td');
@@ -407,15 +439,33 @@ export class PmEnrollmentList extends HTMLElement {
 
   private handleEditSaved(enrollment: EnrollmentResult, inputs: EditRowInputs): void {
     const required = [inputs.courseSelect, inputs.teacherSelect, inputs.instrumentSelect, inputs.stepSelect].filter(
-      (element) => element.required,
+      (element) => element?.required,
     );
-    if (!required.every((element) => element.reportValidity())) return;
+    if (!required.every((element) => element!.reportValidity())) return;
+
+    const instrumentType = inputs.instrumentSelect.hidden ? null : (inputs.instrumentSelect.value as InstrumentType);
+    const stepType = inputs.stepSelect.hidden ? null : (inputs.stepSelect.value as StepType);
+
+    // A persisted row corrects a record that already exists, so it carries only
+    // what may still change; a staged one is still the whole enrollment.
+    if (!inputs.courseSelect) {
+      const update: EnrollmentUpdateInput = { teacherId: inputs.teacherSelect.value, instrumentType, stepType };
+
+      this.dispatchEvent(
+        new CustomEvent('enrollment-update-saved', {
+          bubbles: true,
+          composed: true,
+          detail: { studentCourseId: enrollment.studentCourseId, input: update },
+        }),
+      );
+      return;
+    }
 
     const input: EnrollmentInput = {
       courseId: inputs.courseSelect.value,
       teacherId: inputs.teacherSelect.value,
-      instrumentType: inputs.instrumentSelect.hidden ? null : (inputs.instrumentSelect.value as InstrumentType),
-      stepType: inputs.stepSelect.hidden ? null : (inputs.stepSelect.value as StepType),
+      instrumentType,
+      stepType,
       enrolledDate: enrollment.enrolledDate,
     };
 
@@ -424,6 +474,16 @@ export class PmEnrollmentList extends HTMLElement {
         bubbles: true,
         composed: true,
         detail: { studentCourseId: enrollment.studentCourseId, input },
+      }),
+    );
+  }
+
+  private handleWithdrawClicked(enrollment: EnrollmentResult): void {
+    this.dispatchEvent(
+      new CustomEvent('enrollment-withdraw-clicked', {
+        bubbles: true,
+        composed: true,
+        detail: { enrollment },
       }),
     );
   }
