@@ -66,5 +66,7 @@ public sealed class StudentsTestFixture
 		services.AddTransient<CountCourseEnrollmentsHandler>();
 		services.AddTransient<EnrollStudentHandler>();
 		services.AddTransient<GetStudentCoursesHandler>();
+		services.AddTransient<UpdateEnrollmentHandler>();
+		services.AddTransient<WithdrawEnrollmentHandler>();
 	}
 }

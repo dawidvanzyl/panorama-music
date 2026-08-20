@@ -46,5 +46,42 @@ public static class StudentCourseRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
+
+		// The assigned teacher and the instrument and step the course type
+		// records are the whole of an enrollment's mutable state, so the update
+		// is a PUT carrying a full representation of it. Correcting the course or
+		// the enrolled date means withdrawing and re-enrolling.
+		group
+			.MapPut("/{studentId:guid}/courses/{studentCourseId:guid}", async (Guid studentId, Guid studentCourseId, UpdateEnrollmentRequest request, UpdateEnrollmentHandler handler, CancellationToken ct) =>
+			{
+				var command = new UpdateEnrollmentCommand(studentId, studentCourseId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.AddEndpointFilter<ValidationFilter<UpdateEnrollmentRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("UpdateEnrollment")
+			.Produces<StudentCourseResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Refused while it is the student's last remaining enrollment. The
+		// interface does not offer the confirmation until then, but this endpoint
+		// is where the rule is actually enforced.
+		group
+			.MapDelete("/{studentId:guid}/courses/{studentCourseId:guid}", async (Guid studentId, Guid studentCourseId, WithdrawEnrollmentHandler handler, CancellationToken ct) =>
+			{
+				var command = new WithdrawEnrollmentCommand(studentId, studentCourseId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("WithdrawEnrollment")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

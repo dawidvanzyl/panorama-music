@@ -53,6 +53,17 @@ export interface EnrollmentInput {
   enrolledDate: string;
 }
 
+/**
+ * What an existing enrollment may be corrected to. The course and the enrolled
+ * date are settled at enrollment and so are absent here — correcting either
+ * means withdrawing and re-enrolling.
+ */
+export interface EnrollmentUpdateInput {
+  teacherId: string;
+  instrumentType: InstrumentType | null;
+  stepType: StepType | null;
+}
+
 export class EnrollmentsError extends Error {
   constructor(
     message: string,
@@ -103,6 +114,28 @@ export async function enrollStudent(studentId: string, input: EnrollmentInput): 
     body: JSON.stringify(input),
   });
   return handleResponse<EnrollmentResult>(response);
+}
+
+export async function updateEnrollment(
+  studentId: string,
+  studentCourseId: string,
+  input: EnrollmentUpdateInput,
+): Promise<EnrollmentResult> {
+  const response = await fetch(`${STUDENTS_BASE}/${studentId}/courses/${studentCourseId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  return handleResponse<EnrollmentResult>(response);
+}
+
+/** Withdraws the student from the course, removing the enrollment outright. */
+export async function withdrawEnrollment(studentId: string, studentCourseId: string): Promise<void> {
+  const response = await fetch(`${STUDENTS_BASE}/${studentId}/courses/${studentCourseId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
 }
 
 /**

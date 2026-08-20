@@ -38,14 +38,14 @@ public sealed class StudentCourse : AggregateRoot
 	public Course Course { get; }
 
 	/// <summary>Exactly one teacher — never zero, never several.</summary>
-	public Guid TeacherId { get; }
+	public Guid TeacherId { get; private set; }
 
 	public DateOnly EnrolledDate { get; }
 
 	/// <summary>
 	/// Null when the course type records neither an instrument type nor a step.
 	/// </summary>
-	public StudentInstrument? Instrument { get; }
+	public StudentInstrument? Instrument { get; private set; }
 
 	public static StudentCourse Enroll(
 		Guid studentCourseId,
@@ -68,6 +68,50 @@ public sealed class StudentCourse : AggregateRoot
 
 		enrollment.Raise(new StudentEnrolled(student, enrollment, teacher));
 		return enrollment;
+	}
+
+	/// <summary>
+	/// Corrects the assignment: a different teacher, and the instrument type and
+	/// step the course type records. The course and the enrolled date are settled
+	/// at enrollment, so neither is reachable from here — correcting either means
+	/// withdrawing and re-enrolling.
+	/// <para>
+	/// Snapshots the current values as the "before" picture before applying the
+	/// new ones, exactly as <c>Guardian.Update</c> does.
+	/// </para>
+	/// </summary>
+	public void Update(
+		Student student,
+		DirectoryTeacher teacher,
+		InstrumentType? instrumentType,
+		StepType? stepType)
+	{
+		// Built before anything is applied, so a shape the course type refuses
+		// leaves the enrollment exactly as it was.
+		var instrument = BuildInstrument(Course.CourseType, instrumentType, stepType);
+
+		var before = new StudentCourse(
+			StudentCourseId,
+			StudentId,
+			Course,
+			TeacherId,
+			EnrolledDate,
+			Instrument);
+
+		TeacherId = teacher.TeacherId;
+		Instrument = instrument;
+
+		Raise(new StudentEnrollmentUpdated(student, before, this, teacher));
+	}
+
+	/// <summary>
+	/// The student is withdrawn from the course. The record goes, along with the
+	/// instrument and step recorded against it — this milestone keeps no
+	/// withdrawn-but-retained state.
+	/// </summary>
+	public void MarkWithdrawn(Student student)
+	{
+		Raise(new StudentWithdrawn(student, this));
 	}
 
 	/// <summary>

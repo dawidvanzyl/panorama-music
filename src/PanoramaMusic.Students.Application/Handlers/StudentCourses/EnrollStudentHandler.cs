@@ -53,6 +53,12 @@ public sealed class EnrollStudentHandler(
 
 		await studentCourseRepository.CreateAsync(enrollment, cancellationToken);
 
+		// The instrument and step are their own record, so they are written as
+		// their own step on the request's ambient transaction. A course type that
+		// records neither leaves the enrollment without one.
+		if (enrollment.Instrument is not null)
+			await studentCourseRepository.CreateInstrumentAsync(enrollment.StudentCourseId, enrollment.Instrument, cancellationToken);
+
 		return enrollment.ToResult(teacher);
 	}
 }

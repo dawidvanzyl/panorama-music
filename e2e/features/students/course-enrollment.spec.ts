@@ -214,6 +214,104 @@ test.describe('Enrollment — the enrolled date is recorded', { tag: ['@9IT4'] }
   });
 });
 
+test.describe('Enrollment — withdrawal removes the enrollment record', { tag: ['@9IT5'] }, () => {
+  test('drops the withdrawn enrollment and leaves the student others in place', async ({ page }) => {
+    const { studentsPage, target, instrument } = await openStudentsWithCourses(page);
+    const surname = uniqueSurname('Withdraw');
+
+    await studentsPage.createStudent(
+      { firstName: 'Kagiso', lastName: surname, ...studentDefaults },
+      { courseLabel: target.courseLabel, teacherName: target.teacherName },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    // A second enrollment, because a student must remain enrolled in at least
+    // one course and their last one cannot be withdrawn.
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.enrollInCourse({
+      courseLabel: instrument,
+      teacherName: target.teacherName,
+      instrumentLabel: 'Piano',
+      stepLabel: '2A',
+    });
+    await expect(studentsPage.enrollmentListRow(instrument)).toBeVisible();
+
+    await studentsPage.withdrawEnrollment(instrument);
+
+    await expect(studentsPage.enrollmentListRow(instrument)).toHaveCount(0);
+    await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
+
+    // Gone from the record itself, not merely from the rendered list.
+    await studentsPage.closeWizard();
+    await studentsPage.openCoursesTab(surname);
+    await expect(studentsPage.enrollmentListRow(instrument)).toHaveCount(0);
+  });
+
+});
+
+test.describe('Enrollment — a student must remain enrolled in at least one course', { tag: ['@9IT8'] }, () => {
+  test('refuses to withdraw the student last remaining enrollment', async ({ page }) => {
+    const { studentsPage, target } = await openStudentsWithCourses(page);
+    const surname = uniqueSurname('LastOne');
+
+    await studentsPage.createStudent(
+      { firstName: 'Naledi', lastName: surname, ...studentDefaults },
+      { courseLabel: target.courseLabel, teacherName: target.teacherName },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.withdrawEnrollment(target.courseLabel, false);
+
+    await expect(studentsPage.withdrawEnrollmentModal).not.toHaveAttribute('open', '');
+    await expect(studentsPage.coursesStepMessage()).toContainText(
+      'A student must remain enrolled in at least one course.',
+    );
+    await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
+  });
+});
+
+test.describe('Enrollment — an existing enrollment can be corrected', { tag: ['@9IT9'] }, () => {
+  test('changes the assigned teacher, instrument and step on the enrollment row', async ({ page }) => {
+    await loginAsAdmin(page);
+    const target = await seedEnrollmentTarget(page);
+    // A second seeded target only for its teacher, so the correction has someone
+    // to reassign the enrollment to.
+    const replacement = await seedEnrollmentTarget(page);
+    const instrument = await seedInstrumentCourse(page);
+
+    const studentsPage = new StudentsPage(page);
+    await studentsPage.gotoStudents();
+    const surname = uniqueSurname('Correct');
+
+    await studentsPage.createStudent(
+      { firstName: 'Thabo', lastName: surname, ...studentDefaults },
+      { courseLabel: instrument, teacherName: target.teacherName, instrumentLabel: 'Piano', stepLabel: '2A' },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.editEnrollment(instrument, {
+      teacherName: replacement.teacherName,
+      instrumentLabel: 'Guitar',
+      stepLabel: '3B',
+    });
+
+    const cells = studentsPage.enrollmentListRow(instrument).locator('td');
+    await expect(cells.nth(1)).toHaveText(replacement.teacherName);
+    await expect(cells.nth(2)).toHaveText('Guitar');
+    await expect(cells.nth(3)).toHaveText('3B');
+
+    // Corrected on the record itself, not merely in the rendered row.
+    await studentsPage.closeWizard();
+    await studentsPage.openCoursesTab(surname);
+    const reread = studentsPage.enrollmentListRow(instrument).locator('td');
+    await expect(reread.nth(1)).toHaveText(replacement.teacherName);
+    await expect(reread.nth(2)).toHaveText('Guitar');
+    await expect(reread.nth(3)).toHaveText('3B');
+  });
+});
+
 test.describe('Enrollment — the endpoints require authentication', { tag: ['@9IT6'] }, () => {
   test('refuses an anonymous read and an anonymous enrollment', async ({ page }) => {
     const { studentsPage, target } = await openStudentsWithCourses(page);
@@ -235,7 +333,17 @@ test.describe('Enrollment — the endpoints require authentication', { tag: ['@9
       },
     });
 
+    // The enrollment these two name need not exist: an anonymous caller is
+    // refused before anything is looked up, which is the point being asserted.
+    const enrollmentPath = `/api/students/${studentId}/courses/${crypto.randomUUID()}`;
+    const updateResponse = await page.request.put(enrollmentPath, {
+      data: { teacherId: target.teacherId, instrumentType: null, stepType: null },
+    });
+    const withdrawResponse = await page.request.delete(enrollmentPath);
+
     expect(listResponse.status()).toBe(401);
     expect(enrollResponse.status()).toBe(401);
+    expect(updateResponse.status()).toBe(401);
+    expect(withdrawResponse.status()).toBe(401);
   });
 });
