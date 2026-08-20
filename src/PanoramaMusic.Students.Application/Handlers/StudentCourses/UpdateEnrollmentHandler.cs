@@ -38,6 +38,15 @@ public sealed class UpdateEnrollmentHandler(
 
 		await studentCourseRepository.UpdateAsync(enrollment, cancellationToken);
 
+		// What the enrollment records is replaced outright rather than amended:
+		// the corrected course type may record fewer fields than the row already
+		// holds, so dropping it first is what leaves nothing stale behind. Both
+		// writes run on the request's ambient transaction.
+		await studentCourseRepository.DeleteInstrumentAsync(enrollment.StudentCourseId, cancellationToken);
+
+		if (enrollment.Instrument is not null)
+			await studentCourseRepository.CreateInstrumentAsync(enrollment.StudentCourseId, enrollment.Instrument, cancellationToken);
+
 		return enrollment.ToResult(teacher);
 	}
 }

@@ -247,6 +247,9 @@ test.describe('Enrollment — withdrawal removes the enrollment record', { tag: 
     await expect(studentsPage.enrollmentListRow(instrument)).toHaveCount(0);
   });
 
+});
+
+test.describe('Enrollment — a student must remain enrolled in at least one course', { tag: ['@9IT8'] }, () => {
   test('refuses to withdraw the student last remaining enrollment', async ({ page }) => {
     const { studentsPage, target } = await openStudentsWithCourses(page);
     const surname = uniqueSurname('LastOne');
@@ -265,6 +268,47 @@ test.describe('Enrollment — withdrawal removes the enrollment record', { tag: 
       'A student must remain enrolled in at least one course.',
     );
     await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
+  });
+});
+
+test.describe('Enrollment — an existing enrollment can be corrected', { tag: ['@9IT9'] }, () => {
+  test('changes the assigned teacher, instrument and step on the enrollment row', async ({ page }) => {
+    await loginAsAdmin(page);
+    const target = await seedEnrollmentTarget(page);
+    // A second seeded target only for its teacher, so the correction has someone
+    // to reassign the enrollment to.
+    const replacement = await seedEnrollmentTarget(page);
+    const instrument = await seedInstrumentCourse(page);
+
+    const studentsPage = new StudentsPage(page);
+    await studentsPage.gotoStudents();
+    const surname = uniqueSurname('Correct');
+
+    await studentsPage.createStudent(
+      { firstName: 'Thabo', lastName: surname, ...studentDefaults },
+      { courseLabel: instrument, teacherName: target.teacherName, instrumentLabel: 'Piano', stepLabel: '2A' },
+    );
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    await studentsPage.openCoursesTab(surname);
+    await studentsPage.editEnrollment(instrument, {
+      teacherName: replacement.teacherName,
+      instrumentLabel: 'Guitar',
+      stepLabel: '3B',
+    });
+
+    const cells = studentsPage.enrollmentListRow(instrument).locator('td');
+    await expect(cells.nth(1)).toHaveText(replacement.teacherName);
+    await expect(cells.nth(2)).toHaveText('Guitar');
+    await expect(cells.nth(3)).toHaveText('3B');
+
+    // Corrected on the record itself, not merely in the rendered row.
+    await studentsPage.closeWizard();
+    await studentsPage.openCoursesTab(surname);
+    const reread = studentsPage.enrollmentListRow(instrument).locator('td');
+    await expect(reread.nth(1)).toHaveText(replacement.teacherName);
+    await expect(reread.nth(2)).toHaveText('Guitar');
+    await expect(reread.nth(3)).toHaveText('3B');
   });
 });
 

@@ -103,11 +103,6 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 			throw new DomainException(StudentEnrollmentMessages.AlreadyEnrolled);
 		}
 
-		// The instrument and step belong to the enrollment, so they are their own
-		// single-purpose write on the same ambient transaction rather than a
-		// second operation folded into the function above.
-		await CreateInstrumentAsync(enrollment, cancellationToken);
-
 		domainEventCollector.Collect(enrollment);
 	}
 
@@ -124,19 +119,6 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 			cancellationToken);
 
 		await Connection.ExecuteAsync(command);
-
-		// What the enrollment records is replaced outright rather than amended:
-		// the course type may record fewer fields than the row already holds, so
-		// dropping the old row first is what leaves nothing stale behind. Both
-		// writes run on the request's ambient transaction.
-		var deleteInstrumentCommand = CreateCommandDefinition(
-			"students.delete_student_instrument",
-			new { p_student_course_id = enrollment.StudentCourseId },
-			Transaction,
-			cancellationToken);
-		await Connection.ExecuteAsync(deleteInstrumentCommand);
-
-		await CreateInstrumentAsync(enrollment, cancellationToken);
 
 		domainEventCollector.Collect(enrollment);
 	}
@@ -156,23 +138,27 @@ public class StudentCourseRepository(IUnitOfWork unitOfWork, IDomainEventCollect
 		domainEventCollector.Collect(enrollment);
 	}
 
-	/// <summary>
-	/// Writes the instrument and step the enrollment records, if its course type
-	/// records either. Nothing is written for a course type that records neither.
-	/// </summary>
-	private async Task CreateInstrumentAsync(StudentCourse enrollment, CancellationToken cancellationToken)
+	public async Task CreateInstrumentAsync(Guid studentCourseId, StudentInstrument instrument, CancellationToken cancellationToken)
 	{
-		if (enrollment.Instrument is null)
-			return;
-
 		var command = CreateCommandDefinition(
 			"students.create_student_instrument",
 			new
 			{
-				p_student_course_id = enrollment.StudentCourseId,
-				p_instrument_type = enrollment.Instrument.InstrumentType?.ToString(),
-				p_step_type = enrollment.Instrument.StepType.ToString(),
+				p_student_course_id = studentCourseId,
+				p_instrument_type = instrument.InstrumentType?.ToString(),
+				p_step_type = instrument.StepType.ToString(),
 			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+	}
+
+	public async Task DeleteInstrumentAsync(Guid studentCourseId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_student_instrument",
+			new { p_student_course_id = studentCourseId },
 			Transaction,
 			cancellationToken);
 

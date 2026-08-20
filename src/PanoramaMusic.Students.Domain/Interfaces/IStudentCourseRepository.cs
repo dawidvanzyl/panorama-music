@@ -39,16 +39,28 @@ public interface IStudentCourseRepository
 	Task<int> CountByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// Persists the enrollment and, when the course type records one, the
-	/// instrument and step that go with it.
+	/// Persists the enrollment itself. The instrument and step it records are
+	/// written separately by <see cref="CreateInstrumentAsync"/>.
 	/// </summary>
 	Task CreateAsync(StudentCourse enrollment, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// Persists the corrected teacher and the instrument and step the enrollment
-	/// now records, replacing whatever it recorded before.
+	/// Persists the enrollment's corrected teacher. The instrument and step it
+	/// records are replaced separately by <see cref="DeleteInstrumentAsync"/> and
+	/// <see cref="CreateInstrumentAsync"/>.
 	/// </summary>
 	Task UpdateAsync(StudentCourse enrollment, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Writes the instrument and step an enrollment records. Called only for a
+	/// course type that records either; one that records neither has no row.
+	/// </summary>
+	Task CreateInstrumentAsync(Guid studentCourseId, StudentInstrument instrument, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Removes the instrument and step recorded against an enrollment, if any.
+	/// </summary>
+	Task DeleteInstrumentAsync(Guid studentCourseId, CancellationToken cancellationToken);
 
 	/// <summary>
 	/// Removes the enrollment, and with it the instrument and step recorded

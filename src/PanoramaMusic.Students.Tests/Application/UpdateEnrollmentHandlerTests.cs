@@ -55,7 +55,43 @@ public class UpdateEnrollmentHandlerTests : IClassFixture<StudentsTestFixture>
 						&& e.Instrument!.InstrumentType == InstrumentType.Guitar
 						&& e.Instrument!.StepType == StepType.Step3B),
 					It.IsAny<CancellationToken>()),
+				Times.Once),
+			// What the enrollment records is replaced outright, so the old row goes
+			// before the corrected one is written.
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.DeleteInstrumentAsync(enrollment.StudentCourseId, It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.CreateInstrumentAsync(
+					enrollment.StudentCourseId,
+					It.Is<StudentInstrument>(i => i.InstrumentType == InstrumentType.Guitar && i.StepType == StepType.Step3B),
+					It.IsAny<CancellationToken>()),
 				Times.Once));
+	}
+
+	[Fact]
+	[Trait("AC", "269UC1")]
+	public async Task HandleAsync_CourseTypeRecordingNeither_ReplacesNothingAndWritesNoInstrument()
+	{
+		var student = StudentFactory.Create();
+		var enrollment = StudentCourseFactory.Create(
+			studentId: student.StudentId,
+			course: CourseFactory.Create(courseType: CourseType.GREEnrichment));
+		var teacher = GivenEnrollmentStudentAndTeacher(student, enrollment);
+
+		await _handler.HandleAsync(
+			UpdateCommand(student.StudentId, enrollment.StudentCourseId, teacher.TeacherId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			// The row is still dropped — the course type may have recorded
+			// something before — but nothing takes its place.
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.DeleteInstrumentAsync(enrollment.StudentCourseId, It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.CreateInstrumentAsync(It.IsAny<Guid>(), It.IsAny<StudentInstrument>(), It.IsAny<CancellationToken>()),
+				Times.Never));
 	}
 
 	[Theory]
@@ -220,10 +256,18 @@ public class UpdateEnrollmentHandlerTests : IClassFixture<StudentsTestFixture>
 			() => enrollment.Instrument.ShouldNotBeNull().StepType.ShouldBe(expectedStepType),
 			() => VerifyNothingPersisted());
 
-	private void VerifyNothingPersisted() =>
+	private void VerifyNothingPersisted()
+	{
+		_context.Repositories.StudentCourseRepositoryMock.Verify(
+			r => r.DeleteInstrumentAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+			Times.Never);
+		_context.Repositories.StudentCourseRepositoryMock.Verify(
+			r => r.CreateInstrumentAsync(It.IsAny<Guid>(), It.IsAny<StudentInstrument>(), It.IsAny<CancellationToken>()),
+			Times.Never);
 		_context.Repositories.StudentCourseRepositoryMock.Verify(
 			r => r.UpdateAsync(It.IsAny<StudentCourse>(), It.IsAny<CancellationToken>()),
 			Times.Never);
+	}
 
 	private static UpdateEnrollmentCommand UpdateCommand(
 		Guid studentId,

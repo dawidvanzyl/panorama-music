@@ -126,7 +126,6 @@ export class PmCoursesStep extends HTMLElement {
   private _teachers: AssignableTeacher[] = [];
   private _pendingEnrollments: EnrollmentResult[] = [];
   private _pendingCounter = 0;
-  private _enrollments: EnrollmentResult[] = [];
 
   constructor() {
     super();
@@ -206,7 +205,6 @@ export class PmCoursesStep extends HTMLElement {
     this.enrollmentForm!.isPersisted = true;
     this.showListView();
 
-    this._enrollments = [];
     this.enrollmentList!.enrollments = [];
 
     this.section!.classList.add('courses-step__section--visible');
@@ -219,9 +217,6 @@ export class PmCoursesStep extends HTMLElement {
    * race a form the user just opened.
    */
   set enrollments(value: EnrollmentResult[]) {
-    // Kept alongside the list's own copy because how many the student holds is
-    // what decides whether a withdrawal may be confirmed at all.
-    this._enrollments = value;
     this.enrollmentList!.enrollments = value;
   }
 
@@ -350,7 +345,7 @@ export class PmCoursesStep extends HTMLElement {
   private handleWithdrawClicked = (event: Event): void => {
     const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
 
-    if (this._enrollments.length <= 1) {
+    if (this.enrollmentList!.enrollments.length <= 1) {
       this.showError(AT_LEAST_ONE_COURSE_TO_WITHDRAW);
       return;
     }

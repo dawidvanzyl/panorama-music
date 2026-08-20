@@ -131,7 +131,15 @@ public class EnrollStudentHandlerTests : IClassFixture<StudentsTestFixture>
 			// The student's other enrollment keeps the step it was recorded with —
 			// instrument and step belong to one enrollment, not to the student.
 			() => existing.Instrument!.StepType.ShouldBe(StepType.Step4B),
-			() => existing.Instrument!.InstrumentType.ShouldBeNull());
+			() => existing.Instrument!.InstrumentType.ShouldBeNull(),
+			// The instrument and step are their own record, written against the
+			// enrollment just created.
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.CreateInstrumentAsync(
+					It.IsAny<Guid>(),
+					It.Is<StudentInstrument>(i => i.InstrumentType == InstrumentType.Piano && i.StepType == StepType.Step2A),
+					It.IsAny<CancellationToken>()),
+				Times.Once));
 	}
 
 	[Theory]

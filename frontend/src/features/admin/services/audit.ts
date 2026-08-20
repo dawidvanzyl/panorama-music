@@ -77,6 +77,8 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'students.course.cost_updated', label: 'Course Cost Updated' },
       { value: 'students.course.deleted', label: 'Course Deleted' },
       { value: 'students.student_course.enrolled', label: 'Student Enrolled' },
+      { value: 'students.student_course.updated', label: 'Student Enrollment Updated' },
+      { value: 'students.student_course.withdrawn', label: 'Student Withdrawn' },
     ],
   },
   {
