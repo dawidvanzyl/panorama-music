@@ -1,5 +1,11 @@
 import { test, expect } from '../../fixtures/base';
-import { createRegisteredUser, goToCourseManagementPage, uniqueTestEmail } from '../../fixtures/testUsers';
+import {
+  createRegisteredUser,
+  goToCourseManagementPage,
+  loginAsAdmin,
+  uniqueTestEmail,
+} from '../../fixtures/testUsers';
+import { seedEnrolledStudent, seedEnrollmentTarget } from '../../fixtures/enrollment';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { CourseManagementPage } from '../../pages/courses/CourseManagementPage';
 import { landingUrl } from '../../fixtures/navigation';
@@ -224,6 +230,37 @@ test.describe('Course Management — removing a course', { tag: ['@8IT1'] }, () 
     await expect(coursesPage.row('Grade 2 Recorder', `R ${cost}`)).toHaveCount(0);
     await coursesPage.reloadCourses();
     await expect(coursesPage.row('Grade 2 Recorder', `R ${cost}`)).toHaveCount(0);
+  });
+});
+
+test.describe('Course Management — a course a student is enrolled in cannot be deleted', { tag: ['@9IT7'] }, () => {
+  test('refuses the delete against the row, offers no confirmation, and leaves the course listed', async ({ page }) => {
+    await loginAsAdmin(page);
+    const target = await seedEnrollmentTarget(page);
+    await seedEnrolledStudent(page, target);
+
+    const coursesPage = new CourseManagementPage(page);
+    await coursesPage.gotoCourses();
+    const row = coursesPage.row('Grade 2 Recorder', `R ${target.courseCost}`);
+    await expect(row).toBeVisible();
+
+    await coursesPage.startDelete(row);
+
+    await expect(coursesPage.rowError()).toContainText('enrolled student(s) and cannot be deleted');
+    await expect(coursesPage.deleteModal).toBeHidden();
+
+    // The endpoint refuses it too, so the guard is not merely the screen's.
+    const status = await page.evaluate(async (courseId) => {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+      });
+      return response.status;
+    }, target.courseId);
+    expect(status).toBe(400);
+
+    await coursesPage.reloadCourses();
+    await expect(coursesPage.row('Grade 2 Recorder', `R ${target.courseCost}`)).toBeVisible();
   });
 });
 

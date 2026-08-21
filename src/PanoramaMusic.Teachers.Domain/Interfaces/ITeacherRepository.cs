@@ -15,6 +15,12 @@ public interface ITeacherRepository
 
 	Task<IList<Teacher>> GetAllAsync(CancellationToken cancellationToken);
 
+	/// <summary>
+	/// The named teachers only — the read that answers "who are these teachers"
+	/// without its cost growing with the size of the roster.
+	/// </summary>
+	Task<IList<Teacher>> GetByIdsAsync(IReadOnlyCollection<Guid> teacherIds, CancellationToken cancellationToken);
+
 	Task CreateAsync(Teacher teacher, CancellationToken cancellationToken);
 
 	Task UpdateProfileAsync(Teacher teacher, CancellationToken cancellationToken);

@@ -1,9 +1,12 @@
 import './pm-student-siblings-summary';
 import './pm-student-guardians-summary';
+import './pm-student-courses-summary';
 import type { StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
+import type { EnrollmentResult } from '../services/enrollments';
 import type { PmStudentSiblingsSummary } from './pm-student-siblings-summary';
 import type { PmStudentGuardiansSummary } from './pm-student-guardians-summary';
+import type { PmStudentCoursesSummary } from './pm-student-courses-summary';
 import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
@@ -95,8 +98,8 @@ styles.replaceSync(`
       padding: 0;
       background: var(--pm-surface-2);
     }
-    /* Siblings first, then guardians beneath it — stacked rather than in two
-       columns so each section's items can size to their own content. */
+    /* Siblings first, then guardians, then courses beneath them — stacked rather
+       than in columns so each section's items can size to their own content. */
     .students-table__summary-wrapper {
       display: flex;
       flex-direction: column;
@@ -160,6 +163,8 @@ export class PmStudentsTable extends HTMLElement {
   private _siblingsCache = new Map<string, StudentResult[]>();
   private _guardiansCache = new Map<string, GuardianResult[]>();
   private _guardianSummaryComponents = new Map<string, PmStudentGuardiansSummary>();
+  private _enrollmentsCache = new Map<string, EnrollmentResult[]>();
+  private _coursesSummaryComponents = new Map<string, PmStudentCoursesSummary>();
   private _relationships: GuardianRelationship[] = [];
 
   constructor() {
@@ -201,6 +206,12 @@ export class PmStudentsTable extends HTMLElement {
     if (component) component.guardians = guardians;
   }
 
+  setCoursesSummary(studentId: string, enrollments: EnrollmentResult[]): void {
+    this._enrollmentsCache.set(studentId, enrollments);
+    const component = this._coursesSummaryComponents.get(studentId);
+    if (component) component.enrollments = enrollments;
+  }
+
   set relationships(value: GuardianRelationship[]) {
     this._relationships = value;
     for (const component of this._guardianSummaryComponents.values()) {
@@ -214,6 +225,7 @@ export class PmStudentsTable extends HTMLElement {
     this.rowsBody.innerHTML = '';
     this._summaryComponents.clear();
     this._guardianSummaryComponents.clear();
+    this._coursesSummaryComponents.clear();
     this.emptyMessage.hidden = this._students.length > 0;
 
     for (const student of this._students) {
@@ -295,7 +307,11 @@ export class PmStudentsTable extends HTMLElement {
     guardiansSummary.guardians = this._guardiansCache.get(student.studentId) ?? [];
     this._guardianSummaryComponents.set(student.studentId, guardiansSummary);
 
-    summaryWrapper.append(siblingsSummary, guardiansSummary);
+    const coursesSummary = document.createElement('pm-student-courses-summary') as PmStudentCoursesSummary;
+    coursesSummary.enrollments = this._enrollmentsCache.get(student.studentId) ?? [];
+    this._coursesSummaryComponents.set(student.studentId, coursesSummary);
+
+    summaryWrapper.append(siblingsSummary, guardiansSummary, coursesSummary);
     summaryCell.appendChild(summaryWrapper);
     summaryRow.appendChild(summaryCell);
 

@@ -112,6 +112,8 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 			client.AuthorizedGetRequest($"/api/teachers/{someId}"), TestContext.Current.CancellationToken);
 		var listResponse = await client.Client.SendAsync(
 			client.AuthorizedGetRequest("/api/teachers"), TestContext.Current.CancellationToken);
+		var rosterResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/teachers/roster"), TestContext.Current.CancellationToken);
 		var profileResponse = await client.Client.SendAsync(
 			client.AuthorizedPutRequest($"/api/teachers/{someId}/profile", new UpdateTeacherProfileRequest("Alice", "Vance")),
 			TestContext.Current.CancellationToken);
@@ -122,7 +124,13 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => getResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// The full list stays closed — it carries the linked account email and
+			// the banking details.
 			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// The roster read is the one exception: a Teacher assigning a teacher to
+			// a student's enrollment needs it, and seeing who teaches is not the same
+			// as maintaining teachers. It serves names alone.
+			() => rosterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => profileResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => classificationResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}

@@ -44,6 +44,30 @@ public class DeleteCourseHandlerTests : IClassFixture<StudentsTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "268UC29")]
+	public async Task HandleAsync_CourseWithEnrolledStudents_ThrowsDomainExceptionAndDeletesNothing()
+	{
+		var course = CourseFactory.Create();
+		_context.Repositories.CourseRepositoryMock
+			.Setup(r => r.GetByIdAsync(course.CourseId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(course);
+		_context.Repositories.StudentCourseRepositoryMock
+			.Setup(r => r.CountByCourseIdAsync(course.CourseId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(3);
+
+		var exception = await Should.ThrowAsync<DomainException>(
+			() => _handler.HandleAsync(new DeleteCourseCommand(course.CourseId), TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			// The refusal names how many enrollments stand in the way, as the
+			// guardian relationship's does.
+			() => exception.Message.ShouldContain("3 enrolled student(s)"),
+			() => _context.Repositories.CourseRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<Course>(), It.IsAny<CancellationToken>()),
+				Times.Never));
+	}
+
+	[Fact]
 	[Trait("AC", "258UC6")]
 	public async Task HandleAsync_UnknownCourseId_ThrowsEntityNotFoundExceptionAndDeletesNothing()
 	{

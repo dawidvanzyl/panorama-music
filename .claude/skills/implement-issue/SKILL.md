@@ -190,8 +190,8 @@ For each cycle, invoke `verify-implementation` in a sub-agent, passing:
 
 Act on the verdict:
 
-- **`PASS`** — proceed to step 6. Warnings are advisory; address any you agree
-  with, or leave them.
+- **`PASS`** — every non-gating finding still has a disposition (see below).
+  Once they do, proceed to step 6.
 - **`BLOCKED (n)`** — for each blocker, either fix it and commit, or mark it
   invalid with a reason. Carry both into the next cycle's `prev_report` — fixed
   items so verify can confirm them, invalid items annotated
@@ -201,6 +201,21 @@ Act on the verdict:
   findings to the developer. Once the developer rules, record the decision as
   `RESOLVED_BY: developer` in `prev_report`, apply any required fix, and resume
   the loop. Settled items are never re-raised.
+
+**Non-gating findings.** Warnings, suggestions, and questions do not block the
+verdict, but they are never ignored. On every cycle, give each one an explicit
+disposition and record it in the next cycle's `prev_report`:
+
+- Valid and in scope → fix it and commit. Annotate `ACTIONED: {what you did}`.
+- Valid but genuinely out of scope for this issue → annotate
+  `DEFERRED: {reason}` and raise it with the developer at step 6 rather than
+  silently dropping it. Per project policy, do not open a tracking issue.
+- Not valid → annotate `INVALID: {reason}`, citing the issue, the codebase, or
+  a standards doc. Verify adjudicates it on the next cycle, same as a blocker.
+
+Never proceed to step 6 with an undispositioned warning, suggestion, or
+question. "Advisory" means the verdict does not gate on it — not that it can be
+skipped.
 
 If cycle 3 does not return `PASS`, stop and hand the outstanding report to the
 developer. Do not proceed to step 6.
@@ -239,6 +254,6 @@ developer. Do not proceed to step 6.
 - Never assume missing information.
 - The verify loop is capped at 3 cycles. `implement-issue` owns the count;
   `verify-implementation` is stateless.
-- Never dismiss a verify blocker silently. Fix it, or mark it invalid with a
-  cited reason and let verify adjudicate.
+- Never dismiss a verify finding silently — blocker or not. Fix it, or annotate
+  it `INVALID`/`DEFERRED` with a cited reason and let verify adjudicate.
 - Keep communication concise and actionable.

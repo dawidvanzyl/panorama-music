@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Teachers.Application.Handlers.Banking;
 using PanoramaMusic.Teachers.Application.Handlers.Self;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
@@ -56,9 +57,15 @@ public static class ServiceCollectionExtensions
 		// without knowing what a teacher is.
 		services.AddTransient<IRoleRemovalValidator, TeacherLinkRoleRemovalValidator>();
 
+		// Students owns the contract; the Teachers context supplies the answer, so
+		// an enrollment can name the teacher it assigns without the Students
+		// context knowing how a teacher is stored.
+		services.AddTransient<ITeacherDirectory, StudentsTeacherDirectory>();
+
 		services.AddTransient<CreateTeacherHandler>();
 		services.AddTransient<GetTeacherByIdHandler>();
 		services.AddTransient<GetTeachersHandler>();
+		services.AddTransient<GetTeacherRosterHandler>();
 		services.AddTransient<UpdateTeacherProfileHandler>();
 		services.AddTransient<UpdateTeacherClassificationHandler>();
 		services.AddTransient<GetLinkableAccountsHandler>();

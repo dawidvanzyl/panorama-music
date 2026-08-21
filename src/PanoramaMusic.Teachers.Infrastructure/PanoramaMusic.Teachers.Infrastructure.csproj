@@ -14,6 +14,11 @@
          about an account arrives through its own IAccountDirectory port, which
          Identity implements. -->
     <ProjectReference Include="..\PanoramaMusic.Identity.Domain\PanoramaMusic.Identity.Domain.csproj" />
+    <!-- Solely to implement the Students context's ITeacherDirectory port — who
+         teaches and what they are called are this context's facts to publish,
+         the same shape as the IRoleRemovalValidator reference above. Nothing
+         here reads Students' data. -->
+    <ProjectReference Include="..\PanoramaMusic.Students.Domain\PanoramaMusic.Students.Domain.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj" />

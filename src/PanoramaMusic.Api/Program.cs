@@ -141,6 +141,7 @@ app.MapAdminRoutes();
 app.MapAuditRoutes();
 app.MapStudentRoutes();
 app.MapGuardianRoutes();
+app.MapStudentCourseRoutes();
 app.MapGuardianRelationshipRoutes();
 app.MapLessonStructureRoutes();
 app.MapCourseRoutes();

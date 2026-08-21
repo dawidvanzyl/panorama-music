@@ -8,6 +8,7 @@ using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.LessonStructures;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
+using PanoramaMusic.Students.Application.Handlers.StudentCourses;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Application.Validators.Students;
@@ -19,6 +20,7 @@ using PanoramaMusic.Students.Infrastructure.Translators.Courses;
 using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
+using PanoramaMusic.Students.Infrastructure.Translators.StudentCourses;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
 using PanoramaMusic.Students.Infrastructure.TypeHandlers;
 
@@ -51,6 +53,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IGuardianRelationshipRepository, GuardianRelationshipRepository>();
 		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
 		services.AddTransient<ICourseRepository, CourseRepository>();
+		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -79,6 +82,11 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetCoursesHandler>();
 		services.AddTransient<UpdateCourseCostHandler>();
 		services.AddTransient<DeleteCourseHandler>();
+		services.AddTransient<CountCourseEnrollmentsHandler>();
+		services.AddTransient<EnrollStudentHandler>();
+		services.AddTransient<GetStudentCoursesHandler>();
+		services.AddTransient<UpdateEnrollmentHandler>();
+		services.AddTransient<WithdrawEnrollmentHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -98,6 +106,9 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, CourseCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, CourseCostUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, CourseDeletedTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentEnrolledTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
 
 		return services;
 	}

@@ -5,6 +5,7 @@ import '../components/pm-delete-course-modal';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   CoursesError,
+  countCourseEnrollments,
   createCourse,
   deleteCourse,
   getCourses,
@@ -157,11 +158,28 @@ export class PmCourseManagementPage extends HTMLElement {
     }
   };
 
-  private handleDeleteClicked = (event: Event): void => {
+  /**
+   * A course any student is enrolled in cannot be deleted, so the confirmation
+   * is never opened for one — the user is told why against the row instead of
+   * being asked to confirm something the server would reject.
+   */
+  private handleDeleteClicked = async (event: Event): Promise<void> => {
     const { course } = (event as CustomEvent<{ course: Course }>).detail;
     this.clearError();
 
-    this.deleteModal!.show(course.courseId, courseName(course));
+    try {
+      const { count } = await countCourseEnrollments(course.courseId);
+      if (count > 0) {
+        this.courseTable!.showRowError(
+          course.courseId,
+          `${courseName(course)} has ${count} enrolled student(s) and cannot be deleted.`,
+        );
+        return;
+      }
+      this.deleteModal!.show(course.courseId, courseName(course));
+    } catch (err) {
+      this.courseTable!.showRowError(course.courseId, this.messageFor(err));
+    }
   };
 
   private handleDeleteConfirmed = async (event: Event): Promise<void> => {
