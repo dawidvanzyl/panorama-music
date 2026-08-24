@@ -8,7 +8,7 @@ import {
   OCCURRENCE_TYPES,
   OCCURRENCE_TYPE_LABELS,
 } from '../services/course-display';
-import { appendOptions } from './select-options';
+import { appendOptions } from '../../../components/select-options';
 import type { CourseType, DurationType, LessonType, OccurrenceType } from '../services/courses';
 
 const styles = new CSSStyleSheet();
