@@ -14,12 +14,12 @@ public static class ExtraCurricularFactory
 		Guid? extraCurricularId = null,
 		string description = "Marimba Band",
 		PhaseType phase = PhaseType.Junior,
-		params (DayType Day, TimeOnly StartTime)[] slots)
+		params (DayOfWeek Day, TimeOnly StartTime)[] slots)
 	{
 		var activityId = extraCurricularId ?? Guid.NewGuid();
 		var requested = slots.Length > 0
 			? slots
-			: [(DayType.Monday, new TimeOnly(15, 0))];
+			: [(DayOfWeek.Monday, new TimeOnly(15, 0))];
 
 		return new ExtraCurricular(
 			activityId,

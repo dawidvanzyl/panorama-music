@@ -28,20 +28,21 @@ public class CreateExtraCurricularHandlerTests : IClassFixture<StudentsTestFixtu
 		var persisted = CaptureCreated();
 
 		var result = await _handler.HandleAsync(
-			CommandFor("Marimba Band", PhaseType.Junior, (DayType.Monday, new TimeOnly(15, 0))),
+			CommandFor("Marimba Band", PhaseType.Junior, (DayOfWeek.Monday, new TimeOnly(15, 0))),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
 			() => result.Description.ShouldBe("Marimba Band"),
 			() => result.Phase.ShouldBe(PhaseType.Junior),
 			() => result.PracticeTimes.Count.ShouldBe(1),
-			() => result.PracticeTimes[0].Day.ShouldBe(DayType.Monday),
+			() => result.PracticeTimes[0].Day.ShouldBe(DayOfWeek.Monday),
 			() => result.PracticeTimes[0].StartTime.ShouldBe(new TimeOnly(15, 0)),
 			// The slot was persisted against the activity, not merely returned.
-			() => persisted.Value.ShouldNotBeNull(),
-			() => persisted.Value!.ExtraCurricularId.ShouldBe(result.ExtraCurricularId),
-			() => persisted.Value!.PracticeTimes.Count.ShouldBe(1),
-			() => persisted.Value!.PracticeTimes[0].ExtraCurricularId.ShouldBe(result.ExtraCurricularId));
+			() => persisted.Activity.ShouldNotBeNull(),
+			() => persisted.Activity!.ExtraCurricularId.ShouldBe(result.ExtraCurricularId),
+			() => persisted.PracticeTimes.Count.ShouldBe(1),
+			() => persisted.PracticeTimes[0].ExtraCurricularId.ShouldBe(result.ExtraCurricularId),
+			() => persisted.PracticeTimes[0].Day.ShouldBe(DayOfWeek.Monday));
 	}
 
 	[Fact]
@@ -54,17 +55,19 @@ public class CreateExtraCurricularHandlerTests : IClassFixture<StudentsTestFixtu
 			CommandFor(
 				"Choir",
 				PhaseType.Senior,
-				(DayType.Friday, new TimeOnly(14, 0)),
-				(DayType.Monday, new TimeOnly(16, 0)),
-				(DayType.Monday, new TimeOnly(9, 15))),
+				(DayOfWeek.Friday, new TimeOnly(14, 0)),
+				(DayOfWeek.Monday, new TimeOnly(16, 0)),
+				(DayOfWeek.Monday, new TimeOnly(9, 15))),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
-			() => persisted.Value.ShouldNotBeNull(),
-			() => persisted.Value!.PracticeTimes.Count.ShouldBe(3),
+			() => persisted.Activity.ShouldNotBeNull(),
+			// One write per slot, sequenced by the handler on the request's
+			// ambient transaction — not folded into the activity's own write.
+			() => persisted.PracticeTimes.Count.ShouldBe(3),
 			// All three belong to the one activity — not only the last surviving.
-			() => persisted.Value!.PracticeTimes.ShouldAllBe(slot => slot.ExtraCurricularId == result.ExtraCurricularId),
-			() => persisted.Value!.PracticeTimes.Select(slot => slot.ToString())
+			() => persisted.PracticeTimes.ShouldAllBe(slot => slot.ExtraCurricularId == result.ExtraCurricularId),
+			() => persisted.PracticeTimes.Select(slot => slot.ToString())
 				.ShouldBe(["Monday 09:15", "Monday 16:00", "Friday 14:00"]),
 			() => result.PracticeTimes.Count.ShouldBe(3),
 			// Each slot is identified in its own right, so a caller can address one.
@@ -74,27 +77,43 @@ public class CreateExtraCurricularHandlerTests : IClassFixture<StudentsTestFixtu
 	private static CreateExtraCurricularCommand CommandFor(
 		string description,
 		PhaseType phase,
-		params (DayType Day, TimeOnly StartTime)[] slots) =>
+		params (DayOfWeek Day, TimeOnly StartTime)[] slots) =>
 		new(new CreateExtraCurricularRequest(
 			description,
 			phase,
 			[.. slots.Select(slot => new PracticeTimeRequest(slot.Day, slot.StartTime))]));
 
-	/// <summary>The activity the handler asked the repository to persist.</summary>
-	private CapturedActivity CaptureCreated()
+	/// <summary>
+	/// What the handler asked the repository to persist: the activity, and each
+	/// slot it wrote afterwards in the order it wrote them.
+	/// </summary>
+	private CapturedWrites CaptureCreated()
 	{
-		var captured = new CapturedActivity();
+		var captured = new CapturedWrites();
 
 		_context.Repositories.ExtraCurricularRepositoryMock
 			.Setup(r => r.CreateAsync(It.IsAny<ExtraCurricular>(), It.IsAny<CancellationToken>()))
-			.Callback<ExtraCurricular, CancellationToken>((extraCurricular, _) => captured.Value = extraCurricular)
+			.Callback<ExtraCurricular, CancellationToken>((extraCurricular, _) => captured.Activity = extraCurricular)
+			.Returns(Task.CompletedTask);
+
+		_context.Repositories.ExtraCurricularRepositoryMock
+			.Setup(r => r.CreatePracticeTimeAsync(It.IsAny<ExtraCurricularPracticeTime>(), It.IsAny<CancellationToken>()))
+			.Callback<ExtraCurricularPracticeTime, CancellationToken>((practiceTime, _) =>
+			{
+				// The activity has to exist before a slot can reference it, so the
+				// order the handler writes in is part of what is being asserted.
+				captured.Activity.ShouldNotBeNull();
+				captured.PracticeTimes.Add(practiceTime);
+			})
 			.Returns(Task.CompletedTask);
 
 		return captured;
 	}
 
-	private sealed class CapturedActivity
+	private sealed class CapturedWrites
 	{
-		public ExtraCurricular? Value { get; set; }
+		public ExtraCurricular? Activity { get; set; }
+
+		public List<ExtraCurricularPracticeTime> PracticeTimes { get; } = [];
 	}
 }

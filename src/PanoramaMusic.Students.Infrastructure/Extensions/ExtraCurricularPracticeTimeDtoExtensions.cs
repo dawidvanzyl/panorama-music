@@ -22,6 +22,6 @@ internal static class ExtraCurricularPracticeTimeDtoExtensions
 				group.Select(dto => new ExtraCurricularPracticeTime(
 					dto.Practice_Time_Id,
 					dto.Extra_Curricular_Id,
-					Enum.Parse<DayType>(dto.Day),
+					Enum.Parse<DayOfWeek>(dto.Day),
 					dto.Start_Time))))];
 }

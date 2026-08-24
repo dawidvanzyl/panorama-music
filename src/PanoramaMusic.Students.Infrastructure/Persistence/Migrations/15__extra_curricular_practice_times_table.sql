@@ -1,8 +1,9 @@
 -- Create extra_curricular_practice_times table
 -- One weekly practice slot belonging to an extra-curricular activity (#10).
--- day mirrors the DayType enum in PanoramaMusic.Students.Domain.Enums — keep in
--- sync. The enum's member order is the display order; this column stores the
--- name, and ordering is the aggregate's concern rather than the query's.
+-- day stores the member name of System.DayOfWeek — keep the CHECK list in sync
+-- with it. The school week starts on Monday, which DayOfWeek's own numbering
+-- does not; that ordering is the ExtraCurricular aggregate's concern rather than
+-- this column's or the query's.
 -- start_time is TIME, not TIMESTAMP: a slot recurs every week and has no date
 -- component to record.
 -- The slots are owned by their activity, so the cascade is what makes "a

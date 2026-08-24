@@ -27,14 +27,9 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		return dtos.MapToExtraCurriculars();
 	}
 
-	/// <summary>
-	/// The activity and each of its slots are separate single-purpose writes, run
-	/// inside the request's ambient transaction — so they commit together without
-	/// any one function taking on more than a single insert.
-	/// </summary>
 	public async Task CreateAsync(ExtraCurricular extraCurricular, CancellationToken cancellationToken)
 	{
-		var createActivity = CreateCommandDefinition(
+		var command = CreateCommandDefinition(
 			"students.create_extra_curricular",
 			new
 			{
@@ -45,25 +40,34 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 			Transaction,
 			cancellationToken);
 
-		await Connection.ExecuteAsync(createActivity);
+		await Connection.ExecuteAsync(command);
 
-		foreach (var practiceTime in extraCurricular.PracticeTimes)
-		{
-			var createPracticeTime = CreateCommandDefinition(
-				"students.create_extra_curricular_practice_time",
-				new
-				{
-					p_practice_time_id = practiceTime.PracticeTimeId,
-					p_extra_curricular_id = practiceTime.ExtraCurricularId,
-					p_day = practiceTime.Day.ToString(),
-					p_start_time = practiceTime.StartTime,
-				},
-				Transaction,
-				cancellationToken);
-
-			await Connection.ExecuteAsync(createPracticeTime);
-		}
-
+		// The aggregate root is what carries the pending events, so this is where
+		// they are drained — the slot writes below are child rows and raise none
+		// of their own. The collected event still holds this instance, whose
+		// practice times are populated, so the audit record names them all.
 		domainEventCollector.Collect(extraCurricular);
+	}
+
+	/// <summary>
+	/// One slot. The activity and its slots are separate single-purpose writes
+	/// sequenced by the handler, and the request's ambient transaction is what
+	/// makes them atomic.
+	/// </summary>
+	public async Task CreatePracticeTimeAsync(ExtraCurricularPracticeTime practiceTime, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.create_extra_curricular_practice_time",
+			new
+			{
+				p_practice_time_id = practiceTime.PracticeTimeId,
+				p_extra_curricular_id = practiceTime.ExtraCurricularId,
+				p_day = practiceTime.Day.ToString(),
+				p_start_time = practiceTime.StartTime,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
 	}
 }

@@ -1,8 +1,6 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.ExtraCurriculars;
-using PanoramaMusic.Students.Domain.Exceptions;
-using PanoramaMusic.Students.Domain.Messages;
 
 namespace PanoramaMusic.Students.Domain.Entities;
 
@@ -26,10 +24,10 @@ public sealed class ExtraCurricular : AggregateRoot
 		Phase = phase;
 
 		// Day-then-time order is an invariant of the activity rather than
-		// something each caller sorts for itself, so "Monday first" is known in
-		// exactly one place — here — instead of being restated by the read
-		// query, the result mapping and the screen.
-		_practiceTimes = [.. practiceTimes.OrderBy(slot => slot.Day).ThenBy(slot => slot.StartTime)];
+		// something each caller sorts for itself, so "the week starts on Monday"
+		// is known in exactly one place — here — instead of being restated by the
+		// read query, the result mapping and the screen.
+		_practiceTimes = [.. practiceTimes.OrderBy(slot => WeekOrderOf(slot.Day)).ThenBy(slot => slot.StartTime)];
 	}
 
 	public Guid ExtraCurricularId { get; }
@@ -45,30 +43,17 @@ public sealed class ExtraCurricular : AggregateRoot
 	public IReadOnlyList<ExtraCurricularPracticeTime> PracticeTimes => _practiceTimes;
 
 	/// <summary>
-	/// Defines an activity from its description, phase and weekly slots. An
-	/// activity with no slot, or with two slots sharing a day and start time, is
-	/// not a thing that can exist — so neither is constructible here.
+	/// Defines an activity from its description, phase and weekly slots. The
+	/// request validator is what refuses an empty or self-duplicating slot set,
+	/// so the rules are stated once, at the boundary, rather than again here.
 	/// </summary>
 	public static ExtraCurricular Create(
 		Guid extraCurricularId,
 		string description,
 		PhaseType phase,
-		IEnumerable<(DayType Day, TimeOnly StartTime)> slots)
+		IEnumerable<(DayOfWeek Day, TimeOnly StartTime)> slots)
 	{
-		var requested = slots.ToList();
-		if (requested.Count == 0)
-			throw new DomainException(ExtraCurricularMessages.AtLeastOnePracticeTimeRequired);
-
-		var duplicate = requested
-			.GroupBy(slot => (slot.Day, slot.StartTime))
-			.FirstOrDefault(group => group.Count() > 1);
-		if (duplicate is not null)
-		{
-			throw new DomainException(ExtraCurricularMessages.DuplicatePracticeTime(
-				$"{duplicate.Key.Day} {duplicate.Key.StartTime:HH\\:mm}"));
-		}
-
-		var practiceTimes = requested.Select(slot =>
+		var practiceTimes = slots.Select(slot =>
 			new ExtraCurricularPracticeTime(Guid.NewGuid(), extraCurricularId, slot.Day, slot.StartTime));
 
 		var extraCurricular = new ExtraCurricular(extraCurricularId, description, phase, practiceTimes);
@@ -76,6 +61,14 @@ public sealed class ExtraCurricular : AggregateRoot
 		extraCurricular.Raise(new ExtraCurricularCreated(extraCurricular));
 		return extraCurricular;
 	}
+
+	/// <summary>
+	/// Where a day falls in the school week, which starts on Monday.
+	/// <see cref="DayOfWeek"/> numbers Sunday as 0, so sorting on the bare member
+	/// would lead with Sunday; shifting by six rotates the week without needing
+	/// an enum of our own.
+	/// </summary>
+	private static int WeekOrderOf(DayOfWeek day) => ((int)day + 6) % 7;
 
 	/// <summary>
 	/// How an activity reads wherever one has to be named to a person — an audit

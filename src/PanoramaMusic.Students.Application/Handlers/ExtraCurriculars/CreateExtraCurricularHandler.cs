@@ -25,6 +25,14 @@ public sealed class CreateExtraCurricularHandler(IExtraCurricularRepository extr
 
 		await extraCurricularRepository.CreateAsync(extraCurricular, cancellationToken);
 
+		// Each slot is its own record, so each is written as its own step on the
+		// request's ambient transaction — which is what makes the activity and
+		// its slots land together.
+		foreach (var practiceTime in extraCurricular.PracticeTimes)
+		{
+			await extraCurricularRepository.CreatePracticeTimeAsync(practiceTime, cancellationToken);
+		}
+
 		return extraCurricular.ToResult();
 	}
 }

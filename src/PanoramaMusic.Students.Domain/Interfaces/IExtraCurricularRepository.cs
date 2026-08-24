@@ -12,6 +12,10 @@ public interface IExtraCurricularRepository
 	/// </summary>
 	Task<IList<ExtraCurricular>> GetAllAsync(PhaseType? phase, CancellationToken cancellationToken);
 
-	/// <summary>Persists the activity together with every practice time it owns.</summary>
+	/// <summary>Persists the activity itself. Its slots are written one at a time by
+	/// <see cref="CreatePracticeTimeAsync"/>, sequenced by the caller.</summary>
 	Task CreateAsync(ExtraCurricular extraCurricular, CancellationToken cancellationToken);
+
+	/// <summary>Persists one weekly slot against the activity that owns it.</summary>
+	Task CreatePracticeTimeAsync(ExtraCurricularPracticeTime practiceTime, CancellationToken cancellationToken);
 }

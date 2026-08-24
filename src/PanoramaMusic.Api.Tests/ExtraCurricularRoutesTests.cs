@@ -140,8 +140,8 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 					description,
 					PhaseType.Junior,
 					[
-						new PracticeTimeRequest(DayType.Monday, new TimeOnly(15, 0)),
-						new PracticeTimeRequest(DayType.Monday, new TimeOnly(15, 0)),
+						new PracticeTimeRequest(DayOfWeek.Monday, new TimeOnly(15, 0)),
+						new PracticeTimeRequest(DayOfWeek.Monday, new TimeOnly(15, 0)),
 					])),
 			TestContext.Current.CancellationToken);
 
@@ -161,7 +161,7 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 		var coordinator = await SignInAsync("extra-curriculars-slot-round-trip", Role.Coordinator, "10.0.71.9");
 		var description = $"Recorder Ensemble {Guid.NewGuid()}";
 
-		var created = await CreateActivityAsync(coordinator, description, PhaseType.Senior, DayType.Wednesday, new TimeOnly(7, 30));
+		var created = await CreateActivityAsync(coordinator, description, PhaseType.Senior, DayOfWeek.Wednesday, new TimeOnly(7, 30));
 
 		var response = await coordinator.Client.SendAsync(
 			coordinator.AuthorizedGetRequest("/api/extra-curriculars"), TestContext.Current.CancellationToken);
@@ -170,7 +170,7 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 			.Single(activity => activity.ExtraCurricularId == created.ExtraCurricularId);
 
 		ShouldlyHelpers.Satisfy(
-			() => readBack.PracticeTimes.Single().Day.ShouldBe(DayType.Wednesday),
+			() => readBack.PracticeTimes.Single().Day.ShouldBe(DayOfWeek.Wednesday),
 			() => readBack.PracticeTimes.Single().StartTime.ShouldBe(new TimeOnly(7, 30)),
 			// No date leaks onto the wire — a value really being carried as a
 			// timestamp would show up here as 1970-01-01T07:30:00.
@@ -181,7 +181,7 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 	private static CreateExtraCurricularRequest RequestFor(
 		string description,
 		PhaseType phase,
-		DayType day = DayType.Monday,
+		DayOfWeek day = DayOfWeek.Monday,
 		TimeOnly? startTime = null) =>
 		new(description, phase, [new PracticeTimeRequest(day, startTime ?? new TimeOnly(15, 0))]);
 
@@ -197,7 +197,7 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 		IsolatedHttpClient client,
 		string description,
 		PhaseType phase,
-		DayType day = DayType.Monday,
+		DayOfWeek day = DayOfWeek.Monday,
 		TimeOnly? startTime = null)
 	{
 		var response = await client.Client.SendAsync(

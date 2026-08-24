@@ -29,12 +29,12 @@ public class GetExtraCurricularsHandlerTests : IClassFixture<StudentsTestFixture
 		var marimba = ExtraCurricularFactory.Create(
 			description: "Marimba Band",
 			slots: [
-				(DayType.Friday, new TimeOnly(14, 0)),
-				(DayType.Monday, new TimeOnly(16, 0)),
-				(DayType.Monday, new TimeOnly(9, 15))]);
+				(DayOfWeek.Friday, new TimeOnly(14, 0)),
+				(DayOfWeek.Monday, new TimeOnly(16, 0)),
+				(DayOfWeek.Monday, new TimeOnly(9, 15))]);
 		var choir = ExtraCurricularFactory.Create(
 			description: "Choir",
-			slots: [(DayType.Sunday, new TimeOnly(8, 0)), (DayType.Tuesday, new TimeOnly(14, 30))]);
+			slots: [(DayOfWeek.Sunday, new TimeOnly(8, 0)), (DayOfWeek.Tuesday, new TimeOnly(14, 30))]);
 		SetupActivities(null, marimba, choir);
 
 		var results = await _handler.HandleAsync(null, TestContext.Current.CancellationToken);

@@ -32,9 +32,9 @@ public class CreateExtraCurricularRequestValidatorTests
 	public void Validate_TwoSlotsSharingADayAndStartTime_ReturnsFailureNamingThatSlot()
 	{
 		var result = _validator.Validate(RequestWith([
-			(DayType.Monday, new TimeOnly(15, 0)),
-			(DayType.Wednesday, new TimeOnly(15, 0)),
-			(DayType.Monday, new TimeOnly(15, 0))]));
+			(DayOfWeek.Monday, new TimeOnly(15, 0)),
+			(DayOfWeek.Wednesday, new TimeOnly(15, 0)),
+			(DayOfWeek.Monday, new TimeOnly(15, 0))]));
 
 		ShouldlyHelpers.Satisfy(
 			() => result.IsValid.ShouldBeFalse(),
@@ -50,8 +50,8 @@ public class CreateExtraCurricularRequestValidatorTests
 	{
 		// The rule is one slot per day-and-time pair, not one slot per day.
 		var result = _validator.Validate(RequestWith([
-			(DayType.Monday, new TimeOnly(15, 0)),
-			(DayType.Monday, new TimeOnly(16, 0))]));
+			(DayOfWeek.Monday, new TimeOnly(15, 0)),
+			(DayOfWeek.Monday, new TimeOnly(16, 0))]));
 
 		result.IsValid.ShouldBeTrue();
 	}
@@ -61,9 +61,9 @@ public class CreateExtraCurricularRequestValidatorTests
 	public void Validate_MissingDescriptionOrPhase_ReturnsFailureNamingIt()
 	{
 		var noDescription = _validator.Validate(
-			new CreateExtraCurricularRequest("  ", PhaseType.Junior, SlotsFor([(DayType.Monday, new TimeOnly(15, 0))])));
+			new CreateExtraCurricularRequest("  ", PhaseType.Junior, SlotsFor([(DayOfWeek.Monday, new TimeOnly(15, 0))])));
 		var noPhase = _validator.Validate(
-			new CreateExtraCurricularRequest("Marimba Band", null, SlotsFor([(DayType.Monday, new TimeOnly(15, 0))])));
+			new CreateExtraCurricularRequest("Marimba Band", null, SlotsFor([(DayOfWeek.Monday, new TimeOnly(15, 0))])));
 
 		ShouldlyHelpers.Satisfy(
 			() => noDescription.IsValid.ShouldBeFalse(),
@@ -77,14 +77,14 @@ public class CreateExtraCurricularRequestValidatorTests
 	[Trait("AC", "275UC1")]
 	public void Validate_CompleteRequest_ReturnsSuccess()
 	{
-		var result = _validator.Validate(RequestWith([(DayType.Monday, new TimeOnly(15, 0))]));
+		var result = _validator.Validate(RequestWith([(DayOfWeek.Monday, new TimeOnly(15, 0))]));
 
 		result.IsValid.ShouldBeTrue();
 	}
 
-	private static CreateExtraCurricularRequest RequestWith((DayType Day, TimeOnly StartTime)[] slots) =>
+	private static CreateExtraCurricularRequest RequestWith((DayOfWeek Day, TimeOnly StartTime)[] slots) =>
 		new("Marimba Band", PhaseType.Junior, SlotsFor(slots));
 
-	private static IList<PracticeTimeRequest> SlotsFor((DayType Day, TimeOnly StartTime)[] slots) =>
+	private static IList<PracticeTimeRequest> SlotsFor((DayOfWeek Day, TimeOnly StartTime)[] slots) =>
 		[.. slots.Select(slot => new PracticeTimeRequest(slot.Day, slot.StartTime))];
 }

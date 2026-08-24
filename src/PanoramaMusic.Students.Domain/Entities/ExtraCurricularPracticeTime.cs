@@ -1,5 +1,3 @@
-using PanoramaMusic.Students.Domain.Enums;
-
 namespace PanoramaMusic.Students.Domain.Entities;
 
 /// <summary>
@@ -9,7 +7,7 @@ namespace PanoramaMusic.Students.Domain.Entities;
 /// </summary>
 public sealed class ExtraCurricularPracticeTime
 {
-	public ExtraCurricularPracticeTime(Guid practiceTimeId, Guid extraCurricularId, DayType day, TimeOnly startTime)
+	public ExtraCurricularPracticeTime(Guid practiceTimeId, Guid extraCurricularId, DayOfWeek day, TimeOnly startTime)
 	{
 		PracticeTimeId = practiceTimeId;
 		ExtraCurricularId = extraCurricularId;
@@ -21,7 +19,7 @@ public sealed class ExtraCurricularPracticeTime
 
 	public Guid ExtraCurricularId { get; }
 
-	public DayType Day { get; }
+	public DayOfWeek Day { get; }
 
 	public TimeOnly StartTime { get; }
 
