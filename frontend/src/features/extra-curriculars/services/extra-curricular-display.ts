@@ -46,11 +46,6 @@ export function practiceTimesText(extraCurricular: ExtraCurricular): string {
   return extraCurricular.practiceTimes.map(practiceTimeText).join(' · ');
 }
 
-/** How an activity is named to a human. */
-export function extraCurricularName(extraCurricular: ExtraCurricular): string {
-  return extraCurricular.description;
-}
-
 export const NO_PRACTICE_TIME_ERROR = 'An activity must have at least one practice time.';
 
 export const MISSING_ERROR = 'Enter a description and choose a phase.';
