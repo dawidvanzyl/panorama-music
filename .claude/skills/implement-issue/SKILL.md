@@ -20,10 +20,15 @@ At the start of execution, always post a visible message to the user:
 
 ## Inputs
 
-Use this skill when the user provides:
+- `issue_number` (story/sub-issue), e.g. `48` — required.
+- `parent_issue_number` (epic/parent), e.g. `45` — required.
+- `mode` — `interactive` (default) or `subagent`.
 
-- `issue_number` (story/sub-issue), e.g. `48`
-- `parent_issue_number` (epic/parent), e.g. `45`
+Required in `subagent` mode:
+
+- `base_branch` — resolved by the caller. Never asked for here.
+- `journal_dir` — absolute path to this story's journal directory.
+- `design_file` — the frozen `e2e-design.md` from `qa-design`. Read-only.
 
 Optional but recommended:
 
@@ -33,7 +38,7 @@ Optional but recommended:
 
 Execute the full story workflow for a GitHub issue:
 1) prepare the base branch via the prepare-base skill,
-2) read and orient from the issue,
+2) read and orient from the issue and the E2E scenario design,
 3) check dependencies are unblocked,
 4) create a correctly named feature branch from the base branch,
 5) implement the requirements,
@@ -46,15 +51,26 @@ Execute the full story workflow for a GitHub issue:
 
 Before doing anything else:
 
+`interactive`:
+
 - If `issue_number` was not provided, ask: "What is the issue number to implement?"
 - If `parent_issue_number` was not provided, ask: "What is the parent epic issue number?"
 - Do not proceed until both values are confirmed.
 
+`subagent`:
+
+- Every required input arrives in the brief. If one is missing, do not guess and do
+  not ask — report `BLOCKED (1)` naming it. A question here is a hang, not a pause.
+
 ### 0.5) Prepare base branch
 
-- Invoke the `prepare-base` skill.
-- Allow `prepare-base` to ask for and checkout the base branch independently.
-- Do not pass or assume a base branch — let the user confirm it within `prepare-base`.
+- Invoke the `prepare-base` skill, passing `base_branch` and the current `mode`.
+- `interactive` — if the user has not named a base branch, let `prepare-base` ask.
+- `subagent` — pass the `base_branch` from your brief. `prepare-base` will not ask
+  for it, and must not: the derivation rule lives in one place so it cannot drift.
+- If `prepare-base` returns `BLOCKED`, stop and pass that through. A dirty working
+  tree is the common cause, and it may hold **your own uncommitted work from a run
+  that died mid-story** — never resolve it yourself.
 - After `prepare-base` completes, `origin/{base_branch}` has been fetched and
   is current. The current local branch may or may not be `base_branch` itself
   (if another worktree already had it checked out, `prepare-base` will have
@@ -77,7 +93,8 @@ Extract and internalize the following before writing any code:
   Used only for the PR `--milestone` flag in step 6; omit that flag entirely
   if the issue has no milestone assigned (expected for `[Bug]` and
   `[Tech Debt]` issues).
-- IT codes — from `## Epic Reference > Acceptance Criteria Covered` (e.g. `48IT1`)
+- IT codes — from `## Test Specifications` (e.g. `45IT1`). Read them to understand
+  what will be proven against your branch; never write a test for one.
 - UC codes — from `## Acceptance Criteria (G/W/T)` (e.g. `48UC1`)
 - **Constraints** — read `## Context & Constraints` in full. Note every
   pattern, convention, and restriction listed. These are non-negotiable during
@@ -104,8 +121,26 @@ Extract and internalize the following before writing any code:
 - `src/.editorconfig` — if backend scope.
 - `frontend/.editorconfig` — if frontend scope.
 
-If any requirement is ambiguous or two sections appear to conflict, ask a
-clarifying question before coding. Do not resolve ambiguity by assumption.
+Then read `design_file` — the frozen E2E scenario design for this story.
+
+It is the most concrete statement of what this story must do that exists: the
+preconditions, actors, paths and expected outcomes that the acceptance tests will
+prove, written before any of it was built. Build to it. Every scenario in it is
+something QA will assert against your branch, so a requirement you satisfy
+differently from the design is a bug report waiting to be filed.
+
+The design is **read-only**. If it appears wrong — it contradicts the sub-issue, or
+asserts behaviour the story places out of scope — that is a real possibility worth
+raising, and it is an escalation, never an edit.
+
+If any requirement is ambiguous or two sections appear to conflict:
+
+- `interactive` — ask a clarifying question before coding.
+- `subagent` — escalate to the tech lead, stating the conflict, the options you see
+  and which you would choose. Then continue with anything that does not depend on
+  the answer.
+
+Do not resolve ambiguity by assumption in either mode.
 
 ### 1.5) Dependency gate (HARD STOP)
 
@@ -132,7 +167,8 @@ map the issue's requirements to actual files and structure:
 - For stories with `layer: frontend`: read `## Page Architecture` and identify
   existing component patterns the new screens should follow.
 - If the codebase structure is unclear or no analogous code exists, state your
-  understanding to the user and ask for confirmation before proceeding.
+  understanding and get it confirmed before proceeding — to the user in
+  `interactive` mode, to the tech lead in `subagent` mode.
 
 The goal of this step is to arrive at a clear mental map of where each
 requirement will land, without having written a single line yet.
@@ -162,11 +198,22 @@ requirement will land, without having written a single line yet.
     `frontend/src/services/__tests__/`. Install vitest if not present
     (`npm install -D vitest`). Register any new tag in `frontend/vitest.config.ts`'s
     `tags` array (name + description), same as every existing tag.
-- For each IT code: write an xUnit integration test tagged
-  `[Trait("AC", "{code}")]` using the exact code as it appears in the issue
-  body (e.g. `[Trait("AC", "45IT1")]`) — IT codes carry the **epic's** issue
-  number, already resolved in the text; do not recompute it.
-- If `## Acceptance Criteria (G/W/T)` has no entries, no unit/frontend tests are required for this story. IT code coverage from `## Epic Reference > Acceptance Criteria Covered` is independent of this and still applies if present.
+- **Write no tests for IT codes.** IT codes are proven by Playwright specs and
+  nothing else, and those specs belong to QA — they are designed before you start
+  and implemented after you open the PR.
+
+  Never tag an xUnit or vitest test with an IT code. A unit test carrying an IT
+  trait makes a code look covered to `close-issue` and `close-milestone` while
+  proving something narrower than the end-to-end behaviour the code names, which
+  is worse than no coverage: it is a false claim that reports as green.
+
+  You cannot write in `e2e/` — the path guard refuses it. That is the boundary, not
+  an obstacle. If an IT code describes behaviour you believe the story cannot
+  deliver, escalate.
+
+- If `## Acceptance Criteria (G/W/T)` has no entries, no unit or frontend tests are
+  required for this story. That is a valid state, not a gap — the story's IT
+  coverage is independent of it and is QA's to prove.
 - Update `README.md` if behaviour, setup, usage, or documentation are affected.
 - Build: `dotnet build src/PanoramaMusic.slnx`
 - Format check: `dotnet format src/PanoramaMusic.slnx --verify-no-changes`
@@ -182,11 +229,15 @@ For each cycle, invoke `verify-implementation` in a sub-agent, passing:
 
 - `issue_number`
 - `base_branch`
+- `journal_dir`
 - `mode: subagent`
 - `cycle` — 1, 2, or 3
 - `prev_verify_sha` — the `VERIFIED_SHA` from the previous cycle (omit on
   cycle 1)
-- `prev_report` — the previous cycle's report (omit on cycle 1)
+- `prev_report` — the **path** to the previous cycle's report, annotated with your
+  disposition on every finding (omit on cycle 1). Verify writes its report to
+  `{journal_dir}/verify-{cycle}.md` and returns only a verdict block; read the file
+  yourself, and pass the path rather than its contents.
 
 Act on the verdict:
 
@@ -197,10 +248,16 @@ Act on the verdict:
   items so verify can confirm them, invalid items annotated
   `INVALID: {reason}` so verify can adjudicate. Do not mark an item invalid to
   avoid work; the reason must cite the issue, the codebase, or a standards doc.
-- **`NEEDS_HUMAN (n)`** — stop. Present the open questions and disputed
-  findings to the developer. Once the developer rules, record the decision as
-  `RESOLVED_BY: developer` in `prev_report`, apply any required fix, and resume
-  the loop. Settled items are never re-raised.
+- **`NEEDS_RULING (n)`** — stop and get a ruling on the open questions and
+  disputed findings.
+  - `interactive` — present them to the developer.
+  - `subagent` — escalate to the tech lead, which may answer from the epic, the
+    standards docs or a ruling already recorded earlier in the run, or take it to
+    the developer itself.
+
+  Once ruled, record the decision as `RESOLVED_BY: developer` in `prev_report`,
+  apply any required fix, and resume the loop. Settled items are never re-raised —
+  in this cycle or any later one.
 
 **Non-gating findings.** Warnings, suggestions, and questions do not block the
 verdict, but they are never ignored. On every cycle, give each one an explicit
@@ -222,10 +279,26 @@ developer. Do not proceed to step 6.
 
 ### 6) Open PR
 
-- Ask: "Are you ready to post a pull request?"
-- If yes: proceed with commit, push, and PR creation.
-- If no: stop and wait.
+- `interactive` — ask: "Are you ready to post a pull request?" If yes, proceed. If
+  no, stop and wait.
+- `subagent` — proceed without asking. Opening the PR is the outcome the tech lead
+  assigned; a gate here would stall the run, and the PR is not a commitment to merge
+  — three labels and the lead's own judgement still stand between it and the
+  milestone branch.
 - Commit and format the PR following conventions in `docs/coding-standards.md`.
+
+**If a pull request already exists for this branch** — you are re-entering after
+rework — strip the worker gate labels before pushing:
+
+```bash
+gh pr edit {pr_number} --remove-label "gate: qa-complete" --remove-label "gate: reviewer-approved"
+```
+
+Those labels describe a branch that stops existing the moment you push. Leaving one
+in place would let the story merge on a sign-off given against different code, which
+is the one path by which this pipeline could ship something nobody checked. Leave
+`gate: owner-approved` alone — that one is the owner's to manage.
+
 - Push feature branch.
 - Use `milestone_title` extracted in step 1, if any.
 - Create PR using `gh pr create` with:
@@ -256,4 +329,28 @@ developer. Do not proceed to step 6.
   `verify-implementation` is stateless.
 - Never dismiss a verify finding silently — blocker or not. Fix it, or annotate
   it `INVALID`/`DEFERRED` with a cited reason and let verify adjudicate.
+- Never write in `e2e/`, and never tag a unit test with an IT code.
+- Never edit `design_file`.
+- Never ask a question in `subagent` mode. A background worker has no interactive
+  turn for an answer to land in, so a question is a hang rather than a pause —
+  escalate to the tech lead instead, and carry on with anything that does not
+  depend on the answer.
 - Keep communication concise and actionable.
+
+## Reporting (`subagent` mode)
+
+Per `.claude/shared/subagent-contract.md`, reply with a verdict block only:
+
+```
+VERDICT: {PR_OPEN | BLOCKED (n) | NEEDS_RULING (n)}
+REPORT: {journal_dir}/implement-{attempt}.md
+PR: {pr_number}
+SHA: {sha}
+```
+
+Write the report into `journal_dir` **as you go**. Record what you built, the
+verify cycles and their dispositions, and every decision you made that the issue did
+not settle. A later attempt — possibly by a fresh agent after this session dies —
+reads that file to avoid repeating an approach that already failed.
+
+Never paste a diff, a verify report, or test output into the reply.

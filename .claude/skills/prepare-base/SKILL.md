@@ -3,7 +3,8 @@ name: prepare-base
 description: >
   Load this skill when the user says "prepare base", "prepare-base", or
   "/prepare-base". Prunes remote tracking references, checks out a base branch,
-  pulls latest, and cleans up local-only feature branches after confirmation.
+  pulls latest, and — interactively only — cleans up local-only feature branches
+  after confirmation.
 license: MIT
 compatibility: opencode
 metadata:
@@ -23,12 +24,31 @@ At the start of execution, always post a visible message to the user:
 
 ## Inputs
 
-* `base_branch`: prefer to infer from context if specified by the user.
-* If not provided, ask:
+* `mode`: `interactive` (default) or `subagent`.
+* `base_branch`:
+  * `interactive` — prefer to infer from context if specified by the user;
+    otherwise ask:
 
-  > "Which base branch would you like to prepare? (e.g. master)"
+    > "Which base branch would you like to prepare? (e.g. master)"
 
-Do not proceed until `base_branch` is confirmed.
+    Do not proceed until confirmed.
+  * `subagent` — **required**. The caller resolves it, per
+    `.claude/shared/subagent-contract.md`. Do not ask, and do not derive it here:
+    the derivation rule lives in one place so it cannot drift, and a worker that
+    guesses its base produces a diff against the wrong branch.
+
+## What `subagent` mode does not do
+
+Steps 5–8 — identifying and deleting stale local branches — **do not run in
+`subagent` mode**. They are skipped entirely, not deferred or reported.
+
+Branch deletion is destructive, requires explicit confirmation by project policy,
+and is refused for agents by the `guard-destructive` hook regardless of what this
+skill says. It is also housekeeping rather than preparation: nothing about checking
+out a base branch requires deleting anything. Listing candidates an agent cannot act
+on would only add noise the caller has to ignore.
+
+Run `/prepare-base` yourself between runs to clean up.
 
 ---
 
@@ -36,8 +56,10 @@ Do not proceed until `base_branch` is confirmed.
 
 ### 0) Gather inputs
 
-* If `base_branch` is not provided, request it.
-* Stop execution until confirmed.
+* `interactive` — if `base_branch` is not provided, request it and stop until
+  confirmed.
+* `subagent` — if `base_branch` was not passed, do not proceed. Report
+  `BLOCKED (1)` naming the missing input.
 
 ---
 
@@ -50,13 +72,26 @@ Do not proceed until `base_branch` is confirmed.
   ```
 * If output is not empty:
 
-  * Display the modified/untracked files.
-  * Ask:
+  * `interactive`:
+    * Display the modified/untracked files.
+    * Ask:
 
-    > "You have uncommitted changes. Continue anyway? (yes/no)"
-  * Accept only: `yes`, `y`, or `confirm`
-  * If anything else → stop execution.
-* Never stash, commit, or discard automatically.
+      > "You have uncommitted changes. Continue anyway? (yes/no)"
+    * Accept only: `yes`, `y`, or `confirm`
+    * If anything else → stop execution.
+
+  * `subagent`: **stop and escalate.** Report `BLOCKED (1)` with the file list.
+
+    Do not continue, and do not resolve it. A dirty tree at the start of a story
+    has two plausible causes and you cannot tell them apart: work the developer
+    left behind, or **your own interrupted work from a run that died mid-story**.
+    Quota exhaustion makes the second case ordinary rather than rare.
+
+    Checking out a base branch over either one risks carrying foreign changes into
+    a story, or destroying work that was about to be committed. Only the tech lead
+    has the run journal needed to tell which it is.
+
+* Never stash, commit, or discard automatically — in either mode.
 
 ---
 
@@ -113,6 +148,9 @@ Do not proceed until `base_branch` is confirmed.
 ---
 
 ### 5) Identify safe deletion candidates
+
+> **`interactive` mode only.** In `subagent` mode, skip to step 9 — steps 5 through
+> 8 do not run. See *What `subagent` mode does not do*.
 
 Define:
 
@@ -213,7 +251,21 @@ git branch -d <branch>
 
 ### 9) Summary
 
-Provide final structured summary:
+`subagent` mode — emit only the verdict block. Ask nothing, summarise nothing, and
+write no journal file: this is a step inside the caller's work, not a delegated task
+of its own, so it has no report to point at.
+
+```
+VERDICT: {PREPARED | BLOCKED (n)}
+BASE: {base_branch}
+CHECKED_OUT: {yes | no — already held by another worktree}
+```
+
+`PREPARED` means `origin/{base_branch}` is fetched and current. `CHECKED_OUT: no` is
+a normal outcome, not a failure — the caller branches from `origin/{base_branch}`
+either way.
+
+`interactive` mode — provide the final structured summary:
 
 ## Summary
 
@@ -247,3 +299,9 @@ If none skipped:
 * Never delete without explicit confirmation
 * Never push deletions to remote unless explicitly requested
 * Never modify working tree automatically
+* Never delete any branch in `subagent` mode — not even a confirmed candidate, and
+  not by asking the caller for permission. The hook refuses it regardless; treating
+  the refusal as an obstacle to route around is itself the error.
+* Never ask a question in `subagent` mode. A background worker has no interactive
+  turn for an answer to arrive in, so a question is not a pause — it is a hang.
+  Report `BLOCKED (n)` and let the caller decide.

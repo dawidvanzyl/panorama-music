@@ -70,8 +70,10 @@ function signatures. Behaviour visible to callers/users must be unchanged unless
 
 ## Acceptance Criteria (G/W/T)
 
-> Codes are issue-scoped: `{issue_number}UC{n}` for unit tests, `{issue_number}IT{n}` for E2E
-> (e.g. issue #48 → `48UC1`, `48IT1`). Not derived from any milestone.
+> **UC codes only** — unit and service tests, scoped to this issue's own number
+> (`{issue_number}UC{n}`, e.g. issue #48 → `48UC1`). Never "NFC".
+>
+> Leave a subsection explicitly "N/A" if genuinely not applicable; don't delete the heading.
 
 ### Backend
 
@@ -81,12 +83,21 @@ function signatures. Behaviour visible to callers/users must be unchanged unless
 
 - [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
 
-### E2E
+---
 
-> Only for criteria that don't decompose into backend-only or frontend-only behaviour. Codes here
-> are IT codes (not UC codes) — one IT code per spec file/`test.describe` block, repeated across
-> every G/W/T line that spec covers — verified via the Playwright E2E suite instead of the unit-test
-> runners.
+## Test Specifications
+
+> **End-to-end behaviours, proven by Playwright and nothing else.** Same section, same meaning
+> and same purpose as on a story issue: it is QA's input contract, and the reason QA reads one
+> section regardless of issue type.
+>
+> IT codes are scoped to the issue that **owns the criterion**. A tech-debt issue has no epic,
+> so it owns its own — `{issue_number}IT{n}`, e.g. issue #236 → `236IT1`.
+>
+> Include a specification only where the remediation changes behaviour observable end-to-end.
+> Most tech debt is internal and legitimately has none; leave the section "N/A" rather than
+> inventing coverage. If this list is long, ask whether the work is really tech debt or a
+> feature story wearing the wrong label.
 
 - [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
 

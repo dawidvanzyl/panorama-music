@@ -86,16 +86,32 @@ Post: "Milestone M$MILESTONE_NUMBER closed on GitHub."
 
 Invoke the `prepare-base` skill.
 
-Provide the following input — do not ask for it:
+Provide the following inputs — do not ask for them:
 - `base_branch` = `master`
+- `mode` = `interactive`
+
+`interactive` deliberately, not `subagent`. This is the one moment in the cycle when
+the stale-branch cleanup is worth doing: the milestone has just merged, so every
+story branch under it is finished. Subagent mode skips those steps entirely.
 
 ### 3) Delete the milestone branch — local and remote
+
+Both commands are destructive and the `guard-destructive` hook intercepts them by
+design:
+
 ```
 git branch -d milestone/m$MILESTONE_NUMBER
 git push origin --delete milestone/m$MILESTONE_NUMBER
 ```
 
-If `git branch -d` fails (branch not fully merged), do NOT retry with `-D`. Post the error and stop execution — do not proceed to tagging with a stale branch present.
+- **Running in your own session** — the hook asks for confirmation. Confirm and
+  continue. This is the intended path.
+- **Running under an agent** — the hook denies both outright. Do not rephrase them,
+  and do not look for an equivalent that slips past. Post the two commands for the
+  user to run, note in the summary that deletion is outstanding, and continue to
+  step 4. Tagging does not depend on the branch being gone.
+
+If `git branch -d` fails because the branch is not fully merged, do NOT retry with `-D`. Post the error and stop execution — a branch git does not consider merged is a reason to look, not to force.
 If `git push origin --delete` fails (e.g. already deleted, permissions), note this in the final summary but continue to step 4.
 
 Post: "Milestone branch milestone/m$MILESTONE_NUMBER deleted (local and remote)."

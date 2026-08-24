@@ -20,9 +20,22 @@ One paragraph. What this story delivers from a **user or system value perspectiv
 - Epic: #issue-number
 - Work Areas:
   - [ ] Exact checkbox text copied from epic
-- Acceptance Criteria Covered:
-  - [ ] `[IT_CODE]` Exact checkbox text **and code** copied verbatim from the epic (e.g. epic
-    #45 → `45IT1`) — IT codes are scoped to the **epic's** issue number, not this sub-issue's
+
+---
+
+## Test Specifications
+
+> **End-to-end behaviours, proven by Playwright and nothing else.** This section is QA's input
+> contract: it is what scenario design decomposes and what the spec suite must prove. Every
+> issue type carries it, so QA reads one section regardless of what kind of issue it is given.
+>
+> Derived at `plan-milestone` §3.7 from the epic's acceptance criteria and this story's
+> interface contract — never authored by hand, and frozen once planning completes.
+>
+> IT codes are scoped to the issue that **owns the criterion**. For a story that is the epic
+> (e.g. epic #45 → `45IT1`), so these codes carry the epic's number, not this sub-issue's.
+
+- [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
 
 ---
 
@@ -97,9 +110,14 @@ sequenceDiagram
 
 ## Acceptance Criteria (G/W/T)
 
-> UC codes are scoped to **this sub-issue's own** number (`{issue_number}UC{n}`, e.g. `48UC1`
-> for issue #48) — invented fresh per sub-issue. IT codes below and under Epic Reference are
-> scoped to the **epic's** number and copied verbatim from it. Neither references a milestone.
+> **UC codes only.** Scoped to **this sub-issue's own** number (`{issue_number}UC{n}`, e.g.
+> `48UC1` for issue #48), invented fresh per sub-issue, and proven by the unit-test runners —
+> xUnit for backend, vitest service tests for frontend. Neither references a milestone.
+>
+> **IT codes never appear in this section.** They live under `## Test Specifications` and are
+> proven by the Playwright suite alone. A story with no unit-testable behaviour of its own
+> leaves both subsections empty; that is a valid state, not a gap, and its IT coverage still
+> applies.
 
 ### Backend
 
@@ -108,12 +126,6 @@ sequenceDiagram
 ### Frontend
 
 - [ ] `[UC_CODE]` GIVEN … WHEN … THEN …
-
-### E2E
-
-> Only for criteria that don't decompose into backend-only or frontend-only behaviour. Codes here are IT codes (not UC codes) — one IT code per spec file/`test.describe` block, repeated across every G/W/T line that spec covers — verified via the Playwright E2E suite instead of the unit-test runners.
-
-- [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
 
 ---
 
