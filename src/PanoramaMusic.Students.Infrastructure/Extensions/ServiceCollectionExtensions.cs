@@ -47,6 +47,7 @@ public static class ServiceCollectionExtensions
 		// Dapper has no built-in composite-type<->DbType mapping; process-global and
 		// idempotent, so registering it here on every AddStudentsInfrastructure call is safe.
 		SqlMapper.AddTypeHandler(new StudentInputTypeHandler());
+		SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 		services.AddTransient<IStudentRepository, StudentRepository>();
 		services.AddTransient<ISiblingRepository, SiblingRepository>();
