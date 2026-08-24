@@ -24,6 +24,9 @@ export const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { id: 'studentManagementLink', path: '/students', label: 'Student Management', roles: ['Teacher', 'Admin'] },
   { id: 'teachersLink', path: '/teachers', label: 'Teacher Management', roles: ['Coordinator', 'Admin'] },
   { id: 'courseManagementLink', path: '/courses', label: 'Course Management', roles: ['Teacher', 'Coordinator', 'Admin'] },
+  // The only entry not offered to Admin: extra-curriculars are a
+  // Coordinator-owned area and the Admin role holds no rights in it.
+  { id: 'extraCurricularsLink', path: '/extra-curriculars', label: 'Extra-Curriculars', roles: ['Teacher', 'Coordinator'] },
   {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',
