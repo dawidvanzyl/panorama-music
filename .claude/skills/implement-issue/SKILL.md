@@ -187,6 +187,15 @@ requirement will land, without having written a single line yet.
 
 ### 4) Implement
 
+**Before writing code**, create `{journal_dir}/implement-{attempt}.md` with a
+`## Progress` heading. Append a line after each unit of work below.
+
+**Commit after each layer** — domain, application, infrastructure, API, frontend,
+tests — never once at the end. Conventions in `docs/coding-standards.md`.
+
+Uncommitted work in a dead session is redone from scratch. The PR is squash-merged,
+so a granular trail costs nothing.
+
 - Implement all functional requirements from `## Functional Requirements`,
   honouring the constraints from `## Context & Constraints`, the boundaries
   from `## Out of Scope`, and the contracts from `## API / Interface Contract`.

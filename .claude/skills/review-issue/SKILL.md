@@ -82,8 +82,8 @@ git branch --show-current
     milestone` → `milestone/m{number}`), and `master` if the story has none.
 
   > Branch prefixes do not decide this. Story branches target the milestone branch,
-  > not `master`, and `feature/269-…` says nothing about which milestone it serves —
-  > issue #269 does.
+  > not `master`, and a branch name says nothing about which milestone it serves —
+  > its issue does.
 
 ### 2) Read the issue
 

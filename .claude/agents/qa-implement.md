@@ -4,7 +4,7 @@ description: >
   Implements the Playwright specs for a story against its frozen scenario design,
   runs them against the branch, logs failures as bug sub-issues, and signs off
   testing. Tests the code; never fixes it, and never declares the story done.
-model: opus
+model: sonnet
 effort: low
 permissionMode: auto
 background: true

@@ -43,7 +43,7 @@ improve consistency of future work.
   "a new method was added"). Every proposal must have a clear justification:
   "the next piece of work would produce different (better) code if this was
   documented."
-- The coding standards docs may not exist yet (M0 has not been implemented).
+- The coding standards docs may not exist yet.
   If neither exists, report this and stop. If only one exists, use that one.
 - **User approval is required before any edit.**
 - "Nothing to add" is a perfectly valid outcome — do not force additions.
