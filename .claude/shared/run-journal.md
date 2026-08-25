@@ -80,7 +80,7 @@ lead's context on every read.
 ```json
 {
   "milestone_number": 8,
-  "milestone_title": "M8 — Lessons",
+  "milestone_title": "M{n} — {name}",
   "epic_issue_number": 280,
   "journal_root": "C:/Users/dawid/.claude/runs/panorama-music/m8",
   "milestone_branch": "milestone/m8",
@@ -114,12 +114,12 @@ world is checked at resume.
 Every escalation the lead or the developer answered, appended, never edited.
 
 ```markdown
-## R4 — Withdrawal keeps the enrolment row
-Asked by: developer, story #269
-Question: issue says withdrawal preserves history; API contract implies deletion.
-Ruling: keep the row, set `withdrawnAt`. The contract is wrong.
-Ruled by: developer (owner)
-Applies to: any story touching enrolment lifecycle
+## R{n} — {one-line summary}
+Asked by: {role}, story #{issue}
+Question: {as asked}
+Ruling: {the decision}
+Ruled by: {tech lead | developer (owner)}
+Applies to: {this story, or any story touching X}
 ```
 
 Milestone-wide, not per-story, because the questions recur across stories — that is

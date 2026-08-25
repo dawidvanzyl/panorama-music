@@ -61,8 +61,8 @@ Post: "PR merged. Proceeding with milestone close, branch deletion, and tagging.
 `MILESTONE_NUMBER` (e.g. `1` or `1.1`) is the branch/tag suffix, derived
 upstream (by `close-milestone`) from the epic's **assigned milestone title**
 — never the epic issue's own title. It is still NOT the GitHub milestone API
-number, and the two can diverge (e.g. a milestone titled "M1 — Identity &
-Auth" may be API number `3`, not `1`). Look up the real API number from the
+number, and the two can diverge (e.g. a milestone titled `M4 — {name}` may be
+API number `7`, not `4`). Look up the real API number from the
 merged PR's milestone field rather than assuming they match:
 
 ```

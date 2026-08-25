@@ -43,7 +43,7 @@ refers to.
   today. Code may have already changed since the debt was noticed.
   - If it does **not** reproduce (already fixed, refactored away, file
     deleted), stop and tell the user what you found instead, e.g. "This looks
-    already resolved by #182 — want me to proceed anyway, or drop it?" Do not
+    already resolved by #{issue} — want me to proceed anyway, or drop it?" Do not
     draft an issue for debt that no longer exists.
   - If the description is too vague to locate real code (no file, symbol, or
     feature named), ask one targeted question to narrow it down. Do not guess
