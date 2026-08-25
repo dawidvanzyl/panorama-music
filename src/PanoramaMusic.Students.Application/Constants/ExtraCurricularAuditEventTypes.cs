@@ -9,4 +9,8 @@ namespace PanoramaMusic.Students.Application.Constants;
 public static class ExtraCurricularAuditEventTypes
 {
 	public const string ExtraCurricularCreated = "students.extra_curricular.created";
+
+	public const string PracticeTimeAdded = "students.extra_curricular.practice_time_added";
+
+	public const string PracticeTimeRemoved = "students.extra_curricular.practice_time_removed";
 }

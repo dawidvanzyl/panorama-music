@@ -1,5 +1,7 @@
+import './pm-extra-curricular-practice-times';
 import { PHASE_LABELS, practiceTimesText } from '../services/extra-curricular-display';
 import type { ExtraCurricular } from '../services/extra-curriculars';
+import type { PmExtraCurricularPracticeTimes } from './pm-extra-curricular-practice-times';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -36,6 +38,24 @@ styles.replaceSync(`
     .ec-table__expander-header,
     .ec-table__expander {
       width: 40px;
+    }
+    .ec-table__chevron {
+      display: block;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--pm-text-muted);
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .ec-table__chevron--expanded {
+      color: var(--pm-text);
+    }
+    td.ec-table__panel {
+      padding: 0 4px 16px;
     }
     td.ec-table__practice-times {
       color: var(--pm-text-muted);
@@ -93,6 +113,14 @@ export class PmExtraCurricularTable extends HTMLElement {
   private actionsHeader: HTMLElement | null = null;
   private _extraCurriculars: ExtraCurricular[] = [];
   private _showActions = false;
+  /** The activity whose practice-times panel is open, if any. */
+  private expandedId: string | null = null;
+  /**
+   * The open panel itself, kept across renders rather than rebuilt. A rebuild
+   * would clear the day and start time the user had already chosen every time
+   * the catalogue reloaded.
+   */
+  private panel: PmExtraCurricularPracticeTimes | null = null;
 
   constructor() {
     super();
@@ -124,13 +152,27 @@ export class PmExtraCurricularTable extends HTMLElement {
   }
 
   /**
-   * Whether the actions column exists at all. It holds nothing yet — edit and
-   * delete arrive with #278 — but it is a maintainer's column, so a read-only
-   * viewer gets no column rather than an empty one.
+   * Whether this viewer may maintain the catalogue. The row's actions column
+   * holds nothing yet — edit and delete arrive with #278 — but it is a
+   * maintainer's column, so a read-only viewer gets no column rather than an
+   * empty one. The expanded panel follows the same flag for its own controls.
    */
   set showActions(value: boolean) {
     this._showActions = value;
     this.render();
+  }
+
+  get showActions(): boolean {
+    return this._showActions;
+  }
+
+  /**
+   * Puts a refusal the server answered with onto the open panel, beside the
+   * controls that produced it. The panel answers its own two rules without a
+   * request; this is for everything else.
+   */
+  showPanelError(message: string): void {
+    this.panel?.showError(message);
   }
 
   private upgradeProperty(name: string): void {
@@ -147,11 +189,64 @@ export class PmExtraCurricularTable extends HTMLElement {
 
     this.actionsHeader.hidden = !this._showActions;
     this.emptyMessage.hidden = this._extraCurriculars.length > 0;
+
+    // An activity narrowed out of the list by a filter, or deleted elsewhere,
+    // takes its open panel with it rather than leaving one orphaned.
+    if (!this._extraCurriculars.some((activity) => activity.extraCurricularId === this.expandedId)) {
+      this.collapse();
+    }
+
     this.rowsBody.innerHTML = '';
 
     for (const extraCurricular of this._extraCurriculars) {
       this.rowsBody.appendChild(this.buildRow(extraCurricular));
+
+      if (extraCurricular.extraCurricularId === this.expandedId) {
+        this.rowsBody.appendChild(this.buildPanelRow(extraCurricular));
+      }
     }
+  }
+
+  /**
+   * The panel row: a full-width cell beneath the activity's own row, holding the
+   * panel element. It carries no description text of its own, so a locator that
+   * filters rows by an activity's description still addresses exactly one row.
+   */
+  private buildPanelRow(extraCurricular: ExtraCurricular): HTMLTableRowElement {
+    const row = document.createElement('tr');
+    row.dataset.practiceTimesPanelFor = extraCurricular.extraCurricularId;
+
+    const cell = document.createElement('td');
+    cell.classList.add('ec-table__panel');
+    cell.colSpan = this._showActions ? 5 : 4;
+
+    this.panel ??= document.createElement(
+      'pm-extra-curricular-practice-times',
+    ) as unknown as PmExtraCurricularPracticeTimes;
+    this.panel.showActions = this._showActions;
+    this.panel.extraCurricular = extraCurricular;
+
+    cell.appendChild(this.panel);
+    row.appendChild(cell);
+    return row;
+  }
+
+  private toggleExpanded(extraCurricularId: string): void {
+    if (this.expandedId === extraCurricularId) {
+      this.collapse();
+    } else {
+      // One panel at a time: a second one open below the first would put two
+      // activities' slots on screen with only their headings to tell them apart.
+      this.collapse();
+      this.expandedId = extraCurricularId;
+    }
+
+    this.render();
+  }
+
+  private collapse(): void {
+    this.expandedId = null;
+    this.panel = null;
   }
 
   private buildRow(extraCurricular: ExtraCurricular): HTMLTableRowElement {
@@ -160,11 +255,11 @@ export class PmExtraCurricularTable extends HTMLElement {
     // activity's identifier — that is what addresses exactly one row.
     row.dataset.extraCurricularId = extraCurricular.extraCurricularId;
 
-    // The expander is populated by #276, which adds practice-time maintenance
-    // beneath the row. The column is here so the table's shape does not change
-    // under it.
+    const expanded = this.expandedId === extraCurricular.extraCurricularId;
+
     const expanderCell = document.createElement('td');
     expanderCell.classList.add('ec-table__expander');
+    expanderCell.appendChild(this.buildExpander(extraCurricular, expanded));
 
     const descriptionCell = document.createElement('td');
     descriptionCell.textContent = extraCurricular.description;
@@ -185,6 +280,27 @@ export class PmExtraCurricularTable extends HTMLElement {
     }
 
     return row;
+  }
+
+  /**
+   * The chevron that opens and closes the row's practice-times panel. Its glyph
+   * is what says which state the row is in — `chevron_right` closed,
+   * `expand_more` open — so the collapsed state is visible rather than inferred
+   * from the panel's absence.
+   */
+  private buildExpander(extraCurricular: ExtraCurricular, expanded: boolean): HTMLElement {
+    const chevron = document.createElement('button');
+    chevron.type = 'button';
+    chevron.classList.add('ec-table__chevron');
+    chevron.classList.toggle('ec-table__chevron--expanded', expanded);
+    chevron.dataset.expanded = String(expanded);
+    chevron.textContent = expanded ? 'expand_more' : 'chevron_right';
+    chevron.setAttribute(
+      'aria-label',
+      `${expanded ? 'Collapse' : 'Expand'} practice times for ${extraCurricular.description}`,
+    );
+    chevron.addEventListener('click', () => this.toggleExpanded(extraCurricular.extraCurricularId));
+    return chevron;
   }
 
   private buildPhaseBadge(extraCurricular: ExtraCurricular): HTMLElement {

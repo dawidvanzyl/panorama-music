@@ -52,7 +52,8 @@ function authHeaders(): HeadersInit {
   };
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+/** Throws the server's own reason, which is what the screen shows the user. */
+async function assertOk(response: Response): Promise<void> {
   if (response.status === 401) {
     handleUnauthorized();
   }
@@ -60,6 +61,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const body = await response.json().catch(() => ({ error: 'Request failed' }));
     throw new ExtraCurricularsError(body.error ?? `HTTP ${response.status}`, response.status);
   }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  await assertOk(response);
   return response.json() as Promise<T>;
 }
 
@@ -102,4 +107,36 @@ export async function createExtraCurricular(input: ExtraCurricularInput): Promis
   const result = await handleResponse<ExtraCurricular>(response);
   clearExtraCurricularsCache();
   return result;
+}
+
+/**
+ * Adds one weekly slot to an activity that already exists. Slots are maintained
+ * one at a time — there is no request that replaces an activity's whole set.
+ */
+export async function addPracticeTime(extraCurricularId: string, input: PracticeTimeInput): Promise<PracticeTime> {
+  const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}/practice-times`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ day: input.day, startTime: input.startTime }),
+  });
+  const result = await handleResponse<PracticeTime>(response);
+  clearExtraCurricularsCache();
+  return result;
+}
+
+/**
+ * Removes one weekly slot, addressed by its own identifier through the activity
+ * that owns it — another activity may hold the same day and start time.
+ */
+export async function removePracticeTime(extraCurricularId: string, practiceTimeId: string): Promise<void> {
+  const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}/practice-times/${practiceTimeId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+
+  // A removal answers with no body, so there is nothing to read back — only the
+  // refusal, if there was one.
+  await assertOk(response);
+
+  clearExtraCurricularsCache();
 }

@@ -136,4 +136,110 @@ export class ExtraCurricularsPage extends BasePage {
   actionsHeader(): Locator {
     return this.activityTable.locator('#actionsHeader');
   }
+
+  // --- the expandable row and its practice-times panel ----------------------
+
+  /**
+   * The activity's own identifier, read off its row. The description is free
+   * text and the panel is a sibling row carrying no description of its own, so
+   * the identifier is what anchors panel locators to the panel itself rather
+   * than deriving them from `row(description)`.
+   */
+  async activityId(description: string): Promise<string> {
+    const id = await this.row(description).getAttribute('data-extra-curricular-id');
+    if (!id) throw new Error(`No activity row found for "${description}".`);
+    return id;
+  }
+
+  /** The chevron that opens and closes a row's practice-times panel. */
+  expander(description: string): Locator {
+    return this.row(description).getByRole('button', {
+      name: new RegExp(`^(Expand|Collapse) practice times for `),
+    });
+  }
+
+  /** `'true'` while the row is expanded — the collapsed state is observable, not inferred. */
+  async isRowExpanded(description: string): Promise<string | null> {
+    return this.expander(description).getAttribute('data-expanded');
+  }
+
+  async toggleRow(description: string): Promise<void> {
+    await this.expander(description).click();
+  }
+
+  /** The panel opened beneath one activity's row, addressed by that activity. */
+  panel(activityId: string): Locator {
+    return this.activityTable.locator(
+      `tr[data-practice-times-panel-for="${activityId}"] pm-extra-curricular-practice-times`,
+    );
+  }
+
+  panelHeading(activityId: string): Locator {
+    return this.panel(activityId).locator('#title');
+  }
+
+  /** The panel's refusal banner — a duplicate slot, the last slot, or a server reason. */
+  panelError(activityId: string): Locator {
+    return this.panel(activityId).locator('#errorText');
+  }
+
+  panelErrorBanner(activityId: string): Locator {
+    return this.panel(activityId).locator('#error');
+  }
+
+  panelSlotRows(activityId: string): Locator {
+    return this.panel(activityId).locator('#slots tr');
+  }
+
+  /**
+   * Every slot the panel lists, as `"{Day} {HH:mm}"`, in the order rendered.
+   * The ordered sequence is the part of the criterion a naive implementation
+   * gets wrong, so it is read as a list rather than probed slot by slot.
+   */
+  async panelSlots(activityId: string): Promise<string[]> {
+    return this.panelSlotRows(activityId).evaluateAll((rows) =>
+      rows.map((row) => {
+        const cells = row.querySelectorAll('td');
+        return `${cells[0]?.textContent ?? ''} ${cells[1]?.textContent ?? ''}`;
+      }),
+    );
+  }
+
+  /** The panel's own identifier for a slot — what its Remove sends to the endpoint. */
+  async panelSlotId(activityId: string, slot: PracticeSlot): Promise<string> {
+    const ids = await this.panelSlotRows(activityId).evaluateAll((rows) =>
+      rows.map((row) => {
+        const cells = row.querySelectorAll('td');
+        const text = `${cells[0]?.textContent ?? ''} ${cells[1]?.textContent ?? ''}`;
+        return [text, row.dataset.practiceTimeId ?? ''] as const;
+      }),
+    );
+    const match = ids.find(([text]) => text === slotText(slot));
+    if (!match) throw new Error(`Panel lists no ${slotText(slot)} slot.`);
+    return match[1];
+  }
+
+  panelSlotRow(activityId: string, practiceTimeId: string): Locator {
+    return this.panel(activityId).locator(`#slots tr[data-practice-time-id="${practiceTimeId}"]`);
+  }
+
+  panelDaySelect(activityId: string): Locator {
+    return this.panel(activityId).locator('#day');
+  }
+
+  panelStartTimeInput(activityId: string): Locator {
+    return this.panel(activityId).locator('#startTime');
+  }
+
+  /** Stages and submits one slot through the panel's add control. */
+  async addSlotFromPanel(activityId: string, slot: PracticeSlot): Promise<void> {
+    await this.panelDaySelect(activityId).selectOption({ label: slot.day });
+    await this.panelStartTimeInput(activityId).fill(slot.startTime);
+    await this.panel(activityId).locator('#addBtn').click();
+  }
+
+  async removeSlotFromPanel(activityId: string, slot: PracticeSlot): Promise<void> {
+    const practiceTimeId = await this.panelSlotId(activityId, slot);
+    await this.panelSlotRow(activityId, practiceTimeId).getByRole('button', { name: 'Remove' }).click();
+  }
 }

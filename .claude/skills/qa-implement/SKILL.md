@@ -104,6 +104,12 @@ developer and the next cycle both benefit, and CI runs its own.
 
 ### 4) Implement the specs
 
+**Before writing specs**, create `{journal_dir}/qa-run-{cycle}.md` listing the IT
+codes and a `## Progress` heading. Append as each spec lands and each result comes in.
+
+**Commit each spec and page object as you finish it**, never once at the end. An
+uncommitted spec in a dead session is one nobody can run and nobody knows about.
+
 One `test.describe` per IT code, tagged with the code:
 
 ```ts

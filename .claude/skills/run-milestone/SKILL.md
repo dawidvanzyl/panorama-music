@@ -54,6 +54,14 @@ Never re-run a stage GitHub shows as complete. A second `qa-implement` pass on a
 branch already carrying `gate: qa-complete` spends a full worker invocation to
 rediscover what the label already said.
 
+**For a story caught mid-stage, read the interrupted worker's own report** — the
+newest `implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md` in its `journal_dir` —
+before deciding anything. It records how far that worker got, and re-running a stage
+that was nearly finished is the most expensive mistake available at resume.
+
+Then check the working tree. Uncommitted changes are that worker's unfinished work,
+and they are not yours to discard — see step 5.
+
 Report where you are picking up in one line, then continue.
 
 ### 2) Select the next story
@@ -103,6 +111,13 @@ Never a narrative description of the work.
 Always include `issue_number`, `journal_dir` (absolute), `base_branch` (the
 milestone branch), `mode: subagent`, and `outcome`. Add the role's own inputs as
 paths — `design_file`, `prev_report`, `pr_number`.
+
+**End every brief with the same two lines**, whatever the role: create your report
+file before starting work, and commit as you go. Both live in the contract, but a
+rule stated only in a shared doc is one a worker under turn pressure skips.
+
+**Keep briefs short.** Named inputs, one line of intent, rulings cited by number.
+Every word costs the quota that runs the work.
 
 `qa-design` has no shell, so it also needs `issue_body_file`, `epic_body_file` and
 `it_codes_file` written into its `journal_dir` first.

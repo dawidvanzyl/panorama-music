@@ -93,6 +93,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<WithdrawEnrollmentHandler>();
 		services.AddTransient<CreateExtraCurricularHandler>();
 		services.AddTransient<GetExtraCurricularsHandler>();
+		services.AddTransient<AddPracticeTimeHandler>();
+		services.AddTransient<RemovePracticeTimeHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -116,6 +118,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeAddedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
 
 		return services;
 	}

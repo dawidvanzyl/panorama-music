@@ -5,7 +5,7 @@ description: >
   verify gauntlet, and the pull request. Also owns everything that comes back:
   QA bug sub-issues, review findings, and merge conflicts on its own branch.
 model: opus
-effort: medium
+effort: low
 permissionMode: auto
 background: true
 maxTurns: 120

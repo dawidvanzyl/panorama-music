@@ -49,13 +49,39 @@ If a required input is missing, do not guess it and do not proceed. Escalate.
 
 ## The report — worker to lead
 
-Write the report **into `journal_dir` as you work**, not at the end.
+### Leave a trail, or lose the work
 
-An agent cannot tell when it is about to hit its turn limit or when the session is
-about to run out of quota, and both happen routinely. A report written
-incrementally leaves a usable artefact when the agent dies mid-task; a report
-composed in the final turn leaves nothing at all, and the work has to be redone
-from scratch.
+Session quota kills workers mid-task without warning. Four rules:
+
+1. **Create your report file before starting work** — first or second tool call, with
+   a `## Progress` heading. An empty file at a known path beats a perfect report that
+   never got written.
+2. **Append a line after each meaningful step** — what you did, what you decided,
+   what is next.
+3. **Commit as you go** — per layer, per spec, never once at the end. The pull
+   request is squash-merged, so a granular trail costs nothing.
+4. **On resume, read your own report first**, before redoing anything.
+
+Uncommitted work in a dead session cannot be resumed or inspected. It is redone from
+scratch, out of the same quota that killed it.
+
+### Say it once, briefly
+
+Every word you write is spent from the quota that runs the work, and the lead's
+context has to outlast the milestone. Three sentences that leave no doubt beat three
+paragraphs that also leave no doubt.
+
+| Artefact | Shape |
+| --- | --- |
+| Brief | named inputs, one line of intent, rulings cited by number |
+| Report | what you did and decided — not the reasoning that got you there |
+| Reply to the lead | verdict block only |
+| Escalation | question, options, your recommendation |
+| PR comment | finding, source, consequence |
+
+Cut reasoning, keep conclusions. The bound: never cut so far that someone re-raises a
+settled point — one round trip costs more than the sentences saved. When a
+justification is what stops a worker deciding otherwise, keep it to a clause.
 
 The reply to the lead is the verdict block and nothing else:
 

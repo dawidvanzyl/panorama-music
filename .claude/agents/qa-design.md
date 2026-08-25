@@ -4,8 +4,8 @@ description: >
   Designs the concrete E2E scenarios for a story before any of it is built.
   Turns the story's IT codes into preconditions, seed data, paths through the UI,
   and the negative cases worth proving. Writes a frozen design file; writes no tests.
-model: opus
-effort: low
+model: sonnet
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 30

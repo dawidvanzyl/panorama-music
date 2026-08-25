@@ -5,7 +5,7 @@ description: >
   delegates each stage to a worker role, reconciles run state against GitHub,
   and escalates only what it cannot rule on itself.
 model: opus
-effort: high
+effort: medium
 permissionMode: auto
 color: blue
 initialPrompt: >

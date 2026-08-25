@@ -46,6 +46,11 @@ export function practiceTimesText(extraCurricular: ExtraCurricular): string {
   return extraCurricular.practiceTimes.map(practiceTimeText).join(' · ');
 }
 
+/** The expanded panel's heading, naming the activity whose slots it shows. */
+export function practiceTimesHeading(description: string): string {
+  return `Practice Times — ${description}`;
+}
+
 export const NO_PRACTICE_TIME_ERROR = 'An activity must have at least one practice time.';
 
 export const MISSING_ERROR = 'Enter a description and choose a phase.';

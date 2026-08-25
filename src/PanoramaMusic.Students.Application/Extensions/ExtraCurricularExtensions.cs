@@ -14,6 +14,9 @@ public static class ExtraCurricularExtensions
 			extraCurricular.ExtraCurricularId,
 			extraCurricular.Description,
 			extraCurricular.Phase,
-			[.. extraCurricular.PracticeTimes.Select(slot =>
-				new PracticeTimeResult(slot.PracticeTimeId, slot.Day, slot.StartTime))]);
+			[.. extraCurricular.PracticeTimes.Select(ToResult)]);
+
+	/// <summary>One weekly slot as the wire shape.</summary>
+	public static PracticeTimeResult ToResult(this ExtraCurricularPracticeTime practiceTime) =>
+		new(practiceTime.PracticeTimeId, practiceTime.Day, practiceTime.StartTime);
 }

@@ -30,7 +30,7 @@ public sealed class CreateExtraCurricularHandler(IExtraCurricularRepository extr
 		// its slots land together.
 		foreach (var practiceTime in extraCurricular.PracticeTimes)
 		{
-			await extraCurricularRepository.CreatePracticeTimeAsync(practiceTime, cancellationToken);
+			await extraCurricularRepository.CreatePracticeTimeAsync(extraCurricular, practiceTime, cancellationToken);
 		}
 
 		return extraCurricular.ToResult();

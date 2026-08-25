@@ -67,8 +67,8 @@ CodeQL, which runs here and nowhere earlier.
   epic issue's own title text.
 - Extract `milestone_number` using pattern `M(\d+(?:\.\d+)?)` against
   `milestone_title` (not the epic issue's title). For example, a milestone
-  titled `M1 — Identity & Auth` yields milestone number `1`; one titled
-  `M1.1 — Identity Hardening & QA` yields `1.1`.
+  titled `M4 — {name}` yields milestone number `4`; one titled
+  `M4.1 — {name}` yields `4.1`.
 - If multiple matches exist or no match is found in `milestone_title`, notify
   and ask for the milestone number manually. Do not proceed until confirmed.
 - Derive `milestone_branch` = `milestone/m{milestone_number}`.

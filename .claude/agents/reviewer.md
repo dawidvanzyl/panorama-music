@@ -5,7 +5,7 @@ description: >
   coding and security standards, posts its findings, and approves the PR once
   nothing is outstanding. Reads and judges; changes nothing, and merges nothing.
 model: opus
-effort: medium
+effort: low
 permissionMode: auto
 background: true
 maxTurns: 60

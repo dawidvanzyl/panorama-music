@@ -52,8 +52,8 @@ Never report a Blocker or Warning that asks for work listed under
     dependency bump, a one-off fix between milestones — branches from `master` and
     returns to it. This is an ordinary state, not an error.
 
-  > The milestone belongs to the **story**, not the branch. `feature/269-…` says
-  > nothing about which milestone it serves, and never needs to — issue #269 is
+  > The milestone belongs to the **story**, not the branch. A branch name says
+  > nothing about which milestone it serves, and never needs to — its issue is
   > assigned to one. Do not read the base from the branch's pull request either:
   > verify runs inside the gauntlet, before the PR exists.
 

@@ -37,10 +37,12 @@ public static class ExtraCurricularRoutes
 		// them in one request — there is no moment at which one exists without
 		// the other. Maintaining the slots of an activity that already exists is
 		// a separate surface.
-		app
+		var maintenanceGroup = app
 			.MapGroup("/api/extra-curriculars")
 			.WithTags("ExtraCurriculars")
-			.RequireAuthorization("CoordinatorPolicy")
+			.RequireAuthorization("CoordinatorPolicy");
+
+		maintenanceGroup
 			.MapPost("/", async (CreateExtraCurricularRequest request, CreateExtraCurricularHandler handler, CancellationToken ct) =>
 			{
 				var command = new CreateExtraCurricularCommand(request);
@@ -53,5 +55,37 @@ public static class ExtraCurricularRoutes
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
+
+		// Maintaining the slots of an activity that already exists: each slot is
+		// added and removed on its own, and there is no edit — a slot is changed
+		// by removing it and adding the one that replaces it.
+		maintenanceGroup
+			.MapPost("/{extraCurricularId:guid}/practice-times", async (Guid extraCurricularId, PracticeTimeRequest request, AddPracticeTimeHandler handler, CancellationToken ct) =>
+			{
+				var command = new AddPracticeTimeCommand(extraCurricularId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Created($"/api/extra-curriculars/{extraCurricularId}/practice-times/{result.PracticeTimeId}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<PracticeTimeRequest>>()
+			.WithName("AddExtraCurricularPracticeTime")
+			.Produces<PracticeTimeResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		maintenanceGroup
+			.MapDelete("/{extraCurricularId:guid}/practice-times/{practiceTimeId:guid}", async (Guid extraCurricularId, Guid practiceTimeId, RemovePracticeTimeHandler handler, CancellationToken ct) =>
+			{
+				var command = new RemovePracticeTimeCommand(extraCurricularId, practiceTimeId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("RemoveExtraCurricularPracticeTime")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }
