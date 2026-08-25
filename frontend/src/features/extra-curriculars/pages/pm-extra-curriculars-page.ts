@@ -4,8 +4,11 @@ import '../components/pm-extra-curricular-table';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   ExtraCurricularsError,
+  addPracticeTime,
   createExtraCurricular,
   getExtraCurriculars,
+  removePracticeTime,
+  type DayType,
   type ExtraCurricular,
   type ExtraCurricularInput,
 } from '../services/extra-curriculars';
@@ -93,6 +96,8 @@ export class PmExtraCurricularsPage extends HTMLElement {
 
     this.shadowRoot!.addEventListener('extra-curricular-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.addEventListener('extra-curricular-filter-changed', this.handleFilterChanged);
+    this.shadowRoot!.addEventListener('extra-curricular-practice-time-add-requested', this.handlePracticeTimeAdd);
+    this.shadowRoot!.addEventListener('extra-curricular-practice-time-remove-requested', this.handlePracticeTimeRemove);
 
     void this.loadExtraCurriculars();
   }
@@ -100,6 +105,11 @@ export class PmExtraCurricularsPage extends HTMLElement {
   disconnectedCallback(): void {
     this.shadowRoot!.removeEventListener('extra-curricular-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.removeEventListener('extra-curricular-filter-changed', this.handleFilterChanged);
+    this.shadowRoot!.removeEventListener('extra-curricular-practice-time-add-requested', this.handlePracticeTimeAdd);
+    this.shadowRoot!.removeEventListener(
+      'extra-curricular-practice-time-remove-requested',
+      this.handlePracticeTimeRemove,
+    );
   }
 
   private handleFormSubmitted = async (event: Event): Promise<void> => {
@@ -119,6 +129,35 @@ export class PmExtraCurricularsPage extends HTMLElement {
       // The reason belongs on the form itself, beside the values the user
       // entered — which stay put so the create can be corrected and retried.
       this.activityForm!.showError(this.messageFor(err));
+    }
+  };
+
+  /**
+   * A slot the panel has already judged addable. Reloading the catalogue is what
+   * puts it into both the panel and the row's Practice Times cell, so the change
+   * shows without the user reloading the page.
+   */
+  private handlePracticeTimeAdd = async (event: Event): Promise<void> => {
+    const detail = (event as CustomEvent<{ extraCurricularId: string; day: DayType; startTime: string }>).detail;
+
+    try {
+      await addPracticeTime(detail.extraCurricularId, { day: detail.day, startTime: detail.startTime });
+      await this.loadExtraCurriculars();
+    } catch (err) {
+      // The reason belongs on the panel, beside the controls that produced it —
+      // not on the page banner above an unrelated part of the screen.
+      this.activityTable!.showPanelError(this.messageFor(err));
+    }
+  };
+
+  private handlePracticeTimeRemove = async (event: Event): Promise<void> => {
+    const detail = (event as CustomEvent<{ extraCurricularId: string; practiceTimeId: string }>).detail;
+
+    try {
+      await removePracticeTime(detail.extraCurricularId, detail.practiceTimeId);
+      await this.loadExtraCurriculars();
+    } catch (err) {
+      this.activityTable!.showPanelError(this.messageFor(err));
     }
   };
 

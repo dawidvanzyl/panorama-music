@@ -148,8 +148,8 @@ describe('pm-extra-curriculars-page — lists each activity with its slots', { t
     el = await mountPage();
 
     expect(rowTextsOf(el)).toEqual([
-      ['', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00', ''],
-      ['', 'Junior Choir', 'Junior', 'Tuesday 14:30', ''],
+      ['chevron_right', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00', ''],
+      ['chevron_right', 'Junior Choir', 'Junior', 'Tuesday 14:30', ''],
     ]);
   });
 
@@ -464,9 +464,11 @@ describe('pm-extra-curriculars-page — read-only for a Teacher who is not a Coo
     expect((filterBarOf(el) as HTMLElement).hidden).toBe(false);
     expect(tableOf(el).shadowRoot!.getElementById('actionsHeader')!.hidden).toBe(true);
     // The list itself is still read and shown in full.
+    // The expander is offered to a read-only viewer too: the panel it opens is
+    // a place to read this activity's slots, not only to maintain them.
     expect(rowTextsOf(el)).toEqual([
-      ['', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00'],
-      ['', 'Junior Choir', 'Junior', 'Tuesday 14:30'],
+      ['chevron_right', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00'],
+      ['chevron_right', 'Junior Choir', 'Junior', 'Tuesday 14:30'],
     ]);
   });
 
