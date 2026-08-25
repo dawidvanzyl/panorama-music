@@ -5,7 +5,7 @@ description: >
   runs them against the branch, logs failures as bug sub-issues, and signs off
   testing. Tests the code; never fixes it, and never declares the story done.
 model: sonnet
-effort: low
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 80
