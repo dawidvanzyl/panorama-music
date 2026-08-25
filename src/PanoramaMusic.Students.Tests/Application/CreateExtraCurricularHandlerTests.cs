@@ -97,8 +97,8 @@ public class CreateExtraCurricularHandlerTests : IClassFixture<StudentsTestFixtu
 			.Returns(Task.CompletedTask);
 
 		_context.Repositories.ExtraCurricularRepositoryMock
-			.Setup(r => r.CreatePracticeTimeAsync(It.IsAny<ExtraCurricularPracticeTime>(), It.IsAny<CancellationToken>()))
-			.Callback<ExtraCurricularPracticeTime, CancellationToken>((practiceTime, _) =>
+			.Setup(r => r.CreatePracticeTimeAsync(It.IsAny<ExtraCurricular>(), It.IsAny<ExtraCurricularPracticeTime>(), It.IsAny<CancellationToken>()))
+			.Callback<ExtraCurricular, ExtraCurricularPracticeTime, CancellationToken>((_, practiceTime, _) =>
 			{
 				// The activity has to exist before a slot can reference it, so the
 				// order the handler writes in is part of what is being asserted.

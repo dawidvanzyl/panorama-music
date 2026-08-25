@@ -27,6 +27,18 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		return dtos.MapToExtraCurriculars();
 	}
 
+	public async Task<ExtraCurricular?> GetByIdAsync(Guid extraCurricularId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_extra_curricular_by_id",
+			new { p_extra_curricular_id = extraCurricularId },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<ExtraCurricularPracticeTimeDto>(command);
+
+		return dtos.MapToExtraCurriculars().SingleOrDefault();
+	}
+
 	public async Task CreateAsync(ExtraCurricular extraCurricular, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
@@ -43,8 +55,7 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		await Connection.ExecuteAsync(command);
 
 		// The aggregate root is what carries the pending events, so this is where
-		// they are drained — the slot writes below are child rows and raise none
-		// of their own. The collected event still holds this instance, whose
+		// they are drained. The collected event still holds this instance, whose
 		// practice times are populated, so the audit record names them all.
 		domainEventCollector.Collect(extraCurricular);
 	}
@@ -52,9 +63,13 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 	/// <summary>
 	/// One slot. The activity and its slots are separate single-purpose writes
 	/// sequenced by the handler, and the request's ambient transaction is what
-	/// makes them atomic.
+	/// makes them atomic. On the create path the drain below is a no-op — the
+	/// activity's own write already took its event.
 	/// </summary>
-	public async Task CreatePracticeTimeAsync(ExtraCurricularPracticeTime practiceTime, CancellationToken cancellationToken)
+	public async Task CreatePracticeTimeAsync(
+		ExtraCurricular extraCurricular,
+		ExtraCurricularPracticeTime practiceTime,
+		CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
 			"students.create_extra_curricular_practice_time",
@@ -69,5 +84,31 @@ public class ExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEventColle
 			cancellationToken);
 
 		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(extraCurricular);
+	}
+
+	/// <summary>
+	/// One slot, removed from the activity that owns it. Whether it may go at all
+	/// is the aggregate's rule and has already been answered by the time this runs.
+	/// </summary>
+	public async Task DeletePracticeTimeAsync(
+		ExtraCurricular extraCurricular,
+		ExtraCurricularPracticeTime practiceTime,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_extra_curricular_practice_time",
+			new
+			{
+				p_practice_time_id = practiceTime.PracticeTimeId,
+				p_extra_curricular_id = practiceTime.ExtraCurricularId,
+			},
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(extraCurricular);
 	}
 }

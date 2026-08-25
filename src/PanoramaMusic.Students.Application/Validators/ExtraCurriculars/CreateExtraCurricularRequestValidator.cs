@@ -23,12 +23,10 @@ public sealed class CreateExtraCurricularRequestValidator : AbstractValidator<Cr
 			.NotEmpty()
 			.WithMessage(ExtraCurricularMessages.AtLeastOnePracticeTimeRequired);
 
+		// What one slot must carry is stated once, in the validator the add
+		// endpoint uses too, rather than restated here as inline child rules.
 		RuleForEach(x => x.PracticeTimes)
-			.ChildRules(slot =>
-			{
-				slot.RuleFor(x => x.Day).NotNull().IsInEnum();
-				slot.RuleFor(x => x.StartTime).NotNull();
-			});
+			.SetValidator(new PracticeTimeRequestValidator());
 
 		// The day and start time pair is unique within one activity. The refusal
 		// names the slot it is about, since a request carrying several is

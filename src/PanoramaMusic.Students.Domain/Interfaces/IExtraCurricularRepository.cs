@@ -12,10 +12,30 @@ public interface IExtraCurricularRepository
 	/// </summary>
 	Task<IList<ExtraCurricular>> GetAllAsync(PhaseType? phase, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// One activity with its practice times attached, or null when no activity
+	/// carries that identifier. This is what the slot-maintenance use cases load,
+	/// since both of their rules are about the slots the activity already holds.
+	/// </summary>
+	Task<ExtraCurricular?> GetByIdAsync(Guid extraCurricularId, CancellationToken cancellationToken);
+
 	/// <summary>Persists the activity itself. Its slots are written one at a time by
 	/// <see cref="CreatePracticeTimeAsync"/>, sequenced by the caller.</summary>
 	Task CreateAsync(ExtraCurricular extraCurricular, CancellationToken cancellationToken);
 
-	/// <summary>Persists one weekly slot against the activity that owns it.</summary>
-	Task CreatePracticeTimeAsync(ExtraCurricularPracticeTime practiceTime, CancellationToken cancellationToken);
+	/// <summary>
+	/// Persists one weekly slot against the activity that owns it. The activity is
+	/// passed alongside because it is the aggregate root that carries the pending
+	/// events, and this is the write that persists what its behaviour did.
+	/// </summary>
+	Task CreatePracticeTimeAsync(
+		ExtraCurricular extraCurricular,
+		ExtraCurricularPracticeTime practiceTime,
+		CancellationToken cancellationToken);
+
+	/// <summary>Removes one weekly slot from the activity that owns it.</summary>
+	Task DeletePracticeTimeAsync(
+		ExtraCurricular extraCurricular,
+		ExtraCurricularPracticeTime practiceTime,
+		CancellationToken cancellationToken);
 }
