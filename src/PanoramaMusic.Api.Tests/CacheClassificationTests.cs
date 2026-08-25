@@ -88,6 +88,12 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["CreateCourse"] = CacheExpectation.Cacheable,
 		["UpdateCourseCost"] = CacheExpectation.Cacheable,
 
+		// Extra-curricular activities are the school's own catalogue too — a
+		// description, a phase and the weekly slots they run at. No student is
+		// named; who is assigned to one is a separate payload.
+		["GetExtraCurriculars"] = CacheExpectation.Cacheable,
+		["CreateExtraCurricular"] = CacheExpectation.Cacheable,
+
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
 		["IsGuardianShared"] = CacheExpectation.Cacheable,

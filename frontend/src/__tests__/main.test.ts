@@ -228,3 +228,38 @@ describe('main router — a refused route lands on the topmost permitted entry',
     expect(document.getElementById('app')!.innerHTML).not.toContain(page);
   });
 });
+
+describe('main router — the Extra-Curriculars route is refused to Admin alone', { tags: ['275UC23'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it('bounces a user whose only role is Admin off the route without rendering the page', async () => {
+    grantRoles('Admin');
+    window.location.hash = '#/extra-curriculars';
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe('#/admin/users');
+    });
+
+    expect(document.getElementById('app')!.innerHTML).not.toContain('<pm-extra-curriculars-page>');
+  });
+
+  it.each([['Teacher'], ['Coordinator']])('lets a %s reach the page', async (role) => {
+    grantRoles(role);
+    // A public page as the neutral baseline, so the hash below always changes
+    // and a render actually runs.
+    window.location.hash = '#/login';
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-login-page>');
+    });
+
+    window.location.hash = '#/extra-curriculars';
+
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-extra-curriculars-page>');
+    });
+  });
+});

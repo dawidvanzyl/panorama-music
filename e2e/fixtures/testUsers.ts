@@ -8,6 +8,7 @@ import { StudentsPage } from '../pages/students/StudentsPage';
 import { GuardianRelationshipsPage } from '../pages/students/GuardianRelationshipsPage';
 import { TeachersPage } from '../pages/teachers/TeachersPage';
 import { CourseManagementPage } from '../pages/courses/CourseManagementPage';
+import { ExtraCurricularsPage } from '../pages/extra-curriculars/ExtraCurricularsPage';
 import { landingUrl } from './navigation';
 import { seedEnrollmentTarget } from './enrollment';
 
@@ -66,6 +67,26 @@ export async function goToCourseManagementPage(page: Page): Promise<CourseManage
   const courseManagementPage = new CourseManagementPage(page);
   await courseManagementPage.gotoCourses();
   return courseManagementPage;
+}
+
+/**
+ * Extra-curriculars are a Coordinator-owned area and the Admin the other
+ * helpers sign in as holds no rights in it, so this one pays for an
+ * invite-and-register round trip before it can open the screen at all.
+ */
+export async function goToExtraCurricularsPageAsCoordinator(page: Page): Promise<ExtraCurricularsPage> {
+  const email = uniqueTestEmail('ec-coordinator');
+  const password = 'CoordinatorPass123!';
+  await createRegisteredUser(page, email, password, ['Coordinator']);
+
+  const loginPage = new LoginPage(page);
+  await loginPage.gotoLogin();
+  await loginPage.login(email, password);
+  await expect(page).toHaveURL(landingUrl('Coordinator'));
+
+  const extraCurricularsPage = new ExtraCurricularsPage(page);
+  await extraCurricularsPage.gotoExtraCurriculars();
+  return extraCurricularsPage;
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {

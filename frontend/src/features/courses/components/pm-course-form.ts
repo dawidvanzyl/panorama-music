@@ -5,7 +5,7 @@ import {
   isValidCost,
   lessonStructureOptionLabel,
 } from '../services/course-display';
-import { appendOptions } from './select-options';
+import { appendOptions } from '../../../components/select-options';
 import type { CourseType, LessonStructure } from '../services/courses';
 
 const styles = new CSSStyleSheet();

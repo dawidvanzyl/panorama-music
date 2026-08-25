@@ -136,7 +136,14 @@ public static class ServiceCollectionExtensions
 			.AddPolicy("CoordinatorOrAdminPolicy", policy => policy.RequireAssertion(context =>
 				context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.Admin)))
 			.AddPolicy("TeacherCoordinatorOrAdminPolicy", policy => policy.RequireAssertion(context =>
-				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.Admin)));
+				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.Admin)))
+			// The two below deliberately exclude Admin. An area whose owner is the
+			// Coordinator grants nothing to the Admin role — a person who happens
+			// to be an admin reaches it through the Teacher role they also hold.
+			.AddPolicy("TeacherOrCoordinatorPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator)))
+			.AddPolicy("CoordinatorPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.Coordinator)));
 
 		return services;
 	}

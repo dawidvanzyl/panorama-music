@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Students.Application.Handlers.Courses;
+using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.LessonStructures;
@@ -17,6 +18,7 @@ using PanoramaMusic.Students.Infrastructure.Contexts;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Repositories;
 using PanoramaMusic.Students.Infrastructure.Translators.Courses;
+using PanoramaMusic.Students.Infrastructure.Translators.ExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
@@ -45,6 +47,7 @@ public static class ServiceCollectionExtensions
 		// Dapper has no built-in composite-type<->DbType mapping; process-global and
 		// idempotent, so registering it here on every AddStudentsInfrastructure call is safe.
 		SqlMapper.AddTypeHandler(new StudentInputTypeHandler());
+		SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 		services.AddTransient<IStudentRepository, StudentRepository>();
 		services.AddTransient<ISiblingRepository, SiblingRepository>();
@@ -54,6 +57,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
 		services.AddTransient<ICourseRepository, CourseRepository>();
 		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
+		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -87,6 +91,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetStudentCoursesHandler>();
 		services.AddTransient<UpdateEnrollmentHandler>();
 		services.AddTransient<WithdrawEnrollmentHandler>();
+		services.AddTransient<CreateExtraCurricularHandler>();
+		services.AddTransient<GetExtraCurricularsHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -109,6 +115,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, StudentEnrolledTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularCreatedTranslator>();
 
 		return services;
 	}
