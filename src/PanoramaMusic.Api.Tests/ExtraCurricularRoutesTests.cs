@@ -178,6 +178,104 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 			() => payload.ShouldNotContain("1970"));
 	}
 
+	[Fact]
+	[Trait("AC", "276UC7")]
+	public async Task PracticeTimeEndpoints_CallerHoldingOnlyTeacher_AreBothForbiddenAndNothingChanges()
+	{
+		var coordinator = await SignInAsync("practice-times-teacher-owner", Role.Coordinator, "10.0.72.1");
+		var activity = await CreateActivityAsync(coordinator, $"Teacher Refused {Guid.NewGuid()}", PhaseType.Junior);
+
+		var teacher = await SignInAsync("practice-times-teacher", Role.Teacher, "10.0.72.2");
+		var addResponse = await teacher.Client.SendAsync(
+			teacher.AuthorizedPostRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times",
+				new PracticeTimeRequest(DayOfWeek.Friday, new TimeOnly(12, 0))),
+			TestContext.Current.CancellationToken);
+		var removeResponse = await teacher.Client.SendAsync(
+			teacher.AuthorizedDeleteRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times/{activity.PracticeTimes[0].PracticeTimeId}"),
+			TestContext.Current.CancellationToken);
+
+		var readBack = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		ShouldlyHelpers.Satisfy(
+			() => addResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// A Teacher reads this area, so the refusal has to be of the change
+			// rather than of the screen — the slots are exactly as they were.
+			() => readBack.PracticeTimes.Count.ShouldBe(1),
+			() => readBack.PracticeTimes[0].PracticeTimeId.ShouldBe(activity.PracticeTimes[0].PracticeTimeId));
+	}
+
+	[Fact]
+	[Trait("AC", "276UC8")]
+	public async Task PracticeTimeEndpoints_CallerHoldingOnlyAdmin_AreBothForbiddenAndNothingChanges()
+	{
+		var coordinator = await SignInAsync("practice-times-admin-owner", Role.Coordinator, "10.0.72.3");
+		var activity = await CreateActivityAsync(coordinator, $"Admin Refused {Guid.NewGuid()}", PhaseType.Senior);
+
+		var admin = await SignInAsync("practice-times-admin", Role.Admin, "10.0.72.4");
+		var addResponse = await admin.Client.SendAsync(
+			admin.AuthorizedPostRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times",
+				new PracticeTimeRequest(DayOfWeek.Friday, new TimeOnly(12, 0))),
+			TestContext.Current.CancellationToken);
+		var removeResponse = await admin.Client.SendAsync(
+			admin.AuthorizedDeleteRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times/{activity.PracticeTimes[0].PracticeTimeId}"),
+			TestContext.Current.CancellationToken);
+
+		var readBack = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		ShouldlyHelpers.Satisfy(
+			() => addResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => readBack.PracticeTimes.Count.ShouldBe(1));
+	}
+
+	[Fact]
+	[Trait("AC", "276UC9")]
+	public async Task PracticeTimeEndpoints_CallerHoldingCoordinator_AddAndRemoveArePermittedAndPersisted()
+	{
+		var coordinator = await SignInAsync("practice-times-coordinator", Role.Coordinator, "10.0.72.5");
+		var activity = await CreateActivityAsync(
+			coordinator, $"Maintained {Guid.NewGuid()}", PhaseType.Junior, DayOfWeek.Monday, new TimeOnly(15, 0));
+
+		var addResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPostRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times",
+				new PracticeTimeRequest(DayOfWeek.Wednesday, new TimeOnly(13, 0))),
+			TestContext.Current.CancellationToken);
+		var addPayload = await addResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		addResponse.StatusCode.ShouldBe(HttpStatusCode.Created, addPayload);
+		var added = JsonSerializer.Deserialize<PracticeTimeResult>(addPayload, _jsonOptions).ShouldNotBeNull();
+
+		var afterAdd = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		var removeResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedDeleteRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}/practice-times/{added.PracticeTimeId}"),
+			TestContext.Current.CancellationToken);
+		var afterRemove = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		ShouldlyHelpers.Satisfy(
+			() => added.Day.ShouldBe(DayOfWeek.Wednesday),
+			() => afterAdd.PracticeTimes.Count.ShouldBe(2),
+			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			// Both changes really landed: the added slot is gone again and the one
+			// the activity opened with is untouched.
+			() => afterRemove.PracticeTimes.Count.ShouldBe(1),
+			() => afterRemove.PracticeTimes[0].Day.ShouldBe(DayOfWeek.Monday));
+	}
+
+	private static async Task<ExtraCurricularResult> ReadActivityAsync(IsolatedHttpClient client, Guid extraCurricularId)
+	{
+		var listed = await ReadListAsync(await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/extra-curriculars"), TestContext.Current.CancellationToken));
+
+		return listed.Single(activity => activity.ExtraCurricularId == extraCurricularId);
+	}
+
 	private static CreateExtraCurricularRequest RequestFor(
 		string description,
 		PhaseType phase,

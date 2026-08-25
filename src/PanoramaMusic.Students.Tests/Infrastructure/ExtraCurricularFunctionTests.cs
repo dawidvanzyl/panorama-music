@@ -74,6 +74,50 @@ public class ExtraCurricularFunctionTests : IClassFixture<StudentsDatabaseFixtur
 			() => juniorRowsUnfiltered.ShouldBe(1));
 	}
 
+	[Fact]
+	[Trait("AC", "276UC3")]
+	public async Task GetExtraCurricularById_TwoActivitiesSharingADayAndStartTime_ReturnsBothWithTheirOwnSlots()
+	{
+		var alphaId = await GivenActivityAsync($"Alpha {Guid.NewGuid()}", "Junior");
+		var betaId = await GivenActivityAsync($"Beta {Guid.NewGuid()}", "Senior");
+		// The same pair on both. If the uniqueness rule had been written as a
+		// catalogue-wide constraint rather than a per-activity one, the second
+		// insert would throw here rather than failing an assertion below.
+		await GivenSlotAsync(alphaId, "Wednesday", new TimeOnly(13, 0));
+		await GivenSlotAsync(alphaId, "Monday", new TimeOnly(8, 0));
+		await GivenSlotAsync(betaId, "Wednesday", new TimeOnly(13, 0));
+
+		var alphaSlots = await ReadSlotsAsync(alphaId);
+		var betaSlots = await ReadSlotsAsync(betaId);
+
+		ShouldlyHelpers.Satisfy(
+			() => alphaSlots.ShouldBe(["Wednesday 13:00", "Monday 08:00"], ignoreOrder: true),
+			// Beta kept its own copy of the shared pair, and read-by-id returns the
+			// slots of the activity asked for and no others.
+			() => betaSlots.ShouldBe(["Wednesday 13:00"]));
+	}
+
+	/// <summary>Every slot the read-by-id function returns for one activity, as it reads to a person.</summary>
+	private async Task<List<string>> ReadSlotsAsync(Guid activityId)
+	{
+		await using var select = _fixture.Connection.CreateCommand();
+		select.CommandText = """
+			SELECT day, start_time
+			FROM students.get_extra_curricular_by_id(@p_extra_curricular_id);
+			""";
+		select.Parameters.AddWithValue("p_extra_curricular_id", activityId);
+
+		await using var reader = await select.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+
+		var slots = new List<string>();
+		while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+		{
+			slots.Add($"{reader.GetString(0)} {reader.GetFieldValue<TimeOnly>(1):HH\\:mm}");
+		}
+
+		return slots;
+	}
+
 	private async Task<Guid> GivenActivityAsync(string description, string phase)
 	{
 		var activityId = Guid.NewGuid();
