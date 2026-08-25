@@ -230,6 +230,53 @@ describe('practice-times panel — adds a slot', { tags: ['276UC12'] }, () => {
     expect(summaryCellOf(el, 'Junior Choir')).toBe('Tuesday 14:30 · Thursday 16:00');
   });
 
+  it('still offers exactly the seven days after the change re-renders the table', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Junior Choir');
+
+    expect((inPanel(el, 'day') as HTMLSelectElement).options).toHaveLength(7);
+
+    vi.mocked(addPracticeTime).mockResolvedValue({
+      practiceTimeId: 'pt5',
+      day: 'Thursday',
+      startTime: '16:00:00',
+    });
+    thenCatalogueIs(
+      marimba,
+      withSlots(choir, choir.practiceTimes[0], { practiceTimeId: 'pt5', day: 'Thursday', startTime: '16:00:00' }),
+    );
+
+    await pressAdd(el, 'Thursday', '16:00');
+    await pressAdd(el, 'Saturday', '08:00');
+
+    // The table moves the retained panel between parents on every render, so the
+    // element reconnects each time. Anything one-time done on connect would have
+    // given the select a second and third set of Monday-Sunday by now.
+    expect((inPanel(el, 'day') as HTMLSelectElement).options).toHaveLength(7);
+  });
+
+  it('keeps the day and start time already chosen across the re-render', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Junior Choir');
+
+    vi.mocked(addPracticeTime).mockResolvedValue({
+      practiceTimeId: 'pt5',
+      day: 'Thursday',
+      startTime: '16:00:00',
+    });
+    thenCatalogueIs(
+      marimba,
+      withSlots(choir, choir.practiceTimes[0], { practiceTimeId: 'pt5', day: 'Thursday', startTime: '16:00:00' }),
+    );
+
+    await pressAdd(el, 'Thursday', '16:00');
+
+    // The next slot is usually a single change away, so the panel is not rebuilt
+    // under the user — which is the reason the element is retained at all.
+    expect((inPanel(el, 'day') as HTMLSelectElement).value).toBe('Thursday');
+    expect((inPanel(el, 'startTime') as HTMLInputElement).value).toBe('16:00');
+  });
+
   it('shows the server refusal on the panel and leaves the slots as they were', async () => {
     el = await mountPage();
     await toggleRow(el, 'Junior Choir');

@@ -172,14 +172,24 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
   private _extraCurricular: ExtraCurricular | null = null;
   private _showActions = false;
 
+  /**
+   * Everything that must happen exactly once lives here rather than in
+   * <c>connectedCallback</c>. The table moves this element between parents on
+   * every render to keep the day and start time already chosen, so the connected
+   * callback runs many times over one panel's life — anything one-time placed
+   * there would be done again on each of them. Building the day options there is
+   * what gave the select a second and third set of Monday–Sunday.
+   *
+   * The shadow tree exists from this point on, so the lookups and the listener
+   * are safe here, and the listener sits on a child that travels with the
+   * element.
+   */
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this.shadowRoot!.adoptedStyleSheets = [styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
-  }
 
-  connectedCallback(): void {
     this.heading = this.shadowRoot!.getElementById('title') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.errorText = this.shadowRoot!.getElementById('errorText') as HTMLElement;
@@ -195,17 +205,16 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
     appendOptions(this.daySelect, DAYS, DAY_LABELS);
 
     this.addBtn.addEventListener('click', this.handleAdd);
+  }
 
+  /** Re-entrant by construction: everything below is safe to repeat. */
+  connectedCallback(): void {
     // A property assigned before this element upgraded lands as an own property
     // that shadows the accessor below, so it is replayed through the setter here.
     this.upgradeProperty('extraCurricular');
     this.upgradeProperty('showActions');
 
     this.render();
-  }
-
-  disconnectedCallback(): void {
-    this.addBtn?.removeEventListener('click', this.handleAdd);
   }
 
   set extraCurricular(value: ExtraCurricular | null) {

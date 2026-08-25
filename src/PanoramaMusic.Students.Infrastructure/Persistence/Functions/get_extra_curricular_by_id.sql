@@ -4,8 +4,11 @@
 -- Slot order is deliberately NOT set here — day-of-week-from-Monday order is an
 -- invariant of the ExtraCurricular aggregate, and restating it as a CASE
 -- expression would duplicate the rule.
--- An activity with no practice times returns no rows, which the schema's
--- at-least-one rule makes unreachable.
+-- The join means an activity holding no practice times returns no rows and so
+-- reads back as absent. That state is one the ExtraCurricular aggregate prevents
+-- — it refuses to be created without a slot and refuses to give up its last one
+-- — and not one the schema itself constrains, so this is a consequence of the
+-- domain rule rather than a guarantee of the table.
 
 CREATE OR REPLACE FUNCTION students.get_extra_curricular_by_id(
     p_extra_curricular_id UUID
