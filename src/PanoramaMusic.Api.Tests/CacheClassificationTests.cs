@@ -60,6 +60,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetAssignableExtraCurriculars"] = CacheExpectation.NoStore,
 		["AssignStudentExtraCurricular"] = CacheExpectation.NoStore,
 
+		// The phase-scoped picker read names no student — it is the catalogue
+		// narrowed to one phase, and identifies nobody.
+		["GetAssignableExtraCurricularsByPhase"] = CacheExpectation.Cacheable,
+
 		// Identity payloads carry email addresses, roles, invite URLs and tokens.
 		["GetUsers"] = CacheExpectation.NoStore,
 		["CreateUser"] = CacheExpectation.NoStore,

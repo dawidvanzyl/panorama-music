@@ -4,6 +4,7 @@ using PanoramaMusic.Students.Application.Commands.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Models;
 using PanoramaMusic.Students.Application.Requests.StudentExtraCurriculars;
+using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Api.Routes.Students;
 
@@ -52,6 +53,25 @@ public static class StudentExtraCurricularRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
+
+		// The same picker, for a student who does not exist yet: the create wizard
+		// stages its assignments before the student is saved, so it has no
+		// identifier to ask the route above with. It cannot fall back to the
+		// catalogue endpoint either — that one is closed to Admin, who is one of
+		// the callers this area admits, and widening it is #273's decision. Phase
+		// alone is the whole narrowing; a student who does not exist takes part in
+		// nothing, and what the wizard has staged is its own to leave out.
+		group
+			.MapGet("/extra-curriculars/assignable", async (PhaseType phase, GetAssignableExtraCurricularsByPhaseHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(phase, ct);
+				return Results.Ok(result);
+			})
+			.WithName("GetAssignableExtraCurricularsByPhase")
+			.Produces<IList<ExtraCurricularResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
 
 		group
 			.MapPost("/{studentId:guid}/extra-curriculars", async (Guid studentId, AssignExtraCurricularRequest request, AssignExtraCurricularHandler handler, CancellationToken ct) =>

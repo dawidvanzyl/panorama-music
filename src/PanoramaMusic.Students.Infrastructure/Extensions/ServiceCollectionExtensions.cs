@@ -100,6 +100,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<RemovePracticeTimeHandler>();
 		services.AddTransient<GetStudentExtraCurricularsHandler>();
 		services.AddTransient<GetAssignableExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
 

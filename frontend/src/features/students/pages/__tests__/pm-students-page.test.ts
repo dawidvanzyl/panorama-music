@@ -81,6 +81,29 @@ import {
   type EnrollmentResult,
 } from '../../services/enrollments';
 
+vi.mock('../../services/student-extra-curriculars', async () => {
+  const actual = await vi.importActual<typeof import('../../services/student-extra-curriculars')>(
+    '../../services/student-extra-curriculars',
+  );
+  return {
+    ...actual,
+    getStudentExtraCurriculars: vi.fn(),
+    getAssignableExtraCurriculars: vi.fn(),
+    getAssignableExtraCurricularsByPhase: vi.fn(),
+    assignExtraCurricular: vi.fn(),
+    removeExtraCurricular: vi.fn(),
+  };
+});
+
+import {
+  getStudentExtraCurriculars,
+  getAssignableExtraCurriculars,
+  getAssignableExtraCurricularsByPhase,
+  assignExtraCurricular,
+  removeExtraCurricular,
+  type StudentExtraCurricular,
+} from '../../services/student-extra-curriculars';
+
 import '../pm-students-page';
 import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
@@ -1391,5 +1414,167 @@ describe('pm-students-page — expanded row shows a read-only courses summary', 
 
     const summary = tableShadow.querySelector('pm-student-courses-summary') as PmStudentCoursesSummary;
     expect(summary.enrollments.map((e) => e.studentCourseId)).toEqual(['sc1']);
+  });
+});
+
+const choir: StudentExtraCurricular = {
+  extraCurricularId: 'ec1',
+  description: 'Choir',
+  phase: 'Junior',
+  practiceTimes: [{ practiceTimeId: 'pt1', day: 'Tuesday', startTime: '14:30:00' }],
+};
+
+const orchestra: StudentExtraCurricular = {
+  extraCurricularId: 'ec2',
+  description: 'String Orchestra',
+  phase: 'Junior',
+  practiceTimes: [{ practiceTimeId: 'pt2', day: 'Monday', startTime: '14:30:00' }],
+};
+
+function extraCurricularsStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+  return wizard.shadowRoot!.getElementById('extraCurricularsStep')!.shadowRoot!;
+}
+
+function extraCurricularRowsOf(wizard: PmStudentWizardModal): HTMLTableRowElement[] {
+  return [...extraCurricularsStepShadowOf(wizard).querySelectorAll('tbody tr')] as HTMLTableRowElement[];
+}
+
+/** Opens the Add Activity panel, chooses an activity and presses Assign. */
+async function assignViaPanel(wizard: PmStudentWizardModal, extraCurricularId: string): Promise<void> {
+  const stepShadow = extraCurricularsStepShadowOf(wizard);
+  (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+  await flush();
+  (stepShadow.getElementById('activitySelect') as HTMLSelectElement).value = extraCurricularId;
+  (stepShadow.getElementById('assignBtn') as HTMLButtonElement).click();
+  await flush();
+}
+
+describe('pm-students-page — edit mode writes an assignment immediately', { tags: ['277UC20'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getStudentExtraCurriculars).mockReset();
+    vi.mocked(getAssignableExtraCurriculars).mockReset();
+    vi.mocked(assignExtraCurricular).mockReset();
+    vi.mocked(removeExtraCurricular).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+    vi.mocked(getAssignableExtraCurriculars).mockResolvedValue([choir, orchestra]);
+    vi.mocked(assignExtraCurricular).mockResolvedValue(choir);
+    vi.mocked(removeExtraCurricular).mockResolvedValue(undefined);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it("lists the student's activities when the tab is opened", async () => {
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+
+    (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(getStudentExtraCurriculars)).toHaveBeenCalledWith('s1');
+    expect(extraCurricularRowsOf(wizard).map((row) => row.querySelector('td')!.textContent)).toEqual(['Choir']);
+  });
+
+  it('assigns straight away, without the student having to be saved', async () => {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+
+    await assignViaPanel(wizard, 'ec1');
+
+    expect(vi.mocked(assignExtraCurricular)).toHaveBeenCalledWith('s1', 'ec1');
+    // The student itself was never saved — only the assignment was written.
+    expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+    expect(extraCurricularRowsOf(wizard).map((row) => row.querySelector('td')!.textContent)).toEqual(['Choir']);
+  });
+
+  it('removes straight away, and the activity is offered by the picker again', async () => {
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir, orchestra]);
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([orchestra]);
+    (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(removeExtraCurricular)).toHaveBeenCalledWith('s1', 'ec1');
+    expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+    expect(extraCurricularRowsOf(wizard).map((row) => row.querySelector('td')!.textContent)).toEqual([
+      'String Orchestra',
+    ]);
+
+    // The server decides what is assignable, so the removed activity coming back
+    // into the picker is proven by asking again after the removal — this is the
+    // answer the endpoint now gives, with Choir no longer excluded.
+    vi.mocked(getAssignableExtraCurriculars).mockResolvedValue([choir]);
+    const stepShadow = extraCurricularsStepShadowOf(wizard);
+    (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+    await flush();
+    expect([...(stepShadow.getElementById('activitySelect') as HTMLSelectElement).options].map((o) => o.value)).toEqual(
+      ['ec1'],
+    );
+  });
+});
+
+describe('pm-students-page — create mode stages until the student is saved', { tags: ['277UC21'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
+    vi.mocked(assignExtraCurricular).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir, orchestra]);
+    vi.mocked(assignExtraCurricular).mockResolvedValue(choir);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('sends nothing while the wizard is open, then assigns each staged activity to the new student', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
+
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    wizardShadow.getElementById('nextBtn')!.click();
+    wizardShadow.getElementById('nextBtn')!.click();
+    wizardShadow.getElementById('nextBtn')!.click();
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
+    wizardShadow.getElementById('nextBtn')!.click();
+    await flush();
+
+    // The student does not exist yet, so the picker is asked for the phase alone.
+    await assignViaPanel(wizard, 'ec1');
+    await assignViaPanel(wizard, 'ec2');
+
+    expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith('Junior');
+    expect(vi.mocked(assignExtraCurricular)).not.toHaveBeenCalled();
+    expect(extraCurricularRowsOf(wizard).map((row) => row.querySelector('td')!.textContent)).toEqual([
+      'Choir',
+      'String Orchestra',
+    ]);
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(createStudent)).toHaveBeenCalled();
+    expect(vi.mocked(assignExtraCurricular).mock.calls).toEqual([
+      ['s3', 'ec1'],
+      ['s3', 'ec2'],
+    ]);
   });
 });

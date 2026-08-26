@@ -44,6 +44,15 @@ import {
   type EnrollmentResult,
   type EnrollmentUpdateInput,
 } from '../services/enrollments';
+import {
+  getStudentExtraCurriculars,
+  getAssignableExtraCurriculars,
+  getAssignableExtraCurricularsByPhase,
+  assignExtraCurricular,
+  removeExtraCurricular,
+  StudentExtraCurricularsError,
+  type PhaseType,
+} from '../services/student-extra-curriculars';
 import { courseLabel } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentsTable } from '../components/pm-students-table';
@@ -174,6 +183,10 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('enrollment-update-requested', this.handleEnrollmentUpdateRequested);
     this.shadowRoot!.addEventListener('enrollment-withdraw-requested', this.handleEnrollmentWithdrawRequested);
     this.shadowRoot!.addEventListener('enrollment-withdraw-confirmed', this.handleEnrollmentWithdrawConfirmed);
+    this.shadowRoot!.addEventListener('extra-curriculars-tab-activated', this.handleExtraCurricularsTabActivated);
+    this.shadowRoot!.addEventListener('extra-curriculars-assignable-requested', this.handleAssignableRequested);
+    this.shadowRoot!.addEventListener('extra-curricular-assign-requested', this.handleExtraCurricularAssignRequested);
+    this.shadowRoot!.addEventListener('extra-curricular-remove-requested', this.handleExtraCurricularRemoveRequested);
 
     clearStudentsCache();
     void this.loadStudents();
@@ -208,6 +221,16 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('enrollment-update-requested', this.handleEnrollmentUpdateRequested);
     this.shadowRoot!.removeEventListener('enrollment-withdraw-requested', this.handleEnrollmentWithdrawRequested);
     this.shadowRoot!.removeEventListener('enrollment-withdraw-confirmed', this.handleEnrollmentWithdrawConfirmed);
+    this.shadowRoot!.removeEventListener('extra-curriculars-tab-activated', this.handleExtraCurricularsTabActivated);
+    this.shadowRoot!.removeEventListener('extra-curriculars-assignable-requested', this.handleAssignableRequested);
+    this.shadowRoot!.removeEventListener(
+      'extra-curricular-assign-requested',
+      this.handleExtraCurricularAssignRequested,
+    );
+    this.shadowRoot!.removeEventListener(
+      'extra-curricular-remove-requested',
+      this.handleExtraCurricularRemoveRequested,
+    );
   }
 
   private handleCreateClick = (): void => {
@@ -247,12 +270,14 @@ export class PmStudentsPage extends HTMLElement {
       pendingSiblingIds,
       pendingGuardians = [],
       pendingEnrollments = [],
+      pendingExtraCurricularIds = [],
     } = (
       event as CustomEvent<{
         input: StudentInput;
         pendingSiblingIds: string[];
         pendingGuardians?: GuardianInput[];
         pendingEnrollments?: EnrollmentInput[];
+        pendingExtraCurricularIds?: string[];
       }>
     ).detail;
     this.clearError();
@@ -268,6 +293,9 @@ export class PmStudentsPage extends HTMLElement {
       }
       if (pendingEnrollments.length > 0) {
         await this.createPendingEnrollments(created.studentId, pendingEnrollments);
+      }
+      if (pendingExtraCurricularIds.length > 0) {
+        await this.assignPendingExtraCurriculars(created.studentId, pendingExtraCurricularIds);
       }
     } catch (err) {
       this.wizardModal!.showStudentError(err instanceof StudentsError ? err.message : 'An unexpected error occurred');
@@ -590,6 +618,82 @@ export class PmStudentsPage extends HTMLElement {
     }
   };
 
+  private handleExtraCurricularsTabActivated = async (event: Event): Promise<void> => {
+    const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    await this.refreshWizardExtraCurriculars(studentId);
+  };
+
+  /**
+   * The picker's options, asked for each time the Add Activity panel opens. In
+   * edit mode the student exists, so the server excludes what they already take
+   * part in; in create mode there is no student yet, so the phase alone narrows
+   * it and the tab leaves out what it has staged.
+   */
+  private handleAssignableRequested = async (event: Event): Promise<void> => {
+    const { studentId, phase } = (event as CustomEvent<{ studentId: string | null; phase: PhaseType | null }>).detail;
+    try {
+      if (studentId) {
+        this.wizardModal!.assignableExtraCurriculars = await getAssignableExtraCurriculars(studentId);
+        return;
+      }
+      // Grade Private carries no phase, and no activity is offered to one.
+      this.wizardModal!.assignableExtraCurriculars = phase ? await getAssignableExtraCurricularsByPhase(phase) : [];
+    } catch (err) {
+      this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+    }
+  };
+
+  private handleExtraCurricularAssignRequested = async (event: Event): Promise<void> => {
+    const { studentId, extraCurricularId } = (event as CustomEvent<{ studentId: string; extraCurricularId: string }>)
+      .detail;
+    try {
+      await assignExtraCurricular(studentId, extraCurricularId);
+      await this.refreshWizardExtraCurriculars(studentId);
+      this.wizardModal!.closeExtraCurricularPanel();
+    } catch (err) {
+      this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+    }
+  };
+
+  private handleExtraCurricularRemoveRequested = async (event: Event): Promise<void> => {
+    const { studentId, extraCurricularId } = (event as CustomEvent<{ studentId: string; extraCurricularId: string }>)
+      .detail;
+    try {
+      await removeExtraCurricular(studentId, extraCurricularId);
+      await this.refreshWizardExtraCurriculars(studentId);
+    } catch (err) {
+      this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+    }
+  };
+
+  private refreshWizardExtraCurriculars = async (studentId: string): Promise<void> => {
+    try {
+      this.wizardModal!.extraCurriculars = await getStudentExtraCurriculars(studentId);
+    } catch (err) {
+      this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+    }
+  };
+
+  /**
+   * Runs last, once the student and its related records exist. Like the staged
+   * siblings, guardians and enrollments, the student is already created and
+   * visible by this point, so a failure surfaces on the page banner rather than
+   * reopening the (now-closed) wizard.
+   */
+  private async assignPendingExtraCurriculars(studentId: string, extraCurricularIds: string[]): Promise<void> {
+    try {
+      for (const extraCurricularId of extraCurricularIds) {
+        await assignExtraCurricular(studentId, extraCurricularId);
+      }
+    } catch (err) {
+      this.showError(err);
+    }
+  }
+
+  private extraCurricularMessage(err: unknown): string {
+    return err instanceof StudentExtraCurricularsError ? err.message : 'An unexpected error occurred';
+  }
+
   private refreshWizardEnrollments = async (studentId: string): Promise<void> => {
     try {
       this.wizardModal!.enrollments = await getStudentCourses(studentId);
@@ -651,7 +755,10 @@ export class PmStudentsPage extends HTMLElement {
 
   private showError(err: unknown): void {
     this.errorBanner!.textContent =
-      err instanceof StudentsError || err instanceof GuardiansError || err instanceof EnrollmentsError
+      err instanceof StudentsError ||
+      err instanceof GuardiansError ||
+      err instanceof EnrollmentsError ||
+      err instanceof StudentExtraCurricularsError
         ? err.message
         : 'An unexpected error occurred';
     this.errorBanner!.classList.add('students-page__error--visible');
