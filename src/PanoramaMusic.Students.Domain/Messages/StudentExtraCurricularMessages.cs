@@ -7,6 +7,8 @@ namespace PanoramaMusic.Students.Domain.Messages;
 /// </summary>
 public static class StudentExtraCurricularMessages
 {
+	public const string ActivityRequired = "Choose an activity.";
+
 	public const string AlreadyAssigned = "The student already takes part in this activity.";
 
 	public const string PhaseMismatch = "A student can only be assigned to an activity offered to their own phase.";
