@@ -35,6 +35,8 @@ public sealed class StudentsTestContext
 
 		public Mock<IExtraCurricularRepository> ExtraCurricularRepositoryMock { get; } = new Mock<IExtraCurricularRepository>();
 
+		public Mock<IStudentExtraCurricularRepository> StudentExtraCurricularRepositoryMock { get; } = new Mock<IStudentExtraCurricularRepository>();
+
 		/// <summary>
 		/// Not a repository of this context's own, but the port it reads teachers
 		/// through — mocked here alongside them because that is what the handlers
