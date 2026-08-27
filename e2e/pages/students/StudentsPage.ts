@@ -108,6 +108,27 @@ export class StudentsPage extends BasePage {
   }
 
   /**
+   * Opens the create wizard and fills in the Student step only, leaving the
+   * caller on the Student step to drive the remaining tabs itself — for a
+   * scenario that needs to assert something between two of them, where
+   * `createStudent`'s single pass through to Save would not stop to look.
+   */
+  async startCreatingStudent(input: StudentInput): Promise<void> {
+    await this.createButton.click();
+    await this.fillStudentFields(input);
+  }
+
+  /** Advances the create wizard by one Next click. */
+  async goToNextStep(): Promise<void> {
+    await this.wizardModal.locator('#nextBtn').click();
+  }
+
+  /** Presses Save on the create wizard's final step (Extra-Curriculars). */
+  async saveStudent(): Promise<void> {
+    await this.wizardModal.locator('#saveBtn').click();
+  }
+
+  /**
    * Opens the Courses tab's enroll panel, fills it in and confirms. In create
    * mode this stages the enrollment; in edit mode it submits one.
    */
@@ -499,7 +520,17 @@ export class StudentsPage extends BasePage {
     return this.wizardModal.locator('#extraCurricularsStep');
   }
 
+  /**
+   * Opens the Add Activity panel. Waits first for any previous panel to have
+   * fully collapsed (its 220ms CSS transition settled, not merely its class
+   * toggled) — clicking `#addBtn` while that transition is still in flight
+   * can leave Playwright's own actionability check treating the button as
+   * unstable and silently retrying the click for real, which double-fires
+   * the picker's own assignable-list request and can leave two responses
+   * racing each other to populate the `<select>`.
+   */
   async openAddActivityPanel(): Promise<void> {
+    await expect(this.extraCurricularsStep().locator('#panel')).toBeHidden();
     await this.extraCurricularsStep().locator('#addBtn').click();
   }
 
@@ -518,14 +549,21 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * Opens the Add Activity panel (if not already open), chooses the activity
-   * by its picker option label, and presses Assign. In edit mode this writes
-   * immediately; in create mode it stages the activity in the wizard's memory.
+   * Opens the Add Activity panel, chooses the activity by its picker option
+   * label, and presses Assign. In edit mode this writes immediately; in
+   * create mode it stages the activity in the wizard's memory. Always opens
+   * the panel itself rather than checking whether one is already open — the
+   * panel's collapse on a prior assign animates over 220ms, during which a
+   * bounding-box check reads it as still open while it is in fact `inert`,
+   * so re-detecting is less reliable than simply opening it every time.
+   *
+   * The picker's option list arrives from a request the panel opening
+   * dispatches, so the desired option is awaited rather than assumed present
+   * the instant the panel opens.
    */
   async assignActivity(optionLabel: string): Promise<void> {
-    if (!(await this.extraCurricularsStep().locator('#panel').isVisible().catch(() => false))) {
-      await this.openAddActivityPanel();
-    }
+    await this.openAddActivityPanel();
+    await expect(this.activityPicker().locator('option', { hasText: optionLabel })).toHaveCount(1);
     await this.activityPicker().selectOption({ label: optionLabel });
     await this.extraCurricularsStep().locator('#assignBtn').click();
   }
