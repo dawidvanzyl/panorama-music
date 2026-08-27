@@ -368,6 +368,15 @@ export class StudentsPage extends BasePage {
     return this.page.locator('pm-student-courses-summary:visible');
   }
 
+  /**
+   * Read-only extra-curriculars summary for the currently-expanded row (same
+   * scoping rule as siblings). Absent entirely for a Private-grade student
+   * (#278's addendum) — it is never rendered for them, not merely empty.
+   */
+  visibleExtraCurricularsSummary(): Locator {
+    return this.page.locator('pm-student-extra-curriculars-summary:visible');
+  }
+
   /** Opens the Edit wizard for `name` and switches to its Guardians tab. */
   async openGuardiansTab(name: string): Promise<void> {
     await this.row(name).locator('.students-table__btn--edit').click();
