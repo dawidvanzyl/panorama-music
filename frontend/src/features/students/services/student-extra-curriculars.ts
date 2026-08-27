@@ -72,22 +72,17 @@ export async function getStudentExtraCurriculars(studentId: string): Promise<Stu
 }
 
 /**
- * What the add panel's picker offers: activities of this student's own phase
- * that they do not already take part in. Both narrowings are the server's, so
- * the panel shows the list as it arrives rather than filtering it here.
- */
-export async function getAssignableExtraCurriculars(studentId: string): Promise<StudentExtraCurricular[]> {
-  const response = await fetch(`${STUDENTS_BASE}/${studentId}/extra-curriculars/assignable`, {
-    headers: authHeaders(),
-  });
-  return handleResponse<StudentExtraCurricular[]>(response);
-}
-
-/**
- * The same picker, for a student who does not exist yet. The create wizard
- * stages its assignments before the student is saved, so it has no identifier to
- * ask the student-scoped read with — and what it has already staged is its own to
- * leave out of the list.
+ * What the add panel's picker offers: the activities of a phase. Both the create
+ * and the edit wizard read through this one, driven by the phase the Student
+ * step's field currently holds rather than by any stored student — an unsaved
+ * phase change has to be reflected, and a student-scoped read resolves the phase
+ * from the stored row, which cannot see one.
+ *
+ * It narrows by phase only, so leaving out what the student already takes part in
+ * is the step's own filter — the same one it applies to staged activities.
+ *
+ * The student-scoped `GET /api/students/{id}/extra-curriculars/assignable` still
+ * exists and is still tested; nothing in the interface reads through it now.
  */
 export async function getAssignableExtraCurricularsByPhase(phase: PhaseType): Promise<StudentExtraCurricular[]> {
   const response = await fetch(`${STUDENTS_BASE}/extra-curriculars/assignable?phase=${encodeURIComponent(phase)}`, {

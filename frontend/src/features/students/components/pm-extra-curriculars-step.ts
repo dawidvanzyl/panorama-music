@@ -294,6 +294,23 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.addBtn.addEventListener('click', this.handleAddClicked);
     this.cancelBtn.addEventListener('click', this.handleCancelClicked);
     this.assignBtn.addEventListener('click', this.handleAssignClicked);
+
+    // Anything assigned to these before the element was upgraded landed as a
+    // plain own property, which then shadows the accessor for good — every later
+    // assignment silently sets a field nothing reads. Re-applying them through
+    // the accessors is the standard upgrade fix, and it matters here because the
+    // wizard pushes the phase down as it opens, which can precede the upgrade.
+    this.upgradeProperty('phase');
+    this.upgradeProperty('assigned');
+    this.upgradeProperty('assignable');
+  }
+
+  private upgradeProperty(name: 'phase' | 'assigned' | 'assignable'): void {
+    if (!Object.hasOwn(this, name)) return;
+
+    const value = this[name] as never;
+    delete this[name];
+    this[name] = value;
   }
 
   disconnectedCallback(): void {
@@ -340,10 +357,13 @@ export class PmExtraCurricularsStep extends HTMLElement {
 
   /** The picker's options, pushed in by the page when the panel is opened. */
   set assignable(value: StudentExtraCurricular[]) {
-    // In create mode nothing has been written, so what the wizard has staged is
-    // its own to leave out — the server cannot know about it.
-    const staged = new Set(this._assigned.map((activity) => activity.extraCurricularId));
-    this._assignable = value.filter((activity) => !staged.has(activity.extraCurricularId));
+    // The read is phase-scoped and knows nothing about this student, so leaving
+    // out what they already take part in is this step's job in both modes: in
+    // create mode those are the staged activities the server cannot know about,
+    // in edit mode the ones it holds but was not asked to exclude. One filter,
+    // because `_assigned` is the same list either way.
+    const held = new Set(this._assigned.map((activity) => activity.extraCurricularId));
+    this._assignable = value.filter((activity) => !held.has(activity.extraCurricularId));
     this.renderAssignable();
   }
 

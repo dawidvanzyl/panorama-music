@@ -88,7 +88,6 @@ vi.mock('../../services/student-extra-curriculars', async () => {
   return {
     ...actual,
     getStudentExtraCurriculars: vi.fn(),
-    getAssignableExtraCurriculars: vi.fn(),
     getAssignableExtraCurricularsByPhase: vi.fn(),
     assignExtraCurricular: vi.fn(),
     removeExtraCurricular: vi.fn(),
@@ -97,7 +96,6 @@ vi.mock('../../services/student-extra-curriculars', async () => {
 
 import {
   getStudentExtraCurriculars,
-  getAssignableExtraCurriculars,
   getAssignableExtraCurricularsByPhase,
   assignExtraCurricular,
   removeExtraCurricular,
@@ -261,8 +259,12 @@ function fillStudentStep(wizard: PmStudentWizardModal): void {
   (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
   (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
   (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
-  (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
   (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+  // Chosen the way a user chooses it: the Extra-Curriculars step follows this
+  // field's change event, so setting the value alone would announce nothing.
+  const phaseSelect = stepShadow.getElementById('phase') as HTMLSelectElement;
+  phaseSelect.value = 'Junior';
+  phaseSelect.dispatchEvent(new Event('change'));
 }
 
 /** Opens the enroll panel on the Courses tab and confirms it, staging or submitting one enrollment. */
@@ -1454,11 +1456,11 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
 
   beforeEach(async () => {
     vi.mocked(getStudentExtraCurriculars).mockReset();
-    vi.mocked(getAssignableExtraCurriculars).mockReset();
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
     vi.mocked(assignExtraCurricular).mockReset();
     vi.mocked(removeExtraCurricular).mockReset();
     vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
-    vi.mocked(getAssignableExtraCurriculars).mockResolvedValue([choir, orchestra]);
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir, orchestra]);
     vi.mocked(assignExtraCurricular).mockResolvedValue(choir);
     vi.mocked(removeExtraCurricular).mockResolvedValue(undefined);
     el = await mountPage();
@@ -1512,10 +1514,9 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
       'String Orchestra',
     ]);
 
-    // The server decides what is assignable, so the removed activity coming back
-    // into the picker is proven by asking again after the removal — this is the
-    // answer the endpoint now gives, with Choir no longer excluded.
-    vi.mocked(getAssignableExtraCurriculars).mockResolvedValue([choir]);
+    // The read is phase-scoped and returns both, so the removed activity coming
+    // back into the picker is the step's own filter no longer excluding it — the
+    // student stopped holding it.
     const stepShadow = extraCurricularsStepShadowOf(wizard);
     (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
     await flush();

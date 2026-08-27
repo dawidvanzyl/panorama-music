@@ -77,8 +77,17 @@ function fillStudentStep(): void {
   (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
   (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
   (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
-  (stepShadow.getElementById('phase') as HTMLSelectElement).value = 'Junior';
   (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+  // Chosen the way a user chooses it: the Extra-Curriculars step follows this
+  // field's change event, so setting the value alone would announce nothing.
+  choosePhase('Junior');
+}
+
+/** Chooses a phase on the Student tab the way a user does, so the wizard reacts. */
+function choosePhase(phase: string): void {
+  const phaseSelect = byId('studentStep').shadowRoot!.getElementById('phase') as HTMLSelectElement;
+  phaseSelect.value = phase;
+  phaseSelect.dispatchEvent(new Event('change'));
 }
 
 /** Chooses a grade on the Student tab the way a user does, so the wizard reacts. */

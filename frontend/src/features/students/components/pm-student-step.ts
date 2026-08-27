@@ -136,6 +136,9 @@ export class PmStudentStep extends HTMLElement {
     populateSelectOptions(this.languageSelect, LANGUAGES);
 
     this.gradeSelect.addEventListener('change', () => this.updateClassPhaseVisibility());
+    // The phase is what the Extra-Curriculars step follows, so choosing one has to
+    // be announced in its own right — a grade change is not the only way it moves.
+    this.phaseSelect.addEventListener('change', () => this.announcePhase());
     this.updateClassPhaseVisibility();
   }
 
@@ -177,14 +180,22 @@ export class PmStudentStep extends HTMLElement {
       this.phaseSelect!.value = '';
     }
 
-    // A Private-grade student is not part of the school and takes no part in
-    // extra-curriculars, so the wizard's own shape depends on this field. Told
-    // rather than polled, so the tab reacts the moment the grade changes.
+    this.announcePhase();
+  }
+
+  /**
+   * Announces the phase this form currently holds. The Extra-Curriculars step
+   * follows it live — a phase makes that step available, no phase removes it — so
+   * the value is pushed out rather than polled, and it is the field's own value
+   * rather than the saved student's. Grade Private clears the field above, which
+   * is how a Private-grade student ends up with no step.
+   */
+  private announcePhase(): void {
     this.dispatchEvent(
-      new CustomEvent('student-grade-changed', {
+      new CustomEvent('student-phase-changed', {
         bubbles: true,
         composed: true,
-        detail: { isPrivate },
+        detail: { phase: (this.phaseSelect!.value || null) as StudentInput['phase'] },
       }),
     );
   }

@@ -46,7 +46,6 @@ import {
 } from '../services/enrollments';
 import {
   getStudentExtraCurriculars,
-  getAssignableExtraCurriculars,
   getAssignableExtraCurricularsByPhase,
   assignExtraCurricular,
   removeExtraCurricular,
@@ -624,19 +623,17 @@ export class PmStudentsPage extends HTMLElement {
   };
 
   /**
-   * The picker's options, asked for each time the Add Activity panel opens. In
-   * edit mode the student exists, so the server excludes what they already take
-   * part in; in create mode there is no student yet, so the phase alone narrows
-   * it and the tab leaves out what it has staged.
+   * The picker's options, asked for each time the Add Activity panel opens. Both
+   * modes read by the phase the form currently holds, never by the stored
+   * student: an unsaved phase is the whole point — editing a Private-grade
+   * student into a graded one has to offer that phase's activities before
+   * anything is saved. Leaving out what the student already holds is the step's,
+   * since a phase-scoped read knows nothing about them.
    */
   private handleAssignableRequested = async (event: Event): Promise<void> => {
-    const { studentId, phase } = (event as CustomEvent<{ studentId: string | null; phase: PhaseType | null }>).detail;
+    const { phase } = (event as CustomEvent<{ phase: PhaseType | null }>).detail;
     try {
-      if (studentId) {
-        this.wizardModal!.assignableExtraCurriculars = await getAssignableExtraCurriculars(studentId);
-        return;
-      }
-      // Grade Private carries no phase, and no activity is offered to one.
+      // No phase means no step at all, so there is nothing to offer.
       this.wizardModal!.assignableExtraCurriculars = phase ? await getAssignableExtraCurricularsByPhase(phase) : [];
     } catch (err) {
       this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
