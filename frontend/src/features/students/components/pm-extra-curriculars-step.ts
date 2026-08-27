@@ -422,12 +422,15 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.openPanel();
 
     // The list is asked for each time the panel opens, so an activity removed a
-    // moment ago is offered again without the tab having to track it.
+    // moment ago is offered again without the tab having to track it. The phase
+    // is the whole of the request: the read is phase-scoped in both modes, and
+    // which activities this student already holds is settled here rather than by
+    // the caller.
     this.dispatchEvent(
       new CustomEvent('extra-curriculars-assignable-requested', {
         bubbles: true,
         composed: true,
-        detail: { studentId: this._studentId, phase: this._phase },
+        detail: { phase: this._phase },
       }),
     );
   };
