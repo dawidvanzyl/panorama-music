@@ -57,6 +57,19 @@ export const MISSING_ERROR = 'Enter a description and choose a phase.';
 
 export const MISSING_SLOT_ERROR = 'Choose a day and a start time.';
 
+/**
+ * Why an activity in use cannot go, named against the row that offered the
+ * delete — the same words the server refuses the deletion with.
+ */
+export function cannotDeleteError(description: string, assignedStudents: number): string {
+  return `${description} has ${assignedStudents} assigned student(s) and cannot be deleted.`;
+}
+
+/** The confirmation's body, naming the activity and what goes with it. */
+export function deleteActivityBody(description: string, practiceTimeCount: number): string {
+  return `This action cannot be undone. The activity ${description} and its ${practiceTimeCount} practice time(s) will be permanently removed.`;
+}
+
 /** Refuses a slot the form already holds, naming the one it is about. */
 export function duplicatePracticeTimeError(practiceTime: { day: DayType; startTime: string }): string {
   return `${practiceTimeText(practiceTime)} is already a practice time for this activity.`;

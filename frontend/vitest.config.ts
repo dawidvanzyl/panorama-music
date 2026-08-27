@@ -196,7 +196,7 @@ export default defineConfig({
       { name: '277UC12', description: 'The Extra-Curriculars tab shows an empty-state message in place of rows when the student is assigned to nothing' },
       { name: '277UC13', description: 'Each assigned row shows the activity, a phase badge, its practice-time slots and a Remove control' },
       { name: '277UC14', description: 'Add Activity opens a panel offering an activity picker, a disabled Phase field showing the student own phase, and Cancel and Assign' },
-      { name: '277UC15', description: 'The activity picker offers only phase-matched activities the student is not already assigned to, labelled with description and practice time' },
+      { name: '277UC15', description: 'The activity picker offers only phase-matched activities the student is not already assigned to' },
       { name: '277UC16', description: 'Assigning a chosen activity closes the panel and lists it in the assigned-activity table' },
       { name: '277UC17', description: 'Cancel closes the Add Activity panel and sends no assignment request' },
       { name: '277UC18', description: 'Pressing Assign with nothing chosen assigns nothing and sends no request' },

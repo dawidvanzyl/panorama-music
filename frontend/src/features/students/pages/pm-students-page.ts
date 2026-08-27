@@ -383,18 +383,21 @@ export class PmStudentsPage extends HTMLElement {
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
     try {
-      const [siblings, guardians, enrollments] = await Promise.all([
+      const [siblings, guardians, enrollments, extraCurriculars] = await Promise.all([
         getSiblings(studentId),
         getGuardians(studentId),
         getStudentCourses(studentId),
+        getStudentExtraCurriculars(studentId),
       ]);
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
       this.studentsTable!.setCoursesSummary(studentId, enrollments);
+      this.studentsTable!.setExtraCurricularsSummary(studentId, extraCurriculars);
     } catch {
       this.studentsTable!.setSiblingsSummary(studentId, []);
       this.studentsTable!.setGuardiansSummary(studentId, []);
       this.studentsTable!.setCoursesSummary(studentId, []);
+      this.studentsTable!.setExtraCurricularsSummary(studentId, []);
     }
   };
 

@@ -110,6 +110,51 @@ export async function createExtraCurricular(input: ExtraCurricularInput): Promis
 }
 
 /**
+ * Corrects an activity's description and phase. Its practice times are not part
+ * of the request: they are maintained one at a time from the expanded row, and a
+ * slot is never edited in place.
+ */
+export async function updateExtraCurricular(
+  extraCurricularId: string,
+  input: { description: string; phase: PhaseType },
+): Promise<ExtraCurricular> {
+  const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ description: input.description, phase: input.phase }),
+  });
+  const result = await handleResponse<ExtraCurricular>(response);
+  clearExtraCurricularsCache();
+  return result;
+}
+
+/**
+ * How many students take part in the activity — the same condition the delete
+ * enforces, so the screen can say an activity is in use rather than offering a
+ * confirmation the server would reject.
+ */
+export async function countExtraCurricularStudents(extraCurricularId: string): Promise<{ count: number }> {
+  const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}/students/count`, {
+    headers: authHeaders(),
+  });
+  return handleResponse<{ count: number }>(response);
+}
+
+/** Removes the activity and every one of its practice times. */
+export async function deleteExtraCurricular(extraCurricularId: string): Promise<void> {
+  const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+
+  // A deletion answers with no body, so there is nothing to read back — only the
+  // refusal, if there was one.
+  await assertOk(response);
+
+  clearExtraCurricularsCache();
+}
+
+/**
  * Adds one weekly slot to an activity that already exists. Slots are maintained
  * one at a time — there is no request that replaces an activity's whole set.
  */

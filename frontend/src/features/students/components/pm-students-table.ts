@@ -1,12 +1,15 @@
 import './pm-student-siblings-summary';
 import './pm-student-guardians-summary';
 import './pm-student-courses-summary';
+import './pm-student-extra-curriculars-summary';
 import type { StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { EnrollmentResult } from '../services/enrollments';
+import type { StudentExtraCurricular } from '../services/student-extra-curriculars';
 import type { PmStudentSiblingsSummary } from './pm-student-siblings-summary';
 import type { PmStudentGuardiansSummary } from './pm-student-guardians-summary';
 import type { PmStudentCoursesSummary } from './pm-student-courses-summary';
+import type { PmStudentExtraCurricularsSummary } from './pm-student-extra-curriculars-summary';
 import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
@@ -165,6 +168,8 @@ export class PmStudentsTable extends HTMLElement {
   private _guardianSummaryComponents = new Map<string, PmStudentGuardiansSummary>();
   private _enrollmentsCache = new Map<string, EnrollmentResult[]>();
   private _coursesSummaryComponents = new Map<string, PmStudentCoursesSummary>();
+  private _extraCurricularsCache = new Map<string, StudentExtraCurricular[]>();
+  private _extraCurricularsSummaryComponents = new Map<string, PmStudentExtraCurricularsSummary>();
   private _relationships: GuardianRelationship[] = [];
 
   constructor() {
@@ -204,6 +209,17 @@ export class PmStudentsTable extends HTMLElement {
     this._guardiansCache.set(studentId, guardians);
     const component = this._guardianSummaryComponents.get(studentId);
     if (component) component.guardians = guardians;
+  }
+
+  /**
+   * A Private-grade student has no summary component at all, so this is a no-op
+   * for them — the cache entry is still kept, which costs nothing and keeps the
+   * caller from having to know the rule.
+   */
+  setExtraCurricularsSummary(studentId: string, extraCurriculars: StudentExtraCurricular[]): void {
+    this._extraCurricularsCache.set(studentId, extraCurriculars);
+    const component = this._extraCurricularsSummaryComponents.get(studentId);
+    if (component) component.extraCurriculars = extraCurriculars;
   }
 
   setCoursesSummary(studentId: string, enrollments: EnrollmentResult[]): void {
@@ -312,6 +328,22 @@ export class PmStudentsTable extends HTMLElement {
     this._coursesSummaryComponents.set(student.studentId, coursesSummary);
 
     summaryWrapper.append(siblingsSummary, guardiansSummary, coursesSummary);
+
+    // A Private-grade student takes no part in extra-curriculars, so the roster
+    // shows no section at all rather than an empty one — an empty state would
+    // suggest they could hold activities. They have no tab in the modal for the
+    // same reason.
+    if (student.grade !== 'Private') {
+      const extraCurricularsSummary = document.createElement(
+        'pm-student-extra-curriculars-summary',
+      ) as PmStudentExtraCurricularsSummary;
+      extraCurricularsSummary.extraCurriculars = this._extraCurricularsCache.get(student.studentId) ?? [];
+      this._extraCurricularsSummaryComponents.set(student.studentId, extraCurricularsSummary);
+      summaryWrapper.appendChild(extraCurricularsSummary);
+    } else {
+      this._extraCurricularsSummaryComponents.delete(student.studentId);
+    }
+
     summaryCell.appendChild(summaryWrapper);
     summaryRow.appendChild(summaryCell);
 

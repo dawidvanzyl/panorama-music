@@ -1,21 +1,28 @@
 import '../components/pm-extra-curricular-form';
 import '../components/pm-extra-curricular-filter-bar';
 import '../components/pm-extra-curricular-table';
+import '../components/pm-delete-extra-curricular-modal';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   ExtraCurricularsError,
   addPracticeTime,
+  countExtraCurricularStudents,
   createExtraCurricular,
+  deleteExtraCurricular,
   getExtraCurriculars,
   removePracticeTime,
+  updateExtraCurricular,
   type DayType,
   type ExtraCurricular,
   type ExtraCurricularInput,
+  type PhaseType,
 } from '../services/extra-curriculars';
+import { cannotDeleteError } from '../services/extra-curricular-display';
 import { filterExtraCurriculars, type ExtraCurricularFilters } from '../services/filter-extra-curriculars';
 import type { PmExtraCurricularFilterBar } from '../components/pm-extra-curricular-filter-bar';
 import type { PmExtraCurricularForm } from '../components/pm-extra-curricular-form';
 import type { PmExtraCurricularTable } from '../components/pm-extra-curricular-table';
+import type { PmDeleteExtraCurricularModal } from '../components/pm-delete-extra-curricular-modal';
 
 /**
  * Who may maintain the catalogue. Admin is deliberately absent: this area is
@@ -63,12 +70,14 @@ template.innerHTML = `
   <pm-extra-curricular-form id="form" hidden></pm-extra-curricular-form>
   <pm-extra-curricular-filter-bar id="filterBar"></pm-extra-curricular-filter-bar>
   <pm-extra-curricular-table id="table"></pm-extra-curricular-table>
+  <pm-delete-extra-curricular-modal id="deleteModal"></pm-delete-extra-curricular-modal>
 `;
 
 export class PmExtraCurricularsPage extends HTMLElement {
   private activityForm: PmExtraCurricularForm | null = null;
   private filterBar: PmExtraCurricularFilterBar | null = null;
   private activityTable: PmExtraCurricularTable | null = null;
+  private deleteModal: PmDeleteExtraCurricularModal | null = null;
   private errorBanner: HTMLElement | null = null;
   private filters: ExtraCurricularFilters = {};
   /** The whole catalogue, read once and narrowed in place by the filter bar. */
@@ -85,6 +94,7 @@ export class PmExtraCurricularsPage extends HTMLElement {
     this.activityForm = this.shadowRoot!.getElementById('form') as unknown as PmExtraCurricularForm;
     this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmExtraCurricularFilterBar;
     this.activityTable = this.shadowRoot!.getElementById('table') as unknown as PmExtraCurricularTable;
+    this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteExtraCurricularModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     // A Teacher who is not a Coordinator gets a read-only page: the filter bar
@@ -98,6 +108,9 @@ export class PmExtraCurricularsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('extra-curricular-filter-changed', this.handleFilterChanged);
     this.shadowRoot!.addEventListener('extra-curricular-practice-time-add-requested', this.handlePracticeTimeAdd);
     this.shadowRoot!.addEventListener('extra-curricular-practice-time-remove-requested', this.handlePracticeTimeRemove);
+    this.shadowRoot!.addEventListener('extra-curricular-save-requested', this.handleSaveRequested);
+    this.shadowRoot!.addEventListener('extra-curricular-delete-clicked', this.handleDeleteClicked);
+    this.shadowRoot!.addEventListener('extra-curricular-delete-confirmed', this.handleDeleteConfirmed);
 
     void this.loadExtraCurriculars();
   }
@@ -110,7 +123,78 @@ export class PmExtraCurricularsPage extends HTMLElement {
       'extra-curricular-practice-time-remove-requested',
       this.handlePracticeTimeRemove,
     );
+    this.shadowRoot!.removeEventListener('extra-curricular-save-requested', this.handleSaveRequested);
+    this.shadowRoot!.removeEventListener('extra-curricular-delete-clicked', this.handleDeleteClicked);
+    this.shadowRoot!.removeEventListener('extra-curricular-delete-confirmed', this.handleDeleteConfirmed);
   }
+
+  private handleSaveRequested = async (event: Event): Promise<void> => {
+    const { extraCurricularId, description, phase } = (
+      event as CustomEvent<{ extraCurricularId: string; description: string; phase: PhaseType }>
+    ).detail;
+    this.clearError();
+
+    try {
+      const updated = await updateExtraCurricular(extraCurricularId, { description, phase });
+      // The response is the updated activity, so the list is corrected in place.
+      // A re-read would put a second call between the change and the row that
+      // reports it, and its failure would leave the row asserting stale values
+      // for a change that actually landed.
+      this.extraCurriculars = this.extraCurriculars.map((activity) =>
+        activity.extraCurricularId === extraCurricularId ? updated : activity,
+      );
+      this.renderExtraCurriculars();
+    } catch (err) {
+      // The reason belongs against the row it concerns, which stays in edit mode
+      // holding the entered values so the change can be corrected.
+      this.activityTable!.showRowError(extraCurricularId, this.messageFor(err));
+    }
+  };
+
+  /**
+   * An activity any student takes part in cannot be deleted, so the confirmation
+   * is never opened for one — the user is told why against the row instead of
+   * being asked to confirm something the server would refuse.
+   */
+  private handleDeleteClicked = async (event: Event): Promise<void> => {
+    const { extraCurricular } = (event as CustomEvent<{ extraCurricular: ExtraCurricular }>).detail;
+    this.clearError();
+
+    try {
+      const { count } = await countExtraCurricularStudents(extraCurricular.extraCurricularId);
+      if (count > 0) {
+        this.activityTable!.showRowError(
+          extraCurricular.extraCurricularId,
+          cannotDeleteError(extraCurricular.description, count),
+        );
+        return;
+      }
+      this.deleteModal!.show(
+        extraCurricular.extraCurricularId,
+        extraCurricular.description,
+        extraCurricular.practiceTimes.length,
+      );
+    } catch (err) {
+      this.activityTable!.showRowError(extraCurricular.extraCurricularId, this.messageFor(err));
+    }
+  };
+
+  private handleDeleteConfirmed = async (event: Event): Promise<void> => {
+    const { extraCurricularId } = (event as CustomEvent<{ extraCurricularId: string }>).detail;
+    this.clearError();
+
+    try {
+      await deleteExtraCurricular(extraCurricularId);
+      // Dropped from the list rather than re-read, for the same reason an update
+      // is applied in place.
+      this.extraCurriculars = this.extraCurriculars.filter(
+        (activity) => activity.extraCurricularId !== extraCurricularId,
+      );
+      this.renderExtraCurriculars();
+    } catch (err) {
+      this.activityTable!.showRowError(extraCurricularId, this.messageFor(err));
+    }
+  };
 
   private handleFormSubmitted = async (event: Event): Promise<void> => {
     const detail = (event as CustomEvent<ExtraCurricularInput>).detail;

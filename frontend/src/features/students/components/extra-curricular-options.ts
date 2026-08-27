@@ -42,13 +42,14 @@ export function practiceTimesText(extraCurricular: StudentExtraCurricular): stri
 }
 
 /**
- * How the picker labels an option: "{description} — {day} {start time}", per the
- * design. The first slot names the activity's regular meeting; the whole set is
- * what the assigned table then shows.
+ * How the picker labels an option: the activity's description, alone. A student
+ * is assigned to an activity and never to one of its practice times, so naming a
+ * slot in the option would state something false — an activity meeting twice
+ * would read as a choice between its two slots, with the second hidden. The
+ * whole set is what the assigned row then shows.
  */
 export function activityOptionLabel(extraCurricular: StudentExtraCurricular): string {
-  const first = extraCurricular.practiceTimes[0];
-  return first ? `${extraCurricular.description} — ${practiceTimeText(first)}` : extraCurricular.description;
+  return extraCurricular.description;
 }
 
 /** Stands in for the rows when the student takes part in nothing. */

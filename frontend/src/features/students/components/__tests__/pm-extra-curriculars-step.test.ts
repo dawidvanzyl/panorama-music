@@ -145,13 +145,13 @@ describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC
 });
 
 describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC15'] }, () => {
-  it('labels each option with its description and its practice time', () => {
+  it('labels each option with its description alone', () => {
     step.activate('s1', 'Junior');
     step.assigned = [];
 
     openPanel([drumline, orchestra]);
 
-    expect(pickerOptions()).toEqual(['Junior Drumline — Tuesday 13:30', 'String Orchestra — Monday 14:30']);
+    expect(pickerOptions()).toEqual(['Junior Drumline', 'String Orchestra']);
   });
 
   it('leaves out an activity already staged, which the server cannot know about in create mode', () => {
@@ -160,7 +160,7 @@ describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC
 
     openPanel([choir, orchestra]);
 
-    expect(pickerOptions()).toEqual(['String Orchestra — Monday 14:30']);
+    expect(pickerOptions()).toEqual(['String Orchestra']);
   });
 });
 
@@ -220,7 +220,7 @@ describe('pm-extra-curriculars-step — removing an assignment', { tags: ['277UC
     expect(rows().map((row) => cellsOf(row)[0])).toEqual(['String Orchestra']);
 
     openPanel([choir, orchestra, drumline]);
-    expect(pickerOptions()).toEqual(['Choir — Tuesday 14:30', 'Junior Drumline — Tuesday 13:30']);
+    expect(pickerOptions()).toEqual(['Choir', 'Junior Drumline']);
   });
 
   it('asks the page to remove a persisted assignment rather than dropping it in memory', () => {
