@@ -148,8 +148,10 @@ describe('pm-extra-curriculars-page — lists each activity with its slots', { t
     el = await mountPage();
 
     expect(rowTextsOf(el)).toEqual([
-      ['chevron_right', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00', ''],
-      ['chevron_right', 'Junior Choir', 'Junior', 'Tuesday 14:30', ''],
+      // The last cell is the Actions column, which #278 filled with the row's
+      // Edit and Delete controls.
+      ['chevron_right', 'Marimba Band', 'Senior', 'Monday 09:15 · Monday 16:00 · Friday 14:00', 'EditDelete'],
+      ['chevron_right', 'Junior Choir', 'Junior', 'Tuesday 14:30', 'EditDelete'],
     ]);
   });
 

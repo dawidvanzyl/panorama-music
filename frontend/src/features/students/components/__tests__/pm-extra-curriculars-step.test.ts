@@ -120,6 +120,33 @@ describe('pm-extra-curriculars-step — assigned rows', { tags: ['277UC13'] }, (
   });
 });
 
+describe('pm-extra-curriculars-step — the picker names the activity', { tags: ['278UC23'] }, () => {
+  it('shows the description alone and names no practice time', () => {
+    step.activate('s1', 'Junior');
+    step.assigned = [];
+
+    // Choir meets twice. Naming its first slot would state that the Tuesday
+    // meeting is what is being chosen, and hide the Thursday one entirely.
+    openPanel([choir]);
+
+    expect(pickerOptions()).toEqual(['Choir']);
+    expect(pickerOptions()[0]).not.toContain('Tuesday');
+    expect(pickerOptions()[0]).not.toContain('14:30');
+  });
+});
+
+describe('pm-extra-curriculars-step — the row names the times', { tags: ['278UC24'] }, () => {
+  it('lists every practice time of an assigned activity, in day-then-time order', () => {
+    step.activate('s1', 'Junior');
+
+    step.assigned = [choir];
+
+    // Both slots, in the order the activity itself keeps — the student is
+    // assigned to the activity, so all of its meetings are theirs.
+    expect(cellsOf(rows()[0])[2]).toBe('Tuesday 14:30 · Thursday 15:30');
+  });
+});
+
 describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC14'] }, () => {
   beforeEach(() => {
     step.activate('s1', 'Junior');
