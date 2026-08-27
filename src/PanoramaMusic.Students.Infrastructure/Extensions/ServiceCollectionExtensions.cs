@@ -10,6 +10,7 @@ using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.LessonStructures;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
+using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Application.Validators.Students;
@@ -23,6 +24,7 @@ using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentCourses;
+using PanoramaMusic.Students.Infrastructure.Translators.StudentExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
 using PanoramaMusic.Students.Infrastructure.TypeHandlers;
 
@@ -58,6 +60,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<ICourseRepository, CourseRepository>();
 		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
 		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
+		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -95,6 +98,11 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetExtraCurricularsHandler>();
 		services.AddTransient<AddPracticeTimeHandler>();
 		services.AddTransient<RemovePracticeTimeHandler>();
+		services.AddTransient<GetStudentExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
+		services.AddTransient<AssignExtraCurricularHandler>();
+		services.AddTransient<RemoveExtraCurricularHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -120,6 +128,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeAddedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
 
 		return services;
 	}
