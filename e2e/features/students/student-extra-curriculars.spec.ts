@@ -128,6 +128,29 @@ async function seedJuniorActivityWithOwner(
   return { ...activity, owner };
 }
 
+/**
+ * A Senior-phase activity, created by a fresh, throwaway Coordinator. Used by
+ * `10IT11` S2, which deliberately picks the phase furthest from anything a
+ * Private-grade student (who has none) could be read as matching, so the
+ * refusal cannot be mistaken for the ordinary phase-mismatch rule (`277UC7`).
+ */
+async function seedSeniorActivity(page: Page, description: string, slot: PracticeSlot): Promise<SeededActivity> {
+  await loginAsNewUser(page, 'ec-coordinator', ['Coordinator']);
+  const activitiesPage = new ExtraCurricularsPage(page);
+  await activitiesPage.gotoExtraCurriculars();
+  await activitiesPage.createActivity(description, 'Senior', [slot]);
+  await expect(activitiesPage.row(description)).toBeVisible();
+
+  const { extraCurricularId, practiceTimes } = await getActivityByDescription(page, description);
+  return {
+    description,
+    slot,
+    optionLabel: `${description} — ${slotText(slot)}`,
+    extraCurricularId,
+    practiceTimeId: practiceTimes[0].practiceTimeId,
+  };
+}
+
 /** A Junior student, enrolled in one course, seeded by Admin through the API. */
 async function seedJuniorStudent(page: Page): Promise<string> {
   await loginAsAdmin(page);
@@ -447,3 +470,87 @@ test.describe(
     });
   },
 );
+
+test.describe('Extra-Curriculars — a Private-grade student takes no part in extra-curriculars', { tag: ['@10IT11'] }, () => {
+  test("the wizard never offers the step, and the assignment endpoint refuses the student directly", async ({
+    page,
+  }) => {
+    // --- S1: the wizard never offers the Extra-Curriculars step, in create mode or in edit mode ---
+    await loginAsAdmin(page);
+    const target = await seedEnrollmentTarget(page);
+    const studentsPage = new StudentsPage(page);
+    await studentsPage.gotoStudents();
+
+    const surname = uniqueSurname('Private');
+    await studentsPage.startCreatingStudent({
+      firstName: 'Naledi',
+      lastName: surname,
+      dateOfBirth: '2014-05-12',
+      grade: 'Private',
+      language: 'English',
+    });
+    await studentsPage.goToNextStep(); // Student -> Siblings
+    await studentsPage.goToNextStep(); // Siblings -> Guardians
+    await studentsPage.goToNextStep(); // Guardians -> Courses
+    await studentsPage.enrollInCourse({ courseLabel: target.courseLabel, teacherName: target.teacherName });
+
+    // Courses carries Save directly — there is no further step to advance to,
+    // because Extra-Curriculars was never inserted into a Private-grade
+    // student's wizard.
+    await expect(studentsPage.wizardModal.locator('#nextBtn')).toBeHidden();
+    await expect(studentsPage.wizardModal.locator('#saveBtn')).toBeVisible();
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toBeHidden();
+
+    await studentsPage.saveStudent();
+    await expect(studentsPage.row(surname)).toBeVisible();
+
+    // Reopening in edit mode: Student, Siblings, Guardians, Courses — Courses
+    // is the last tab, and no Extra-Curriculars tab is offered.
+    await studentsPage.openCoursesTab(surname);
+    await expect(studentsPage.wizardModal.locator('#tabStudent')).toBeVisible();
+    await expect(studentsPage.wizardModal.locator('#tabSiblings')).toBeVisible();
+    await expect(studentsPage.wizardModal.locator('#tabGuardians')).toBeVisible();
+    await expect(studentsPage.wizardModal.locator('#tabCourses')).toBeVisible();
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toBeHidden();
+    await studentsPage.closeWizard();
+
+    // --- S2: the assignment endpoint refuses a Private-grade student directly, independent of the UI ---
+    const studentId = await studentIdBySurname(page, surname);
+    const token = uniqueToken('10IT11');
+    const activity = await seedSeniorActivity(page, `${token} Ineligible Activity`, {
+      day: 'Monday',
+      startTime: '15:00',
+    });
+
+    // Signed in as Admin, calling the endpoint directly — bypassing the
+    // wizard entirely, since hiding the step is not the enforcement.
+    await loginAsAdmin(page);
+    const assignResult = await page.evaluate(
+      async ({ studentId, extraCurricularId }) => {
+        const response = await fetch(`/api/students/${studentId}/extra-curriculars`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+          },
+          body: JSON.stringify({ extraCurricularId }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        return { status: response.status, error: body.error };
+      },
+      { studentId, extraCurricularId: activity.extraCurricularId },
+    );
+
+    // A validation refusal, not a 404 — the student and the activity both
+    // exist; it is the grade that is refused, not a missing resource. The
+    // message is not pinned to an exact string the design does not fix, but
+    // it must actually name the rule.
+    expect(assignResult.status).toBe(400);
+    expect(assignResult.error).toBeTruthy();
+    expect(assignResult.error).toMatch(/private/i);
+
+    // Nothing was persisted by the refused call.
+    const assignedAfter = await getStudentActivities(page, studentId);
+    expect(assignedAfter.map((a) => a.extraCurricularId)).not.toContain(activity.extraCurricularId);
+  });
+});

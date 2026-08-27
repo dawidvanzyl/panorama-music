@@ -78,6 +78,11 @@ export class StudentsPage extends BasePage {
    * it carries Save, and Courses only offers Next — so all four Next clicks
    * are required.
    *
+   * A Private-grade student has no Extra-Curriculars step at all (R9):
+   * Courses is their final step and carries Save directly, so only three
+   * Next clicks happen and `activityOptionLabels` is meaningless for them —
+   * passing any is a caller error, not something this silently tolerates.
+   *
    * A student must be enrolled in at least one course, so the Courses tab
    * always stages one. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
@@ -94,12 +99,21 @@ export class StudentsPage extends BasePage {
     enrollment?: EnrollmentInput,
     activityOptionLabels: string[] = [],
   ): Promise<void> {
+    const isPrivate = input.grade === 'Private';
+    if (isPrivate && activityOptionLabels.length > 0) {
+      throw new Error('A Private-grade student has no Extra-Curriculars step to stage activities on.');
+    }
+
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.enrollInCourse(enrollment);
+    if (isPrivate) {
+      await this.wizardModal.locator('#saveBtn').click();
+      return;
+    }
     await this.wizardModal.locator('#nextBtn').click();
     for (const optionLabel of activityOptionLabels) {
       await this.assignActivity(optionLabel);
