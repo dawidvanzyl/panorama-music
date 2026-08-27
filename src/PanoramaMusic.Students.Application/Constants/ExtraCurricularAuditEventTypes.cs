@@ -10,6 +10,10 @@ public static class ExtraCurricularAuditEventTypes
 {
 	public const string ExtraCurricularCreated = "students.extra_curricular.created";
 
+	public const string ExtraCurricularUpdated = "students.extra_curricular.updated";
+
+	public const string ExtraCurricularDeleted = "students.extra_curricular.deleted";
+
 	public const string PracticeTimeAdded = "students.extra_curricular.practice_time_added";
 
 	public const string PracticeTimeRemoved = "students.extra_curricular.practice_time_removed";

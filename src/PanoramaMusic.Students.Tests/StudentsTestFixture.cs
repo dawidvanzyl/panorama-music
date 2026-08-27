@@ -74,6 +74,9 @@ public sealed class StudentsTestFixture
 		services.AddTransient<WithdrawEnrollmentHandler>();
 		services.AddTransient<CreateExtraCurricularHandler>();
 		services.AddTransient<GetExtraCurricularsHandler>();
+		services.AddTransient<UpdateExtraCurricularHandler>();
+		services.AddTransient<DeleteExtraCurricularHandler>();
+		services.AddTransient<CountExtraCurricularStudentsHandler>();
 		services.AddTransient<AddPracticeTimeHandler>();
 		services.AddTransient<RemovePracticeTimeHandler>();
 		services.AddTransient<GetStudentExtraCurricularsHandler>();

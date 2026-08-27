@@ -28,6 +28,13 @@ public interface IStudentExtraCurricularRepository
 	/// </summary>
 	Task<bool> ExistsAsync(Guid studentId, Guid extraCurricularId, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// How many students currently take part in the activity. An activity with any
+	/// assignment against it cannot be deleted, so this is the condition that
+	/// blocks the delete — the same shape as the course enrollment count.
+	/// </summary>
+	Task<int> CountByExtraCurricularIdAsync(Guid extraCurricularId, CancellationToken cancellationToken);
+
 	Task CreateAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
 
 	Task DeleteAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
