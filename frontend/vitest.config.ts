@@ -204,6 +204,11 @@ export default defineConfig({
       { name: '277UC20', description: 'In edit mode an assignment or removal is written immediately without the student having to be saved' },
       { name: '277UC21', description: 'In create mode chosen activities are staged and written only once the student has been saved' },
       { name: '277UC22', description: 'Extra-Curriculars is the create wizard final step and carries Save, with Courses offering Next' },
+      { name: '277UC26', description: 'A Private-grade student has no Extra-Curriculars step in create mode and Courses carries Save' },
+      { name: '277UC27', description: 'Changing the grade to Private in create mode discards the staged activities and removes the step' },
+      { name: '277UC28', description: 'A Private-grade student is offered no Extra-Curriculars tab in edit mode and Courses is the last tab' },
+      { name: '277UC29', description: 'Changing a student grade to Private in edit mode hides the tab, and saving deletes their assignments' },
+      { name: '277UC30', description: 'Cancelling an edit that changed the grade to Private leaves the student assignments intact' },
     ],
   },
 })

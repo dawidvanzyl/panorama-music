@@ -358,6 +358,20 @@ export class PmExtraCurricularsStep extends HTMLElement {
     return this._assigned.map((activity) => activity.extraCurricularId);
   }
 
+  /**
+   * Drops everything staged and closes the panel. Run when the grade becomes
+   * Private in create mode: that student takes part in nothing, and nothing has
+   * been written yet, so the staged set simply goes. Edit mode does not call this
+   * — a persisted assignment is deleted by saving the student, not by the change.
+   */
+  discardStaged(): void {
+    this._assigned = [];
+    this._assignable = [];
+    this.clearError();
+    this.closePanel();
+    this.renderAssigned();
+  }
+
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('ec-step__message--error');

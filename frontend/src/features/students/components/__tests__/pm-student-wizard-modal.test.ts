@@ -81,6 +81,21 @@ function fillStudentStep(): void {
   (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
 }
 
+/** Chooses a grade on the Student tab the way a user does, so the wizard reacts. */
+function chooseGrade(grade: string): void {
+  const gradeSelect = byId('studentStep').shadowRoot!.getElementById('grade') as HTMLSelectElement;
+  gradeSelect.value = grade;
+  gradeSelect.dispatchEvent(new Event('change'));
+}
+
+/** Steps the create wizard from Student through to whatever its last step is. */
+function advanceToFinalStep(): void {
+  byId<HTMLButtonElement>('nextBtn').click();
+  byId<HTMLButtonElement>('nextBtn').click();
+  byId<HTMLButtonElement>('nextBtn').click();
+  if (!byId('nextBtn').hidden) byId<HTMLButtonElement>('nextBtn').click();
+}
+
 afterEach(() => {
   if (modal?.isConnected) document.body.removeChild(modal);
 });
@@ -162,5 +177,125 @@ describe('pm-student-wizard-modal — Extra-Curriculars is the create wizard fin
     (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
 
     expect((stepShadow.getElementById('phaseField') as HTMLInputElement).value).toBe('Junior');
+  });
+});
+
+describe('pm-student-wizard-modal — a Private-grade student in create mode', { tags: ['277UC26'] }, () => {
+  it('offers no Extra-Curriculars step, and Courses carries Save', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    chooseGrade('Private');
+
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+    expect(byId('stepCourses').classList.contains('wizard__step--visible')).toBe(true);
+    // Courses is their last step, so it is the one carrying Save.
+    expect(byId('saveBtn').hidden).toBe(false);
+    expect(byId('nextBtn').hidden).toBe(true);
+  });
+
+  it('leaves the wizard unchanged for every other grade', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    chooseGrade('Private');
+    // Going back to a school grade means choosing the class and phase again —
+    // Private cleared both, and both are required for every other grade.
+    chooseGrade('Grade4');
+    fillStudentStep();
+
+    advanceToFinalStep();
+
+    expect(byId('tabExtraCurriculars').hidden).toBe(false);
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+  });
+});
+
+describe('pm-student-wizard-modal — grade becoming Private discards staged activities', { tags: ['277UC27'] }, () => {
+  it('drops what was staged and removes the step, sending nothing', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    advanceToFinalStep();
+
+    // Stage one activity on the step the grade is about to remove.
+    const stepShadow = byId('extraCurricularsStep').shadowRoot!;
+    (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+    modal.assignableExtraCurriculars = [
+      {
+        extraCurricularId: 'ec1',
+        description: 'Choir',
+        phase: 'Junior',
+        practiceTimes: [{ practiceTimeId: 'pt1', day: 'Tuesday', startTime: '14:30:00' }],
+      },
+    ];
+    (stepShadow.getElementById('activitySelect') as HTMLSelectElement).value = 'ec1';
+    (stepShadow.getElementById('assignBtn') as HTMLButtonElement).click();
+    expect(modal.pendingExtraCurricularIds).toEqual(['ec1']);
+
+    byId<HTMLButtonElement>('tabStudent').click();
+    chooseGrade('Private');
+
+    expect(modal.pendingExtraCurricularIds).toEqual([]);
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+    expect(stepShadow.querySelectorAll('tbody tr')).toHaveLength(0);
+  });
+
+  it('returns to Courses when the grade turns Private while the step is showing', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    advanceToFinalStep();
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+
+    chooseGrade('Private');
+
+    // Never left showing a step the wizard no longer offers.
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(false);
+    expect(byId('stepCourses').classList.contains('wizard__step--visible')).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+  });
+});
+
+describe('pm-student-wizard-modal — a Private-grade student in edit mode', { tags: ['277UC28'] }, () => {
+  it('offers no Extra-Curriculars tab, leaving Courses last', () => {
+    mountModal();
+
+    modal.openForEdit({ ...alice, grade: 'Private', class: null, phase: null });
+
+    const visibleTabs = ([...modal.shadowRoot!.querySelectorAll('.wizard__tab')] as HTMLButtonElement[]).filter(
+      (tab) => !tab.hidden,
+    );
+    expect(visibleTabs.map((tab) => tab.textContent)).toEqual(['Student', 'Siblings', 'Guardians', 'Courses']);
+  });
+
+  it('offers the tab again when a different, non-Private student is opened', () => {
+    mountModal();
+    modal.openForEdit({ ...alice, grade: 'Private', class: null, phase: null });
+
+    modal.openForEdit(alice);
+
+    // The flag belongs to the student being edited, not to the modal instance.
+    expect(byId('tabExtraCurriculars').hidden).toBe(false);
+  });
+});
+
+describe('pm-student-wizard-modal — changing a grade to Private in edit mode', { tags: ['277UC29'] }, () => {
+  it('hides the tab on the change, leaving the deletion to the save', () => {
+    mountModal();
+    modal.openForEdit(alice);
+    byId<HTMLButtonElement>('tabExtraCurriculars').click();
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+
+    byId<HTMLButtonElement>('tabStudent').click();
+    chooseGrade('Private');
+
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(false);
   });
 });

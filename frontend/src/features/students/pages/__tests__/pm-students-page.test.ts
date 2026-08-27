@@ -1525,6 +1525,67 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
   });
 });
 
+describe('pm-students-page — a grade changed to Private in edit mode', { tags: ['277UC29', '277UC30'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getStudentExtraCurriculars).mockReset();
+    vi.mocked(removeExtraCurricular).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir, orchestra]);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  /** Opens Alice in edit mode on the Extra-Curriculars tab, then turns her Private. */
+  function turnPrivate(wizard: PmStudentWizardModal): void {
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('tabStudent') as HTMLButtonElement).click();
+    const gradeSelect = wizardShadow
+      .getElementById('studentStep')!
+      .shadowRoot!.getElementById('grade') as HTMLSelectElement;
+    gradeSelect.value = 'Private';
+    gradeSelect.dispatchEvent(new Event('change'));
+  }
+
+  it('saves the student and lets that update carry the deletion — the page deletes nothing itself', async () => {
+    vi.mocked(updateStudent).mockResolvedValue({ ...alice, grade: 'Private', class: null, phase: null });
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    turnPrivate(wizard);
+    await flush();
+
+    expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+
+    (wizard.shadowRoot!.getElementById('studentSaveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(updateStudent)).toHaveBeenCalledWith('s1', expect.objectContaining({ grade: 'Private' }));
+    // The assignments go with the update, server-side (277UC24). The page issuing
+    // its own removals would be a second, racing writer of the same rule.
+    expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+  });
+
+  it('leaves the assignments alone when the edit is cancelled instead of saved', async () => {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    turnPrivate(wizard);
+    await flush();
+
+    (wizard.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(wizard.hasAttribute('open')).toBe(false);
+    // Nothing was written on the change itself, so a cancelled edit leaves the
+    // student exactly as they were — assignments included.
+    expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+    expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+  });
+});
+
 describe('pm-students-page — create mode stages until the student is saved', { tags: ['277UC21'] }, () => {
   let el: HTMLElement;
 

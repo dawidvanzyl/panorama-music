@@ -176,6 +176,17 @@ export class PmStudentStep extends HTMLElement {
       this.classSelect!.value = '';
       this.phaseSelect!.value = '';
     }
+
+    // A Private-grade student is not part of the school and takes no part in
+    // extra-curriculars, so the wizard's own shape depends on this field. Told
+    // rather than polled, so the tab reacts the moment the grade changes.
+    this.dispatchEvent(
+      new CustomEvent('student-grade-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { isPrivate },
+      }),
+    );
   }
 
   private selectFields(): Array<{ select: HTMLSelectElement; label: string }> {
