@@ -5,6 +5,7 @@ using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Requests.ExtraCurriculars;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Exceptions;
 using Shouldly;
 using Xunit;
 
@@ -72,6 +73,49 @@ public class CreateExtraCurricularHandlerTests : IClassFixture<StudentsTestFixtu
 			() => result.PracticeTimes.Count.ShouldBe(3),
 			// Each slot is identified in its own right, so a caller can address one.
 			() => result.PracticeTimes.Select(slot => slot.PracticeTimeId).Distinct().Count().ShouldBe(3));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC25")]
+	public async Task HandleAsync_DescriptionAlreadyHeldInThatPhase_ThrowsDomainExceptionAndPersistsNothing()
+	{
+		var persisted = CaptureCreated();
+		_context.Repositories.ExtraCurricularRepositoryMock
+			.Setup(r => r.ExistsInPhaseAsync("Choir", PhaseType.Junior, null, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
+
+		var exception = await Should.ThrowAsync<DomainException>(async () => await _handler.HandleAsync(
+			CommandFor("Choir", PhaseType.Junior, (DayOfWeek.Monday, new TimeOnly(15, 0))),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			// Names what collided, in the phase it collided in.
+			() => exception.Message.ShouldBe("Junior already has an activity called \"Choir\"."),
+			() => persisted.Activity.ShouldBeNull(),
+			() => persisted.PracticeTimes.ShouldBeEmpty());
+	}
+
+	[Fact]
+	[Trait("AC", "278UC26")]
+	public async Task HandleAsync_SameDescriptionInTheOtherPhase_IsCreated()
+	{
+		var persisted = CaptureCreated();
+		// The Junior catalogue holds it; the Senior one does not, and the read is
+		// asked about the phase being created into.
+		_context.Repositories.ExtraCurricularRepositoryMock
+			.Setup(r => r.ExistsInPhaseAsync("Choir", PhaseType.Junior, null, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
+
+		var result = await _handler.HandleAsync(
+			CommandFor("Choir", PhaseType.Senior, (DayOfWeek.Monday, new TimeOnly(15, 0))),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.Description.ShouldBe("Choir"),
+			() => result.Phase.ShouldBe(PhaseType.Senior),
+			// A Junior Choir and a Senior Choir are legitimately different
+			// activities, so the second really was written.
+			() => persisted.Activity.ShouldNotBeNull());
 	}
 
 	private static CreateExtraCurricularCommand CommandFor(
