@@ -417,9 +417,13 @@ export class PmStudentWizardModal extends HTMLElement {
     this.applyGrade(isPrivate);
   };
 
+  /**
+   * Sets the grade the wizard is shaped around. Whether the tab is offered is
+   * `updateFooter`'s to apply, and every path out of here reaches it — directly,
+   * or through the `goToStep` below, which ends in it.
+   */
   private applyGrade(isPrivate: boolean): void {
     this._isPrivate = isPrivate;
-    this.tabExtraCurriculars!.hidden = isPrivate;
 
     if (isPrivate) {
       if (this._mode === 'create') this.extraCurricularsStep!.discardStaged();
