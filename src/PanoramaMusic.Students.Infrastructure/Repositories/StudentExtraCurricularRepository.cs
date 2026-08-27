@@ -100,6 +100,28 @@ public class StudentExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEve
 		domainEventCollector.Collect(assignment);
 	}
 
+	public async Task DeleteAllByStudentIdAsync(
+		Guid studentId,
+		IEnumerable<StudentExtraCurricular> assignments,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_student_extra_curriculars_by_student",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+
+		await Connection.ExecuteAsync(command);
+
+		// One write, but one event per assignment: each is its own aggregate, and
+		// the audit trail names the activities the student stopped taking part in
+		// rather than recording a bare count.
+		foreach (var assignment in assignments)
+		{
+			domainEventCollector.Collect(assignment);
+		}
+	}
+
 	private static bool IsDuplicateAssignment(PostgresException exception) =>
 		exception.SqlState == _uniqueViolationSqlState
 		&& exception.ConstraintName == _studentExtraCurricularPrimaryKey;

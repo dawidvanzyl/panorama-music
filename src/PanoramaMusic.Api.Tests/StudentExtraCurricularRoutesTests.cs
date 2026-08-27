@@ -111,6 +111,51 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 			() => afterRemove.ShouldBeEmpty());
 	}
 
+	[Fact]
+	[Trait("AC", "277UC23")]
+	public async Task AssignStudentExtraCurricular_PrivateGradeStudent_IsRefusedOverTheWireAndNothingIsPersisted()
+	{
+		var admin = await SignInAsync("student-ec-private-admin", Role.Admin, "10.0.73.6");
+		var coordinator = await SignInAsync("student-ec-private-coordinator", Role.Coordinator, "10.0.73.7");
+		var student = await CreatePrivateStudentAsync(admin, "Kagiso", "Dlamini");
+		var activity = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
+
+		// The interface hides the step, but the rule is not the interface's: this
+		// is the request the hidden step would have sent, made directly.
+		var response = await admin.Client.SendAsync(
+			admin.AuthorizedPostRequest(
+				$"/api/students/{student.StudentId}/extra-curriculars",
+				new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		var assigned = await ReadAssignedAsync(admin, student.StudentId);
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
+			// Named for the grade, not for the absent phase the grade implies.
+			() => payload.ShouldContain("Private-grade student"),
+			() => assigned.ShouldBeEmpty());
+	}
+
+	private static async Task<StudentResult> CreatePrivateStudentAsync(
+		IsolatedHttpClient client,
+		string firstName,
+		string lastName)
+	{
+		// Grade and phase are biconditional, so a Private-grade student carries
+		// neither a class nor a phase — the create validator refuses any other shape.
+		var request = new CreateStudentRequest(
+			firstName, lastName, new DateOnly(2014, 5, 12), GradeType.Private, null, null, Language.English);
+
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/students", request), TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		response.StatusCode.ShouldBe(HttpStatusCode.Created, payload);
+
+		return JsonSerializer.Deserialize<StudentResult>(payload, _jsonOptions).ShouldNotBeNull();
+	}
+
 	private async Task<IsolatedHttpClient> SignInAsync(string emailPrefix, Role role, string sourceIp)
 	{
 		var (email, _) = await fixture.SeedActiveUserAsync(_password, emailPrefix, role);

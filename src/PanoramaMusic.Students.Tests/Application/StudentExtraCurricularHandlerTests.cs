@@ -175,6 +175,28 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 	}
 
 	[Fact]
+	[Trait("AC", "277UC23")]
+	public async Task HandleAsync_PrivateGradeStudent_IsRefusedForTheGradeAndPersistsNothing()
+	{
+		// Private-grade, so no phase — the two are biconditional. The refusal has to
+		// name the grade all the same: "no phase matches" is not the reason, and the
+		// endpoint states the rule for any caller, not only the screen that hides
+		// the step.
+		var student = GivenStudent(GradeType.Private, phase: null);
+		var activity = GivenActivity("Choir", PhaseType.Junior);
+		GivenAssigned(student, []);
+		var writes = CaptureWrites();
+
+		var thrown = await Should.ThrowAsync<DomainException>(() => _assignHandler.HandleAsync(
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => thrown.Message.ShouldBe("A Private-grade student does not take part in extra-curricular activities."),
+			() => writes.Created.ShouldBeEmpty());
+	}
+
+	[Fact]
 	[Trait("AC", "277UC8")]
 	public async Task HandleAsync_UnknownStudentOrActivity_IsReportedAsNotFoundAndPersistsNothing()
 	{
@@ -210,9 +232,19 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 	/// other — so a test can ask for one who does not exist without arranging
 	/// anything further.
 	/// </summary>
-	private Student GivenStudent(PhaseType phase)
+	private Student GivenStudent(PhaseType phase) => GivenStudent(GradeType.Grade4, phase);
+
+	/// <summary>
+	/// Grade and phase together, kept consistent with each other: a Private-grade
+	/// student carries neither a class nor a phase, every other grade carries both.
+	/// </summary>
+	private Student GivenStudent(GradeType grade, PhaseType? phase)
 	{
-		var student = StudentFactory.Create(phase: phase);
+		var isPrivate = grade == GradeType.Private;
+		var student = StudentFactory.Create(
+			grade: grade,
+			@class: isPrivate ? null : ClassType.A1,
+			phase: phase);
 
 		_context.Repositories.StudentRepositoryMock
 			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))

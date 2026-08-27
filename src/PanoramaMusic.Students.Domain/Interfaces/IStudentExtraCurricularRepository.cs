@@ -31,4 +31,15 @@ public interface IStudentExtraCurricularRepository
 	Task CreateAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
 
 	Task DeleteAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Every one of the student's assignments, in a single statement rather than a
+	/// delete per row. The assignments are passed alongside because they are the
+	/// aggregates carrying the pending removal events, so each removal is still
+	/// audited individually even though the write is one.
+	/// </summary>
+	Task DeleteAllByStudentIdAsync(
+		Guid studentId,
+		IEnumerable<StudentExtraCurricular> assignments,
+		CancellationToken cancellationToken);
 }
