@@ -103,7 +103,12 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// named; who is assigned to one is a separate payload.
 		["GetExtraCurriculars"] = CacheExpectation.Cacheable,
 		["CreateExtraCurricular"] = CacheExpectation.Cacheable,
+		["UpdateExtraCurricular"] = CacheExpectation.Cacheable,
 		["AddExtraCurricularPracticeTime"] = CacheExpectation.Cacheable,
+
+		// An assigned-student count is an aggregate over one activity; it names
+		// nobody, the same as a course's enrollment count.
+		["CountExtraCurricularStudents"] = CacheExpectation.Cacheable,
 
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.
