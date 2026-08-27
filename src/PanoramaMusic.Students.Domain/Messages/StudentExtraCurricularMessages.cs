@@ -14,8 +14,7 @@ public static class StudentExtraCurricularMessages
 	/// student carries no phase, so the phase rule would refuse the assignment
 	/// anyway — but it would give the wrong reason for it.
 	/// </summary>
-	public const string PrivateGradeExcluded =
-		"A Private-grade student does not take part in extra-curricular activities.";
+	public const string PrivateGradeExcluded = "A Private-grade student does not take part in extra-curricular activities.";
 
 	public const string AlreadyAssigned = "The student already takes part in this activity.";
 
