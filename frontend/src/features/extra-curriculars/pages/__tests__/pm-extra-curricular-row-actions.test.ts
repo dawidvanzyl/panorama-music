@@ -122,7 +122,9 @@ async function pressDelete(el: HTMLElement, extraCurricularId: string): Promise<
 }
 
 function modalTextOf(el: HTMLElement): string {
-  return (modalOf(el).shadowRoot!.querySelector('.modal__body') as HTMLElement).textContent!.replaceAll(/\s+/g, ' ').trim();
+  return (modalOf(el).shadowRoot!.querySelector('.modal__body') as HTMLElement)
+    .textContent!.replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 function modalIsOpen(el: HTMLElement): boolean {

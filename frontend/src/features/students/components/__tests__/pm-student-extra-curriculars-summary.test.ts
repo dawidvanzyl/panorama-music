@@ -58,9 +58,7 @@ describe('pm-student-extra-curriculars-summary — one entry per activity', { ta
     // Two activities, not three entries — the one meeting twice appears once.
     expect(items).toHaveLength(2);
     expect(items[0].querySelector('.summary__item-heading')!.textContent).toBe('Choir');
-    expect(items[0].querySelector('.summary__item-practice-times')!.textContent).toBe(
-      'Monday 15:00 · Thursday 15:00',
-    );
+    expect(items[0].querySelector('.summary__item-practice-times')!.textContent).toBe('Monday 15:00 · Thursday 15:00');
     expect(items[1].querySelector('.summary__item-heading')!.textContent).toBe('Junior Drumline');
     expect(items[1].querySelector('.summary__item-practice-times')!.textContent).toBe('Tuesday 13:30');
 
