@@ -89,7 +89,8 @@ export class StudentsPage extends BasePage {
    *
    * `activityOptionLabels` stages zero or more activities on the
    * Extra-Curriculars step before Save — each one is the picker's option
-   * label, e.g. `"{description} — {day} {startTime}"`. Staging in create mode
+   * label, which is the activity's description alone (per #278's R11
+   * display correction). Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
    * through identical UI mechanics.
@@ -567,7 +568,11 @@ export class StudentsPage extends BasePage {
     await this.extraCurricularsStep().locator('#cancelBtn').click();
   }
 
-  /** The Add Activity panel's picker. Options read `"{description} — {day} {startTime}"`. */
+  /**
+   * The Add Activity panel's picker. Options read the activity's description
+   * alone, per #278's R11 display correction — a student is assigned to an
+   * activity, never to one of its practice times, so no slot is named.
+   */
   activityPicker(): Locator {
     return this.extraCurricularsStep().locator('#activitySelect');
   }

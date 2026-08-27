@@ -37,7 +37,11 @@ const studentDefaults = {
 interface SeededActivity {
   description: string;
   slot: PracticeSlot;
-  /** The Add Activity panel's option label: "{description} — {day} {startTime}". */
+  /**
+   * The Add Activity panel's option label — the activity's description alone,
+   * per #278's R11 display correction, superseding the older
+   * "{description} — {day} {startTime}" label this suite used before it.
+   */
   optionLabel: string;
   extraCurricularId: string;
   practiceTimeId: string;
@@ -105,7 +109,7 @@ async function createJuniorActivityAs(page: Page, description: string, slot: Pra
   return {
     description,
     slot,
-    optionLabel: `${description} — ${slotText(slot)}`,
+    optionLabel: description,
     extraCurricularId,
     practiceTimeId: practiceTimes[0].practiceTimeId,
   };
@@ -145,7 +149,7 @@ async function seedSeniorActivity(page: Page, description: string, slot: Practic
   return {
     description,
     slot,
-    optionLabel: `${description} — ${slotText(slot)}`,
+    optionLabel: description,
     extraCurricularId,
     practiceTimeId: practiceTimes[0].practiceTimeId,
   };
