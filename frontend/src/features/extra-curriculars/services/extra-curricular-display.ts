@@ -65,11 +65,6 @@ export function cannotDeleteError(description: string, assignedStudents: number)
   return `${description} has ${assignedStudents} assigned student(s) and cannot be deleted.`;
 }
 
-/** The confirmation's body, naming the activity and what goes with it. */
-export function deleteActivityBody(description: string, practiceTimeCount: number): string {
-  return `This action cannot be undone. The activity ${description} and its ${practiceTimeCount} practice time(s) will be permanently removed.`;
-}
-
 /** Refuses a slot the form already holds, naming the one it is about. */
 export function duplicatePracticeTimeError(practiceTime: { day: DayType; startTime: string }): string {
   return `${practiceTimeText(practiceTime)} is already a practice time for this activity.`;

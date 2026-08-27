@@ -232,6 +232,7 @@ export class PmExtraCurricularTable extends HTMLElement {
     // any row error it might have carried are done with.
     this.editingId = null;
     this.descriptionDraft = '';
+    this.phaseDraft = 'Junior';
     this.saving = false;
     this.clearRowError();
     this.render();
@@ -503,6 +504,7 @@ export class PmExtraCurricularTable extends HTMLElement {
   private handleCancelClicked(): void {
     this.editingId = null;
     this.descriptionDraft = '';
+    this.phaseDraft = 'Junior';
     this.saving = false;
     this.clearRowError();
     this.render();
