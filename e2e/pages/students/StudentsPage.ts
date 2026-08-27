@@ -542,10 +542,25 @@ export class StudentsPage extends BasePage {
    * unstable and silently retrying the click for real, which double-fires
    * the picker's own assignable-list request and can leave two responses
    * racing each other to populate the `<select>`.
+   *
+   * Also waits for *this* panel's own opening transition to finish before
+   * returning. `#assignBtn` sits at the bottom of the panel, inside the
+   * `max-height`-animated, `overflow: hidden` container — its own bounding
+   * box never moves during the animation (only its ancestor's clip does), so
+   * Playwright's stability check, which compares bounding boxes across
+   * frames, reads it as already "stable" well before it is genuinely
+   * paintable. Confirmed by a document-level click listener: a click fired
+   * ~80ms into the 220ms transition landed for real on the panel's own
+   * clipping wrapper, not the button — the assignment silently never
+   * happened. Waiting out the full transition here removes the ambiguity for
+   * every caller, rather than each one having to know why an immediate click
+   * on `#assignBtn` can occasionally hit nothing.
    */
   async openAddActivityPanel(): Promise<void> {
     await expect(this.extraCurricularsStep().locator('#panel')).toBeHidden();
     await this.extraCurricularsStep().locator('#addBtn').click();
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- no DOM signal exists for "the CSS transition has finished"; see the doc comment above.
+    await this.page.waitForTimeout(300);
   }
 
   async cancelAddActivityPanel(): Promise<void> {
