@@ -72,21 +72,38 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * Steps the create wizard through all four tabs (Student → Siblings →
-   * Guardians → Courses) without adding any siblings or guardians. Save only
-   * appears on the final tab, so all three Next clicks are required.
+   * Steps the create wizard through all five tabs (Student → Siblings →
+   * Guardians → Courses → Extra-Curriculars) without adding any siblings or
+   * guardians. Extra-Curriculars is the wizard's final step in create mode —
+   * it carries Save, and Courses only offers Next — so all four Next clicks
+   * are required.
    *
    * A student must be enrolled in at least one course, so the Courses tab
    * always stages one. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
+   *
+   * `activityOptionLabels` stages zero or more activities on the
+   * Extra-Curriculars step before Save — each one is the picker's option
+   * label, e.g. `"{description} — {day} {startTime}"`. Staging in create mode
+   * writes nothing until Save; this is the same panel `assignActivity` drives
+   * in edit mode, so both this staged path and edit mode's immediate write go
+   * through identical UI mechanics.
    */
-  async createStudent(input: StudentInput, enrollment?: EnrollmentInput): Promise<void> {
+  async createStudent(
+    input: StudentInput,
+    enrollment?: EnrollmentInput,
+    activityOptionLabels: string[] = [],
+  ): Promise<void> {
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.enrollInCourse(enrollment);
+    await this.wizardModal.locator('#nextBtn').click();
+    for (const optionLabel of activityOptionLabels) {
+      await this.assignActivity(optionLabel);
+    }
     await this.wizardModal.locator('#saveBtn').click();
   }
 
@@ -111,6 +128,13 @@ export class StudentsPage extends BasePage {
       await form.locator('#enrolledDate').fill(enrollment.enrolledDate);
     }
     await form.locator('#confirmBtn').click();
+
+    // Waits for the panel's own list view to return (its Enroll button
+    // reappears) before a caller moves on. In create mode this is the signal
+    // that the confirm was staged; a caller that immediately clicks Next
+    // (Courses → Extra-Curriculars, since #277) could otherwise race the
+    // panel's own collapse under load.
+    await expect(step.locator('#enrollBtn')).toBeVisible();
   }
 
   /** Chooses the named option, or the first real one when the caller does not care which. */
@@ -461,5 +485,72 @@ export class StudentsPage extends BasePage {
 
   async syncGuardians(): Promise<void> {
     await this.syncGuardiansButton().click();
+  }
+
+  // --- Extra-Curriculars step -----------------------------------------------
+
+  /** Opens the Edit wizard for `name` and switches to its Extra-Curriculars tab. */
+  async openExtraCurricularsTab(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await this.wizardModal.locator('#tabExtraCurriculars').click();
+  }
+
+  extraCurricularsStep(): Locator {
+    return this.wizardModal.locator('#extraCurricularsStep');
+  }
+
+  async openAddActivityPanel(): Promise<void> {
+    await this.extraCurricularsStep().locator('#addBtn').click();
+  }
+
+  async cancelAddActivityPanel(): Promise<void> {
+    await this.extraCurricularsStep().locator('#cancelBtn').click();
+  }
+
+  /** The Add Activity panel's picker. Options read `"{description} — {day} {startTime}"`. */
+  activityPicker(): Locator {
+    return this.extraCurricularsStep().locator('#activitySelect');
+  }
+
+  /** The panel's disabled, non-editable field showing the student's own phase. */
+  activityPanelPhaseField(): Locator {
+    return this.extraCurricularsStep().locator('#phaseField');
+  }
+
+  /**
+   * Opens the Add Activity panel (if not already open), chooses the activity
+   * by its picker option label, and presses Assign. In edit mode this writes
+   * immediately; in create mode it stages the activity in the wizard's memory.
+   */
+  async assignActivity(optionLabel: string): Promise<void> {
+    if (!(await this.extraCurricularsStep().locator('#panel').isVisible().catch(() => false))) {
+      await this.openAddActivityPanel();
+    }
+    await this.activityPicker().selectOption({ label: optionLabel });
+    await this.extraCurricularsStep().locator('#assignBtn').click();
+  }
+
+  /** Presses Assign with nothing chosen in the picker. */
+  async pressAssignWithNothingChosen(): Promise<void> {
+    await this.extraCurricularsStep().locator('#assignBtn').click();
+  }
+
+  /** A row in the assigned-activity table, addressed by the activity's description. */
+  assignedActivityRow(description: string): Locator {
+    return this.extraCurricularsStep().locator('#rows').locator('tr').filter({ hasText: description });
+  }
+
+  async removeActivity(description: string): Promise<void> {
+    await this.assignedActivityRow(description).getByRole('button', { name: 'Remove' }).click();
+  }
+
+  /** The "No extra-curricular activities assigned." line shown in place of rows. */
+  noActivitiesMessage(): Locator {
+    return this.extraCurricularsStep().locator('#empty');
+  }
+
+  /** The Extra-Curriculars step's own message area, where a refusal is shown. */
+  extraCurricularsStepMessage(): Locator {
+    return this.extraCurricularsStep().locator('#message');
   }
 }
