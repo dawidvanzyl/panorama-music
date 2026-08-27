@@ -1526,6 +1526,110 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
   });
 });
 
+const privateStudent: StudentResult = {
+  ...alice,
+  studentId: 's4',
+  firstName: 'Kagiso',
+  lastName: 'Dlamini',
+  grade: 'Private',
+  class: null,
+  phase: null,
+};
+
+/** Chooses a grade and a phase on the Student tab the way a user does. */
+function chooseGradeAndPhase(wizard: PmStudentWizardModal, grade: string, phase: string): void {
+  const stepShadow = wizard.shadowRoot!.getElementById('studentStep')!.shadowRoot!;
+  const gradeSelect = stepShadow.getElementById('grade') as HTMLSelectElement;
+  gradeSelect.value = grade;
+  gradeSelect.dispatchEvent(new Event('change'));
+  if (phase) {
+    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+    const phaseSelect = stepShadow.getElementById('phase') as HTMLSelectElement;
+    phaseSelect.value = phase;
+    phaseSelect.dispatchEvent(new Event('change'));
+  }
+}
+
+describe(
+  'pm-students-page — the picker follows the form, not the saved student',
+  { tags: ['277UC33', '277UC34', '277UC35'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      vi.mocked(getStudentExtraCurriculars).mockReset();
+      vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
+      vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+      vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir, orchestra]);
+      mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, privateStudent]));
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('offers the newly chosen phase for a saved Private student, without saving first', async () => {
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(privateStudent);
+
+      // The bug this fixes: the tab was absent and, once reachable, read the
+      // phase from the stored row — which is still Private, still null.
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+
+      chooseGradeAndPhase(wizard, 'Grade4', 'Senior');
+      await flush();
+
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
+
+      (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+      await flush();
+      const stepShadow = extraCurricularsStepShadowOf(wizard);
+      (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+      await flush();
+
+      // Read for the phase the form holds now, not the student's stored null,
+      // and nothing was saved to get there.
+      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith('Senior');
+      expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+      expect((stepShadow.getElementById('phaseField') as HTMLInputElement).value).toBe('Senior');
+      expect(
+        [...(stepShadow.getElementById('activitySelect') as HTMLSelectElement).options].map((o) => o.value),
+      ).toEqual(['ec1', 'ec2']);
+    });
+
+    it('leaves out activities the student already holds, which a phase-scoped read does not exclude', async () => {
+      vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+      await flush();
+
+      const stepShadow = extraCurricularsStepShadowOf(wizard);
+      (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+      await flush();
+
+      // The endpoint answered with both; Choir is already held, so only the
+      // other is offered. That filtering is the step's, not the server's.
+      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith('Junior');
+      expect(
+        [...(stepShadow.getElementById('activitySelect') as HTMLSelectElement).options].map((o) => o.value),
+      ).toEqual(['ec2']);
+    });
+
+    it('removes the tab when a saved graded student is changed to Private', async () => {
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
+
+      chooseGradeAndPhase(wizard, 'Private', '');
+      await flush();
+
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+    });
+  },
+);
+
 describe('pm-students-page — a grade changed to Private in edit mode', { tags: ['277UC29', '277UC30'] }, () => {
   let el: HTMLElement;
 

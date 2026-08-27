@@ -189,6 +189,65 @@ describe('pm-student-wizard-modal — Extra-Curriculars is the create wizard fin
   });
 });
 
+describe('pm-student-wizard-modal — the phase field governs the step', { tags: ['277UC31', '277UC32'] }, () => {
+  /** Everything but the phase, so the phase alone is what moves in these tests. */
+  function fillStudentStepWithoutPhase(): void {
+    const stepShadow = byId('studentStep').shadowRoot!;
+    (stepShadow.getElementById('firstName') as HTMLInputElement).value = 'Nadia';
+    (stepShadow.getElementById('lastName') as HTMLInputElement).value = 'Vance';
+    (stepShadow.getElementById('dateOfBirth') as HTMLInputElement).value = '2014-05-12';
+    (stepShadow.getElementById('grade') as HTMLSelectElement).value = 'Grade4';
+    (stepShadow.getElementById('class') as HTMLSelectElement).value = 'A1';
+    (stepShadow.getElementById('language') as HTMLSelectElement).value = 'English';
+  }
+
+  it('makes the step available the moment a phase is chosen, and it carries Save', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStepWithoutPhase();
+
+    // With no phase yet, the step is not on offer at all.
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+
+    choosePhase('Junior');
+
+    expect(byId('tabExtraCurriculars').hidden).toBe(false);
+    advanceToFinalStep();
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+    expect(byId('nextBtn').hidden).toBe(true);
+  });
+
+  it('removes the step when the phase is cleared, handing Save back to Courses', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    advanceToFinalStep();
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+
+    // Cleared directly rather than via the grade: the phase field is the
+    // mechanism, and grade Private is only one way of emptying it.
+    choosePhase('');
+
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+    expect(byId('stepCourses').classList.contains('wizard__step--visible')).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+  });
+
+  it('removes the step when the grade is set to Private, which empties the phase field', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    expect(byId('tabExtraCurriculars').hidden).toBe(false);
+
+    chooseGrade('Private');
+
+    // Same outcome as Addendum 1 stated, now reached through the phase.
+    expect(byId('tabExtraCurriculars').hidden).toBe(true);
+    expect(modal.pendingExtraCurricularIds).toEqual([]);
+  });
+});
+
 describe('pm-student-wizard-modal — a Private-grade student in create mode', { tags: ['277UC26'] }, () => {
   it('offers no Extra-Curriculars step, and Courses carries Save', () => {
     mountModal();

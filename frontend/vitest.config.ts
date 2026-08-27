@@ -209,6 +209,11 @@ export default defineConfig({
       { name: '277UC28', description: 'A Private-grade student is offered no Extra-Curriculars tab in edit mode and Courses is the last tab' },
       { name: '277UC29', description: 'Changing a student grade to Private in edit mode hides the tab, and saving deletes their assignments' },
       { name: '277UC30', description: 'Cancelling an edit that changed the grade to Private leaves the student assignments intact' },
+      { name: '277UC31', description: 'Selecting a phase in create mode makes the Extra-Curriculars step available and it carries Save' },
+      { name: '277UC32', description: 'Clearing the phase or setting grade Private removes the Extra-Curriculars step and Courses carries Save' },
+      { name: '277UC33', description: 'Editing a saved Private student to a graded one offers that phase activities without saving first' },
+      { name: '277UC34', description: 'The picker does not offer activities the student already holds, which the phase-scoped read does not exclude' },
+      { name: '277UC35', description: 'Changing a saved graded student to Private removes the Extra-Curriculars tab on the change' },
     ],
   },
 })
