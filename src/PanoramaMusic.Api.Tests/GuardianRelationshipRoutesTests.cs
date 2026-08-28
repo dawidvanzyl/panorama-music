@@ -16,7 +16,7 @@ public sealed class GuardianRelationshipRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "214UC5")]
-	public async Task MaintenanceEndpoints_CallerWithoutCoordinatorOrAdmin_AreRejected()
+	public async Task MaintenanceEndpoints_CallerWithoutCoordinator_AreRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "guardian-relationships-teacher", Role.Teacher);
 		var client = fixture.CreateIsolatedClient("10.0.50.1");
@@ -34,10 +34,40 @@ public sealed class GuardianRelationshipRoutesTests(ApiTestFixture fixture)
 			client.AuthorizedDeleteRequest($"/api/guardian-relationships/{someId}"),
 			TestContext.Current.CancellationToken);
 
+		// Admin is refused too — the area grants it nothing at all.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "guardian-relationships-admin", Role.Admin);
+		var adminClient = fixture.CreateIsolatedClient("10.0.50.4");
+		await adminClient.LoginAsync(adminEmail, _password);
+
+		var adminCreateResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPostRequest("/api/guardian-relationships", new CreateGuardianRelationshipRequest("Aunt")),
+			TestContext.Current.CancellationToken);
+
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => renameResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminCreateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+	}
+
+	[Fact]
+	[Trait("AC", "273UC2")]
+	public async Task ReadEndpoints_Admin_AreRejectedWithForbidden()
+	{
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "guardian-relationships-read-admin", Role.Admin);
+		var client = fixture.CreateIsolatedClient("10.0.50.5");
+		await client.LoginAsync(adminEmail, _password);
+
+		var someId = Guid.NewGuid();
+
+		var listResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/guardian-relationships"), TestContext.Current.CancellationToken);
+		var countResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/guardian-relationships/{someId}/count"), TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => countResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	[Fact]
