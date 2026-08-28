@@ -213,6 +213,38 @@ describe('pm-users-table — saving Coordinator role edits reflects on the row',
   });
 });
 
+describe('pm-users-table — saving Banking Coordinator role edits reflects on the row', { tags: ['287UC4'] }, () => {
+  let el: PmUsersTable;
+
+  beforeEach(() => {
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+    mockUpdateUserRoles.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('saving with the Banking Coordinator checkbox ticked shows the Banking Coordinator badge on the row', async () => {
+    mockUpdateUserRoles.mockResolvedValueOnce({
+      userId: activeUser.userId,
+      email: activeUser.email,
+      roles: ['Teacher', 'BankingCoordinator'],
+      isActive: true,
+    });
+
+    el.users = [activeUser];
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
+    el.shadowRoot!.querySelector<HTMLInputElement>('input[type="checkbox"][value="BankingCoordinator"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+
+    await vi.waitFor(() => {
+      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).toContain('BankingCoordinator');
+    });
+  });
+});
+
 describe('pm-users-table — status filter', { tags: ['M1.1UC22'] }, () => {
   let el: PmUsersTable;
 
