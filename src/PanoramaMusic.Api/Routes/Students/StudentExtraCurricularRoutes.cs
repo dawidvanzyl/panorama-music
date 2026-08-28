@@ -23,7 +23,7 @@ public static class StudentExtraCurricularRoutes
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("StudentExtraCurriculars")
-			.RequireAuthorization("TeacherOrAdminPolicy");
+			.RequireAuthorization("TeacherPolicy");
 
 		group
 			.MapGet("/{studentId:guid}/extra-curriculars", async (Guid studentId, GetStudentExtraCurricularsHandler handler, CancellationToken ct) =>

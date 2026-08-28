@@ -16,7 +16,7 @@ public static class StudentCourseRoutes
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("Enrollment")
-			.RequireAuthorization("TeacherOrAdminPolicy");
+			.RequireAuthorization("TeacherPolicy");
 
 		group
 			.MapPost("/{studentId:guid}/courses", async (Guid studentId, EnrollStudentRequest request, EnrollStudentHandler handler, CancellationToken ct) =>

@@ -17,7 +17,7 @@ public static class StudentRoutes
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("Students")
-			.RequireAuthorization("TeacherOrAdminPolicy");
+			.RequireAuthorization("TeacherPolicy");
 
 		group
 			.MapGet("/", async (GetStudentsHandler handler, CancellationToken ct) =>

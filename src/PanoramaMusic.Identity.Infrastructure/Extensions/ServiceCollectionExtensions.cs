@@ -131,19 +131,20 @@ public static class ServiceCollectionExtensions
 			.AddAuthorizationBuilder()
 			.AddPolicy("AdminPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Admin)))
 			.AddPolicy("TeacherPolicy", policy => policy.RequireAssertion(context => context.User.HasRole(Role.Teacher)))
-			.AddPolicy("TeacherOrAdminPolicy", policy => policy.RequireAssertion(context =>
-				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Admin)))
-			.AddPolicy("CoordinatorOrAdminPolicy", policy => policy.RequireAssertion(context =>
-				context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.Admin)))
-			.AddPolicy("TeacherCoordinatorOrAdminPolicy", policy => policy.RequireAssertion(context =>
-				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.Admin)))
-			// The two below deliberately exclude Admin. An area whose owner is the
-			// Coordinator grants nothing to the Admin role — a person who happens
-			// to be an admin reaches it through the Teacher role they also hold.
+			// The policies below deliberately exclude Admin. An area whose owner is
+			// Teacher, Coordinator, or BankingCoordinator grants nothing to the Admin
+			// role — a person who happens to be an admin reaches it through whichever
+			// of those roles they also hold.
 			.AddPolicy("TeacherOrCoordinatorPolicy", policy => policy.RequireAssertion(context =>
 				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator)))
 			.AddPolicy("CoordinatorPolicy", policy => policy.RequireAssertion(context =>
-				context.User.HasRole(Role.Coordinator)));
+				context.User.HasRole(Role.Coordinator)))
+			.AddPolicy("BankingCoordinatorPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.BankingCoordinator)))
+			.AddPolicy("CoordinatorOrBankingCoordinatorPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.BankingCoordinator)))
+			.AddPolicy("TeacherCoordinatorOrBankingCoordinatorPolicy", policy => policy.RequireAssertion(context =>
+				context.User.HasRole(Role.Teacher) || context.User.HasRole(Role.Coordinator) || context.User.HasRole(Role.BankingCoordinator)));
 
 		return services;
 	}

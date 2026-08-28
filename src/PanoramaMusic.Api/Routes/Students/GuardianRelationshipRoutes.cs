@@ -12,13 +12,13 @@ public static class GuardianRelationshipRoutes
 {
 	public static void MapGuardianRelationshipRoutes(this WebApplication app)
 	{
-		// Reading the lookup is open to every staff role: Teachers need it for the
-		// relationship dropdown when adding a guardian, and Coordinators need it to
-		// list the types they maintain. Maintaining it is Coordinator-or-Admin.
+		// Reading the lookup is open to Teacher and Coordinator: Teachers need it
+		// for the relationship dropdown when adding a guardian, and Coordinators
+		// need it to list the types they maintain. Maintaining it is Coordinator-only.
 		app
 			.MapGroup("/api/guardian-relationships")
 			.WithTags("Guardian Relationships")
-			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy")
+			.RequireAuthorization("TeacherOrCoordinatorPolicy")
 			.MapGet("/", async (GetGuardianRelationshipsHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(ct);
@@ -32,7 +32,7 @@ public static class GuardianRelationshipRoutes
 		var maintenanceGroup = app
 			.MapGroup("/api/guardian-relationships")
 			.WithTags("Guardian Relationships")
-			.RequireAuthorization("CoordinatorOrAdminPolicy");
+			.RequireAuthorization("CoordinatorPolicy");
 
 		maintenanceGroup
 			.MapPost("/", async (CreateGuardianRelationshipRequest request, CreateGuardianRelationshipHandler handler, CancellationToken ct) =>
