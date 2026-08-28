@@ -26,6 +26,12 @@ public sealed class StudentsDatabaseFixture : IAsyncLifetime
 
 	public async ValueTask InitializeAsync()
 	{
+		// The repositories call Postgres functions via CommandType.StoredProcedure,
+		// which Npgsql emits as CALL unless this compatibility switch is on — the
+		// same one Program.cs sets at application startup. Only tests that drive a
+		// repository directly need it; the raw SQL below would work either way.
+		AppContext.SetSwitch("Npgsql.EnableStoredProcedureCompatMode", true);
+
 		await _postgres.StartAsync();
 
 		_migrationConnectionString = _postgres.GetConnectionString();

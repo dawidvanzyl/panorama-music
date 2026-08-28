@@ -34,9 +34,9 @@ public sealed class ExtraCurricular : AggregateRoot
 
 	public Guid ExtraCurricularId { get; }
 
-	public string Description { get; }
+	public string Description { get; private set; }
 
-	public PhaseType Phase { get; }
+	public PhaseType Phase { get; private set; }
 
 	/// <summary>
 	/// The activity's weekly slots, in day-of-week order from Monday and then by
@@ -62,6 +62,36 @@ public sealed class ExtraCurricular : AggregateRoot
 
 		extraCurricular.Raise(new ExtraCurricularCreated(extraCurricular));
 		return extraCurricular;
+	}
+
+	/// <summary>
+	/// Corrects the activity's description and the phase it is offered to. Those
+	/// two are the whole of what an edit reaches: a practice time is never edited
+	/// in place, so the slot set is left exactly as it stands. Whether the new
+	/// description is already held by another activity in that phase is a
+	/// catalogue-wide question this aggregate cannot see, so it is answered
+	/// outside — by the read the use case makes and, decisively, by the unique
+	/// constraint behind it.
+	/// </summary>
+	public void Update(string description, PhaseType phase)
+	{
+		var before = new ExtraCurricular(ExtraCurricularId, Description, Phase, _practiceTimes);
+
+		Description = description;
+		Phase = phase;
+
+		Raise(new ExtraCurricularUpdated(before, this));
+	}
+
+	/// <summary>
+	/// Marks the activity as going. Whether it may go at all — no student takes
+	/// part in it — is a question about assignments the activity does not hold, so
+	/// the use case answers it before this is called. Its practice times go with
+	/// it, which the schema's cascade is what actually carries out.
+	/// </summary>
+	public void MarkDeleted()
+	{
+		Raise(new ExtraCurricularDeleted(this));
 	}
 
 	/// <summary>

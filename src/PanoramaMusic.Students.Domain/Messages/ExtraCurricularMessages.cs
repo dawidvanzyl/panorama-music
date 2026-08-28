@@ -15,4 +15,20 @@ public static class ExtraCurricularMessages
 	/// </summary>
 	public static string DuplicatePracticeTime(string practiceTime) =>
 		$"{practiceTime} is already a practice time for this activity.";
+
+	/// <summary>
+	/// Names the phase and the description that collided, e.g. Junior already has
+	/// an activity called "Choir". A description is unique within its phase only —
+	/// a Junior and a Senior Choir are two legitimately different activities.
+	/// </summary>
+	public static string DuplicateDescription(string phase, string description) =>
+		$"{phase} already has an activity called \"{description}\".";
+
+	/// <summary>
+	/// Names the activity and how many students still take part in it, e.g. Choir
+	/// has 24 assigned student(s) and cannot be deleted. The same wording is what
+	/// the row-level banner shows.
+	/// </summary>
+	public static string CannotDeleteWithAssignedStudents(string description, int assignedStudents) =>
+		$"{description} has {assignedStudents} assigned student(s) and cannot be deleted.";
 }

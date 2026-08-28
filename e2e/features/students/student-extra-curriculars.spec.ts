@@ -37,7 +37,11 @@ const studentDefaults = {
 interface SeededActivity {
   description: string;
   slot: PracticeSlot;
-  /** The Add Activity panel's option label: "{description} — {day} {startTime}". */
+  /**
+   * The Add Activity panel's option label — the activity's description alone,
+   * per #278's R11 display correction, superseding the older
+   * "{description} — {day} {startTime}" label this suite used before it.
+   */
   optionLabel: string;
   extraCurricularId: string;
   practiceTimeId: string;
@@ -105,7 +109,7 @@ async function createJuniorActivityAs(page: Page, description: string, slot: Pra
   return {
     description,
     slot,
-    optionLabel: `${description} — ${slotText(slot)}`,
+    optionLabel: description,
     extraCurricularId,
     practiceTimeId: practiceTimes[0].practiceTimeId,
   };
@@ -145,7 +149,7 @@ async function seedSeniorActivity(page: Page, description: string, slot: Practic
   return {
     description,
     slot,
-    optionLabel: `${description} — ${slotText(slot)}`,
+    optionLabel: description,
     extraCurricularId,
     practiceTimeId: practiceTimes[0].practiceTimeId,
   };
@@ -554,3 +558,55 @@ test.describe('Extra-Curriculars — a Private-grade student takes no part in ex
     expect(assignedAfter.map((a) => a.extraCurricularId)).not.toContain(activity.extraCurricularId);
   });
 });
+
+/**
+ * A Junior activity with two practice times, created by a fresh, throwaway
+ * Coordinator — `10IT12` needs an activity that meets more than once, which
+ * `seedJuniorActivity` (one slot only) cannot seed.
+ */
+async function seedJuniorActivityWithSlots(page: Page, description: string, slots: PracticeSlot[]): Promise<void> {
+  await loginAsNewUser(page, 'ec-coordinator', ['Coordinator']);
+  const activitiesPage = new ExtraCurricularsPage(page);
+  await activitiesPage.gotoExtraCurriculars();
+  await activitiesPage.createActivity(description, 'Junior', slots);
+  await expect(activitiesPage.row(description)).toBeVisible();
+}
+
+test.describe(
+  "Extra-Curriculars — the Students table's expanded row shows an activity's practice times",
+  { tag: ['@10IT12'] },
+  () => {
+    test('an activity with two practice times appears once in the expanded row, carrying both', async ({ page }) => {
+      const token = uniqueToken('10IT12');
+      const description = `${token} Choir`;
+      const monday: PracticeSlot = { day: 'Monday', startTime: '15:00' };
+      const thursday: PracticeSlot = { day: 'Thursday', startTime: '15:00' };
+      await seedJuniorActivityWithSlots(page, description, [monday, thursday]);
+
+      await loginAsAdmin(page);
+      const target = await seedEnrollmentTarget(page);
+      const studentsPage = new StudentsPage(page);
+      await studentsPage.gotoStudents();
+
+      const surname = uniqueSurname('ChoirStudent');
+      await studentsPage.createStudent(
+        { ...studentDefaults, firstName: 'Lindiwe', lastName: surname },
+        { courseLabel: target.courseLabel, teacherName: target.teacherName },
+        [description],
+      );
+      await expect(studentsPage.row(surname)).toBeVisible();
+
+      await studentsPage.toggleRowExpanded(surname);
+      const summary = studentsPage.visibleExtraCurricularsSummary();
+      await expect(summary).toBeVisible();
+
+      // Listed once — not once per practice time. A naive implementation that
+      // flattens the grouped read back out into one entry per slot is what
+      // this asserts against, by counting entries rather than merely
+      // checking that both times appear somewhere in the summary.
+      const entry = summary.locator('.summary__item').filter({ hasText: description });
+      await expect(entry).toHaveCount(1);
+      await expect(entry.locator('.summary__item-practice-times')).toHaveText(`${slotText(monday)} · ${slotText(thursday)}`);
+    });
+  },
+);

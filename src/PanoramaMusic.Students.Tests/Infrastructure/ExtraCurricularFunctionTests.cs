@@ -1,5 +1,12 @@
+using Moq;
 using Npgsql;
 using NpgsqlTypes;
+using PanoramaMusic.Persistence.Interfaces;
+using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Infrastructure.Repositories;
+using PanoramaMusic.Students.Tests.Factories;
 using PanoramaMusic.Students.Tests.Fixtures;
 using Shouldly;
 using Xunit;
@@ -95,6 +102,108 @@ public class ExtraCurricularFunctionTests : IClassFixture<StudentsDatabaseFixtur
 			// Beta kept its own copy of the shared pair, and read-by-id returns the
 			// slots of the activity asked for and no others.
 			() => betaSlots.ShouldBe(["Wednesday 13:00"]));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC5")]
+	public async Task DeleteExtraCurricular_ActivityWithSeveralSlots_TakesEveryOneOfThemWithIt()
+	{
+		var activityId = await GivenActivityAsync($"Recorder Ensemble {Guid.NewGuid()}", "Junior");
+		await GivenSlotAsync(activityId, "Monday", new TimeOnly(15, 0));
+		await GivenSlotAsync(activityId, "Thursday", new TimeOnly(15, 0));
+
+		await CallAsync(
+			"SELECT students.delete_extra_curricular(@p_extra_curricular_id);",
+			("p_extra_curricular_id", activityId));
+
+		var remainingSlots = await CountSlotRowsAsync(activityId);
+		var remainingActivities = await CountActivityRowsAsync(activityId);
+
+		ShouldlyHelpers.Satisfy(
+			() => remainingActivities.ShouldBe(0),
+			// No orphan: the slots are gone from their own table, not merely
+			// unreachable through an absent activity.
+			() => remainingSlots.ShouldBe(0));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC29")]
+	public async Task CreateAsync_DescriptionAlreadyHeldInThatPhase_TranslatesTheUniqueViolationIntoTheRefusal()
+	{
+		var description = $"Choir {Guid.NewGuid()}";
+		// The read both requests would have made is deliberately skipped: this is
+		// the state a race leaves behind, where the constraint is all that is left
+		// to settle it.
+		await using var transaction = await _fixture.Connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+		var repository = RepositoryOver(transaction);
+
+		await repository.CreateAsync(
+			ExtraCurricularFactory.Create(Guid.NewGuid(), description, PhaseType.Junior),
+			TestContext.Current.CancellationToken);
+
+		var exception = await Should.ThrowAsync<DomainException>(async () => await repository.CreateAsync(
+			ExtraCurricularFactory.Create(Guid.NewGuid(), description, PhaseType.Junior),
+			TestContext.Current.CancellationToken));
+
+		// The loser of the race gets the refusal a read would have produced, not
+		// an unexplained failure.
+		exception.Message.ShouldBe($"Junior already has an activity called \"{description}\".");
+
+		await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+	}
+
+	[Fact]
+	[Trait("AC", "278UC29")]
+	public async Task CreateAsync_SameDescriptionInTheOtherPhase_IsNotRefused()
+	{
+		var description = $"Choir {Guid.NewGuid()}";
+		await using var transaction = await _fixture.Connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+		var repository = RepositoryOver(transaction);
+
+		await repository.CreateAsync(
+			ExtraCurricularFactory.Create(Guid.NewGuid(), description, PhaseType.Junior),
+			TestContext.Current.CancellationToken);
+
+		// The constraint is scoped to the pair, so the other phase is untouched by
+		// it — the rule is not a catalogue-wide one.
+		await Should.NotThrowAsync(async () => await repository.CreateAsync(
+			ExtraCurricularFactory.Create(Guid.NewGuid(), description, PhaseType.Senior),
+			TestContext.Current.CancellationToken));
+
+		await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+	}
+
+	/// <summary>
+	/// The real repository over the fixture's connection and the given
+	/// transaction. Only the repository can be under test here: the translation it
+	/// performs needs a genuine Postgres constraint violation to translate.
+	/// </summary>
+	private ExtraCurricularRepository RepositoryOver(NpgsqlTransaction transaction)
+	{
+		var unitOfWork = new Mock<IUnitOfWork>();
+		unitOfWork.SetupGet(u => u.Connection).Returns(_fixture.Connection);
+		unitOfWork.SetupGet(u => u.Transaction).Returns(transaction);
+
+		return new ExtraCurricularRepository(unitOfWork.Object, Mock.Of<IDomainEventCollector>());
+	}
+
+	private Task<long> CountSlotRowsAsync(Guid activityId) =>
+		ScalarAsync(
+			"SELECT COUNT(*) FROM students.extra_curricular_practice_times WHERE extra_curricular_id = @id;",
+			activityId);
+
+	private Task<long> CountActivityRowsAsync(Guid activityId) =>
+		ScalarAsync(
+			"SELECT COUNT(*) FROM students.extra_curriculars WHERE extra_curricular_id = @id;",
+			activityId);
+
+	private async Task<long> ScalarAsync(string sql, Guid activityId)
+	{
+		await using var select = _fixture.Connection.CreateCommand();
+		select.CommandText = sql;
+		select.Parameters.AddWithValue("id", activityId);
+
+		return (long)(await select.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
 	}
 
 	/// <summary>Every slot the read-by-id function returns for one activity, as it reads to a person.</summary>

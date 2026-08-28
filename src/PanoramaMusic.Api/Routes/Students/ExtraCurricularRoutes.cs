@@ -56,6 +56,56 @@ public static class ExtraCurricularRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
+		// The description and the phase are the whole of an activity's editable
+		// state, so the update is a PUT carrying a full representation of it. The
+		// practice times are deliberately absent: a slot is never edited in place.
+		maintenanceGroup
+			.MapPut("/{extraCurricularId:guid}", async (Guid extraCurricularId, UpdateExtraCurricularRequest request, UpdateExtraCurricularHandler handler, CancellationToken ct) =>
+			{
+				var command = new UpdateExtraCurricularCommand(extraCurricularId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Ok(result);
+			})
+			.AddEndpointFilter<ValidationFilter<UpdateExtraCurricularRequest>>()
+			.WithName("UpdateExtraCurricular")
+			.Produces<ExtraCurricularResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// How many students take part in the activity — the same condition the
+		// delete below enforces, so the screen can say an activity is in use
+		// before offering a confirmation it would have to reject.
+		maintenanceGroup
+			.MapGet("/{extraCurricularId:guid}/students/count", async (Guid extraCurricularId, CountExtraCurricularStudentsHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(extraCurricularId, ct);
+				return Results.Ok(result);
+			})
+			.WithName("CountExtraCurricularStudents")
+			.Produces<CountExtraCurricularStudentsResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Refused while any student takes part in the activity. The interface does
+		// not offer the confirmation until then, but this endpoint is where the
+		// rule is actually enforced. The practice times go with the activity.
+		maintenanceGroup
+			.MapDelete("/{extraCurricularId:guid}", async (Guid extraCurricularId, DeleteExtraCurricularHandler handler, CancellationToken ct) =>
+			{
+				var command = new DeleteExtraCurricularCommand(extraCurricularId);
+				await handler.HandleAsync(command, ct);
+				return Results.Ok();
+			})
+			.WithName("DeleteExtraCurricular")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
 		// Maintaining the slots of an activity that already exists: each slot is
 		// added and removed on its own, and there is no edit — a slot is changed
 		// by removing it and adding the one that replaces it.

@@ -55,6 +55,17 @@ public class StudentExtraCurricularRepository(IUnitOfWork unitOfWork, IDomainEve
 		return await Connection.ExecuteScalarAsync<bool>(command);
 	}
 
+	public async Task<int> CountByExtraCurricularIdAsync(Guid extraCurricularId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_student_count_by_extra_curricular",
+			new { p_extra_curricular_id = extraCurricularId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.ExecuteScalarAsync<int>(command);
+	}
+
 	public async Task CreateAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

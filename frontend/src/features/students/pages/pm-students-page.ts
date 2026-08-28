@@ -382,19 +382,26 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    // A Private-grade student takes no part in extra-curriculars and is given no
+    // summary to populate, so their activities are not read at all rather than
+    // read and discarded.
+    const takesPartInActivities = this._allStudents.find((s) => s.studentId === studentId)?.grade !== 'Private';
     try {
-      const [siblings, guardians, enrollments] = await Promise.all([
+      const [siblings, guardians, enrollments, extraCurriculars] = await Promise.all([
         getSiblings(studentId),
         getGuardians(studentId),
         getStudentCourses(studentId),
+        takesPartInActivities ? getStudentExtraCurriculars(studentId) : Promise.resolve([]),
       ]);
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
       this.studentsTable!.setCoursesSummary(studentId, enrollments);
+      this.studentsTable!.setExtraCurricularsSummary(studentId, extraCurriculars);
     } catch {
       this.studentsTable!.setSiblingsSummary(studentId, []);
       this.studentsTable!.setGuardiansSummary(studentId, []);
       this.studentsTable!.setCoursesSummary(studentId, []);
+      this.studentsTable!.setExtraCurricularsSummary(studentId, []);
     }
   };
 

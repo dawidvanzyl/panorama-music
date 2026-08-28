@@ -120,6 +120,33 @@ describe('pm-extra-curriculars-step — assigned rows', { tags: ['277UC13'] }, (
   });
 });
 
+describe('pm-extra-curriculars-step — the picker names the activity', { tags: ['278UC23'] }, () => {
+  it('shows the description alone and names no practice time', () => {
+    step.activate('s1', 'Junior');
+    step.assigned = [];
+
+    // Choir meets twice. Naming its first slot would state that the Tuesday
+    // meeting is what is being chosen, and hide the Thursday one entirely.
+    openPanel([choir]);
+
+    expect(pickerOptions()).toEqual(['Choir']);
+    expect(pickerOptions()[0]).not.toContain('Tuesday');
+    expect(pickerOptions()[0]).not.toContain('14:30');
+  });
+});
+
+describe('pm-extra-curriculars-step — the row names the times', { tags: ['278UC24'] }, () => {
+  it('lists every practice time of an assigned activity, in day-then-time order', () => {
+    step.activate('s1', 'Junior');
+
+    step.assigned = [choir];
+
+    // Both slots, in the order the activity itself keeps — the student is
+    // assigned to the activity, so all of its meetings are theirs.
+    expect(cellsOf(rows()[0])[2]).toBe('Tuesday 14:30 · Thursday 15:30');
+  });
+});
+
 describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC14'] }, () => {
   beforeEach(() => {
     step.activate('s1', 'Junior');
@@ -145,13 +172,13 @@ describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC
 });
 
 describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC15'] }, () => {
-  it('labels each option with its description and its practice time', () => {
+  it('labels each option with its description alone', () => {
     step.activate('s1', 'Junior');
     step.assigned = [];
 
     openPanel([drumline, orchestra]);
 
-    expect(pickerOptions()).toEqual(['Junior Drumline — Tuesday 13:30', 'String Orchestra — Monday 14:30']);
+    expect(pickerOptions()).toEqual(['Junior Drumline', 'String Orchestra']);
   });
 
   it('leaves out an activity already staged, which the server cannot know about in create mode', () => {
@@ -160,7 +187,7 @@ describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC
 
     openPanel([choir, orchestra]);
 
-    expect(pickerOptions()).toEqual(['String Orchestra — Monday 14:30']);
+    expect(pickerOptions()).toEqual(['String Orchestra']);
   });
 });
 
@@ -220,7 +247,7 @@ describe('pm-extra-curriculars-step — removing an assignment', { tags: ['277UC
     expect(rows().map((row) => cellsOf(row)[0])).toEqual(['String Orchestra']);
 
     openPanel([choir, orchestra, drumline]);
-    expect(pickerOptions()).toEqual(['Choir — Tuesday 14:30', 'Junior Drumline — Tuesday 13:30']);
+    expect(pickerOptions()).toEqual(['Choir', 'Junior Drumline']);
   });
 
   it('asks the page to remove a persisted assignment rather than dropping it in memory', () => {

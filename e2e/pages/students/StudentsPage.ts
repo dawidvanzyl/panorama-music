@@ -89,7 +89,8 @@ export class StudentsPage extends BasePage {
    *
    * `activityOptionLabels` stages zero or more activities on the
    * Extra-Curriculars step before Save — each one is the picker's option
-   * label, e.g. `"{description} — {day} {startTime}"`. Staging in create mode
+   * label, which is the activity's description alone (per #278's R11
+   * display correction). Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
    * through identical UI mechanics.
@@ -367,6 +368,15 @@ export class StudentsPage extends BasePage {
     return this.page.locator('pm-student-courses-summary:visible');
   }
 
+  /**
+   * Read-only extra-curriculars summary for the currently-expanded row (same
+   * scoping rule as siblings). Absent entirely for a Private-grade student
+   * (#278's addendum) — it is never rendered for them, not merely empty.
+   */
+  visibleExtraCurricularsSummary(): Locator {
+    return this.page.locator('pm-student-extra-curriculars-summary:visible');
+  }
+
   /** Opens the Edit wizard for `name` and switches to its Guardians tab. */
   async openGuardiansTab(name: string): Promise<void> {
     await this.row(name).locator('.students-table__btn--edit').click();
@@ -567,7 +577,11 @@ export class StudentsPage extends BasePage {
     await this.extraCurricularsStep().locator('#cancelBtn').click();
   }
 
-  /** The Add Activity panel's picker. Options read `"{description} — {day} {startTime}"`. */
+  /**
+   * The Add Activity panel's picker. Options read the activity's description
+   * alone, per #278's R11 display correction — a student is assigned to an
+   * activity, never to one of its practice times, so no slot is named.
+   */
   activityPicker(): Locator {
     return this.extraCurricularsStep().locator('#activitySelect');
   }

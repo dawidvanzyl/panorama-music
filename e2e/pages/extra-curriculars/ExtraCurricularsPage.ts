@@ -26,12 +26,14 @@ export class ExtraCurricularsPage extends BasePage {
   readonly activityForm: Locator;
   readonly filterBar: Locator;
   readonly activityTable: Locator;
+  readonly deleteModal: Locator;
 
   constructor(page: Page) {
     super(page);
     this.activityForm = page.locator('#form');
     this.filterBar = page.locator('#filterBar');
     this.activityTable = page.locator('#table');
+    this.deleteModal = page.locator('#deleteModal');
   }
 
   async gotoExtraCurriculars(): Promise<void> {
@@ -241,5 +243,86 @@ export class ExtraCurricularsPage extends BasePage {
   async removeSlotFromPanel(activityId: string, slot: PracticeSlot): Promise<void> {
     const practiceTimeId = await this.panelSlotId(activityId, slot);
     await this.panelSlotRow(activityId, practiceTimeId).getByRole('button', { name: 'Remove' }).click();
+  }
+
+  // --- the row's Edit and Delete controls (#278) -----------------------------
+
+  /**
+   * The activity's own row, addressed by its identifier rather than its
+   * displayed text. Editing swaps the description cell for an input and the
+   * phase badge for a select, so once a row is in its editing state, neither
+   * value is part of its rendered text any more and `row(description)` can no
+   * longer find it — this is what the edit-state methods below use instead.
+   */
+  rowById(activityId: string): Locator {
+    return this.activityTable.locator(`tbody tr[data-extra-curricular-id="${activityId}"]`);
+  }
+
+  /** Presses Edit on the row, putting its description and phase into an editable state. */
+  async editRow(description: string): Promise<void> {
+    await this.row(description).getByRole('button', { name: 'Edit', exact: true }).click();
+  }
+
+  /** The row's own description input, visible only while that row is being edited. */
+  rowDescriptionInput(activityId: string): Locator {
+    return this.rowById(activityId).locator('#descriptionInput');
+  }
+
+  /** The row's own phase select, visible only while that row is being edited. */
+  rowPhaseSelect(activityId: string): Locator {
+    return this.rowById(activityId).locator('#phaseSelect');
+  }
+
+  /** Fills the row's own edit inputs, addressed by the activity's identifier. */
+  async fillRowEdit(activityId: string, changes: { description?: string; phase?: Phase }): Promise<void> {
+    if (changes.description !== undefined) {
+      await this.rowDescriptionInput(activityId).fill(changes.description);
+    }
+    if (changes.phase !== undefined) {
+      await this.rowPhaseSelect(activityId).selectOption({ label: changes.phase });
+    }
+  }
+
+  /** Presses Save on the row currently being edited, addressed by the activity's identifier. */
+  async saveRowEdit(activityId: string): Promise<void> {
+    await this.rowById(activityId).getByRole('button', { name: 'Save', exact: true }).click();
+  }
+
+  /** Presses Cancel on the row currently being edited, discarding the drafted values. */
+  async cancelRowEdit(activityId: string): Promise<void> {
+    await this.rowById(activityId).getByRole('button', { name: 'Cancel', exact: true }).click();
+  }
+
+  /** Presses Delete on the activity's row. */
+  async clickDelete(description: string): Promise<void> {
+    await this.row(description).getByRole('button', { name: 'Delete', exact: true }).click();
+  }
+
+  /** Confirms the Delete Activity modal, carrying out the deletion. */
+  async confirmDelete(): Promise<void> {
+    await this.deleteModal.locator('#deleteBtn').click();
+  }
+
+  /** Cancels the Delete Activity modal, leaving the activity untouched. */
+  async cancelDeleteModal(): Promise<void> {
+    await this.deleteModal.locator('#cancelBtn').click();
+  }
+
+  /** The modal's own naming of the activity and its practice-time count. */
+  deleteModalName(): Locator {
+    return this.deleteModal.locator('#modalName');
+  }
+
+  deleteModalCount(): Locator {
+    return this.deleteModal.locator('#modalCount');
+  }
+
+  /**
+   * The row-level banner reporting a refused save or delete, addressed by the
+   * activity's own identifier — it sits in its own row, above the activity's,
+   * so it is not part of `row(description)` itself.
+   */
+  rowBanner(activityId: string): Locator {
+    return this.activityTable.locator(`tr.ec-table__error-row[data-error-for="${activityId}"]`);
   }
 }

@@ -268,6 +268,130 @@ public sealed class ExtraCurricularRoutesTests(ApiTestFixture fixture)
 			() => afterRemove.PracticeTimes[0].Day.ShouldBe(DayOfWeek.Monday));
 	}
 
+	[Fact]
+	[Trait("AC", "278UC8")]
+	public async Task UpdateAndDelete_CallerHoldingOnlyTeacher_AreBothForbiddenAndNothingChanges()
+	{
+		var coordinator = await SignInAsync("ec-edit-teacher-owner", Role.Coordinator, "10.0.73.1");
+		var description = $"Teacher Edit Refused {Guid.NewGuid()}";
+		var activity = await CreateActivityAsync(coordinator, description, PhaseType.Junior);
+
+		var teacher = await SignInAsync("ec-edit-teacher", Role.Teacher, "10.0.73.2");
+		var updateResponse = await teacher.Client.SendAsync(
+			teacher.AuthorizedPutRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}",
+				new UpdateExtraCurricularRequest($"Renamed {Guid.NewGuid()}", PhaseType.Senior)),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await teacher.Client.SendAsync(
+			teacher.AuthorizedDeleteRequest($"/api/extra-curriculars/{activity.ExtraCurricularId}"),
+			TestContext.Current.CancellationToken);
+
+		var readBack = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		ShouldlyHelpers.Satisfy(
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// A Teacher reads this area, so the refusal has to be of the change
+			// rather than of the screen — the activity is exactly as it was.
+			() => readBack.Description.ShouldBe(description),
+			() => readBack.Phase.ShouldBe(PhaseType.Junior));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC9")]
+	public async Task UpdateCountAndDelete_CallerHoldingOnlyAdmin_AreAllForbidden()
+	{
+		var coordinator = await SignInAsync("ec-edit-admin-owner", Role.Coordinator, "10.0.73.3");
+		var activity = await CreateActivityAsync(coordinator, $"Admin Edit Refused {Guid.NewGuid()}", PhaseType.Senior);
+
+		var admin = await SignInAsync("ec-edit-admin", Role.Admin, "10.0.73.4");
+		var updateResponse = await admin.Client.SendAsync(
+			admin.AuthorizedPutRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}",
+				new UpdateExtraCurricularRequest("Admin Rename", PhaseType.Junior)),
+			TestContext.Current.CancellationToken);
+		var countResponse = await admin.Client.SendAsync(
+			admin.AuthorizedGetRequest($"/api/extra-curriculars/{activity.ExtraCurricularId}/students/count"),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await admin.Client.SendAsync(
+			admin.AuthorizedDeleteRequest($"/api/extra-curriculars/{activity.ExtraCurricularId}"),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			// The Admin role owns nothing in this area — the count is refused too.
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => countResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC10")]
+	public async Task UpdateAndDelete_CallerHoldingCoordinator_ArePermittedAndPersisted()
+	{
+		var coordinator = await SignInAsync("ec-edit-coordinator", Role.Coordinator, "10.0.73.5");
+		var activity = await CreateActivityAsync(
+			coordinator, $"Marimba Band {Guid.NewGuid()}", PhaseType.Junior, DayOfWeek.Monday, new TimeOnly(15, 0));
+		var renamed = $"Marimba Ensemble {Guid.NewGuid()}";
+
+		var updateResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPutRequest(
+				$"/api/extra-curriculars/{activity.ExtraCurricularId}",
+				new UpdateExtraCurricularRequest(renamed, PhaseType.Senior)),
+			TestContext.Current.CancellationToken);
+		var afterUpdate = await ReadActivityAsync(coordinator, activity.ExtraCurricularId);
+
+		var countResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedGetRequest($"/api/extra-curriculars/{activity.ExtraCurricularId}/students/count"),
+			TestContext.Current.CancellationToken);
+		var count = JsonSerializer.Deserialize<CountExtraCurricularStudentsResult>(
+			await countResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), _jsonOptions)
+			.ShouldNotBeNull();
+
+		var deleteResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedDeleteRequest($"/api/extra-curriculars/{activity.ExtraCurricularId}"),
+			TestContext.Current.CancellationToken);
+		var afterDelete = await ReadListAsync(await coordinator.Client.SendAsync(
+			coordinator.AuthorizedGetRequest("/api/extra-curriculars"), TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => afterUpdate.Description.ShouldBe(renamed),
+			() => afterUpdate.Phase.ShouldBe(PhaseType.Senior),
+			// The edit left the slots exactly as they were.
+			() => afterUpdate.PracticeTimes.Single().Day.ShouldBe(DayOfWeek.Monday),
+			() => count.Count.ShouldBe(0),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => afterDelete.ShouldNotContain(a => a.ExtraCurricularId == activity.ExtraCurricularId));
+	}
+
+	[Fact]
+	[Trait("AC", "278UC25")]
+	public async Task CreateExtraCurricular_DescriptionAlreadyHeldInThatPhase_IsRefusedAndTheOtherPhaseIsNot()
+	{
+		var coordinator = await SignInAsync("ec-duplicate-description", Role.Coordinator, "10.0.73.6");
+		var description = $"Choir {Guid.NewGuid()}";
+		await CreateActivityAsync(coordinator, description, PhaseType.Junior);
+
+		var duplicateResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPostRequest("/api/extra-curriculars", RequestFor(description, PhaseType.Junior)),
+			TestContext.Current.CancellationToken);
+		var otherPhaseResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedPostRequest("/api/extra-curriculars", RequestFor(description, PhaseType.Senior)),
+			TestContext.Current.CancellationToken);
+
+		var listed = await ReadListAsync(await coordinator.Client.SendAsync(
+			coordinator.AuthorizedGetRequest("/api/extra-curriculars"), TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => duplicateResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
+			// A rule enforced only in the browser is not enforced.
+			() => listed.Count(a => a.Description == description && a.Phase == PhaseType.Junior).ShouldBe(1),
+			// The same description in the other phase is a legitimately different
+			// activity.
+			() => otherPhaseResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => listed.Count(a => a.Description == description && a.Phase == PhaseType.Senior).ShouldBe(1));
+	}
+
 	private static async Task<ExtraCurricularResult> ReadActivityAsync(IsolatedHttpClient client, Guid extraCurricularId)
 	{
 		var listed = await ReadListAsync(await client.Client.SendAsync(

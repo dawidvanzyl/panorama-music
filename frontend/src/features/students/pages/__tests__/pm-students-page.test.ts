@@ -312,6 +312,10 @@ beforeEach(() => {
   vi.mocked(peekCachedGuardianRelationships).mockReturnValue([motherRelationship, fatherRelationship]);
   vi.mocked(getStudentCourses).mockReset();
   vi.mocked(getStudentCourses).mockResolvedValue([]);
+  // Expanding a row reads the student's activities alongside their siblings,
+  // guardians and enrollments, so every expansion test needs an answer here.
+  vi.mocked(getStudentExtraCurriculars).mockReset();
+  vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
   vi.mocked(enrollStudent).mockReset();
   vi.mocked(enrollStudent).mockResolvedValue(pianoEnrollment);
   vi.mocked(updateEnrollment).mockReset();
@@ -1412,6 +1416,9 @@ describe('pm-students-page — expanded row shows a read-only courses summary', 
       'pm-student-siblings-summary',
       'pm-student-guardians-summary',
       'pm-student-courses-summary',
+      // The activities summary joined the stack in #278, beneath the courses one
+      // it was built like.
+      'pm-student-extra-curriculars-summary',
     ]);
 
     const summary = tableShadow.querySelector('pm-student-courses-summary') as PmStudentCoursesSummary;

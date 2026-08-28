@@ -1,6 +1,6 @@
 import './pm-extra-curricular-practice-times';
-import { PHASE_LABELS, practiceTimesText } from '../services/extra-curricular-display';
-import type { ExtraCurricular } from '../services/extra-curriculars';
+import { MISSING_ERROR, PHASES, PHASE_LABELS, practiceTimesText } from '../services/extra-curricular-display';
+import type { ExtraCurricular, PhaseType } from '../services/extra-curriculars';
 import type { PmExtraCurricularPracticeTimes } from './pm-extra-curricular-practice-times';
 
 const styles = new CSSStyleSheet();
@@ -85,6 +85,81 @@ styles.replaceSync(`
       font-size: 14px;
       margin: 16px 0 0;
     }
+    /* The reason a save or delete failed sits inside the row it concerns, above
+       its cells, so it is never mistaken for another row's. */
+    .ec-table__error-cell {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .ec-table__error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(224, 82, 82, 0.1);
+      border: 1px solid var(--pm-danger);
+      border-radius: var(--pm-radius);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pm-danger);
+    }
+    .ec-table__input,
+    .ec-table__select {
+      box-sizing: border-box;
+      width: 100%;
+      height: 38px;
+      padding: 0 8px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .ec-table__btn {
+      border: 1px solid transparent;
+      border-radius: var(--pm-radius);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ec-table__btn + .ec-table__btn {
+      margin-left: 6px;
+    }
+    .ec-table__btn--edit {
+      background: transparent;
+      border-color: var(--pm-accent);
+      color: var(--pm-accent);
+    }
+    .ec-table__btn--edit:hover:not(:disabled) {
+      background: rgba(79, 124, 255, 0.1);
+    }
+    .ec-table__btn--delete {
+      background: var(--pm-danger, #e05252);
+      border-color: var(--pm-danger, #e05252);
+      color: #fff;
+    }
+    .ec-table__btn--save {
+      background: var(--pm-accent);
+      color: #fff;
+    }
+    .ec-table__btn--cancel {
+      background: transparent;
+      color: var(--pm-text-muted);
+    }
+    .ec-table__btn--cancel:hover {
+      background: var(--pm-surface-2);
+    }
+    .ec-table__btn--delete:hover:not(:disabled),
+    .ec-table__btn--save:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+    .ec-table__btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
   `);
 
 const template = document.createElement('template');
@@ -121,6 +196,15 @@ export class PmExtraCurricularTable extends HTMLElement {
    * the catalogue reloaded.
    */
   private panel: PmExtraCurricularPracticeTimes | null = null;
+  /** The activity whose description and phase are currently editable, if any. */
+  private editingId: string | null = null;
+  /** The values in the edit inputs, kept so a re-render does not lose them. */
+  private descriptionDraft = '';
+  private phaseDraft: PhaseType = 'Junior';
+  private errorId: string | null = null;
+  private errorMessage = '';
+  /** A save is in flight; its actions stay dead until it lands, so one click sends one request. */
+  private saving = false;
 
   constructor() {
     super();
@@ -144,6 +228,13 @@ export class PmExtraCurricularTable extends HTMLElement {
 
   set extraCurriculars(value: ExtraCurricular[]) {
     this._extraCurriculars = value;
+    // A fresh list is what a completed save or delete produces, so any edit and
+    // any row error it might have carried are done with.
+    this.editingId = null;
+    this.descriptionDraft = '';
+    this.phaseDraft = 'Junior';
+    this.saving = false;
+    this.clearRowError();
     this.render();
   }
 
@@ -152,10 +243,10 @@ export class PmExtraCurricularTable extends HTMLElement {
   }
 
   /**
-   * Whether this viewer may maintain the catalogue. The row's actions column
-   * holds nothing yet — edit and delete arrive with #278 — but it is a
-   * maintainer's column, so a read-only viewer gets no column rather than an
-   * empty one. The expanded panel follows the same flag for its own controls.
+   * Whether this viewer may maintain the catalogue. A read-only viewer gets no
+   * actions column at all rather than an empty or disabled one, matching how the
+   * endpoints answer them. The expanded panel follows the same flag for its own
+   * controls.
    */
   set showActions(value: boolean) {
     this._showActions = value;
@@ -173,6 +264,23 @@ export class PmExtraCurricularTable extends HTMLElement {
    */
   showPanelError(message: string): void {
     this.panel?.showError(message);
+  }
+
+  /**
+   * Reports a refused save or delete against the row it concerns. A row being
+   * edited stays in edit mode holding the entered values, so the change can be
+   * corrected and retried.
+   */
+  showRowError(extraCurricularId: string, message: string): void {
+    this.errorId = extraCurricularId;
+    this.errorMessage = message;
+    this.saving = false;
+    this.render();
+  }
+
+  clearRowError(): void {
+    this.errorId = null;
+    this.errorMessage = '';
   }
 
   private upgradeProperty(name: string): void {
@@ -199,6 +307,10 @@ export class PmExtraCurricularTable extends HTMLElement {
     this.rowsBody.innerHTML = '';
 
     for (const extraCurricular of this._extraCurriculars) {
+      if (extraCurricular.extraCurricularId === this.errorId) {
+        this.rowsBody.appendChild(this.buildErrorRow());
+      }
+
       this.rowsBody.appendChild(this.buildRow(extraCurricular));
 
       if (extraCurricular.extraCurricularId === this.expandedId) {
@@ -261,12 +373,20 @@ export class PmExtraCurricularTable extends HTMLElement {
     expanderCell.classList.add('ec-table__expander');
     expanderCell.appendChild(this.buildExpander(extraCurricular, expanded));
 
+    const editing = this.editingId === extraCurricular.extraCurricularId;
+
     const descriptionCell = document.createElement('td');
-    descriptionCell.textContent = extraCurricular.description;
+    if (editing) {
+      descriptionCell.appendChild(this.buildDescriptionInput());
+    } else {
+      descriptionCell.textContent = extraCurricular.description;
+    }
 
     const phaseCell = document.createElement('td');
-    phaseCell.appendChild(this.buildPhaseBadge(extraCurricular));
+    phaseCell.appendChild(editing ? this.buildPhaseSelect() : this.buildPhaseBadge(extraCurricular));
 
+    // The practice times stay read-only in edit mode: a slot is added and
+    // removed from the expanded panel, and never edited in place.
     const practiceTimesCell = document.createElement('td');
     practiceTimesCell.classList.add('ec-table__practice-times');
     practiceTimesCell.textContent = practiceTimesText(extraCurricular);
@@ -274,12 +394,158 @@ export class PmExtraCurricularTable extends HTMLElement {
     row.append(expanderCell, descriptionCell, phaseCell, practiceTimesCell);
 
     if (this._showActions) {
-      const actionsCell = document.createElement('td');
-      actionsCell.classList.add('ec-table__actions');
-      row.appendChild(actionsCell);
+      row.appendChild(editing ? this.buildEditActions(extraCurricular) : this.buildDisplayActions(extraCurricular));
     }
 
     return row;
+  }
+
+  private buildErrorRow(): HTMLTableRowElement {
+    const row = document.createElement('tr');
+    row.classList.add('ec-table__error-row');
+    row.dataset.errorFor = this.errorId ?? '';
+
+    const cell = document.createElement('td');
+    cell.classList.add('ec-table__error-cell');
+    cell.colSpan = this._showActions ? 5 : 4;
+
+    const banner = document.createElement('div');
+    banner.classList.add('ec-table__error');
+    banner.textContent = this.errorMessage;
+    cell.appendChild(banner);
+
+    row.appendChild(cell);
+    return row;
+  }
+
+  private buildDescriptionInput(): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'descriptionInput';
+    input.classList.add('ec-table__input');
+    input.value = this.descriptionDraft;
+    input.addEventListener('input', () => {
+      this.descriptionDraft = input.value;
+    });
+    return input;
+  }
+
+  private buildPhaseSelect(): HTMLSelectElement {
+    const select = document.createElement('select');
+    select.id = 'phaseSelect';
+    select.classList.add('ec-table__select');
+
+    for (const phase of PHASES) {
+      const option = document.createElement('option');
+      option.value = phase;
+      option.textContent = PHASE_LABELS[phase];
+      select.appendChild(option);
+    }
+
+    select.value = this.phaseDraft;
+    select.addEventListener('change', () => {
+      this.phaseDraft = select.value as PhaseType;
+    });
+    return select;
+  }
+
+  private buildDisplayActions(extraCurricular: ExtraCurricular): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    cell.classList.add('ec-table__actions');
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.classList.add('ec-table__btn', 'ec-table__btn--edit');
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => this.handleEditClicked(extraCurricular));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.classList.add('ec-table__btn', 'ec-table__btn--delete');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => this.handleDeleteClicked(extraCurricular));
+
+    cell.append(editBtn, deleteBtn);
+    return cell;
+  }
+
+  private buildEditActions(extraCurricular: ExtraCurricular): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    cell.classList.add('ec-table__actions');
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.classList.add('ec-table__btn', 'ec-table__btn--save');
+    saveBtn.textContent = 'Save';
+    saveBtn.disabled = this.saving;
+    saveBtn.addEventListener('click', () => this.handleSaveClicked(extraCurricular));
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.classList.add('ec-table__btn', 'ec-table__btn--cancel');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.disabled = this.saving;
+    cancelBtn.addEventListener('click', () => this.handleCancelClicked());
+
+    cell.append(saveBtn, cancelBtn);
+    return cell;
+  }
+
+  private handleEditClicked(extraCurricular: ExtraCurricular): void {
+    this.editingId = extraCurricular.extraCurricularId;
+    this.descriptionDraft = extraCurricular.description;
+    this.phaseDraft = extraCurricular.phase;
+    this.saving = false;
+    this.clearRowError();
+    this.render();
+  }
+
+  /** Restores the stored values by discarding the drafts; nothing is sent. */
+  private handleCancelClicked(): void {
+    this.editingId = null;
+    this.descriptionDraft = '';
+    this.phaseDraft = 'Junior';
+    this.saving = false;
+    this.clearRowError();
+    this.render();
+  }
+
+  private handleSaveClicked(extraCurricular: ExtraCurricular): void {
+    // The disabled button is the visible half of this; the flag is the half that
+    // actually guarantees one save produces one request.
+    if (this.saving) return;
+
+    const description = this.descriptionDraft.trim();
+
+    if (description === '') {
+      this.showRowError(extraCurricular.extraCurricularId, MISSING_ERROR);
+      return;
+    }
+
+    // Rendering here both retires any error the previous attempt left on screen
+    // and takes the row's actions out of service until the save lands.
+    this.clearRowError();
+    this.saving = true;
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent('extra-curricular-save-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { extraCurricularId: extraCurricular.extraCurricularId, description, phase: this.phaseDraft },
+      }),
+    );
+  }
+
+  private handleDeleteClicked(extraCurricular: ExtraCurricular): void {
+    this.clearRowError();
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent('extra-curricular-delete-clicked', {
+        bubbles: true,
+        composed: true,
+        detail: { extraCurricular },
+      }),
+    );
   }
 
   /**
