@@ -36,9 +36,10 @@ const ALL_LINK_IDS = [
 
 /**
  * Everything an Admin is offered — which is no longer everything there is.
- * Extra-Curriculars is the one entry the Admin role does not reach.
+ * Admin owns only the three /admin/* views; every other area is owned by
+ * Teacher, Coordinator, or BankingCoordinator instead.
  */
-const ADMIN_LINK_IDS = ALL_LINK_IDS.filter((id) => id !== 'extraCurricularsLink');
+const ADMIN_LINK_IDS = ['userManagementLink', 'adminSessionsLink', 'activityLogLink'];
 
 /** The ids of the entries currently offered, in markup order. */
 function visibleLinkIds(el: HTMLElement): string[] {
@@ -65,21 +66,14 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
   it.each([
     {
       roles: ['Admin'],
-      expected: [
-        'userManagementLink',
-        'adminSessionsLink',
-        'activityLogLink',
-        'studentManagementLink',
-        'teachersLink',
-        'courseManagementLink',
-        'guardianRelationshipsLink',
-      ],
+      expected: ['userManagementLink', 'adminSessionsLink', 'activityLogLink'],
     },
     { roles: ['Teacher'], expected: ['studentManagementLink', 'courseManagementLink', 'extraCurricularsLink'] },
     {
       roles: ['Coordinator'],
       expected: ['teachersLink', 'courseManagementLink', 'extraCurricularsLink', 'guardianRelationshipsLink'],
     },
+    { roles: ['BankingCoordinator'], expected: ['teachersLink'] },
     {
       roles: ['Teacher', 'Coordinator'],
       expected: [
@@ -167,7 +161,9 @@ describe('pm-sidebar — active entry marking', { tags: ['239UC4'] }, () => {
 
   beforeEach(() => {
     mockIsAuthenticated.mockReturnValue(true);
-    grantRoles('Admin');
+    // Every account holds at least Teacher; Coordinator is added so every
+    // route this suite exercises has a visible, markable entry.
+    grantRoles('Admin', 'Teacher', 'Coordinator');
     el = document.createElement('pm-sidebar');
     document.body.appendChild(el);
   });
@@ -219,8 +215,10 @@ describe('pm-sidebar — the admin group is separated from the rest', () => {
     return el.shadowRoot!.getElementById('studentManagementLinkDivider') as HTMLElement;
   }
 
-  it('draws the rule between the admin entries and the rest for an Admin', () => {
-    grantRoles('Admin');
+  it('draws the rule between the admin entries and the rest for an Admin who also holds Teacher', () => {
+    // Every account holds at least Teacher, so an Admin account always sees a
+    // second group too — Admin alone offers no non-admin entry to separate.
+    grantRoles('Admin', 'Teacher');
 
     renderOn('#/admin/users');
 
@@ -238,38 +236,50 @@ describe('pm-sidebar — the admin group is separated from the rest', () => {
   });
 });
 
-describe('pm-sidebar — Teacher Management is offered to Admins and Coordinators only', { tags: ['239UC5'] }, () => {
-  let el: HTMLElement;
+describe(
+  'pm-sidebar — Teacher Management is offered to Coordinators and BankingCoordinators only',
+  { tags: ['239UC5'] },
+  () => {
+    let el: HTMLElement;
 
-  beforeEach(() => {
-    mockIsAuthenticated.mockReturnValue(true);
-    el = document.createElement('pm-sidebar');
-    document.body.appendChild(el);
-  });
+    beforeEach(() => {
+      mockIsAuthenticated.mockReturnValue(true);
+      el = document.createElement('pm-sidebar');
+      document.body.appendChild(el);
+    });
 
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
 
-  it.each(['#/students', '#/teachers', '#/admin/users', '#/'])(
-    'offers no Teacher Management entry to a plain Teacher on %s',
-    (hash) => {
-      grantRoles('Teacher');
+    it.each(['#/students', '#/teachers', '#/admin/users', '#/'])(
+      'offers no Teacher Management entry to a plain Teacher on %s',
+      (hash) => {
+        grantRoles('Teacher');
 
-      renderOn(hash);
+        renderOn(hash);
+
+        expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(true);
+      },
+    );
+
+    it('offers no Teacher Management entry to a plain Admin', () => {
+      grantRoles('Admin');
+
+      renderOn('#/');
 
       expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(true);
-    },
-  );
+    });
 
-  it.each([['Coordinator'], ['Admin']])('offers the Teacher Management entry to a %s', (role) => {
-    grantRoles(role);
+    it.each([['Coordinator'], ['BankingCoordinator']])('offers the Teacher Management entry to a %s', (role) => {
+      grantRoles(role);
 
-    renderOn('#/');
+      renderOn('#/');
 
-    expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(false);
-  });
-});
+      expect((el.shadowRoot!.getElementById('teachersLink') as HTMLAnchorElement).hidden).toBe(false);
+    });
+  },
+);
 
 describe('pm-sidebar — account actions are not the sidebar’s to offer', { tags: ['247UC3'] }, () => {
   let el: HTMLElement;
@@ -326,12 +336,20 @@ describe('pm-sidebar — Course Management is offered only to roles permitted to
     return el.shadowRoot!.getElementById('courseManagementLink') as HTMLAnchorElement;
   }
 
-  it.each([['Teacher'], ['Coordinator'], ['Admin']])('offers the entry to a %s', (role) => {
+  it.each([['Teacher'], ['Coordinator']])('offers the entry to a %s', (role) => {
     grantRoles(role);
 
     renderOn('#/');
 
     expect(courseLink().hidden).toBe(false);
+  });
+
+  it('offers no entry to an Admin', () => {
+    grantRoles('Admin');
+
+    renderOn('#/');
+
+    expect(courseLink().hidden).toBe(true);
   });
 
   it('offers no entry to a signed-in user holding none of the permitted roles', () => {
@@ -344,7 +362,7 @@ describe('pm-sidebar — Course Management is offered only to roles permitted to
 
   it('offers no entry to a user who is not signed in', () => {
     mockIsAuthenticated.mockReturnValue(false);
-    grantRoles('Admin');
+    grantRoles('Coordinator');
 
     renderOn('#/');
 
@@ -357,7 +375,7 @@ describe('pm-sidebar — Course Management sits directly after Teacher Managemen
 
   beforeEach(() => {
     mockIsAuthenticated.mockReturnValue(true);
-    grantRoles('Admin');
+    grantRoles('Coordinator');
     el = document.createElement('pm-sidebar');
     document.body.appendChild(el);
   });
@@ -457,7 +475,7 @@ describe('pm-sidebar — Extra-Curriculars is not offered to an Admin', { tags: 
     expect((el.shadowRoot!.getElementById('extraCurricularsLink') as HTMLAnchorElement).hidden).toBe(true);
   });
 
-  it('still offers an Admin every other entry, so nothing else was narrowed by mistake', () => {
+  it('still offers an Admin its own admin-only entries, so nothing else was narrowed by mistake', () => {
     grantRoles('Admin');
 
     renderOn('#/');
@@ -498,15 +516,15 @@ describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['2
     expect(link.classList.contains('sidebar__link--active')).toBe(true);
   });
 
-  it('hides the link from a Teacher who is neither Coordinator nor Admin', () => {
+  it('hides the link from a Teacher who is not Coordinator', () => {
     grantRoles('Teacher');
 
     expect(relationshipsLinkOn('#/students').hidden).toBe(true);
   });
 
-  it('shows the link to an Admin outside the Students area', () => {
+  it('hides the link from an Admin — the area grants it nothing', () => {
     grantRoles('Admin');
 
-    expect(relationshipsLinkOn('#/admin/users').hidden).toBe(false);
+    expect(relationshipsLinkOn('#/admin/users').hidden).toBe(true);
   });
 });
