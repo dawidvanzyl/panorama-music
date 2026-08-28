@@ -40,7 +40,12 @@ styles.replaceSync(`
       color: var(--pm-text);
       border-bottom: 1px solid var(--pm-border);
     }
-    .users-table__col-roles {
+    td:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .users-table__col-email {
       width: 220px;
     }
     .users-table__col-status {
@@ -263,10 +268,13 @@ styles.replaceSync(`
       border: 1px solid var(--pm-border);
       color: var(--pm-text-muted);
       margin-right: 4px;
+      margin-bottom: 4px;
+      white-space: nowrap;
     }
     .users-table__role-checkboxes {
       display: flex;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 8px 12px;
     }
     .users-table__role-option {
       display: flex;
@@ -313,7 +321,7 @@ template.innerHTML = `
     </div>
     <table>
       <colgroup>
-        <col />
+        <col class="users-table__col-email" />
         <col class="users-table__col-roles" />
         <col class="users-table__col-status" />
         <col class="users-table__col-actions" />
