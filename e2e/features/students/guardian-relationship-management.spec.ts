@@ -111,7 +111,7 @@ test.describe('Guardian Relationship Management', { tag: ['@6IT8'] }, () => {
     await expect(relationshipsPage.row(renamed)).toBeVisible();
   });
 
-  test('denies maintenance to a user who is neither Coordinator nor Admin', async ({ page }) => {
+  test('denies maintenance to a user who is not Coordinator', async ({ page }) => {
     const teacherEmail = uniqueTestEmail('relationship-teacher');
     const password = 'TeacherPass123!';
     await createRegisteredUser(page, teacherEmail, password, ['Teacher']);
@@ -156,6 +156,36 @@ test.describe('Guardian Relationship Management', { tag: ['@6IT8'] }, () => {
     }, someGuid);
 
     expect(statuses).toEqual([403, 403, 403]);
+
+    // Admin is refused too — the area grants it nothing at all, unlike the
+    // Teacher above who at least keeps the read.
+    const adminEmail = uniqueTestEmail('relationship-admin');
+    await createRegisteredUser(page, adminEmail, password, ['Admin']);
+    await loginPage.gotoLogin();
+    await loginPage.login(adminEmail, password);
+    await expect(page).toHaveURL(landingUrl('Admin'));
+
+    const adminStatuses = await page.evaluate(async (guardianRelationshipId) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      };
+      const responses = await Promise.all([
+        fetch('/api/guardian-relationships', { headers }),
+        fetch('/api/guardian-relationships', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ name: 'Aunt' }),
+        }),
+        fetch(`/api/guardian-relationships/${guardianRelationshipId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ name: 'Aunt' }),
+        }),
+      ]);
+      return responses.map((response) => response.status);
+    }, someGuid);
+    expect(adminStatuses).toEqual([403, 403, 403]);
 
     // And an anonymous caller is rejected before authorization is even considered.
     const anonymousResponse = await page.request.post('/api/guardian-relationships', {

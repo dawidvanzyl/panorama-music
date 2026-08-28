@@ -17,6 +17,7 @@ const ROLE_SETS: { label: string; roles: UserRole[] }[] = [
   { label: 'teacher', roles: ['Teacher'] },
   { label: 'coordinator', roles: ['Coordinator'] },
   { label: 'admin', roles: ['Admin'] },
+  { label: 'bankingcoordinator', roles: ['BankingCoordinator'] },
 ];
 
 async function signInAs(page: import('@playwright/test').Page, label: string, roles: UserRole[]): Promise<void> {
@@ -72,8 +73,8 @@ test.describe('Sidebar navigation is gated by role alone', { tag: '@239IT1' }, (
     });
   }
 
-  // An Admin is permitted every entry, so only the role sets that actually
-  // have a screen to be refused get this test at all.
+  // Only the role sets that actually have a screen they are refused get this
+  // test at all — none of the four role sets above is permitted every entry.
   for (const { label, roles } of ROLE_SETS.filter(({ roles }) => refusedEntryFor(roles) !== undefined)) {
     const refused = refusedEntryFor(roles)!;
 

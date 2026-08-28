@@ -106,7 +106,7 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
     await expect(page).toHaveURL(/#\/login/);
   });
 
-  test('permits each teacher operation only for an Admin or Coordinator', async ({ page }) => {
+  test('permits each teacher operation only for a Coordinator or BankingCoordinator', async ({ page }) => {
     const email = uniqueTestEmail('teachers-rbac');
     await createRegisteredUser(page, email, PASSWORD, ['Teacher']);
 
@@ -150,10 +150,25 @@ test.describe('Teacher endpoint access control', { tag: ['@7IT10'] }, () => {
     expect(profile.status()).toBe(403);
     expect(classification.status()).toBe(403);
 
-    // The same operations succeed for an Admin, proving the endpoints are
+    // An Admin is refused too — the area grants it nothing at all.
+    const adminEmail = uniqueTestEmail('teachers-rbac-admin');
+    await createRegisteredUser(page, adminEmail, PASSWORD, ['Admin']);
+    await loginPage.gotoLogin();
+    await loginPage.login(adminEmail, PASSWORD);
+    await expect(page).toHaveURL(landingUrl('Admin'));
+
+    const adminAccessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+    const adminHeaders = { Authorization: `Bearer ${adminAccessToken}` };
+    const adminCreate = await page.request.post('/api/teachers', {
+      headers: adminHeaders,
+      data: { firstName: 'Nope', surname: 'Nope', isPrivate: false },
+    });
+    expect(adminCreate.status()).toBe(403);
+
+    // The same operations succeed for a Coordinator, proving the endpoints are
     // permitted rather than universally closed.
     const teachersPage = await goToTeachersPage(page);
-    const { firstName, surname } = uniqueName('rbac-admin');
+    const { firstName, surname } = uniqueName('rbac-coordinator');
     await teachersPage.createTeacher({ firstName, surname });
     await expect(teachersPage.row(`${firstName} ${surname}`)).toBeVisible();
   });

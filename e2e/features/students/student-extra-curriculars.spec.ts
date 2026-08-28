@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
 import {
   createRegisteredUser,
-  loginAsAdmin,
+  loginAsRoles,
   uniqueTestEmail,
 } from '../../fixtures/testUsers';
 import { seedEnrollmentTarget, seedEnrolledStudent, studentIdBySurname } from '../../fixtures/enrollment';
@@ -155,9 +155,9 @@ async function seedSeniorActivity(page: Page, description: string, slot: Practic
   };
 }
 
-/** A Junior student, enrolled in one course, seeded by Admin through the API. */
+/** A Junior student, enrolled in one course, seeded by Teacher/Coordinator through the API. */
 async function seedJuniorStudent(page: Page): Promise<string> {
-  await loginAsAdmin(page);
+  await loginAsRoles(page, ['Teacher', 'Coordinator']);
   const target = await seedEnrollmentTarget(page);
   return seedEnrolledStudent(page, target);
 }
@@ -187,7 +187,7 @@ interface StudentActivity {
   practiceTimes: { day: string; startTime: string }[];
 }
 
-/** The activities a student is assigned to, read as Admin. */
+/** The activities a student is assigned to, read as Teacher. */
 async function getStudentActivities(page: Page, studentId: string): Promise<StudentActivity[]> {
   return page.evaluate(async (id) => {
     const response = await fetch(`/api/students/${id}/extra-curriculars`, {
@@ -203,12 +203,12 @@ test.describe('Extra-Curriculars — a student can be assigned to multiple activ
   }) => {
     const token = uniqueToken('10IT2');
 
-    // Seeding: two Junior activities via a Coordinator, then an Admin session
+    // Seeding: two Junior activities via a Coordinator, then a Teacher/Coordinator session
     // to create the student through the wizard.
     const marimba = await seedJuniorActivity(page, `${token} Marimba Band`, { day: 'Monday', startTime: '15:00' });
     const recorder = await seedJuniorActivity(page, `${token} Recorder Group`, { day: 'Tuesday', startTime: '15:00' });
 
-    await loginAsAdmin(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
     const studentsPage = new StudentsPage(page);
     await studentsPage.gotoStudents();
@@ -276,8 +276,8 @@ test.describe('Extra-Curriculars — a student can be assigned to multiple activ
     });
 
     // Seeding the third activity switched the page's session to a fresh
-    // Coordinator; reopen the student as Admin to continue in edit mode.
-    await loginAsAdmin(page);
+    // Coordinator; reopen the student as Teacher/Coordinator to continue in edit mode.
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     await studentsPage.gotoStudents();
     await studentsPage.openExtraCurricularsTab(surname);
 
@@ -404,9 +404,9 @@ test.describe(
         startTime: '14:00',
       });
 
-      // Admin creates the "held" assignment before the Coordinator's own
+      // The Teacher/Coordinator session creates the "held" assignment before the Coordinator's own
       // steps run, giving step 6 a real assignment to attempt against.
-      await loginAsAdmin(page);
+      await loginAsRoles(page, ['Teacher', 'Coordinator']);
       const assignHeldStatus = await apiStatus(page, 'POST', `/api/students/${studentId}/extra-curriculars`, {
         extraCurricularId: heldActivity.extraCurricularId,
       });
@@ -463,10 +463,10 @@ test.describe(
       expect(afterRemove.practiceTimes).toHaveLength(1);
       expect(afterRemove.practiceTimes[0].practiceTimeId).toBe(ownActivity.practiceTimeId);
 
-      // Admin confirms: no assignment to the Coordinator's activity was
+      // The Teacher/Coordinator session confirms: no assignment to the Coordinator's activity was
       // created by the refused step 5, and the held assignment from the
       // precondition still exists — step 6's refusal removed nothing.
-      await loginAsAdmin(page);
+      await loginAsRoles(page, ['Teacher', 'Coordinator']);
       const afterAll = await getStudentActivities(page, studentId);
       const ids = afterAll.map((activity) => activity.extraCurricularId);
       expect(ids).toContain(heldActivity.extraCurricularId);
@@ -480,7 +480,7 @@ test.describe('Extra-Curriculars — a Private-grade student takes no part in ex
     page,
   }) => {
     // --- S1: the wizard never offers the Extra-Curriculars step, in create mode or in edit mode ---
-    await loginAsAdmin(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
     const studentsPage = new StudentsPage(page);
     await studentsPage.gotoStudents();
@@ -526,9 +526,9 @@ test.describe('Extra-Curriculars — a Private-grade student takes no part in ex
       startTime: '15:00',
     });
 
-    // Signed in as Admin, calling the endpoint directly — bypassing the
+    // Signed in as Teacher/Coordinator, calling the endpoint directly — bypassing the
     // wizard entirely, since hiding the step is not the enforcement.
-    await loginAsAdmin(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const assignResult = await page.evaluate(
       async ({ studentId, extraCurricularId }) => {
         const response = await fetch(`/api/students/${studentId}/extra-curriculars`, {
@@ -583,7 +583,7 @@ test.describe(
       const thursday: PracticeSlot = { day: 'Thursday', startTime: '15:00' };
       await seedJuniorActivityWithSlots(page, description, [monday, thursday]);
 
-      await loginAsAdmin(page);
+      await loginAsRoles(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
       const studentsPage = new StudentsPage(page);
       await studentsPage.gotoStudents();

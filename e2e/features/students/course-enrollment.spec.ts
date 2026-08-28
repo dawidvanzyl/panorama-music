@@ -1,5 +1,6 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
-import { loginAsAdmin } from '../../fixtures/testUsers';
+import { loginAsRoles } from '../../fixtures/testUsers';
 import { seedEnrollmentTarget, studentIdBySurname } from '../../fixtures/enrollment';
 import { StudentsPage } from '../../pages/students/StudentsPage';
 
@@ -25,8 +26,16 @@ const studentDefaults = {
  * Student Management. Seeding runs before the screen is opened because the
  * enroll form reads the catalogue and roster once on mount.
  */
-async function openStudentsWithCourses(page: Parameters<typeof loginAsAdmin>[0]) {
-  await loginAsAdmin(page);
+/**
+ * Signs in with both Teacher and Coordinator, seeds a course and teacher of
+ * each kind this spec needs, and opens Student Management. Seeding runs
+ * before the screen is opened because the enroll form reads the catalogue and
+ * roster once on mount. Both roles are needed on the one signed-in account:
+ * Coordinator to create teachers and courses, Teacher to open and maintain
+ * Student Management itself.
+ */
+async function openStudentsWithCourses(page: Page) {
+  await loginAsRoles(page, ['Teacher', 'Coordinator']);
   const target = await seedEnrollmentTarget(page);
   const instrument = await seedInstrumentCourse(page);
   const theory = await seedTheoryCourse(page);
@@ -36,24 +45,24 @@ async function openStudentsWithCourses(page: Parameters<typeof loginAsAdmin>[0])
   return { studentsPage, target, instrument, theory };
 }
 
-async function seedInstrumentCourse(page: Parameters<typeof loginAsAdmin>[0]): Promise<string> {
+async function seedInstrumentCourse(page: Page): Promise<string> {
   await seedCourse(page, 'Instrument', 'Individual', 'HalfHour', 'DuringSchool');
   return 'Instrument · Individual · Half Hour · During School';
 }
 
-async function seedTheoryCourse(page: Parameters<typeof loginAsAdmin>[0]): Promise<string> {
+async function seedTheoryCourse(page: Page): Promise<string> {
   await seedCourse(page, 'Theory', 'Group', 'Hour', 'AfterSchool');
   return 'Theory · Group · Hour · After School';
 }
 
 /**
- * Issued from inside the page so the request carries the signed-in Admin's
+ * Issued from inside the page so the request carries the signed-in caller's
  * bearer token. A course of the same type and structure may already exist from
  * an earlier run — that is fine, since the enroll form offers whichever one it
  * finds under that label.
  */
 async function seedCourse(
-  page: Parameters<typeof loginAsAdmin>[0],
+  page: Page,
   courseType: string,
   lessonType: string,
   durationType: string,
@@ -273,7 +282,7 @@ test.describe('Enrollment — a student must remain enrolled in at least one cou
 
 test.describe('Enrollment — an existing enrollment can be corrected', { tag: ['@9IT9'] }, () => {
   test('changes the assigned teacher, instrument and step on the enrollment row', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
     // A second seeded target only for its teacher, so the correction has someone
     // to reassign the enrollment to.

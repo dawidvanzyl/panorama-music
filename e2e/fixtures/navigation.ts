@@ -21,17 +21,18 @@ export const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { id: 'userManagementLink', path: '/admin/users', label: 'User Management', roles: ['Admin'] },
   { id: 'adminSessionsLink', path: '/admin/sessions', label: 'User Sessions', roles: ['Admin'] },
   { id: 'activityLogLink', path: '/admin/activity-log', label: 'Activity Log', roles: ['Admin'] },
-  { id: 'studentManagementLink', path: '/students', label: 'Student Management', roles: ['Teacher', 'Admin'] },
-  { id: 'teachersLink', path: '/teachers', label: 'Teacher Management', roles: ['Coordinator', 'Admin'] },
-  { id: 'courseManagementLink', path: '/courses', label: 'Course Management', roles: ['Teacher', 'Coordinator', 'Admin'] },
-  // The only entry not offered to Admin: extra-curriculars are a
-  // Coordinator-owned area and the Admin role holds no rights in it.
+  { id: 'studentManagementLink', path: '/students', label: 'Student Management', roles: ['Teacher'] },
+  { id: 'teachersLink', path: '/teachers', label: 'Teacher Management', roles: ['Coordinator', 'BankingCoordinator'] },
+  { id: 'courseManagementLink', path: '/courses', label: 'Course Management', roles: ['Teacher', 'Coordinator'] },
+  // Admin owns none of the four entries above — each area belongs to Teacher,
+  // Coordinator, or BankingCoordinator instead. Admin's own areas are the
+  // three /admin/* entries at the top of this list.
   { id: 'extraCurricularsLink', path: '/extra-curriculars', label: 'Extra-Curriculars', roles: ['Teacher', 'Coordinator'] },
   {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',
     label: 'Guardian Relationships',
-    roles: ['Coordinator', 'Admin'],
+    roles: ['Coordinator'],
   },
 ];
 

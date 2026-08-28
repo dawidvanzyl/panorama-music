@@ -23,8 +23,8 @@ function uniqueName(label: string): { firstName: string; surname: string } {
 }
 
 /**
- * Creates a teacher as an Admin, links it to a freshly registered Teacher-role
- * account, and leaves the browser signed in as that teacher.
+ * Creates a teacher as a Coordinator, links it to a freshly registered
+ * Teacher-role account, and leaves the browser signed in as that teacher.
  */
 async function signInAsLinkedTeacher(
   page: import('@playwright/test').Page,
@@ -59,7 +59,9 @@ test.describe('A linked teacher maintains their own record', { tag: ['@7IT12'] }
     await expect(myDetails.firstName()).toHaveText('Renamed');
 
     // The classification is shown locked, with the reason it is not theirs to change.
-    await expect(myDetails.classification).toContainText('Only an Admin or Coordinator can change this classification');
+    await expect(myDetails.classification).toContainText(
+      'Only a Coordinator or BankingCoordinator can change this classification',
+    );
     await expect(myDetails.classification.locator('input')).toHaveCount(0);
 
     // Banking details: capture, reveal, see the activity, and delete.
@@ -84,9 +86,9 @@ test.describe('A linked teacher maintains their own record', { tag: ['@7IT12'] }
     await otherTeachers.createTeacher({ firstName: other.firstName, surname: other.surname });
     await expect(otherTeachers.row(`${other.firstName} ${other.surname}`)).toBeVisible();
 
-    const adminToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+    const coordinatorToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
     const roster = await (
-      await page.request.get('/api/teachers', { headers: { Authorization: `Bearer ${adminToken}` } })
+      await page.request.get('/api/teachers', { headers: { Authorization: `Bearer ${coordinatorToken}` } })
     ).json();
     const otherTeacherId = roster.find(
       (candidate: { surname: string; teacherId: string }) => candidate.surname === other.surname,

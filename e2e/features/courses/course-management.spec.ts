@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/base';
 import {
   createRegisteredUser,
   goToCourseManagementPage,
-  loginAsAdmin,
+  loginAsRoles,
   uniqueTestEmail,
 } from '../../fixtures/testUsers';
 import { seedEnrolledStudent, seedEnrollmentTarget } from '../../fixtures/enrollment';
@@ -235,7 +235,7 @@ test.describe('Course Management — removing a course', { tag: ['@8IT1'] }, () 
 
 test.describe('Course Management — a course a student is enrolled in cannot be deleted', { tag: ['@9IT7'] }, () => {
   test('refuses the delete against the row, offers no confirmation, and leaves the course listed', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
     await seedEnrolledStudent(page, target);
 
@@ -265,7 +265,7 @@ test.describe('Course Management — a course a student is enrolled in cannot be
 });
 
 test.describe('Course Management — maintenance is refused to everyone else', { tag: ['@8IT5'] }, () => {
-  test('refuses a Teacher and an anonymous caller the update and delete endpoints', async ({ page }) => {
+  test('refuses a Teacher and an anonymous caller the update and delete endpoints', async ({ page, browser }) => {
     const cost = uniqueCost();
     const maintainerPage = await goToCourseManagementPage(page);
     await maintainerPage.createCourse({
@@ -312,6 +312,35 @@ test.describe('Course Management — maintenance is refused to everyone else', {
     const anonymousDelete = await page.request.delete(`/api/courses/${courseId}`);
     expect(anonymousUpdate.status()).toBe(401);
     expect(anonymousDelete.status()).toBe(401);
+
+    // An Admin is refused too — the area grants it nothing at all, unlike a
+    // Teacher who at least keeps the read. Run in its own browser context so
+    // the Teacher session and the Courses view still open in it survive.
+    const adminContext = await browser.newContext();
+    const adminPage = await adminContext.newPage();
+    const adminEmail = uniqueTestEmail('course-maintain-admin');
+    await createRegisteredUser(adminPage, adminEmail, password, ['Admin']);
+    const adminLoginPage = new LoginPage(adminPage);
+    await adminLoginPage.gotoLogin();
+    await adminLoginPage.login(adminEmail, password);
+    await expect(adminPage).toHaveURL(landingUrl('Admin'));
+
+    const adminStatuses = await adminPage.evaluate(async (id) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      };
+      const list = await fetch('/api/courses', { headers });
+      const update = await fetch(`/api/courses/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ cost: '1.00' }),
+      });
+      return { list: list.status, update: update.status };
+    }, courseId);
+    expect(adminStatuses.list).toBe(403);
+    expect(adminStatuses.update).toBe(403);
+    await adminContext.close();
 
     // Nothing changed: the course is still listed at the cost it was created with.
     await expect(coursesPage.row('GR Enrichment', `R ${cost}`)).toBeVisible();

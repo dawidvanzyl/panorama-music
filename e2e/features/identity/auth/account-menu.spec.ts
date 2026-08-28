@@ -12,7 +12,7 @@ const ADMIN_PASSWORD = process.env.Admin__Password ?? 'ChangeMe123!';
 const PASSWORD = 'AccountMenuPass123!';
 
 /**
- * Creates a teacher as an Admin and links it to a freshly registered
+ * Creates a teacher as a Coordinator and links it to a freshly registered
  * Teacher-role account, without signing in as that account.
  */
 async function createLinkedTeacher(
