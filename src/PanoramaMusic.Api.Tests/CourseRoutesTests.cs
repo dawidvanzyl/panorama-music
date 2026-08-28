@@ -31,7 +31,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "257UC4")]
 	public async Task CreateCourse_CostWithTwoDecimalPlaces_IsReadBackAsTheSameExactDecimal()
 	{
-		var client = await SignInAsync("courses-cost-admin", Role.Admin, "10.0.70.1");
+		var client = await SignInAsync("courses-cost-admin", Role.Coordinator, "10.0.70.1");
 		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
 		var created = await CreateCourseAsync(client, CourseType.Instrument, 450.55m, structure.LessonStructureId);
@@ -54,7 +54,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "257UC3")]
 	public async Task CreateCourse_NonNumericCost_IsRejectedAsABadRequest()
 	{
-		var client = await SignInAsync("courses-bad-cost-admin", Role.Admin, "10.0.70.2");
+		var client = await SignInAsync("courses-bad-cost-admin", Role.Coordinator, "10.0.70.2");
 		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool);
 
 		var request = client.AuthorizedRequest(HttpMethod.Post, "/api/courses", client.AccessToken);
@@ -72,7 +72,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "257UC5")]
 	public async Task GetCourses_ReturnsEveryCourseWithItsLessonStructureDetail()
 	{
-		var client = await SignInAsync("courses-list-admin", Role.Admin, "10.0.70.3");
+		var client = await SignInAsync("courses-list-admin", Role.Coordinator, "10.0.70.3");
 		var groupHourDuring = await GetStructureAsync(client, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool);
 		var individualHalfAfter = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
@@ -95,10 +95,11 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "257UC9")]
-	public async Task CreateCourse_CallerWithoutCoordinatorOrAdmin_IsForbidden()
+	[Trait("AC", "273UC3")]
+	public async Task CreateCourse_CallerWithoutCoordinator_IsForbidden()
 	{
-		var adminClient = await SignInAsync("courses-forbidden-admin", Role.Admin, "10.0.70.4");
-		var structure = await GetStructureAsync(adminClient, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool);
+		var coordinatorClient = await SignInAsync("courses-forbidden-coordinator", Role.Coordinator, "10.0.70.4");
+		var structure = await GetStructureAsync(coordinatorClient, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool);
 
 		var teacherClient = await SignInAsync("courses-forbidden-teacher", Role.Teacher, "10.0.70.5");
 
@@ -110,10 +111,23 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		var listResponse = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedGetRequest("/api/courses"), TestContext.Current.CancellationToken);
 
+		// Admin is refused both the maintain call and the read — Courses grant it
+		// nothing at all, unlike Teacher which keeps the read.
+		var adminClient = await SignInAsync("courses-forbidden-admin", Role.Admin, "10.0.70.20");
+		var adminCreateResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPostRequest(
+				"/api/courses",
+				new CreateCourseRequest(CourseType.Theory, 120.00m, structure.LessonStructureId)),
+			TestContext.Current.CancellationToken);
+		var adminListResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedGetRequest("/api/courses"), TestContext.Current.CancellationToken);
+
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			// Reading stays open to every staff role.
-			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK));
+			// Reading stays open to Teacher and Coordinator.
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => adminCreateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminListResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	[Fact]
@@ -137,7 +151,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "257UC2")]
 	public async Task CreateCourse_UnknownLessonStructure_IsRejectedAndNoCourseIsPersisted()
 	{
-		var client = await SignInAsync("courses-unknown-structure-admin", Role.Admin, "10.0.70.6");
+		var client = await SignInAsync("courses-unknown-structure-admin", Role.Coordinator, "10.0.70.6");
 
 		var (before, _) = await GetCoursesAsync(client);
 		var response = await client.Client.SendAsync(
@@ -156,7 +170,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC1")]
 	public async Task UpdateCourseCost_NewCost_IsPersistedAsTheSameExactDecimalAndReturned()
 	{
-		var client = await SignInAsync("courses-update-admin", Role.Admin, "10.0.70.7");
+		var client = await SignInAsync("courses-update-admin", Role.Coordinator, "10.0.70.7");
 		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.Hour, OccurrenceType.AfterSchool);
 		var created = await CreateCourseAsync(client, CourseType.Instrument, 450.50m, structure.LessonStructureId);
 
@@ -177,7 +191,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC2")]
 	public async Task UpdateCourseCost_NewCost_LeavesTheCourseTypeAndLessonStructureUnchanged()
 	{
-		var client = await SignInAsync("courses-update-immutable-admin", Role.Admin, "10.0.70.8");
+		var client = await SignInAsync("courses-update-immutable-admin", Role.Coordinator, "10.0.70.8");
 		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.DuringSchool);
 		var created = await CreateCourseAsync(client, CourseType.Theory, 120.00m, structure.LessonStructureId);
 
@@ -195,7 +209,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC3")]
 	public async Task UpdateCourseCost_InvalidCost_IsRejectedAndTheStoredCostIsUnchanged()
 	{
-		var client = await SignInAsync("courses-update-bad-cost-admin", Role.Admin, "10.0.70.9");
+		var client = await SignInAsync("courses-update-bad-cost-admin", Role.Coordinator, "10.0.70.9");
 		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.DuringSchool);
 		var created = await CreateCourseAsync(client, CourseType.Theory, 120.00m, structure.LessonStructureId);
 
@@ -216,7 +230,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC4")]
 	public async Task UpdateCourseCost_UnknownCourseId_IsRefusedAsNotFound()
 	{
-		var client = await SignInAsync("courses-update-missing-admin", Role.Admin, "10.0.70.10");
+		var client = await SignInAsync("courses-update-missing-admin", Role.Coordinator, "10.0.70.10");
 
 		var response = await client.Client.SendAsync(
 			client.AuthorizedPutRequest($"/api/courses/{Guid.NewGuid()}", new UpdateCourseRequest(120.00m)),
@@ -229,7 +243,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC5")]
 	public async Task DeleteCourse_ExistingCourse_RemovesItFromTheCourseList()
 	{
-		var client = await SignInAsync("courses-delete-admin", Role.Admin, "10.0.70.11");
+		var client = await SignInAsync("courses-delete-admin", Role.Coordinator, "10.0.70.11");
 		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.Hour, OccurrenceType.AfterSchool);
 		var created = await CreateCourseAsync(client, CourseType.G2Recorder, 200.00m, structure.LessonStructureId);
 
@@ -251,7 +265,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "258UC6")]
 	public async Task DeleteCourse_UnknownCourseId_IsRefusedAsNotFound()
 	{
-		var client = await SignInAsync("courses-delete-missing-admin", Role.Admin, "10.0.70.12");
+		var client = await SignInAsync("courses-delete-missing-admin", Role.Coordinator, "10.0.70.12");
 
 		var response = await client.Client.SendAsync(
 			client.AuthorizedDeleteRequest($"/api/courses/{Guid.NewGuid()}"),
@@ -262,11 +276,11 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "258UC7")]
-	public async Task CourseMaintenance_CallerWithoutCoordinatorOrAdmin_IsForbiddenAndNothingChanges()
+	public async Task CourseMaintenance_CallerWithoutCoordinator_IsForbiddenAndNothingChanges()
 	{
-		var adminClient = await SignInAsync("courses-maintain-forbidden-admin", Role.Admin, "10.0.70.13");
-		var structure = await GetStructureAsync(adminClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
-		var created = await CreateCourseAsync(adminClient, CourseType.GREEnrichment, 300.00m, structure.LessonStructureId);
+		var coordinatorClient = await SignInAsync("courses-maintain-forbidden-coordinator", Role.Coordinator, "10.0.70.13");
+		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		var created = await CreateCourseAsync(coordinatorClient, CourseType.GREEnrichment, 300.00m, structure.LessonStructureId);
 
 		var teacherClient = await SignInAsync("courses-maintain-forbidden-teacher", Role.Teacher, "10.0.70.14");
 
@@ -277,11 +291,18 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 			teacherClient.AuthorizedDeleteRequest($"/api/courses/{created.CourseId}"),
 			TestContext.Current.CancellationToken);
 
-		var (listed, _) = await GetCoursesAsync(adminClient);
+		// Admin is refused too — the area grants it nothing at all.
+		var adminClient = await SignInAsync("courses-maintain-forbidden-admin", Role.Admin, "10.0.70.21");
+		var adminUpdateResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPutRequest($"/api/courses/{created.CourseId}", new UpdateCourseRequest(999.00m)),
+			TestContext.Current.CancellationToken);
+
+		var (listed, _) = await GetCoursesAsync(coordinatorClient);
 
 		ShouldlyHelpers.Satisfy(
 			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminUpdateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => listed.Single(c => c.CourseId == created.CourseId).Cost.ShouldBe(300.00m));
 	}
 

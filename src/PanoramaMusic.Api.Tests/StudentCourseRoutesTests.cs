@@ -27,11 +27,11 @@ public sealed class StudentCourseRoutesTests(ApiTestFixture fixture)
 	{
 		// The enroll form offers a teacher to assign, so a Teacher working on
 		// Student Management has to be able to read the roster — while the rest of
-		// the teacher record stays Coordinator-or-Admin.
-		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "enroll-roster-admin", Role.Admin);
-		var adminClient = fixture.CreateIsolatedClient("10.0.90.1");
-		await adminClient.LoginAsync(adminEmail, _password);
-		var created = await CreateTeacherAsync(adminClient, "Lindiwe", "Mabaso");
+		// the teacher record stays Coordinator/BankingCoordinator-only.
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "enroll-roster-coordinator", Role.Coordinator);
+		var coordinatorClient = fixture.CreateIsolatedClient("10.0.90.1");
+		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
+		var created = await CreateTeacherAsync(coordinatorClient, "Lindiwe", "Mabaso");
 
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "enroll-roster-teacher", Role.Teacher);
 		var teacherClient = fixture.CreateIsolatedClient("10.0.90.2");
