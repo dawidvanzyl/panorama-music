@@ -54,6 +54,16 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetStudentCourses"] = CacheExpectation.NoStore,
 		["UpdateEnrollment"] = CacheExpectation.NoStore,
 
+		// A student's extra-curricular participation is part of their record, and
+		// the payload is read and written under their identifier.
+		["GetStudentExtraCurriculars"] = CacheExpectation.NoStore,
+		["GetAssignableExtraCurriculars"] = CacheExpectation.NoStore,
+		["AssignStudentExtraCurricular"] = CacheExpectation.NoStore,
+
+		// The phase-scoped picker read names no student — it is the catalogue
+		// narrowed to one phase, and identifies nobody.
+		["GetAssignableExtraCurricularsByPhase"] = CacheExpectation.Cacheable,
+
 		// Identity payloads carry email addresses, roles, invite URLs and tokens.
 		["GetUsers"] = CacheExpectation.NoStore,
 		["CreateUser"] = CacheExpectation.NoStore,
@@ -87,6 +97,18 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["GetCourses"] = CacheExpectation.Cacheable,
 		["CreateCourse"] = CacheExpectation.Cacheable,
 		["UpdateCourseCost"] = CacheExpectation.Cacheable,
+
+		// Extra-curricular activities are the school's own catalogue too — a
+		// description, a phase and the weekly slots they run at. No student is
+		// named; who is assigned to one is a separate payload.
+		["GetExtraCurriculars"] = CacheExpectation.Cacheable,
+		["CreateExtraCurricular"] = CacheExpectation.Cacheable,
+		["UpdateExtraCurricular"] = CacheExpectation.Cacheable,
+		["AddExtraCurricularPracticeTime"] = CacheExpectation.Cacheable,
+
+		// An assigned-student count is an aggregate over one activity; it names
+		// nobody, the same as a course's enrollment count.
+		["CountExtraCurricularStudents"] = CacheExpectation.Cacheable,
 
 		// A bare boolean; the route carries only an opaque GUID, so a cached copy discloses
 		// nothing about an identifiable person.

@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Students.Application.Handlers.Courses;
+using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.LessonStructures;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
+using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Application.Validators.Students;
@@ -17,10 +19,12 @@ using PanoramaMusic.Students.Infrastructure.Contexts;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Repositories;
 using PanoramaMusic.Students.Infrastructure.Translators.Courses;
+using PanoramaMusic.Students.Infrastructure.Translators.ExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.GuardianRelationships;
 using PanoramaMusic.Students.Infrastructure.Translators.Guardians;
 using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentCourses;
+using PanoramaMusic.Students.Infrastructure.Translators.StudentExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
 using PanoramaMusic.Students.Infrastructure.TypeHandlers;
 
@@ -45,6 +49,7 @@ public static class ServiceCollectionExtensions
 		// Dapper has no built-in composite-type<->DbType mapping; process-global and
 		// idempotent, so registering it here on every AddStudentsInfrastructure call is safe.
 		SqlMapper.AddTypeHandler(new StudentInputTypeHandler());
+		SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 		services.AddTransient<IStudentRepository, StudentRepository>();
 		services.AddTransient<ISiblingRepository, SiblingRepository>();
@@ -54,6 +59,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
 		services.AddTransient<ICourseRepository, CourseRepository>();
 		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
+		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
+		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -87,6 +94,18 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetStudentCoursesHandler>();
 		services.AddTransient<UpdateEnrollmentHandler>();
 		services.AddTransient<WithdrawEnrollmentHandler>();
+		services.AddTransient<CreateExtraCurricularHandler>();
+		services.AddTransient<GetExtraCurricularsHandler>();
+		services.AddTransient<UpdateExtraCurricularHandler>();
+		services.AddTransient<DeleteExtraCurricularHandler>();
+		services.AddTransient<CountExtraCurricularStudentsHandler>();
+		services.AddTransient<AddPracticeTimeHandler>();
+		services.AddTransient<RemovePracticeTimeHandler>();
+		services.AddTransient<GetStudentExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
+		services.AddTransient<AssignExtraCurricularHandler>();
+		services.AddTransient<RemoveExtraCurricularHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -109,6 +128,13 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, StudentEnrolledTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularDeletedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeAddedTranslator>();
+		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
+		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
 
 		return services;
 	}

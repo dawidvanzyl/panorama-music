@@ -72,21 +72,74 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * Steps the create wizard through all four tabs (Student → Siblings →
-   * Guardians → Courses) without adding any siblings or guardians. Save only
-   * appears on the final tab, so all three Next clicks are required.
+   * Steps the create wizard through all five tabs (Student → Siblings →
+   * Guardians → Courses → Extra-Curriculars) without adding any siblings or
+   * guardians. Extra-Curriculars is the wizard's final step in create mode —
+   * it carries Save, and Courses only offers Next — so all four Next clicks
+   * are required.
+   *
+   * A Private-grade student has no Extra-Curriculars step at all (R9):
+   * Courses is their final step and carries Save directly, so only three
+   * Next clicks happen and `activityOptionLabels` is meaningless for them —
+   * passing any is a caller error, not something this silently tolerates.
    *
    * A student must be enrolled in at least one course, so the Courses tab
    * always stages one. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
+   *
+   * `activityOptionLabels` stages zero or more activities on the
+   * Extra-Curriculars step before Save — each one is the picker's option
+   * label, which is the activity's description alone (per #278's R11
+   * display correction). Staging in create mode
+   * writes nothing until Save; this is the same panel `assignActivity` drives
+   * in edit mode, so both this staged path and edit mode's immediate write go
+   * through identical UI mechanics.
    */
-  async createStudent(input: StudentInput, enrollment?: EnrollmentInput): Promise<void> {
+  async createStudent(
+    input: StudentInput,
+    enrollment?: EnrollmentInput,
+    activityOptionLabels: string[] = [],
+  ): Promise<void> {
+    const isPrivate = input.grade === 'Private';
+    if (isPrivate && activityOptionLabels.length > 0) {
+      throw new Error('A Private-grade student has no Extra-Curriculars step to stage activities on.');
+    }
+
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.enrollInCourse(enrollment);
+    if (isPrivate) {
+      await this.wizardModal.locator('#saveBtn').click();
+      return;
+    }
+    await this.wizardModal.locator('#nextBtn').click();
+    for (const optionLabel of activityOptionLabels) {
+      await this.assignActivity(optionLabel);
+    }
+    await this.wizardModal.locator('#saveBtn').click();
+  }
+
+  /**
+   * Opens the create wizard and fills in the Student step only, leaving the
+   * caller on the Student step to drive the remaining tabs itself — for a
+   * scenario that needs to assert something between two of them, where
+   * `createStudent`'s single pass through to Save would not stop to look.
+   */
+  async startCreatingStudent(input: StudentInput): Promise<void> {
+    await this.createButton.click();
+    await this.fillStudentFields(input);
+  }
+
+  /** Advances the create wizard by one Next click. */
+  async goToNextStep(): Promise<void> {
+    await this.wizardModal.locator('#nextBtn').click();
+  }
+
+  /** Presses Save on the create wizard's final step (Extra-Curriculars). */
+  async saveStudent(): Promise<void> {
     await this.wizardModal.locator('#saveBtn').click();
   }
 
@@ -111,6 +164,13 @@ export class StudentsPage extends BasePage {
       await form.locator('#enrolledDate').fill(enrollment.enrolledDate);
     }
     await form.locator('#confirmBtn').click();
+
+    // Waits for the panel's own list view to return (its Enroll button
+    // reappears) before a caller moves on. In create mode this is the signal
+    // that the confirm was staged; a caller that immediately clicks Next
+    // (Courses → Extra-Curriculars, since #277) could otherwise race the
+    // panel's own collapse under load.
+    await expect(step.locator('#enrollBtn')).toBeVisible();
   }
 
   /** Chooses the named option, or the first real one when the caller does not care which. */
@@ -308,6 +368,15 @@ export class StudentsPage extends BasePage {
     return this.page.locator('pm-student-courses-summary:visible');
   }
 
+  /**
+   * Read-only extra-curriculars summary for the currently-expanded row (same
+   * scoping rule as siblings). Absent entirely for a Private-grade student
+   * (#278's addendum) — it is never rendered for them, not merely empty.
+   */
+  visibleExtraCurricularsSummary(): Locator {
+    return this.page.locator('pm-student-extra-curriculars-summary:visible');
+  }
+
   /** Opens the Edit wizard for `name` and switches to its Guardians tab. */
   async openGuardiansTab(name: string): Promise<void> {
     await this.row(name).locator('.students-table__btn--edit').click();
@@ -461,5 +530,108 @@ export class StudentsPage extends BasePage {
 
   async syncGuardians(): Promise<void> {
     await this.syncGuardiansButton().click();
+  }
+
+  // --- Extra-Curriculars step -----------------------------------------------
+
+  /** Opens the Edit wizard for `name` and switches to its Extra-Curriculars tab. */
+  async openExtraCurricularsTab(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await this.wizardModal.locator('#tabExtraCurriculars').click();
+  }
+
+  extraCurricularsStep(): Locator {
+    return this.wizardModal.locator('#extraCurricularsStep');
+  }
+
+  /**
+   * Opens the Add Activity panel. Waits first for any previous panel to have
+   * fully collapsed (its 220ms CSS transition settled, not merely its class
+   * toggled) — clicking `#addBtn` while that transition is still in flight
+   * can leave Playwright's own actionability check treating the button as
+   * unstable and silently retrying the click for real, which double-fires
+   * the picker's own assignable-list request and can leave two responses
+   * racing each other to populate the `<select>`.
+   *
+   * Also waits for *this* panel's own opening transition to finish before
+   * returning. `#assignBtn` sits at the bottom of the panel, inside the
+   * `max-height`-animated, `overflow: hidden` container — its own bounding
+   * box never moves during the animation (only its ancestor's clip does), so
+   * Playwright's stability check, which compares bounding boxes across
+   * frames, reads it as already "stable" well before it is genuinely
+   * paintable. Confirmed by a document-level click listener: a click fired
+   * ~80ms into the 220ms transition landed for real on the panel's own
+   * clipping wrapper, not the button — the assignment silently never
+   * happened. Waiting out the full transition here removes the ambiguity for
+   * every caller, rather than each one having to know why an immediate click
+   * on `#assignBtn` can occasionally hit nothing.
+   */
+  async openAddActivityPanel(): Promise<void> {
+    await expect(this.extraCurricularsStep().locator('#panel')).toBeHidden();
+    await this.extraCurricularsStep().locator('#addBtn').click();
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- no DOM signal exists for "the CSS transition has finished"; see the doc comment above.
+    await this.page.waitForTimeout(300);
+  }
+
+  async cancelAddActivityPanel(): Promise<void> {
+    await this.extraCurricularsStep().locator('#cancelBtn').click();
+  }
+
+  /**
+   * The Add Activity panel's picker. Options read the activity's description
+   * alone, per #278's R11 display correction — a student is assigned to an
+   * activity, never to one of its practice times, so no slot is named.
+   */
+  activityPicker(): Locator {
+    return this.extraCurricularsStep().locator('#activitySelect');
+  }
+
+  /** The panel's disabled, non-editable field showing the student's own phase. */
+  activityPanelPhaseField(): Locator {
+    return this.extraCurricularsStep().locator('#phaseField');
+  }
+
+  /**
+   * Opens the Add Activity panel, chooses the activity by its picker option
+   * label, and presses Assign. In edit mode this writes immediately; in
+   * create mode it stages the activity in the wizard's memory. Always opens
+   * the panel itself rather than checking whether one is already open — the
+   * panel's collapse on a prior assign animates over 220ms, during which a
+   * bounding-box check reads it as still open while it is in fact `inert`,
+   * so re-detecting is less reliable than simply opening it every time.
+   *
+   * The picker's option list arrives from a request the panel opening
+   * dispatches, so the desired option is awaited rather than assumed present
+   * the instant the panel opens.
+   */
+  async assignActivity(optionLabel: string): Promise<void> {
+    await this.openAddActivityPanel();
+    await expect(this.activityPicker().locator('option', { hasText: optionLabel })).toHaveCount(1);
+    await this.activityPicker().selectOption({ label: optionLabel });
+    await this.extraCurricularsStep().locator('#assignBtn').click();
+  }
+
+  /** Presses Assign with nothing chosen in the picker. */
+  async pressAssignWithNothingChosen(): Promise<void> {
+    await this.extraCurricularsStep().locator('#assignBtn').click();
+  }
+
+  /** A row in the assigned-activity table, addressed by the activity's description. */
+  assignedActivityRow(description: string): Locator {
+    return this.extraCurricularsStep().locator('#rows').locator('tr').filter({ hasText: description });
+  }
+
+  async removeActivity(description: string): Promise<void> {
+    await this.assignedActivityRow(description).getByRole('button', { name: 'Remove' }).click();
+  }
+
+  /** The "No extra-curricular activities assigned." line shown in place of rows. */
+  noActivitiesMessage(): Locator {
+    return this.extraCurricularsStep().locator('#empty');
+  }
+
+  /** The Extra-Curriculars step's own message area, where a refusal is shown. */
+  extraCurricularsStepMessage(): Locator {
+    return this.extraCurricularsStep().locator('#message');
   }
 }

@@ -2,18 +2,21 @@ import './pm-student-step';
 import './pm-siblings-step';
 import './pm-guardians-step';
 import './pm-courses-step';
+import './pm-extra-curriculars-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { AT_LEAST_ONE_COURSE_TO_SAVE } from './pm-courses-step';
 import type { StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
+import type { PhaseType, StudentExtraCurricular } from '../services/student-extra-curriculars';
 import type { PmStudentStep } from './pm-student-step';
 import type { PmSiblingsStep } from './pm-siblings-step';
 import type { PmGuardiansStep } from './pm-guardians-step';
 import type { PmCoursesStep } from './pm-courses-step';
+import type { PmExtraCurricularsStep } from './pm-extra-curriculars-step';
 
 type Mode = 'create' | 'edit';
-type Step = 'student' | 'siblings' | 'guardians' | 'courses';
+type Step = 'student' | 'siblings' | 'guardians' | 'courses' | 'extraCurriculars';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -124,6 +127,7 @@ template.innerHTML = `
         <button type="button" class="wizard__tab" id="tabSiblings" role="tab" aria-selected="false" aria-controls="stepSiblings">Siblings</button>
         <button type="button" class="wizard__tab" id="tabGuardians" role="tab" aria-selected="false" aria-controls="stepGuardians">Guardians</button>
         <button type="button" class="wizard__tab" id="tabCourses" role="tab" aria-selected="false" aria-controls="stepCourses">Courses</button>
+        <button type="button" class="wizard__tab" id="tabExtraCurriculars" role="tab" aria-selected="false" aria-controls="stepExtraCurriculars">Extra-Curriculars</button>
       </div>
       <div class="wizard__step wizard__step--visible" id="stepStudent" role="tabpanel" aria-labelledby="tabStudent">
         <pm-student-step id="studentStep"></pm-student-step>
@@ -141,6 +145,9 @@ template.innerHTML = `
       <div class="wizard__step" id="stepCourses" role="tabpanel" aria-labelledby="tabCourses">
         <pm-courses-step id="coursesStep"></pm-courses-step>
       </div>
+      <div class="wizard__step" id="stepExtraCurriculars" role="tabpanel" aria-labelledby="tabExtraCurriculars">
+        <pm-extra-curriculars-step id="extraCurricularsStep"></pm-extra-curriculars-step>
+      </div>
       <div class="wizard__actions">
         <button type="button" class="wizard__btn wizard__btn--cancel" id="cancelBtn">Cancel</button>
         <button type="button" class="wizard__btn wizard__btn--secondary" id="previousBtn" hidden>Previous</button>
@@ -157,6 +164,9 @@ export class PmStudentWizardModal extends HTMLElement {
   private tabSiblings: HTMLButtonElement | null = null;
   private tabGuardians: HTMLButtonElement | null = null;
   private tabCourses: HTMLButtonElement | null = null;
+  private tabExtraCurriculars: HTMLButtonElement | null = null;
+  private stepExtraCurricularsEl: HTMLElement | null = null;
+  private extraCurricularsStep: PmExtraCurricularsStep | null = null;
   private stepStudentEl: HTMLElement | null = null;
   private stepSiblingsEl: HTMLElement | null = null;
   private stepGuardiansEl: HTMLElement | null = null;
@@ -176,6 +186,8 @@ export class PmStudentWizardModal extends HTMLElement {
   private _mode: Mode = 'create';
   private _activeStep: Step = 'student';
   private _studentId: string | null = null;
+  /** The student's own phase, which is what limits the activities the picker offers. */
+  private _phase: PhaseType | null = null;
 
   constructor() {
     super();
@@ -195,6 +207,11 @@ export class PmStudentWizardModal extends HTMLElement {
     this.stepGuardiansEl = this.shadowRoot!.getElementById('stepGuardians') as HTMLElement;
     this.stepCoursesEl = this.shadowRoot!.getElementById('stepCourses') as HTMLElement;
     this.coursesStep = this.shadowRoot!.getElementById('coursesStep') as unknown as PmCoursesStep;
+    this.tabExtraCurriculars = this.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement;
+    this.stepExtraCurricularsEl = this.shadowRoot!.getElementById('stepExtraCurriculars') as HTMLElement;
+    this.extraCurricularsStep = this.shadowRoot!.getElementById(
+      'extraCurricularsStep',
+    ) as unknown as PmExtraCurricularsStep;
     this.studentStep = this.shadowRoot!.getElementById('studentStep') as unknown as PmStudentStep;
     this.siblingsStep = this.shadowRoot!.getElementById('siblingsStep') as unknown as PmSiblingsStep;
     this.guardiansStep = this.shadowRoot!.getElementById('guardiansStep') as unknown as PmGuardiansStep;
@@ -210,6 +227,8 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabSiblings.addEventListener('click', () => this.handleSiblingsTabClick());
     this.tabGuardians.addEventListener('click', () => this.handleGuardiansTabClick());
     this.tabCourses.addEventListener('click', () => this.handleCoursesTabClick());
+    this.tabExtraCurriculars.addEventListener('click', () => this.handleExtraCurricularsTabClick());
+    this.shadowRoot!.addEventListener('student-phase-changed', this.handlePhaseChanged);
     this.cancelBtn.addEventListener('click', () => this.close());
     this.previousBtn.addEventListener('click', () => this.handlePrevious());
     this.nextBtn.addEventListener('click', () => this.handleNext());
@@ -222,10 +241,15 @@ export class PmStudentWizardModal extends HTMLElement {
     this._mode = 'create';
     this._studentId = null;
     this.titleEl!.textContent = 'Create Student';
+    // No phase until one is chosen on the Student step, which announces it. The
+    // reset below fires that announcement, so this is the starting point rather
+    // than the last student's phase carrying over.
+    this.applyPhase(null);
     this.studentStep!.reset();
     this.siblingsStep!.activateForCreate(candidates);
     this.guardiansStep!.activateForCreate();
     this.coursesStep!.activateForCreate();
+    this.extraCurricularsStep!.activateForCreate(this._phase);
     this.saveBtn!.disabled = false;
     this.studentSaveBtn!.disabled = false;
     this.goToStep('student');
@@ -236,6 +260,11 @@ export class PmStudentWizardModal extends HTMLElement {
     this._mode = 'edit';
     this._studentId = student.studentId;
     this.titleEl!.textContent = `Edit Student: ${student.firstName} ${student.lastName}`;
+    // Seeded from the stored student so the tab is already right for this one
+    // rather than inheriting whichever was last opened. From here on the form's
+    // own field is what governs — setValues below announces it, and every later
+    // edit of it does too.
+    this.applyPhase((student.phase as PhaseType | null) ?? null);
     this.studentStep!.setValues(student);
     this.saveBtn!.disabled = false;
     this.studentSaveBtn!.disabled = false;
@@ -311,6 +340,30 @@ export class PmStudentWizardModal extends HTMLElement {
     this.coursesStep!.teachers = value;
   }
 
+  /** The activities the student takes part in (edit mode). */
+  set extraCurriculars(value: StudentExtraCurricular[]) {
+    this.extraCurricularsStep!.assigned = value;
+  }
+
+  /** The Add Activity picker's options, fetched when the panel is opened. */
+  set assignableExtraCurriculars(value: StudentExtraCurricular[]) {
+    this.extraCurricularsStep!.assignable = value;
+  }
+
+  showExtraCurricularsError(message: string): void {
+    this.extraCurricularsStep!.showError(message);
+  }
+
+  /** Collapses the Extra-Curriculars tab's Add Activity panel (if open). */
+  closeExtraCurricularPanel(): void {
+    this.extraCurricularsStep!.closePanel();
+  }
+
+  /** Activities staged during create mode, to be assigned once the student is saved. */
+  get pendingExtraCurricularIds(): string[] {
+    return this.extraCurricularsStep!.pendingExtraCurricularIds;
+  }
+
   /** Enrollments staged during create mode, to be created once the student is saved. */
   get pendingEnrollments() {
     return this.coursesStep!.pendingEnrollments;
@@ -341,6 +394,64 @@ export class PmStudentWizardModal extends HTMLElement {
     this.goToStep('courses');
   }
 
+  private handleExtraCurricularsTabClick(): void {
+    if (this._mode === 'create' || !this._phase) return;
+    this.goToStep('extraCurriculars');
+  }
+
+  /**
+   * The Student step's phase field decides whether this wizard has an
+   * Extra-Curriculars step at all, and it is followed live: the form's current
+   * value, not the saved student's. Editing a Private-grade student into a graded
+   * one makes the step available before anything is saved, which reading the
+   * stored row could never do.
+   */
+  private handlePhaseChanged = (event: Event): void => {
+    const { phase } = (event as CustomEvent<{ phase: PhaseType | null }>).detail;
+    if (phase === this._phase) return;
+
+    this.applyPhase(phase);
+  };
+
+  /**
+   * Sets the phase the wizard is shaped around. Losing the phase removes the step:
+   * in create mode nothing has been written, so what was staged is discarded
+   * outright; in edit mode the tab goes now but the student's stored assignments
+   * do not — those are deleted when the student is saved, so cancelling the edit
+   * leaves them intact.
+   * <para>
+   * Whether the tab is offered is `updateFooter`'s to apply, and every path out of
+   * here reaches it — directly, or through the `goToStep` below, which ends in it.
+   * </para>
+   */
+  private applyPhase(phase: PhaseType | null): void {
+    this._phase = phase;
+    // Pushed down so the panel's non-editable Phase value and the picker's read
+    // both follow the form rather than the stored student.
+    this.extraCurricularsStep!.phase = phase;
+
+    if (phase === null) {
+      if (this._mode === 'create') this.extraCurricularsStep!.discardStaged();
+      // Never leave the wizard showing a step it no longer offers.
+      if (this._activeStep === 'extraCurriculars') {
+        this.goToStep('courses');
+        return;
+      }
+    }
+
+    this.updateFooter();
+  }
+
+  /**
+   * The last step of the create wizard, which is the one that carries Save. A
+   * student with no phase has no Extra-Curriculars step, so Courses is theirs —
+   * which is how a Private-grade student gets Save on Courses, their grade having
+   * cleared the phase field.
+   */
+  private get finalStep(): Step {
+    return this._phase ? 'extraCurriculars' : 'courses';
+  }
+
   private goToStep(step: Step): void {
     this._activeStep = step;
 
@@ -348,14 +459,17 @@ export class PmStudentWizardModal extends HTMLElement {
     this.stepSiblingsEl!.classList.toggle('wizard__step--visible', step === 'siblings');
     this.stepGuardiansEl!.classList.toggle('wizard__step--visible', step === 'guardians');
     this.stepCoursesEl!.classList.toggle('wizard__step--visible', step === 'courses');
+    this.stepExtraCurricularsEl!.classList.toggle('wizard__step--visible', step === 'extraCurriculars');
     this.tabStudent!.classList.toggle('wizard__tab--active', step === 'student');
     this.tabSiblings!.classList.toggle('wizard__tab--active', step === 'siblings');
     this.tabGuardians!.classList.toggle('wizard__tab--active', step === 'guardians');
     this.tabCourses!.classList.toggle('wizard__tab--active', step === 'courses');
+    this.tabExtraCurriculars!.classList.toggle('wizard__tab--active', step === 'extraCurriculars');
     this.tabStudent!.setAttribute('aria-selected', String(step === 'student'));
     this.tabSiblings!.setAttribute('aria-selected', String(step === 'siblings'));
     this.tabGuardians!.setAttribute('aria-selected', String(step === 'guardians'));
     this.tabCourses!.setAttribute('aria-selected', String(step === 'courses'));
+    this.tabExtraCurriculars!.setAttribute('aria-selected', String(step === 'extraCurriculars'));
 
     if (step === 'siblings' && this._mode === 'edit' && this._studentId) {
       this.siblingsStep!.activate(this._studentId);
@@ -390,6 +504,17 @@ export class PmStudentWizardModal extends HTMLElement {
       );
     }
 
+    if (step === 'extraCurriculars' && this._mode === 'edit' && this._studentId) {
+      this.extraCurricularsStep!.activate(this._studentId, this._phase);
+      this.dispatchEvent(
+        new CustomEvent('extra-curriculars-tab-activated', {
+          bubbles: true,
+          composed: true,
+          detail: { studentId: this._studentId },
+        }),
+      );
+    }
+
     this.updateFooter();
   }
 
@@ -407,16 +532,25 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabSiblings!.disabled = isCreate;
     this.tabGuardians!.disabled = isCreate;
     this.tabCourses!.disabled = isCreate;
+    this.tabExtraCurriculars!.disabled = isCreate;
+    this.tabExtraCurriculars!.hidden = this._phase === null;
 
+    // The final step is the one that carries Save and the only one without a
+    // Next. That is Extra-Curriculars, except for a Private-grade student, who
+    // has no such step — for them Courses is last and carries Save.
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
-    this.nextBtn!.hidden = !(isCreate && this._activeStep !== 'courses');
-    this.saveBtn!.hidden = isCreate ? this._activeStep !== 'courses' : true;
+    this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
+    this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
     this.cancelBtn!.hidden = !isCreate && onStudentTab;
     this.cancelBtn!.textContent = isCreate ? 'Cancel' : 'Close';
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
   }
 
   private handlePrevious(): void {
+    if (this._activeStep === 'extraCurriculars') {
+      this.goToStep('courses');
+      return;
+    }
     if (this._activeStep === 'courses') {
       this.goToStep('guardians');
       return;
@@ -449,6 +583,15 @@ export class PmStudentWizardModal extends HTMLElement {
     }
     if (this._activeStep === 'guardians') {
       this.goToStep('courses');
+      return;
+    }
+    if (this._activeStep === 'courses') {
+      // Courses is the last step for a student with no phase, so there is nowhere
+      // forward to go — Next is hidden for them anyway. The phase itself is
+      // already current: the Student step announces every change to it.
+      if (!this._phase) return;
+
+      this.goToStep('extraCurriculars');
     }
   }
 
@@ -481,6 +624,7 @@ export class PmStudentWizardModal extends HTMLElement {
             pendingSiblingIds: this.siblingsStep!.pendingSiblingIds,
             pendingGuardians: this.guardiansStep!.pendingGuardians,
             pendingEnrollments: this.coursesStep!.pendingEnrollments,
+            pendingExtraCurricularIds: this.extraCurricularsStep!.pendingExtraCurricularIds,
           },
         }),
       );

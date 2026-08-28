@@ -30,8 +30,15 @@ const ALL_LINK_IDS = [
   'studentManagementLink',
   'teachersLink',
   'courseManagementLink',
+  'extraCurricularsLink',
   'guardianRelationshipsLink',
 ];
+
+/**
+ * Everything an Admin is offered — which is no longer everything there is.
+ * Extra-Curriculars is the one entry the Admin role does not reach.
+ */
+const ADMIN_LINK_IDS = ALL_LINK_IDS.filter((id) => id !== 'extraCurricularsLink');
 
 /** The ids of the entries currently offered, in markup order. */
 function visibleLinkIds(el: HTMLElement): string[] {
@@ -68,11 +75,20 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
         'guardianRelationshipsLink',
       ],
     },
-    { roles: ['Teacher'], expected: ['studentManagementLink', 'courseManagementLink'] },
-    { roles: ['Coordinator'], expected: ['teachersLink', 'courseManagementLink', 'guardianRelationshipsLink'] },
+    { roles: ['Teacher'], expected: ['studentManagementLink', 'courseManagementLink', 'extraCurricularsLink'] },
+    {
+      roles: ['Coordinator'],
+      expected: ['teachersLink', 'courseManagementLink', 'extraCurricularsLink', 'guardianRelationshipsLink'],
+    },
     {
       roles: ['Teacher', 'Coordinator'],
-      expected: ['studentManagementLink', 'teachersLink', 'courseManagementLink', 'guardianRelationshipsLink'],
+      expected: [
+        'studentManagementLink',
+        'teachersLink',
+        'courseManagementLink',
+        'extraCurricularsLink',
+        'guardianRelationshipsLink',
+      ],
     },
   ])('offers exactly the entries $roles permits', ({ roles, expected }) => {
     grantRoles(...roles);
@@ -117,7 +133,7 @@ describe('pm-sidebar — the visible set does not depend on the route', { tags: 
 
       renderOn(hash);
 
-      expect(visibleLinkIds(el)).toEqual(ALL_LINK_IDS);
+      expect(visibleLinkIds(el)).toEqual(ADMIN_LINK_IDS);
     },
   );
 
@@ -140,7 +156,7 @@ describe('pm-sidebar — the visible set does not depend on the route', { tags: 
     const direct = document.createElement('pm-sidebar');
     document.body.appendChild(direct);
 
-    expect(visibleLinkIds(direct)).toEqual(ALL_LINK_IDS);
+    expect(visibleLinkIds(direct)).toEqual(ADMIN_LINK_IDS);
 
     document.body.removeChild(direct);
   });
@@ -336,15 +352,44 @@ describe('pm-sidebar — Course Management is offered only to roles permitted to
   });
 });
 
+describe('pm-sidebar — Course Management sits directly after Teacher Management', { tags: ['257UC20'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    grantRoles('Admin');
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('renders the entry directly after Teacher Management and still above Guardian Relationships', () => {
+    renderOn('#/');
+
+    const link = el.shadowRoot!.getElementById('courseManagementLink') as HTMLAnchorElement;
+    expect(link.previousElementSibling!.id).toBe('teachersLink');
+    // Extra-Curriculars (#275) was inserted between this entry and Guardian
+    // Relationships, so the two are no longer adjacent — the ordering this
+    // criterion is about is that Course Management stays between them.
+    expect(link.nextElementSibling!.id).toBe('extraCurricularsLink');
+    expect(visibleLinkIds(el).indexOf('courseManagementLink')).toBe(visibleLinkIds(el).indexOf('teachersLink') + 1);
+    expect(visibleLinkIds(el).indexOf('courseManagementLink')).toBeLessThan(
+      visibleLinkIds(el).indexOf('guardianRelationshipsLink'),
+    );
+  });
+});
+
 describe(
-  'pm-sidebar — Course Management sits between Teachers and Guardian Relationships',
-  { tags: ['257UC20'] },
+  'pm-sidebar — Extra-Curriculars is offered to Teachers and Coordinators, in its stated position',
+  { tags: ['275UC22'] },
   () => {
     let el: HTMLElement;
 
     beforeEach(() => {
       mockIsAuthenticated.mockReturnValue(true);
-      grantRoles('Admin');
       el = document.createElement('pm-sidebar');
       document.body.appendChild(el);
     });
@@ -353,16 +398,73 @@ describe(
       document.body.removeChild(el);
     });
 
-    it('renders the entry directly after Teacher Management and directly before Guardian Relationships', () => {
+    function extraCurricularsLink(): HTMLAnchorElement {
+      return el.shadowRoot!.getElementById('extraCurricularsLink') as HTMLAnchorElement;
+    }
+
+    it.each([['Teacher'], ['Coordinator']])('offers the entry to a %s', (role) => {
+      grantRoles(role);
+
       renderOn('#/');
 
-      const link = el.shadowRoot!.getElementById('courseManagementLink') as HTMLAnchorElement;
-      expect(link.previousElementSibling!.id).toBe('teachersLink');
+      expect(extraCurricularsLink().hidden).toBe(false);
+    });
+
+    it('renders the entry directly after Course Management and directly before Guardian Relationships', () => {
+      grantRoles('Teacher', 'Coordinator');
+
+      renderOn('#/');
+
+      const link = extraCurricularsLink();
+      expect(link.previousElementSibling!.id).toBe('courseManagementLink');
       expect(link.nextElementSibling!.id).toBe('guardianRelationshipsLink');
-      expect(visibleLinkIds(el).indexOf('courseManagementLink')).toBe(visibleLinkIds(el).indexOf('teachersLink') + 1);
+      const visible = visibleLinkIds(el);
+      expect(visible.indexOf('extraCurricularsLink')).toBe(visible.indexOf('courseManagementLink') + 1);
+      expect(visible.indexOf('extraCurricularsLink')).toBe(visible.indexOf('guardianRelationshipsLink') - 1);
+    });
+
+    it('offers no entry to a user who is not signed in', () => {
+      mockIsAuthenticated.mockReturnValue(false);
+      grantRoles('Teacher');
+
+      renderOn('#/');
+
+      expect(extraCurricularsLink().hidden).toBe(true);
     });
   },
 );
+
+describe('pm-sidebar — Extra-Curriculars is not offered to an Admin', { tags: ['275UC23'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  // The one entry the Admin role does not reach, on any route — every other
+  // entry in the sidebar is offered to it.
+  it.each(['#/', '#/admin/users', '#/students', '#/courses'])('offers no entry on %s', (hash) => {
+    grantRoles('Admin');
+
+    renderOn(hash);
+
+    expect((el.shadowRoot!.getElementById('extraCurricularsLink') as HTMLAnchorElement).hidden).toBe(true);
+  });
+
+  it('still offers an Admin every other entry, so nothing else was narrowed by mistake', () => {
+    grantRoles('Admin');
+
+    renderOn('#/');
+
+    expect(visibleLinkIds(el)).toEqual(ADMIN_LINK_IDS);
+  });
+});
 
 describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['239UC1', '239UC2'] }, () => {
   let el: HTMLElement;

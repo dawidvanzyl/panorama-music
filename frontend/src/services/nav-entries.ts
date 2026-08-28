@@ -77,6 +77,16 @@ export const NAV_ENTRIES: NavEntry[] = [
     roles: ['Teacher', 'Coordinator', 'Admin'],
   },
   {
+    id: 'extraCurricularsLink',
+    path: '/extra-curriculars',
+    icon: 'sports_soccer',
+    label: 'Extra-Curriculars',
+    // The only entry that is not offered to Admin. Extra-curriculars are a
+    // Coordinator-owned area, and the Admin role owns nothing in it; a person
+    // who happens to be an admin reaches the page through their Teacher role.
+    roles: ['Teacher', 'Coordinator'],
+  },
+  {
     id: 'guardianRelationshipsLink',
     path: '/students/guardian-relationships',
     icon: 'family_restroom',

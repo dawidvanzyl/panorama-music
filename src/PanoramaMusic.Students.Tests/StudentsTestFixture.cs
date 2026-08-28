@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Students.Application.Handlers.Courses;
+using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
+using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
 
 namespace PanoramaMusic.Students.Tests;
@@ -33,6 +35,8 @@ public sealed class StudentsTestFixture
 		services.AddTransient(sp => context.Repositories.LessonStructureRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.CourseRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.StudentCourseRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.ExtraCurricularRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.StudentExtraCurricularRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.TeacherDirectoryMock.Object);
 	}
 
@@ -68,5 +72,17 @@ public sealed class StudentsTestFixture
 		services.AddTransient<GetStudentCoursesHandler>();
 		services.AddTransient<UpdateEnrollmentHandler>();
 		services.AddTransient<WithdrawEnrollmentHandler>();
+		services.AddTransient<CreateExtraCurricularHandler>();
+		services.AddTransient<GetExtraCurricularsHandler>();
+		services.AddTransient<UpdateExtraCurricularHandler>();
+		services.AddTransient<DeleteExtraCurricularHandler>();
+		services.AddTransient<CountExtraCurricularStudentsHandler>();
+		services.AddTransient<AddPracticeTimeHandler>();
+		services.AddTransient<RemovePracticeTimeHandler>();
+		services.AddTransient<GetStudentExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsHandler>();
+		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
+		services.AddTransient<AssignExtraCurricularHandler>();
+		services.AddTransient<RemoveExtraCurricularHandler>();
 	}
 }
