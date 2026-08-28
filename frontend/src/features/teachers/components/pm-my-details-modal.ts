@@ -143,7 +143,7 @@ template.innerHTML = `
           </span>
           <span class="my-details__field-value" id="classificationValue"></span>
           <span class="my-details__lock-note" id="classificationLockNote">
-            Only an Admin or Coordinator can change this classification
+            Only a Coordinator or BankingCoordinator can change this classification
           </span>
         </div>
       </div>

@@ -280,12 +280,12 @@ template.innerHTML = `
   </div>
 `;
 
-const ADMIN_REVEAL_NOTE =
+const MAINTAINER_REVEAL_NOTE =
   'Revealing the full number calls the reveal endpoint and writes an audit entry against your account.';
 const RESTRICTED_REVEAL_NOTE =
-  'Your role can see the masked value only. Revealing the full number is restricted to an Admin or the linked teacher.';
+  'Your role can see the masked value only. Revealing the full number is restricted to a BankingCoordinator or the linked teacher.';
 
-const ADMIN_CAPTION = 'Encrypted at rest · deleted when this teacher is deactivated';
+const MAINTAINER_CAPTION = 'Encrypted at rest · deleted when this teacher is deactivated';
 const SELF_SERVICE_CAPTION = 'Encrypted at rest · deleted if your record is deactivated';
 
 /**
@@ -314,7 +314,7 @@ const ACCOUNT_LENGTH_ERROR = 'Enter an account number of 6 to 12 digits.';
  * hidden control as a security boundary.
  *
  * The `self-service` attribute puts the section on a teacher's own record rather
- * than on an Admin's view of somebody else's. The details, the form and the
+ * than on a BankingCoordinator's view of somebody else's. The details, the form and the
  * masking are identical — what changes is that the caller manages them because
  * they own them rather than because of a role, that the caption addresses them
  * directly, and that the activity action lives here, since the own-record view
@@ -415,14 +415,14 @@ export class PmBankingSection extends HTMLElement {
 
   /**
    * On a teacher's own record the right to manage comes from owning it, not
-   * from a role — a linked teacher is not thereby an Admin.
+   * from a role — a linked teacher is not thereby a BankingCoordinator.
    */
   private get selfService(): boolean {
     return this.hasAttribute('self-service');
   }
 
   private get canManage(): boolean {
-    return this.selfService || hasRole('Admin');
+    return this.selfService || hasRole('BankingCoordinator');
   }
 
   private get banking(): BankingDetails | null {
@@ -464,13 +464,13 @@ export class PmBankingSection extends HTMLElement {
     this.byId<HTMLButtonElement>('activityBtn').hidden = !this.selfService;
 
     this.byId<HTMLElement>('card').classList.toggle('banking__card--flush', this.selfService);
-    this.byId<HTMLElement>('caption').textContent = this.selfService ? SELF_SERVICE_CAPTION : ADMIN_CAPTION;
+    this.byId<HTMLElement>('caption').textContent = this.selfService ? SELF_SERVICE_CAPTION : MAINTAINER_CAPTION;
 
     // The note explains a restriction, so it is only worth showing to somebody
     // restricted. A teacher looking at their own details is told nothing they
     // did not already choose by clicking Reveal.
     this.byId<HTMLElement>('revealNote').hidden = this.selfService;
-    this.byId<HTMLElement>('revealNote').textContent = this.canManage ? ADMIN_REVEAL_NOTE : RESTRICTED_REVEAL_NOTE;
+    this.byId<HTMLElement>('revealNote').textContent = this.canManage ? MAINTAINER_REVEAL_NOTE : RESTRICTED_REVEAL_NOTE;
 
     if (banking) {
       this.byId<HTMLElement>('bankValue').textContent = BANK_LABELS[banking.bank] ?? banking.bank;
