@@ -51,4 +51,13 @@ public class CreateUserRequestValidatorTests
 			result => result.IsValid.ShouldBeFalse(),
 			result => result.Errors.ShouldContain(e => e.PropertyName == "Roles[0]"));
 	}
+
+	[Fact]
+	[Trait("AC", "287UC1")]
+	public void Validate_BankingCoordinatorRole_ReturnsSuccess()
+	{
+		var result = _validator.Validate(new CreateUserRequest("user@test.com", [Role.BankingCoordinator]));
+
+		result.IsValid.ShouldBeTrue();
+	}
 }
