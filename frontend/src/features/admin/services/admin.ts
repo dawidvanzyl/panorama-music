@@ -8,6 +8,17 @@ export type UserRole = 'Teacher' | 'Coordinator' | 'Admin' | 'BankingCoordinator
 
 export const ALL_ROLES: readonly UserRole[] = ['Teacher', 'Coordinator', 'Admin', 'BankingCoordinator'];
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  Teacher: 'Teacher',
+  Coordinator: 'Coordinator',
+  Admin: 'Admin',
+  BankingCoordinator: 'Banking Coordinator',
+};
+
+export function roleLabel(role: string): string {
+  return ROLE_LABELS[role as UserRole] ?? role;
+}
+
 export interface GetUserResult {
   userId: string;
   email: string;

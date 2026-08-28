@@ -4,17 +4,13 @@ import { PmDeleteUserModal } from '../pm-delete-user-modal';
 import { deleteUser } from '../../services/admin';
 import type { GetUserResult } from '../../services/admin';
 
-vi.mock('../../services/admin', () => ({
-  deleteUser: vi.fn(),
-  AdminError: class AdminError extends Error {
-    status: number;
-    constructor(message: string, status: number) {
-      super(message);
-      this.name = 'AdminError';
-      this.status = status;
-    }
-  },
-}));
+vi.mock('../../services/admin', async () => {
+  const actual = await vi.importActual<typeof import('../../services/admin')>('../../services/admin');
+  return {
+    ...actual,
+    deleteUser: vi.fn(),
+  };
+});
 
 const deactivatedUser: GetUserResult = {
   userId: 'user-deactivated',

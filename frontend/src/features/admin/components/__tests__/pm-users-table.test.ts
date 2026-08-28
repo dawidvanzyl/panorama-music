@@ -242,7 +242,7 @@ describe('pm-users-table — saving Banking Coordinator role edits reflects on t
     el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
 
     await vi.waitFor(() => {
-      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).toContain('BankingCoordinator');
+      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).toContain('Banking Coordinator');
     });
   });
 });

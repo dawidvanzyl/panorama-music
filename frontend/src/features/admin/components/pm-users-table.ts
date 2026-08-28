@@ -3,6 +3,7 @@ import {
   updateUserRoles,
   AdminError,
   ALL_ROLES,
+  roleLabel,
   type GetUserResult,
   type UserRole,
 } from '../services/admin';
@@ -522,7 +523,7 @@ export class PmUsersTable extends HTMLElement {
     for (const role of roles) {
       const badge = document.createElement('span');
       badge.classList.add('users-table__role-badge');
-      badge.textContent = role;
+      badge.textContent = roleLabel(role);
       wrap.appendChild(badge);
     }
     return wrap;
@@ -541,7 +542,7 @@ export class PmUsersTable extends HTMLElement {
       checkbox.value = role;
       checkbox.checked = currentRoles.includes(role);
 
-      label.append(checkbox, document.createTextNode(role));
+      label.append(checkbox, document.createTextNode(roleLabel(role)));
       wrap.appendChild(label);
     }
 
