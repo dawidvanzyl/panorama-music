@@ -79,6 +79,13 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'students.student_course.enrolled', label: 'Student Enrolled' },
       { value: 'students.student_course.updated', label: 'Student Enrollment Updated' },
       { value: 'students.student_course.withdrawn', label: 'Student Withdrawn' },
+      { value: 'students.extra_curricular.created', label: 'Extra-Curricular Created' },
+      { value: 'students.extra_curricular.updated', label: 'Extra-Curricular Updated' },
+      { value: 'students.extra_curricular.deleted', label: 'Extra-Curricular Deleted' },
+      { value: 'students.extra_curricular.practice_time_added', label: 'Practice Time Added' },
+      { value: 'students.extra_curricular.practice_time_removed', label: 'Practice Time Removed' },
+      { value: 'students.student_extra_curricular.assigned', label: 'Student Assigned To Extra-Curricular' },
+      { value: 'students.student_extra_curricular.removed', label: 'Student Removed From Extra-Curricular' },
     ],
   },
   {
