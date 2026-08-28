@@ -33,14 +33,15 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "277UC10")]
+	[Trait("AC", "273UC1")]
 	public async Task StudentExtraCurricularEndpoints_CallerWhoMayNotMaintainStudentRecords_AreRefusedAndNothingIsPersisted()
 	{
-		var admin = await SignInAsync("student-ec-refusal-admin", Role.Admin, "10.0.73.1");
+		var teacher = await SignInAsync("student-ec-refusal-teacher", Role.Teacher, "10.0.73.1");
 		var coordinator = await SignInAsync("student-ec-refusal-coordinator", Role.Coordinator, "10.0.73.2");
-		var student = await CreateStudentAsync(admin, "Thandi", "Nkosi", PhaseType.Junior);
+		var student = await CreateStudentAsync(teacher, "Thandi", "Nkosi", PhaseType.Junior);
 		var activity = await CreateActivityAsync(coordinator, $"Marimba Band {Guid.NewGuid()}", PhaseType.Junior);
 		var held = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
-		await AssignAsync(admin, student.StudentId, held.ExtraCurricularId);
+		await AssignAsync(teacher, student.StudentId, held.ExtraCurricularId);
 
 		// A Coordinator maintains the activity catalogue but not student records,
 		// so this area is closed to them — real, existing resources throughout, so
@@ -61,17 +62,25 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 				$"/api/students/{student.StudentId}/extra-curriculars/{held.ExtraCurricularId}"),
 			TestContext.Current.CancellationToken);
 
+		// Admin is refused too — this area, like the rest of Students, grants it
+		// nothing at all.
+		var admin = await SignInAsync("student-ec-refusal-admin", Role.Admin, "10.0.73.8");
+		var adminListResponse = await admin.Client.SendAsync(
+			admin.AuthorizedGetRequest($"/api/students/{student.StudentId}/extra-curriculars"),
+			TestContext.Current.CancellationToken);
+
 		var anonymous = fixture.CreateClient();
 		var anonymousResponse = await anonymous.GetAsync(
 			$"/api/students/{student.StudentId}/extra-curriculars", TestContext.Current.CancellationToken);
 
-		var assigned = await ReadAssignedAsync(admin, student.StudentId);
+		var assigned = await ReadAssignedAsync(teacher, student.StudentId);
 
 		ShouldlyHelpers.Satisfy(
 			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => assignableResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => assignResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminListResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			// No session at all is refused earlier still, and as 401 rather than 403.
 			() => anonymousResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized),
 			// Nothing the refused calls asked for happened: the attempted assignment
@@ -83,9 +92,9 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "277UC10")]
 	public async Task StudentExtraCurricularEndpoints_CallerHoldingOnlyTeacher_MayMaintainTheStudentsAssignments()
 	{
-		var admin = await SignInAsync("student-ec-teacher-admin", Role.Admin, "10.0.73.3");
+		var setupTeacher = await SignInAsync("student-ec-teacher-setup", Role.Teacher, "10.0.73.3");
 		var coordinator = await SignInAsync("student-ec-teacher-coordinator", Role.Coordinator, "10.0.73.4");
-		var student = await CreateStudentAsync(admin, "Sipho", "Ndlovu", PhaseType.Senior);
+		var student = await CreateStudentAsync(setupTeacher, "Sipho", "Ndlovu", PhaseType.Senior);
 		var activity = await CreateActivityAsync(coordinator, $"Senior Band {Guid.NewGuid()}", PhaseType.Senior);
 
 		// A Teacher already maintains student records elsewhere, and this endpoint
@@ -115,21 +124,21 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "277UC23")]
 	public async Task AssignStudentExtraCurricular_PrivateGradeStudent_IsRefusedOverTheWireAndNothingIsPersisted()
 	{
-		var admin = await SignInAsync("student-ec-private-admin", Role.Admin, "10.0.73.6");
+		var teacher = await SignInAsync("student-ec-private-teacher", Role.Teacher, "10.0.73.6");
 		var coordinator = await SignInAsync("student-ec-private-coordinator", Role.Coordinator, "10.0.73.7");
-		var student = await CreatePrivateStudentAsync(admin, "Kagiso", "Dlamini");
+		var student = await CreatePrivateStudentAsync(teacher, "Kagiso", "Dlamini");
 		var activity = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
 
 		// The interface hides the step, but the rule is not the interface's: this
 		// is the request the hidden step would have sent, made directly.
-		var response = await admin.Client.SendAsync(
-			admin.AuthorizedPostRequest(
+		var response = await teacher.Client.SendAsync(
+			teacher.AuthorizedPostRequest(
 				$"/api/students/{student.StudentId}/extra-curriculars",
 				new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
 			TestContext.Current.CancellationToken);
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-		var assigned = await ReadAssignedAsync(admin, student.StudentId);
+		var assigned = await ReadAssignedAsync(teacher, student.StudentId);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
