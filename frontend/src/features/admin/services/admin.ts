@@ -4,9 +4,9 @@ import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/users';
 
-export type UserRole = 'Teacher' | 'Coordinator' | 'Admin';
+export type UserRole = 'Teacher' | 'Coordinator' | 'Admin' | 'BankingCoordinator';
 
-export const ALL_ROLES: readonly UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
+export const ALL_ROLES: readonly UserRole[] = ['Teacher', 'Coordinator', 'Admin', 'BankingCoordinator'];
 
 export interface GetUserResult {
   userId: string;
