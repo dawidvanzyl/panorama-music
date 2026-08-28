@@ -210,6 +210,10 @@ test.describe('Extra-Curriculars — a student can be assigned to multiple activ
 
     await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
+    // Student Management is this account's landing page, already mounted by
+    // sign-in before the seed call above ran; reload so the enroll form's
+    // course/teacher lookups (fetched once on mount) see the seeded data.
+    await page.reload();
     const studentsPage = new StudentsPage(page);
     await studentsPage.gotoStudents();
 
@@ -482,6 +486,10 @@ test.describe('Extra-Curriculars — a Private-grade student takes no part in ex
     // --- S1: the wizard never offers the Extra-Curriculars step, in create mode or in edit mode ---
     await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
+    // Student Management is this account's landing page, already mounted by
+    // sign-in before the seed call above ran; reload so the enroll form's
+    // course/teacher lookups (fetched once on mount) see the seeded data.
+    await page.reload();
     const studentsPage = new StudentsPage(page);
     await studentsPage.gotoStudents();
 
@@ -585,6 +593,10 @@ test.describe(
 
       await loginAsRoles(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
+      // Student Management is this account's landing page, already mounted by
+      // sign-in before the seed call above ran; reload so the enroll form's
+      // course/teacher lookups (fetched once on mount) see the seeded data.
+      await page.reload();
       const studentsPage = new StudentsPage(page);
       await studentsPage.gotoStudents();
 

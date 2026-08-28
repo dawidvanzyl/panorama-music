@@ -22,23 +22,21 @@ const studentDefaults = {
 };
 
 /**
- * Signs in, seeds a course and teacher of each kind this spec needs, and opens
- * Student Management. Seeding runs before the screen is opened because the
- * enroll form reads the catalogue and roster once on mount.
- */
-/**
  * Signs in with both Teacher and Coordinator, seeds a course and teacher of
- * each kind this spec needs, and opens Student Management. Seeding runs
- * before the screen is opened because the enroll form reads the catalogue and
- * roster once on mount. Both roles are needed on the one signed-in account:
- * Coordinator to create teachers and courses, Teacher to open and maintain
- * Student Management itself.
+ * each kind this spec needs, and opens Student Management. Both roles are
+ * needed on the one signed-in account: Coordinator to create teachers and
+ * courses, Teacher to open and maintain Student Management itself. Student
+ * Management is this account's own landing page, so signing in has already
+ * mounted it before the seed calls below run; the reload is what makes the
+ * enroll form's course/teacher lookups (fetched once on mount) see the
+ * just-seeded data, since a same-hash `goto` afterwards would be a no-op.
  */
 async function openStudentsWithCourses(page: Page) {
   await loginAsRoles(page, ['Teacher', 'Coordinator']);
   const target = await seedEnrollmentTarget(page);
   const instrument = await seedInstrumentCourse(page);
   const theory = await seedTheoryCourse(page);
+  await page.reload();
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();
@@ -288,6 +286,7 @@ test.describe('Enrollment — an existing enrollment can be corrected', { tag: [
     // to reassign the enrollment to.
     const replacement = await seedEnrollmentTarget(page);
     const instrument = await seedInstrumentCourse(page);
+    await page.reload();
 
     const studentsPage = new StudentsPage(page);
     await studentsPage.gotoStudents();

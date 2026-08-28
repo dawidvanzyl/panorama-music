@@ -72,14 +72,18 @@ export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void>
 /**
  * A student must be enrolled in at least one course, so a course and a teacher
  * are seeded before the screen is opened — the enroll form reads both once on
- * mount and holds them for the session, so seeding after navigation would leave
- * its selects empty. Seeding a teacher and a course needs Coordinator alongside
- * the Teacher role this screen itself requires, so the signed-in account holds
- * both.
+ * mount and holds them for the session. Student Management is this account's
+ * own landing page (Teacher is topmost among its roles), so signing in has
+ * already mounted it before the seed call below runs; a same-hash `goto` to a
+ * path the browser is already on is a no-op, not a remount, so the reload is
+ * what actually makes the enroll form's lookups see the just-seeded data.
+ * Seeding a teacher and a course needs Coordinator alongside the Teacher role
+ * this screen itself requires, so the signed-in account holds both.
  */
 export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
   await loginAsRoles(page, ['Teacher', 'Coordinator']);
   await seedEnrollmentTarget(page);
+  await page.reload();
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();

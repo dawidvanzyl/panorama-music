@@ -3,6 +3,7 @@ import {
   uniqueTestEmail,
   createRegisteredUser,
   goToTeachersPageAsBankingCoordinator,
+  getAdminAccessToken,
 } from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeachersPage } from '../../pages/teachers/TeachersPage';
@@ -84,7 +85,14 @@ test.describe('Deactivation deletes the banking details and preserves the teache
     // the interface, and refused by the endpoint behind it.
     await expect(detailPage.linkButton).toBeDisabled();
     const headers = await authHeaders(page);
-    const accounts = (await (await page.request.get('/api/users', { headers })).json()) as {
+
+    // User management is a separate, unchanged area — Admin-only — so it is
+    // read with a token obtained directly over the API rather than the
+    // BankingCoordinator session's own.
+    const adminAccessToken = await getAdminAccessToken(page);
+    const accounts = (await (
+      await page.request.get('/api/users', { headers: { Authorization: `Bearer ${adminAccessToken}` } })
+    ).json()) as {
       email: string;
       userId: string;
     }[];

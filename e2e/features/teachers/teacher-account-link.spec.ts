@@ -1,5 +1,11 @@
 import { test, expect } from '../../fixtures/base';
-import { uniqueTestEmail, createRegisteredUser, goToTeachersPage, goToAdminUsersPage } from '../../fixtures/testUsers';
+import {
+  uniqueTestEmail,
+  createRegisteredUser,
+  goToTeachersPage,
+  goToAdminUsersPage,
+  getAdminAccessToken,
+} from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
 import { landingUrl } from '../../fixtures/navigation';
@@ -57,7 +63,14 @@ test.describe('Teacher account linking', { tag: ['@7IT5', '@7IT6', '@7IT7'] }, (
     const secondTeacherId = teachers.find(
       (t: { firstName: string; teacherId: string }) => t.firstName === second.firstName,
     ).teacherId;
-    const accounts = await (await page.request.get('/api/users', { headers })).json();
+
+    // User management is a separate, unchanged area — Admin-only — so it is
+    // read with a token obtained directly over the API rather than the
+    // Coordinator session's own.
+    const adminAccessToken = await getAdminAccessToken(page);
+    const accounts = await (
+      await page.request.get('/api/users', { headers: { Authorization: `Bearer ${adminAccessToken}` } })
+    ).json();
     const linkedAccountId = accounts.find((u: { email: string; userId: string }) => u.email === accountEmail).userId;
     const rolelessAccountId = accounts.find(
       (u: { email: string; userId: string }) => u.email === coordinatorAccount,
