@@ -100,14 +100,16 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14', '213UC4'] }
     el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
 
     const checkboxes = el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(3);
+    expect(checkboxes).toHaveLength(4);
 
     const teacherBox = [...checkboxes].find((cb) => cb.value === 'Teacher')!;
     const coordinatorBox = [...checkboxes].find((cb) => cb.value === 'Coordinator')!;
     const adminBox = [...checkboxes].find((cb) => cb.value === 'Admin')!;
+    const bankingCoordinatorBox = [...checkboxes].find((cb) => cb.value === 'BankingCoordinator')!;
     expect(teacherBox.checked).toBe(true);
     expect(coordinatorBox.checked).toBe(false);
     expect(adminBox.checked).toBe(false);
+    expect(bankingCoordinatorBox.checked).toBe(false);
   });
 
   it('edit mode shows Save and Cancel buttons', () => {
