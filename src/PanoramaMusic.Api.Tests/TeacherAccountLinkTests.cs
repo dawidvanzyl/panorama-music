@@ -27,7 +27,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC1")]
 	public async Task LinkTeacherAccount_EligibleAccount_PersistsTheLinkAndReturnsTheLinkedAccount()
 	{
-		var client = await CreateAdminClientAsync("link-eligible", "10.0.61.1");
+		var client = await CreateMaintainerClientAsync("link-eligible", "10.0.61.1");
 		var (accountEmail, accountId) = await fixture.SeedActiveUserAsync(_password, "link-eligible-account", Role.Teacher);
 
 		var createdOnEdit = await CreateTeacherAsync(client, "Alice", "Vance");
@@ -56,7 +56,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC2")]
 	public async Task LinkTeacherAccount_AccountWithoutTheTeacherRole_IsRejectedAndNothingIsPersisted()
 	{
-		var client = await CreateAdminClientAsync("link-no-role", "10.0.61.2");
+		var client = await CreateMaintainerClientAsync("link-no-role", "10.0.61.2");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "link-no-role-account", Role.Coordinator);
 
 		var teacher = await CreateTeacherAsync(client, "Alice", "Vance");
@@ -76,7 +76,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC3")]
 	public async Task LinkTeacherAccount_AccountAlreadyLinkedToAnotherTeacher_IsRejected()
 	{
-		var client = await CreateAdminClientAsync("link-already", "10.0.61.3");
+		var client = await CreateMaintainerClientAsync("link-already", "10.0.61.3");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "link-already-account", Role.Teacher);
 
 		var firstTeacher = await CreateTeacherAsync(client, "Alice", "Vance");
@@ -98,7 +98,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC4")]
 	public async Task UnlinkTeacherAccount_LinkedTeacher_ClearsTheLinkAndKeepsTheTeacher()
 	{
-		var client = await CreateAdminClientAsync("unlink", "10.0.61.4");
+		var client = await CreateMaintainerClientAsync("unlink", "10.0.61.4");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "unlink-account", Role.Teacher);
 
 		var teacher = await CreateTeacherAsync(client, "Alice", "Vance");
@@ -122,19 +122,24 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC5")]
 	public async Task DeleteUser_AccountLinkedToATeacher_ClearsTheLinkAndTheTeacherSurvives()
 	{
-		var client = await CreateAdminClientAsync("delete-linked", "10.0.61.5");
+		var client = await CreateMaintainerClientAsync("delete-linked", "10.0.61.5");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "delete-linked-account", Role.Teacher);
 
 		var teacher = await CreateTeacherAsync(client, "Alice", "Vance");
 		await LinkAsync(client, teacher.TeacherId, accountId);
 
+		// User management is a separate, unchanged area — Admin-only.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "delete-linked-admin", Role.Admin);
+		var admin = fixture.CreateIsolatedClient("10.0.61.15");
+		await admin.LoginAsync(adminEmail, _password);
+
 		// The account is deleted while still linked — only a deactivated account
 		// may be permanently deleted, so it is deactivated first.
-		await client.Client.SendAsync(
-			client.AuthorizedDeleteRequest($"/api/users/{accountId}"),
+		await admin.Client.SendAsync(
+			admin.AuthorizedDeleteRequest($"/api/users/{accountId}"),
 			TestContext.Current.CancellationToken);
-		var deleteResponse = await client.Client.SendAsync(
-			client.AuthorizedDeleteRequest($"/api/users/{accountId}/permanent"),
+		var deleteResponse = await admin.Client.SendAsync(
+			admin.AuthorizedDeleteRequest($"/api/users/{accountId}/permanent"),
 			TestContext.Current.CancellationToken);
 
 		var fetched = await GetTeacherAsync(client, teacher.TeacherId);
@@ -150,18 +155,23 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC6")]
 	public async Task UpdateUserRoles_RemovingTheTeacherRoleFromALinkedAccount_IsRejectedAndRolesAreUnchanged()
 	{
-		var client = await CreateAdminClientAsync("role-removal-blocked", "10.0.61.6");
+		var client = await CreateMaintainerClientAsync("role-removal-blocked", "10.0.61.6");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "role-removal-blocked-account", Role.Teacher);
 
 		var teacher = await CreateTeacherAsync(client, "Alice", "Vance");
 		await LinkAsync(client, teacher.TeacherId, accountId);
 
-		var response = await client.Client.SendAsync(
-			client.AuthorizedPatchRequest($"/api/users/{accountId}", new UpdateUserRolesRequest([Role.Coordinator])),
+		// User management is a separate, unchanged area — Admin-only.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "role-removal-blocked-admin", Role.Admin);
+		var admin = fixture.CreateIsolatedClient("10.0.61.16");
+		await admin.LoginAsync(adminEmail, _password);
+
+		var response = await admin.Client.SendAsync(
+			admin.AuthorizedPatchRequest($"/api/users/{accountId}", new UpdateUserRolesRequest([Role.Coordinator])),
 			TestContext.Current.CancellationToken);
 		var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-		var roles = await GetRolesAsync(client, accountId);
+		var roles = await GetRolesAsync(admin, accountId);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
@@ -173,14 +183,17 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC7")]
 	public async Task UpdateUserRoles_RemovingTheTeacherRoleFromAnUnlinkedAccount_Succeeds()
 	{
-		var client = await CreateAdminClientAsync("role-removal-allowed", "10.0.61.7");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "role-removal-allowed-account", Role.Teacher);
 
-		var response = await client.Client.SendAsync(
-			client.AuthorizedPatchRequest($"/api/users/{accountId}", new UpdateUserRolesRequest([Role.Coordinator])),
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "role-removal-allowed-admin", Role.Admin);
+		var admin = fixture.CreateIsolatedClient("10.0.61.17");
+		await admin.LoginAsync(adminEmail, _password);
+
+		var response = await admin.Client.SendAsync(
+			admin.AuthorizedPatchRequest($"/api/users/{accountId}", new UpdateUserRolesRequest([Role.Coordinator])),
 			TestContext.Current.CancellationToken);
 
-		var roles = await GetRolesAsync(client, accountId);
+		var roles = await GetRolesAsync(admin, accountId);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
@@ -191,7 +204,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "232UC8")]
 	public async Task TeacherAccountEndpoints_CallerWithoutAdminOrCoordinator_AreRejectedWith403()
 	{
-		var adminClient = await CreateAdminClientAsync("link-forbidden-admin", "10.0.61.8");
+		var adminClient = await CreateMaintainerClientAsync("link-forbidden-admin", "10.0.61.8");
 		var teacher = await CreateTeacherAsync(adminClient, "Alice", "Vance");
 
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "link-forbidden", Role.Teacher);
@@ -218,7 +231,7 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 	[Trait("AC", "234UC13")]
 	public async Task LinkTeacherAccount_DeactivatedTeacher_IsRejectedWhileUnlinkingStaysAvailable()
 	{
-		var client = await CreateAdminClientAsync("link-deactivated-admin", "10.0.61.10");
+		var client = await CreateMaintainerClientAsync("link-deactivated-admin", "10.0.61.10");
 		var (_, accountId) = await fixture.SeedActiveUserAsync(_password, "link-deactivated-account", Role.Teacher);
 		var (_, secondAccountId) = await fixture.SeedActiveUserAsync(_password, "link-deactivated-second", Role.Teacher);
 
@@ -257,9 +270,11 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 			() => linkOnceActive.StatusCode.ShouldBe(HttpStatusCode.OK));
 	}
 
-	private async Task<IsolatedHttpClient> CreateAdminClientAsync(string emailPrefix, string simulatedIp)
+	private async Task<IsolatedHttpClient> CreateMaintainerClientAsync(string emailPrefix, string simulatedIp)
 	{
-		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, emailPrefix, Role.Admin);
+		// BankingCoordinator covers both account-link maintenance and the lifecycle
+		// actions some tests in this file also drive through the same client.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, emailPrefix, Role.BankingCoordinator);
 		var client = fixture.CreateIsolatedClient(simulatedIp);
 		await client.LoginAsync(adminEmail, _password);
 		return client;

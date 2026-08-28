@@ -37,7 +37,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC1")]
 	public async Task GetOwnTeacher_LinkedTeacher_ReturnsTheirProfileAndMaskedBankingDetails()
 	{
-		var admin = await CreateClientAsync("self-get-admin", "10.0.63.1", Role.Admin);
+		var admin = await CreateClientAsync("self-get-admin", "10.0.63.1", Role.BankingCoordinator);
 		var (teacher, teacherClient, _) = await CreateLinkedTeacherAsync(admin, "self-get", "10.0.63.2", "Thandi", "Mokoena");
 		await CaptureBankingAsync(admin, teacher.TeacherId);
 
@@ -61,7 +61,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC3")]
 	public async Task OwnBankingWrites_LinkedTeacher_SucceedAndAreAuditedAgainstTheirOwnAccount()
 	{
-		var admin = await CreateClientAsync("self-banking-admin", "10.0.63.3", Role.Admin);
+		var admin = await CreateClientAsync("self-banking-admin", "10.0.63.3", Role.BankingCoordinator);
 		var (_, teacherClient, teacherEmail) = await CreateLinkedTeacherAsync(admin, "self-banking", "10.0.63.4", "Sipho", "Nkosi");
 
 		var createResponse = await teacherClient.Client.SendAsync(
@@ -76,9 +76,11 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 			teacherClient.AuthorizedDeleteRequest("/api/teachers/me/banking"),
 			TestContext.Current.CancellationToken);
 
-		var captured = await admin.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsCaptured, 1, 10);
-		var amended = await admin.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsAmended, 1, 10);
-		var deleted = await admin.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsDeleted, 1, 10);
+		// The audit log is a separate, unchanged area — Admin-only.
+		var auditor = await CreateClientAsync("self-banking-auditor", "10.0.63.16", Role.Admin);
+		var captured = await auditor.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsCaptured, 1, 10);
+		var amended = await auditor.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsAmended, 1, 10);
+		var deleted = await auditor.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsDeleted, 1, 10);
 
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
@@ -93,7 +95,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC4")]
 	public async Task RevealOwnAccountNumber_LinkedTeacher_ReturnsTheFullNumberAndRecordsTheRevealAgainstThem()
 	{
-		var admin = await CreateClientAsync("self-reveal-admin", "10.0.63.5", Role.Admin);
+		var admin = await CreateClientAsync("self-reveal-admin", "10.0.63.5", Role.BankingCoordinator);
 		var (teacher, teacherClient, teacherEmail) = await CreateLinkedTeacherAsync(admin, "self-reveal", "10.0.63.6", "Lerato", "Dube");
 		await CaptureBankingAsync(admin, teacher.TeacherId);
 
@@ -103,7 +105,9 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 		var revealed = await response.Content.ReadFromJsonAsync<RevealedAccountNumberResult>(
 			_jsonOptions, TestContext.Current.CancellationToken);
 
-		var reveals = await admin.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsRevealed, 1, 10);
+		// The audit log is a separate, unchanged area — Admin-only.
+		var auditor = await CreateClientAsync("self-reveal-auditor", "10.0.63.15", Role.Admin);
+		var reveals = await auditor.GetAuditPageAsync(teacherEmail, TeacherAuditEventTypes.BankingDetailsRevealed, 1, 10);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
@@ -122,7 +126,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC5")]
 	public async Task TeacherIdRoutes_LinkedTeacher_AreRefusedForAnotherTeachersRecordAndBanking()
 	{
-		var admin = await CreateClientAsync("self-other-admin", "10.0.63.7", Role.Admin);
+		var admin = await CreateClientAsync("self-other-admin", "10.0.63.7", Role.BankingCoordinator);
 		var other = await CreateTeacherAsync(admin, "Kagiso", "Molefe");
 		await CaptureBankingAsync(admin, other.TeacherId);
 		var (_, teacherClient, _) = await CreateLinkedTeacherAsync(admin, "self-other", "10.0.63.8", "Naledi", "Sithole");
@@ -167,7 +171,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC6")]
 	public async Task UpdateClassification_LinkedTeacherOnTheirOwnRecord_IsRefusedAndTheClassificationIsUnchanged()
 	{
-		var admin = await CreateClientAsync("self-classification-admin", "10.0.63.9", Role.Admin);
+		var admin = await CreateClientAsync("self-classification-admin", "10.0.63.9", Role.BankingCoordinator);
 		var (teacher, teacherClient, _) = await CreateLinkedTeacherAsync(
 			admin, "self-classification", "10.0.63.10", "Bongani", "Zulu");
 
@@ -188,7 +192,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC7")]
 	public async Task AccountLinkRoutes_LinkedTeacherOnTheirOwnRecord_AreRefusedAndTheLinkIsUnchanged()
 	{
-		var admin = await CreateClientAsync("self-link-admin", "10.0.63.11", Role.Admin);
+		var admin = await CreateClientAsync("self-link-admin", "10.0.63.11", Role.BankingCoordinator);
 		var (teacher, teacherClient, _) = await CreateLinkedTeacherAsync(admin, "self-link", "10.0.63.12", "Nomsa", "Khumalo");
 		var (_, otherAccountId) = await fixture.SeedActiveUserAsync(_password, "self-link-other-account", Role.Teacher);
 
@@ -214,7 +218,7 @@ public sealed class TeacherSelfServiceRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "235UC8")]
 	public async Task GetOwnTeacher_AccountLinkedToNoTeacher_IsRefusedWithoutReturningAnyRecord()
 	{
-		var admin = await CreateClientAsync("self-unlinked-admin", "10.0.63.13", Role.Admin);
+		var admin = await CreateClientAsync("self-unlinked-admin", "10.0.63.13", Role.BankingCoordinator);
 		await CreateTeacherAsync(admin, "Pumla", "Ndlovu");
 		var unlinked = await CreateClientAsync("self-unlinked", "10.0.63.14", Role.Teacher);
 
