@@ -25,18 +25,29 @@ At the start of execution, always post a visible message to the user:
 
 Close out a completed milestone by:
 1) verifying all sub-issues are closed,
-2) verifying milestone IT acceptance criteria (backend, frontend, and e2e) pass,
+2) verifying every milestone IT acceptance criterion passes,
 3) creating a PR from `milestone/m{number}` to `master`,
-4) launching the `close-milestone-watch` command that waits for the merge,
-5) which then closes the GitHub milestone, deletes the milestone branch, runs
+4) driving the CodeQL remediation loop until the scan is clean and CI is green,
+5) launching the `close-milestone-watch` command that waits for the merge,
+6) which then closes the GitHub milestone, deletes the milestone branch, runs
    prepare-base on master, and tags.
+
+This pull request gets **no second review pass**. Every story in it was reviewed
+and tested individually; re-reviewing the accumulated diff would re-litigate
+decisions that are already settled. The one thing this stage exists to surface is
+CodeQL, which runs here and nowhere earlier.
 
 ## Guardrails
 
 - **Refuse if any sub-issues under the epic are still open.**
 - **Refuse if the current branch is not `milestone/m{number}`.**
 - **Refuse if the working tree is dirty.**
-- **No file edits, no commits beyond git commands.**
+- **No file edits, no commits beyond git commands.** CodeQL fixes are delegated to a
+  `developer` subagent, never made here — the same delegation rule that holds for
+  the whole run.
+- **Never proceed to the merge while CI is red or CodeQL has open findings.**
+- **Never dismiss or suppress a CodeQL finding.** Escalate to the developer.
+- **Never count a unit test tagged with an IT code as coverage.**
 - Keep all communication concise and professional. No emojis.
 
 ## Procedure
@@ -56,8 +67,8 @@ Close out a completed milestone by:
   epic issue's own title text.
 - Extract `milestone_number` using pattern `M(\d+(?:\.\d+)?)` against
   `milestone_title` (not the epic issue's title). For example, a milestone
-  titled `M1 — Identity & Auth` yields milestone number `1`; one titled
-  `M1.1 — Identity Hardening & QA` yields `1.1`.
+  titled `M4 — {name}` yields milestone number `4`; one titled
+  `M4.1 — {name}` yields `4.1`.
 - If multiple matches exist or no match is found in `milestone_title`, notify
   and ask for the milestone number manually. Do not proceed until confirmed.
 - Derive `milestone_branch` = `milestone/m{milestone_number}`.
@@ -83,65 +94,67 @@ Close out a completed milestone by:
 
 ### 3) Verify IT codes
 
-- Using the sub-issue data fetched in step 2, determine scope per IT code:
-  if the corresponding sub-issue has a `layer: frontend` label, the IT code
-  is `frontend` scope; if it has a `layer: backend` label, it is `backend`
-  scope; otherwise `e2e` scope (full-stack E2E sub-issues carry no
-  `layer: backend`/`layer: frontend` label by convention).
+**Every IT code is proven by Playwright and nothing else.** There is no scope to
+determine and no unit-test path to take.
 
-> IT codes are issue-scoped (`{issue_number}IT{n}`), not milestone-scoped, so
-> there is no shared prefix to wildcard-match across a milestone's sub-issues
-> in one run. Verify each code individually, the same way `close-issue` does
-> — one filtered test execution per code, never a bulk milestone-wide filter.
-> This also still works unchanged for any pre-existing milestone-prefixed
-> code (e.g. `M1IT3`) encountered on older, not-yet-migrated issues, since
-> each code is matched as a literal string either way.
+#### A) The spec exists and carries the tag
 
-#### Backend IT codes
+Check this directly for every code, always. It cannot be inferred from a green
+pipeline: a code with no spec runs nothing and breaks nothing, so CI passes while
+the behaviour is entirely unproven. It is the failure this check exists for.
 
-- For each backend-scoped `[IT_CODE]`, run:
-  `dotnet test --filter "AC=CODE" --no-restore`
-- Map each code to its result:
-  - ✅ PASS — test ran and passed
-  - ❌ FAIL — test ran and failed, or no test found matching this AC code
+```bash
+grep -rn "@{IT_CODE}" e2e/features --include="*.spec.ts"
+```
 
-#### Frontend IT codes
+- No match → ❌ FAIL ("no test tagged with this AC code"). Stop here for this code.
 
-- If any IT codes are frontend-scoped:
-  - Read `frontend/package.json` to confirm a test runner is configured.
-  - For each frontend-scoped `[IT_CODE]`, run:
-    `npx vitest run --reporter=verbose --tags-filter="AC=CODE"`
-  - Map each code to its result:
-    - ✅ PASS — tests matched and passed
-    - ❌ FAIL — tests matched and failed, or no test found matching this AC code
-  - If Vitest is not configured or unavailable, mark all frontend-scoped IT
-    codes as ❌ FAIL and note "Frontend test runner not available" in the
-    failure list.
-- If no IT codes are frontend-scoped, skip this subsection.
+Also confirm no unit test has claimed one:
 
-#### E2E IT codes
+```bash
+grep -rE '\[Trait\("AC", "[0-9]+IT[0-9]+"\)\]' src/ --include="*.cs"
+```
 
-- If any IT codes are e2e-scoped:
-  - Confirm the `qa` stack is healthy: `curl --silent --fail http://localhost:3000/api/health`.
-    If unhealthy, bring it up and wait for health before continuing:
-    `RESET_DB=true docker compose --profile qa up --build -d`.
-  - For each e2e-scoped `[IT_CODE]`, run (from the `e2e/` directory):
-    `npx playwright test --grep "@{IT_CODE}"`
-  - Map each code to its result:
-    - ✅ PASS — tests matched and passed
-    - ❌ FAIL — tests matched and failed, or no test found matching this tag
-- If no IT codes are e2e-scoped, skip this subsection.
+Any hit is a ❌ Blocker and is **never counted as coverage**. A unit test carrying
+an IT trait makes a code look proven while asserting something far narrower than the
+end-to-end behaviour it names — a false claim that reports as green.
+
+#### B) The spec passes
+
+`ci.yml` runs the full Playwright suite on every push, so prefer its result over a
+local run.
+
+```bash
+gh pr checks {pr_number}
+```
+
+- **`e2e-ci` passed against the head commit** → ✅ PASS for every code whose spec
+  exists. Confirm the SHA matches; a green tick on a superseded commit says nothing
+  about the branch you are closing.
+- **Failed, pending, or run against an older commit, or no PR yet** → verify
+  locally. Confirm the `qa` stack is healthy first:
+  `curl --silent --fail http://localhost:3000/api/health`, and if not,
+  `RESET_DB=true docker compose --profile qa up --build -d`.
+
+  Then per code, from the `e2e/` directory:
+
+  ```bash
+  npx playwright test --grep "@{IT_CODE}"
+  ```
+
+  - Tests matched and passed → ✅ PASS
+  - Tests matched and failed → ❌ FAIL
 
 #### Combine results
 
-- Re-fetch the epic body immediately before editing. For each ✅ PASS code
-  (backend, frontend, or e2e), change `- [ ] \`[IT_CODE]\`` to
-  `- [x] \`[IT_CODE]\`` in `## Acceptance Criteria`. Leave ❌ FAIL codes as
-  `- [ ]`. Only write the body if at least one checkbox state actually changes.
-- Compute `n` = total codes ✅ PASS (backend + frontend + e2e), `m` = total IT codes.
+- Re-fetch the epic body immediately before editing. For each ✅ PASS code, change
+  `- [ ] \`[IT_CODE]\`` to `- [x] \`[IT_CODE]\`` inside the epic's
+  `<!-- AC_START -->` block. Leave ❌ FAIL codes as `- [ ]`. Only write the body if
+  at least one checkbox state actually changes.
+- Compute `n` = codes ✅ PASS, `m` = total IT codes.
 - If `n < m`:
-  - Output: "Milestone M{milestone_number} integration tests partially
-    passing: {n}/{m}. Failing codes: {list} (grouped Backend/Frontend/E2E)."
+  - Output: "Milestone M{milestone_number} acceptance criteria partially passing:
+    {n}/{m}. Failing codes: {list}."
   - Stop execution. Do not proceed to step 4.
 - If `n == m`, proceed to step 4.
 
@@ -171,7 +184,71 @@ Close out a completed milestone by:
   ```
 - Capture the PR number from the output.
 
-### 5) Launch close-milestone-watch command
+### 5) CodeQL remediation loop
+
+CodeQL runs against this pull request and nowhere earlier, so its findings cannot
+surface during story work no matter how well the stories were reviewed. Expect them;
+they are a normal stage of closing a milestone, not a sign something went wrong.
+
+Loop until clean:
+
+1. **Wait for the workflows to report.**
+
+   ```bash
+   gh pr checks {pr_number} --watch
+   ```
+
+2. **Read the findings.**
+
+   ```bash
+   gh pr view {pr_number} --json comments,reviews
+   gh api repos/{OWNER}/{REPO}/pulls/{pr_number}/comments --jq '.[] | {path, line, body}'
+   ```
+
+3. **No findings and CI green** → go to step 6.
+
+4. **Findings** → assign them to a `developer` subagent, spawned in the background.
+
+   The brief carries the finding verbatim — the rule it cites, the file and the line
+   — plus `base_branch: milestone/m{n}` and a `journal_dir`. Fixes are committed
+   **directly to the milestone branch**: there is no feature branch and no sub-issue,
+   because there is no story to attach one to.
+
+   The developer has **no story context** for this code. It may come from any story
+   in the milestone, possibly one closed weeks ago, and the story's agent is long
+   gone. So the finding must be the entire brief, and the developer is expected to
+   read the surrounding code before changing it — a fix that satisfies the scanner
+   while quietly altering behaviour will not be caught by a review that already
+   happened.
+
+5. **When the fix lands**, CodeQL and CI both re-run automatically on the push.
+   Return to step 1.
+
+#### CI is the regression gate
+
+You run nothing yourself. `ci.yml` covers the backend build, tests and format check,
+the frontend lint, typecheck, build and tests, and the full Playwright suite against
+a compose stack — a better run than you could perform locally, re-executed on every
+push of every fix.
+
+What you do is **refuse to proceed while it is red**, including when the only red is
+something a CodeQL fix broke on its way past the scanner. A green CodeQL scan on a
+red build is not progress.
+
+This matters more here than anywhere else in the run: these fixes edit source that
+already passed QA and review, on a branch whose stories are all closed. Nothing is
+watching that code any more except CI.
+
+#### Never dismiss a finding
+
+Not yourself, and not by instructing a developer to. A finding that looks like a
+false positive may well be one — that judgement is a security decision and it
+belongs to the developer. Escalate, and record the ruling in the run journal so the
+next milestone does not re-litigate it.
+
+Suppressing an alert with an inline annotation is the same act with extra steps.
+
+### 6) Launch close-milestone-watch command
 
 - Run the `/close-milestone-watch` command with:
   - `$1` = PR number from step 4

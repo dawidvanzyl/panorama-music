@@ -43,7 +43,7 @@ refers to.
   today. Code may have already changed since the debt was noticed.
   - If it does **not** reproduce (already fixed, refactored away, file
     deleted), stop and tell the user what you found instead, e.g. "This looks
-    already resolved by #182 — want me to proceed anyway, or drop it?" Do not
+    already resolved by #{issue} — want me to proceed anyway, or drop it?" Do not
     draft an issue for debt that no longer exists.
   - If the description is too vague to locate real code (no file, symbol, or
     feature named), ask one targeted question to narrow it down. Do not guess
@@ -77,12 +77,23 @@ refers to.
     function signatures.
   - **API / Interface Contract:** only include if a boundary actually
     changes; omit the section entirely for internal-only refactors.
-  - **Acceptance Criteria (G/W/T):** use placeholder codes `{ISSUE}UC{n}` /
-    `{ISSUE}IT{n}` — tech-debt issues have no epic to inherit codes from, so
-    both UC and IT codes are invented fresh here, scoped to this issue's own
-    number once it exists (resolved in Step 4) — never "NFC". Leave
-    `### Frontend` or `### E2E` explicitly "N/A" if genuinely not applicable,
-    don't delete the heading.
+  - **Acceptance Criteria (G/W/T):** UC codes only, as placeholder `{ISSUE}UC{n}`,
+    scoped to this issue's own number once it exists (resolved in Step 4) — never
+    "NFC". Leave `### Backend` or `### Frontend` explicitly "N/A" if genuinely not
+    applicable; don't delete the heading.
+  - **Test Specifications:** IT codes as placeholder `{ISSUE}IT{n}`, resolved in
+    Step 4 alongside the UC codes. A tech-debt issue has no epic, so it owns its
+    own criteria and its codes are scoped to itself.
+
+    Include a specification **only** where the remediation changes behaviour
+    observable end-to-end. Most tech debt is internal and legitimately has none —
+    write `N/A` and keep the heading. Never invent an IT code to make the section
+    look populated: an IT code is a promise that a Playwright spec will exist, and
+    an unfulfilled one blocks `close-issue` on a criterion that was never real.
+
+    If this list runs long, stop and ask whether the work is tech debt at all. A
+    remediation with substantial user-visible behaviour is a feature story wearing
+    the wrong label, and it should carry an epic.
   - **Out of Scope:** explicit boundaries, referencing deferred work by
     `#issue` or future milestone where relevant.
 - **Labels:** `type: tech-debt`, plus any applicable `layer:` / `priority:` /

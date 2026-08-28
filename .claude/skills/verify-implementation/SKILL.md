@@ -36,9 +36,50 @@ Never report a Blocker or Warning that asks for work listed under
 ## Inputs
 
 - `issue_number` — required.
-- `base_branch` — required in `subagent` mode; inferred from the branch prefix
-  otherwise (`feature/`, `bug/`, `tech-debt/` → `master`; `milestone/` → the
-  milestone branch).
+- `base_branch` — passed by the tech lead in `subagent` mode, since it already
+  knows the milestone. Derive it otherwise:
+
+  - On a `milestone/*` branch → `master`.
+  - Story **has** a milestone → `milestone/m{number}`, taken from the assigned
+    milestone's title exactly as `prepare-milestone-base` and `close-milestone`
+    derive it:
+
+    ```bash
+    gh issue view {issue_number} --json milestone
+    ```
+
+  - Story has **no** milestone → `master`. Standalone work — a tech-debt item, a
+    dependency bump, a one-off fix between milestones — branches from `master` and
+    returns to it. This is an ordinary state, not an error.
+
+  > The milestone belongs to the **story**, not the branch. A branch name says
+  > nothing about which milestone it serves, and never needs to — its issue is
+  > assigned to one. Do not read the base from the branch's pull request either:
+  > verify runs inside the gauntlet, before the PR exists.
+
+  **Before defaulting to `master`, rule out a forgotten assignment.** Work cut from
+  a milestone branch but never assigned to the milestone is the one case where the
+  default is badly wrong: the diff would carry every story already merged into that
+  milestone and report them all as part of this change.
+
+  ```bash
+  git ls-remote --heads origin 'refs/heads/milestone/*'
+  ```
+
+  For each result, test whether it is an ancestor of HEAD:
+
+  ```bash
+  git merge-base --is-ancestor origin/{branch} HEAD
+  ```
+
+  If one is, this branch was cut from it. Stop and report the missing milestone
+  assignment rather than proceeding on either base. Between milestones there are no
+  open milestone branches and this costs nothing.
+
+  > Grouped work always lives on a `milestone/*` branch, so this check is complete.
+
+- `journal_dir` — required in `subagent` mode. Absolute path to this story's
+  journal directory; the report is written here.
 - `mode` — `interactive` (default) or `subagent`.
 - `cycle` — integer, default `1`.
 - `prev_verify_sha` — the `VERIFIED_SHA` from the previous cycle. Absent on
@@ -101,7 +142,7 @@ Read `prev_report`. For each finding:
   reason against the issue text and standards you cited originally.
   - Reason holds → drop the finding. Record it under Withdrawn.
   - Reason does not hold → keep the finding, add `DISPUTED` to its row with a
-    one-line rebuttal, and set the verdict to `NEEDS_HUMAN`.
+    one-line rebuttal, and set the verdict to `NEEDS_RULING`.
 - Marked `ACTIONED: {what}` → check the delta for the fix. Confirmed → drop it.
   Not present in the delta → carry it forward with `NOT CONFIRMED` in its row.
 - Marked `DEFERRED: {reason}` → keep it, restated as a 💡 Suggestion, and note
@@ -136,7 +177,10 @@ whether it is clean.
   Used to verify domain logic correctness.
 - **`## Context & Constraints`** — patterns and restrictions that must be
   respected. Any violation is a blocker.
-- **`## Acceptance Criteria (G/W/T)`** — the UC and IT codes. Used to verify
+- **`## Test Specifications`** — the IT codes. Proven by Playwright and owned by
+  QA; confirm no unit test carries one, but never expect the implementation to
+  contain their tests.
+- **`## Acceptance Criteria (G/W/T)`** — the UC codes. Used to verify
   that every criterion has a corresponding test.
 - **`## Out of Scope`** — a hard boundary. Never report a finding that asks for
   work listed here.
@@ -184,7 +228,7 @@ Apply the severity levels defined in
 already. Gating behaviour, which is specific to this skill:
 
 - ❌ Blocker → gating (`BLOCKED`).
-- ❓ Question → gating via `NEEDS_HUMAN`.
+- ❓ Question → gating via `NEEDS_RULING`.
 - ⚠️ Warning and 💡 Suggestion → non-gating, but each still requires a
   disposition from the implementer and is carried across cycles per step 1.5.
 
@@ -255,7 +299,7 @@ Omit this section entirely if all checks passed.
 ```
 
 ---
-VERDICT: {PASS | BLOCKED (n) | NEEDS_HUMAN (n)}
+VERDICT: {PASS | BLOCKED (n) | NEEDS_RULING (n)}
 VERIFIED_SHA: {sha}
 ````
 
@@ -268,9 +312,13 @@ Verdict rules:
 - `PASS` — zero blockers, zero questions, no disputed findings. Warnings and
   suggestions may be present.
 - `BLOCKED (n)` — n blockers, no questions and no disputed findings.
-- `NEEDS_HUMAN (n)` — any open question, or any finding marked `DISPUTED`.
+- `NEEDS_RULING (n)` — any open question, or any finding marked `DISPUTED`.
 
-The verdict block is the last two lines of the report. Always emit it.
+> `NEEDS_RULING` means the work has stopped and cannot restart without a decision
+> from above. The decision may be made by the tech lead rather than reaching a
+> person at all, so the verdict deliberately does not name its audience.
+
+The verdict block is always emitted, and is always the last lines of the report.
 
 ### 8) Present the report
 
@@ -284,8 +332,30 @@ The verdict block is the last two lines of the report. Always emit it.
 
 If the user fixes items, re-run steps 1–6 and present an updated report.
 
-`subagent` mode — output the report and stop. Ask nothing. The parent skill
-owns the loop.
+`subagent` mode — **write** the report, do not print it. Ask nothing; the parent
+skill owns the loop.
+
+```
+{journal_dir}/verify-{cycle}.md
+```
+
+Write it as you go rather than composing it in a final turn. You cannot tell when
+a turn limit or a quota exhaustion is about to end the session, and a report that
+exists only in the last message leaves nothing behind when that happens — the whole
+cycle then has to be re-run.
+
+Reply with the verdict block and the path, nothing else:
+
+```
+VERDICT: {PASS | BLOCKED (n) | NEEDS_RULING (n)}
+VERIFIED_SHA: {sha}
+REPORT: {journal_dir}/verify-{cycle}.md
+```
+
+Never paste the findings tables, the diff, or automated-check output into the
+reply. The parent reads the verdict and opens the file only when the verdict alone
+does not tell it what to do — a full report in the reply spends context that has to
+last the whole milestone. See `.claude/shared/subagent-contract.md`.
 
 ### 9) Summary
 
@@ -298,9 +368,14 @@ owns the loop.
 
 ## Guardrails
 
-- **Read-only.** Never modify files, GitHub issues, PRs, or any state.
+- **Read-only against the repository and GitHub.** Never modify source files,
+  issues, PRs, labels, or any other state. The single exception is the report in
+  `journal_dir`, which is outside the repository.
 - **Do not push, commit, or check out branches.** Only use `git diff`,
   `git fetch`, and `git rev-parse`.
+- **Never fix what you find.** A verifier that repairs a blocker produces an
+  unreviewed change and destroys the record of what was wrong — the finding and
+  the implementer's disposition of it are the artefact.
 - **Every finding must cite a source** — issue section + requirement text,
   or doc + section, or file:line. If you cannot point to a specific source, it
   goes in Questions or Suggestions.

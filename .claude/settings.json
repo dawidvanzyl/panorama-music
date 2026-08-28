@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(gh:*)",
+      "Bash(git:*)",
+      "Bash(dotnet:*)",
+      "Bash(npm run:*)",
+      "Bash(npx:*)",
+      "PowerShell(gh:*)",
+      "PowerShell(git:*)",
+      "PowerShell(dotnet:*)",
+      "PowerShell(npm run:*)",
+      "PowerShell(npx:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-destructive.ps1"
+            ],
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-destructive.ps1"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
