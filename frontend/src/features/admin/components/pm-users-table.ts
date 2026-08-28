@@ -46,7 +46,7 @@ styles.replaceSync(`
       white-space: nowrap;
     }
     .users-table__col-email {
-      width: 220px;
+      width: 550px;
     }
     .users-table__col-status {
       width: 130px;
