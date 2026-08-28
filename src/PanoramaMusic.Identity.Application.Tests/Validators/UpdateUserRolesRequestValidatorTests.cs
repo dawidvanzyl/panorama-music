@@ -40,4 +40,13 @@ public class UpdateUserRolesRequestValidatorTests
 			result => result.IsValid.ShouldBeFalse(),
 			result => result.Errors.ShouldContain(e => e.PropertyName == "Roles[0]"));
 	}
+
+	[Fact]
+	[Trait("AC", "287UC2")]
+	public void Validate_BankingCoordinatorRole_ReturnsSuccess()
+	{
+		var result = _validator.Validate(new UpdateUserRolesRequest([Role.BankingCoordinator]));
+
+		result.IsValid.ShouldBeTrue();
+	}
 }

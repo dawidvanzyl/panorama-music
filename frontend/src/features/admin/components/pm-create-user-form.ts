@@ -1,4 +1,4 @@
-import { createUser, AdminError, ALL_ROLES, type UserRole } from '../services/admin';
+import { createUser, AdminError, ALL_ROLES, roleLabel, type UserRole } from '../services/admin';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -104,7 +104,7 @@ const rolesMarkup = ALL_ROLES.map(
   (role) => `
             <label class="create-user__role-option">
               <input type="checkbox" id="role${role}" value="${role}" ${role === 'Teacher' ? 'checked' : ''} />
-              ${role}
+              ${roleLabel(role)}
             </label>`,
 ).join('');
 

@@ -50,3 +50,25 @@ describe('pm-create-user-form — role selection', { tags: ['213UC4'] }, () => {
     });
   });
 });
+
+describe('pm-create-user-form — Banking Coordinator role', { tags: ['287UC3'] }, () => {
+  let el: PmCreateUserForm;
+
+  beforeEach(() => {
+    el = new PmCreateUserForm();
+    document.body.appendChild(el);
+    mockCreateUser.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('renders a Banking Coordinator checkbox alongside Teacher, Coordinator and Admin', () => {
+    const shadow = el.shadowRoot!;
+
+    const checkbox = shadow.getElementById('roleBankingCoordinator') as HTMLInputElement;
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(false);
+  });
+});

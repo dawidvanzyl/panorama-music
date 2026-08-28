@@ -100,14 +100,16 @@ describe('pm-users-table — inline role edit', { tags: ['M1.1UC14', '213UC4'] }
     el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
 
     const checkboxes = el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(3);
+    expect(checkboxes).toHaveLength(4);
 
     const teacherBox = [...checkboxes].find((cb) => cb.value === 'Teacher')!;
     const coordinatorBox = [...checkboxes].find((cb) => cb.value === 'Coordinator')!;
     const adminBox = [...checkboxes].find((cb) => cb.value === 'Admin')!;
+    const bankingCoordinatorBox = [...checkboxes].find((cb) => cb.value === 'BankingCoordinator')!;
     expect(teacherBox.checked).toBe(true);
     expect(coordinatorBox.checked).toBe(false);
     expect(adminBox.checked).toBe(false);
+    expect(bankingCoordinatorBox.checked).toBe(false);
   });
 
   it('edit mode shows Save and Cancel buttons', () => {
@@ -209,6 +211,38 @@ describe('pm-users-table — saving Coordinator role edits reflects on the row',
 
     await vi.waitFor(() => {
       expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).not.toContain('Coordinator');
+    });
+  });
+});
+
+describe('pm-users-table — saving Banking Coordinator role edits reflects on the row', { tags: ['287UC4'] }, () => {
+  let el: PmUsersTable;
+
+  beforeEach(() => {
+    el = new PmUsersTable();
+    document.body.appendChild(el);
+    mockUpdateUserRoles.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('saving with the Banking Coordinator checkbox ticked shows the Banking Coordinator badge on the row', async () => {
+    mockUpdateUserRoles.mockResolvedValueOnce({
+      userId: activeUser.userId,
+      email: activeUser.email,
+      roles: ['Teacher', 'BankingCoordinator'],
+      isActive: true,
+    });
+
+    el.users = [activeUser];
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--edit')!.click();
+    el.shadowRoot!.querySelector<HTMLInputElement>('input[type="checkbox"][value="BankingCoordinator"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
+
+    await vi.waitFor(() => {
+      expect(el.shadowRoot!.querySelector('tbody tr')!.textContent).toContain('Banking Coordinator');
     });
   });
 });

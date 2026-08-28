@@ -230,6 +230,8 @@ export default defineConfig({
       { name: '278UC24', description: 'An assigned activity lists every one of its practice times in day-then-time order' },
       { name: '278UC30', description: 'A create refused for a duplicate description shows the refusal against the form and adds nothing to the table' },
       { name: '278UC31', description: 'An edit refused for a duplicate description shows the refusal on the row, which keeps its stored values' },
+      { name: '287UC3', description: 'The create-user form renders a Banking Coordinator checkbox alongside Teacher, Coordinator and Admin' },
+      { name: '287UC4', description: 'Admin ticks Banking Coordinator and saves; the row shows the Banking Coordinator badge' },
     ],
   },
 })

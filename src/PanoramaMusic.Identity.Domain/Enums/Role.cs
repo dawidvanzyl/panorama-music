@@ -4,5 +4,6 @@ public enum Role
 {
 	Teacher,
 	Coordinator,
-	Admin
+	Admin,
+	BankingCoordinator
 }

@@ -92,6 +92,58 @@ public class UpdateUserRolesHandlerTests : IClassFixture<IdentityTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "287UC2")]
+	public async Task HandleAsync_AdminAddsBankingCoordinatorRole_PersistsRolesWithBankingCoordinator()
+	{
+		var userId = Guid.NewGuid();
+		var user = UserFactory.Create(userId, "teacher@test.com");
+		var newRoles = new List<Role> { Role.Teacher, Role.BankingCoordinator };
+
+		_context.Repositories.UserRoleRepositoryMock
+			.Setup(r => r.GetRolesAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IList<Role>)[Role.Teacher]);
+
+		_context.Repositories.UserRepositoryMock
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		var result = await _handler.HandleAsync(
+			new UpdateUserRolesCommand(userId, new UpdateUserRolesRequest(newRoles)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.Roles.ShouldBe(newRoles),
+			() => result.Roles.ShouldContain(Role.BankingCoordinator),
+			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.SetRolesAsync(userId, newRoles, TestContext.Current.CancellationToken), Times.Once));
+	}
+
+	[Fact]
+	[Trait("AC", "287UC2")]
+	public async Task HandleAsync_AdminRemovesBankingCoordinatorRole_PersistsRolesWithoutBankingCoordinator()
+	{
+		var userId = Guid.NewGuid();
+		var user = UserFactory.Create(userId, "coordinator@test.com");
+		var newRoles = new List<Role> { Role.Teacher };
+
+		_context.Repositories.UserRoleRepositoryMock
+			.Setup(r => r.GetRolesAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IList<Role>)[Role.Teacher, Role.BankingCoordinator]);
+
+		_context.Repositories.UserRepositoryMock
+			.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(user);
+
+		var result = await _handler.HandleAsync(
+			new UpdateUserRolesCommand(userId, new UpdateUserRolesRequest(newRoles)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.Roles.ShouldBe(newRoles),
+			() => result.Roles.ShouldNotContain(Role.BankingCoordinator),
+			() => _context.Repositories.UserRoleRepositoryMock.Verify(r => r.SetRolesAsync(userId, newRoles, TestContext.Current.CancellationToken), Times.Once));
+	}
+
+	[Fact]
 	[Trait("AC", "M1.1UC12")]
 	public async Task HandleAsync_UserNotFound_ThrowsEntityNotFoundException()
 	{

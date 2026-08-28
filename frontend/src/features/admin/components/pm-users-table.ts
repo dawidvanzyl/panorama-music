@@ -3,6 +3,7 @@ import {
   updateUserRoles,
   AdminError,
   ALL_ROLES,
+  roleLabel,
   type GetUserResult,
   type UserRole,
 } from '../services/admin';
@@ -39,8 +40,13 @@ styles.replaceSync(`
       color: var(--pm-text);
       border-bottom: 1px solid var(--pm-border);
     }
-    .users-table__col-roles {
-      width: 220px;
+    td:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .users-table__col-email {
+      width: 550px;
     }
     .users-table__col-status {
       width: 130px;
@@ -262,10 +268,13 @@ styles.replaceSync(`
       border: 1px solid var(--pm-border);
       color: var(--pm-text-muted);
       margin-right: 4px;
+      margin-bottom: 4px;
+      white-space: nowrap;
     }
     .users-table__role-checkboxes {
       display: flex;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 8px 12px;
     }
     .users-table__role-option {
       display: flex;
@@ -312,7 +321,7 @@ template.innerHTML = `
     </div>
     <table>
       <colgroup>
-        <col />
+        <col class="users-table__col-email" />
         <col class="users-table__col-roles" />
         <col class="users-table__col-status" />
         <col class="users-table__col-actions" />
@@ -522,7 +531,7 @@ export class PmUsersTable extends HTMLElement {
     for (const role of roles) {
       const badge = document.createElement('span');
       badge.classList.add('users-table__role-badge');
-      badge.textContent = role;
+      badge.textContent = roleLabel(role);
       wrap.appendChild(badge);
     }
     return wrap;
@@ -541,7 +550,7 @@ export class PmUsersTable extends HTMLElement {
       checkbox.value = role;
       checkbox.checked = currentRoles.includes(role);
 
-      label.append(checkbox, document.createTextNode(role));
+      label.append(checkbox, document.createTextNode(roleLabel(role)));
       wrap.appendChild(label);
     }
 
