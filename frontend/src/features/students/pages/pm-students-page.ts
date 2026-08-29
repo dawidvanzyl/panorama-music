@@ -115,7 +115,7 @@ template.innerHTML = `
 
   <div class="students-page__container">
     <div class="students-page__header">
-      <h1 class="students-page__title">Student Management</h1>
+      <h1 class="students-page__title">Students</h1>
       <button type="button" class="students-page__create-btn" id="createBtn">Create Student</button>
     </div>
     <pm-student-filter-bar id="filterBar"></pm-student-filter-bar>

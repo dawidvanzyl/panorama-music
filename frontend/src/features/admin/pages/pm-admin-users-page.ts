@@ -43,7 +43,7 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="admin-users__container">
-    <h1 class="admin-users__title">User Management</h1>
+    <h1 class="admin-users__title">Users</h1>
     <pm-create-user-form></pm-create-user-form>
     <pm-user-created-banner id="userCreatedBanner"></pm-user-created-banner>
     <pm-reinvite-banner id="reinviteBanner"></pm-reinvite-banner>
