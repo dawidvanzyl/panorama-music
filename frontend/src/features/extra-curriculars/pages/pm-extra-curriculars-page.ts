@@ -65,7 +65,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <h1 class="extra-curriculars__title">Extra-Curriculars Management</h1>
+  <h1 class="extra-curriculars__title">Extra-Curriculars</h1>
   <div class="extra-curriculars__error" id="error"></div>
   <pm-extra-curricular-form id="form" hidden></pm-extra-curricular-form>
   <pm-extra-curricular-filter-bar id="filterBar"></pm-extra-curricular-filter-bar>
