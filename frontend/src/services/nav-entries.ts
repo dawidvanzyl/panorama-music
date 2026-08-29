@@ -36,7 +36,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     id: 'userManagementLink',
     path: '/admin/users',
     icon: 'group',
-    label: 'User Management',
+    label: 'Users',
     roles: ['Admin'],
   },
   {
@@ -57,7 +57,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     id: 'studentManagementLink',
     path: '/students',
     icon: 'group',
-    label: 'Student Management',
+    label: 'Students',
     // Students are a Teacher-owned area; Admin owns nothing in it.
     roles: ['Teacher'],
     startsGroup: true,
@@ -66,7 +66,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     id: 'teachersLink',
     path: '/teachers',
     icon: 'school',
-    label: 'Teacher Management',
+    label: 'Teachers',
     roles: ['Coordinator', 'BankingCoordinator'],
     matchesNested: true,
   },
@@ -74,7 +74,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     id: 'courseManagementLink',
     path: '/courses',
     icon: 'library_music',
-    label: 'Course Management',
+    label: 'Courses',
     // Courses are owned by Teacher and Coordinator; Admin owns nothing in it.
     roles: ['Teacher', 'Coordinator'],
   },

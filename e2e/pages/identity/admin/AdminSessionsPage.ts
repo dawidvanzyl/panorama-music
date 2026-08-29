@@ -11,7 +11,7 @@ export class AdminSessionsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.heading = page.getByRole('heading', { name: 'Global Session Management' });
+    this.heading = page.getByRole('heading', { name: 'User Sessions' });
     this.filterInput = page.locator('#filterInput');
     this.revokeAllBtn = page.getByRole('button', { name: 'Revoke All (Global)' });
     this.rows = page.locator('table tbody tr');

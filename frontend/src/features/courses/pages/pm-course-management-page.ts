@@ -57,7 +57,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <h1 class="course-management__title">Course Management</h1>
+  <h1 class="course-management__title">Courses</h1>
   <div class="course-management__error" id="error"></div>
   <pm-course-form id="form" hidden></pm-course-form>
   <pm-course-filter-bar id="filterBar" hidden></pm-course-filter-bar>

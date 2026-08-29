@@ -91,7 +91,7 @@ template.innerHTML = `
   <div class="admin-sessions-page__container">
     <div class="admin-sessions-page__header">
       <div>
-        <h1 class="admin-sessions-page__title">Global Session Management</h1>
+        <h1 class="admin-sessions-page__title">User Sessions</h1>
         <p class="admin-sessions-page__subtitle">Oversee and manage all active user sessions across the entire system.</p>
       </div>
       <button type="button" class="admin-sessions-page__revoke-all" id="revokeAllBtn">Revoke All (Global)</button>
