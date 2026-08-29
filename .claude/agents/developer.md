@@ -4,8 +4,8 @@ description: >
   Implements a story end to end — branch, code, unit and service tests, the
   verify gauntlet, and the pull request. Also owns everything that comes back:
   QA bug sub-issues, review findings, and merge conflicts on its own branch.
-model: opus
-effort: low
+model: sonnet
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 120
