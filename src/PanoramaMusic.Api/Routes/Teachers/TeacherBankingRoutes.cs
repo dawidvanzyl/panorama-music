@@ -10,8 +10,8 @@ namespace PanoramaMusic.Api.Routes.Teachers;
 /// <summary>
 /// Banking details live on their own route group because they carry their own
 /// authorization boundary, not the teacher routes' one: a Coordinator may read
-/// a teacher's masked details and their banking activity, but only an Admin may
-/// capture, edit, delete or reveal them.
+/// a teacher's masked details and their banking activity, but only a
+/// BankingCoordinator may capture, edit, delete or reveal them.
 /// <para>
 /// The masked details themselves are not served here — they ride on the teacher
 /// record under the group next door, so opening a record costs one request. The
@@ -35,15 +35,15 @@ public static class TeacherBankingRoutes
 		// RequireAuthorization adds a convention to the group it is called on
 		// rather than returning a separate branch, so calling it twice on a
 		// shared group would require both policies on every endpoint below.
-		var adminGroup = app
+		var bankingCoordinatorGroup = app
 			.MapGroup("/api/teachers/{teacherId:guid}/banking")
 			.WithTags("Teacher Banking")
-			.RequireAuthorization("AdminPolicy");
+			.RequireAuthorization("BankingCoordinatorPolicy");
 
 		var readGroup = app
 			.MapGroup("/api/teachers/{teacherId:guid}/banking")
 			.WithTags("Teacher Banking")
-			.RequireAuthorization("CoordinatorOrAdminPolicy");
+			.RequireAuthorization("CoordinatorOrBankingCoordinatorPolicy");
 
 		readGroup
 			.MapGet("/activity", async (Guid teacherId, GetBankingActivityHandler handler, CancellationToken ct) =>
@@ -58,7 +58,7 @@ public static class TeacherBankingRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		adminGroup
+		bankingCoordinatorGroup
 			.MapPost("/", async (Guid teacherId, CreateBankingDetailsRequest request, CreateBankingDetailsHandler handler, CancellationToken ct) =>
 			{
 				var command = new CreateBankingDetailsCommand(teacherId, request);
@@ -74,7 +74,7 @@ public static class TeacherBankingRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		adminGroup
+		bankingCoordinatorGroup
 			.MapPut("/", async (Guid teacherId, UpdateBankingDetailsRequest request, UpdateBankingDetailsHandler handler, CancellationToken ct) =>
 			{
 				var command = new UpdateBankingDetailsCommand(teacherId, request);
@@ -90,7 +90,7 @@ public static class TeacherBankingRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		adminGroup
+		bankingCoordinatorGroup
 			.MapDelete("/", async (Guid teacherId, DeleteBankingDetailsHandler handler, CancellationToken ct) =>
 			{
 				var command = new DeleteBankingDetailsCommand(teacherId);
@@ -106,7 +106,7 @@ public static class TeacherBankingRoutes
 		// A POST rather than a GET: revealing is an action with a recorded
 		// side-effect, and a GET would invite caching and land the full number
 		// in a URL-shaped access log.
-		adminGroup
+		bankingCoordinatorGroup
 			.MapPost("/reveal", async (Guid teacherId, RevealAccountNumberHandler handler, CancellationToken ct) =>
 			{
 				var command = new RevealAccountNumberCommand(teacherId);

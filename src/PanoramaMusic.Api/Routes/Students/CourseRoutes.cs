@@ -10,14 +10,14 @@ public static class CourseRoutes
 {
 	public static void MapCourseRoutes(this WebApplication app)
 	{
-		// Reading the catalogue is open to every staff role — a Teacher needs to
-		// see what the school offers. Defining a course is Coordinator-or-Admin.
+		// Reading the catalogue is open to Teacher and Coordinator — a Teacher needs
+		// to see what the school offers. Defining a course is Coordinator-only.
 		// The list is unfiltered; narrowing it is the screen's concern, as it is
 		// for students.
 		app
 			.MapGroup("/api/courses")
 			.WithTags("Courses")
-			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy")
+			.RequireAuthorization("TeacherOrCoordinatorPolicy")
 			.MapGet("/", async (GetCoursesHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(ct);
@@ -32,7 +32,7 @@ public static class CourseRoutes
 		var maintenanceGroup = app
 			.MapGroup("/api/courses")
 			.WithTags("Courses")
-			.RequireAuthorization("CoordinatorOrAdminPolicy");
+			.RequireAuthorization("CoordinatorPolicy");
 
 		maintenanceGroup
 			.MapPost("/", async (CreateCourseRequest request, CreateCourseHandler handler, CancellationToken ct) =>

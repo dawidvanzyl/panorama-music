@@ -14,7 +14,7 @@ public static class GuardianRoutes
 		var studentGroup = app
 			.MapGroup("/api/students")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherOrAdminPolicy");
+			.RequireAuthorization("TeacherPolicy");
 
 		studentGroup
 			.MapPost("/{studentId:guid}/guardians", async (Guid studentId, AddGuardianRequest request, AddGuardianHandler handler, CancellationToken ct) =>
@@ -87,7 +87,7 @@ public static class GuardianRoutes
 		var guardianGroup = app
 			.MapGroup("/api/guardians")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherOrAdminPolicy");
+			.RequireAuthorization("TeacherPolicy");
 
 		guardianGroup
 			.MapPut("/{guardianId:guid}", async (Guid guardianId, UpdateGuardianRequest request, UpdateGuardianHandler handler, CancellationToken ct) =>

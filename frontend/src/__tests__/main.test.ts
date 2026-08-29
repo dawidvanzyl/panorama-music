@@ -209,6 +209,26 @@ describe('main router — a refused route lands on the topmost permitted entry',
       page: '<pm-admin-users-page>',
       landing: '#/students',
     },
+    // Admin owns none of these three areas any longer — Students, Courses and
+    // Guardian Relationships are Teacher/Coordinator-owned.
+    {
+      roles: ['Admin'],
+      refused: '#/students',
+      page: '<pm-students-page>',
+      landing: '#/admin/users',
+    },
+    {
+      roles: ['Admin'],
+      refused: '#/courses',
+      page: '<pm-course-management-page>',
+      landing: '#/admin/users',
+    },
+    {
+      roles: ['Admin'],
+      refused: '#/students/guardian-relationships',
+      page: '<pm-guardian-relationships-page>',
+      landing: '#/admin/users',
+    },
   ])('bounces a $roles user off $refused onto $landing', async ({ roles, refused, page, landing }) => {
     grantRoles(...roles);
     // A public page as the neutral baseline: without it, a case whose refused
@@ -261,5 +281,38 @@ describe('main router — the Extra-Curriculars route is refused to Admin alone'
     await vi.waitFor(() => {
       expect(document.getElementById('app')!.innerHTML).toContain('<pm-extra-curriculars-page>');
     });
+  });
+});
+
+describe('main router — Teacher Management route guard', { tags: ['273UC4'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  it.each([['Coordinator'], ['BankingCoordinator']])('lets a %s reach /teachers', async (role) => {
+    grantRoles(role);
+    window.location.hash = '#/login';
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-login-page>');
+    });
+
+    window.location.hash = '#/teachers';
+
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-teachers-page>');
+    });
+  });
+
+  it('bounces a BankingCoordinator off /students, which the role grants nothing in', async () => {
+    grantRoles('BankingCoordinator');
+    window.location.hash = '#/students';
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe('#/teachers');
+    });
+
+    expect(document.getElementById('app')!.innerHTML).not.toContain('<pm-students-page>');
   });
 });

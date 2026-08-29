@@ -71,7 +71,7 @@ describe('pm-teacher-header — an active teacher offers deactivate and no delet
 });
 
 describe('pm-teacher-header — a Coordinator is offered no lifecycle action', { tags: ['234UC10'] }, () => {
-  it('withholds deactivate, reactivate and delete for a non-Admin', () => {
+  it('withholds deactivate, reactivate and delete for a non-BankingCoordinator', () => {
     vi.mocked(hasRole).mockReturnValue(false);
     element = mount(activeTeacher);
 

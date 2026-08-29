@@ -1,5 +1,10 @@
 import { test, expect } from '../../fixtures/base';
-import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../fixtures/testUsers';
+import {
+  uniqueTestEmail,
+  createRegisteredUser,
+  goToTeachersPageAsBankingCoordinator,
+  getAdminAccessToken,
+} from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeachersPage } from '../../pages/teachers/TeachersPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
@@ -46,7 +51,7 @@ test.describe('Deactivation deletes the banking details and preserves the teache
     const relinkEmail = uniqueTestEmail('lifecycle-relink');
     await createRegisteredUser(page, relinkEmail, PASSWORD, ['Teacher']);
 
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('lifecycle-deactivate');
     const fullName = `${firstName} ${surname}`;
     await teachersPage.createTeacher({ firstName, surname });
@@ -80,7 +85,14 @@ test.describe('Deactivation deletes the banking details and preserves the teache
     // the interface, and refused by the endpoint behind it.
     await expect(detailPage.linkButton).toBeDisabled();
     const headers = await authHeaders(page);
-    const accounts = (await (await page.request.get('/api/users', { headers })).json()) as {
+
+    // User management is a separate, unchanged area — Admin-only — so it is
+    // read with a token obtained directly over the API rather than the
+    // BankingCoordinator session's own.
+    const adminAccessToken = await getAdminAccessToken(page);
+    const accounts = (await (
+      await page.request.get('/api/users', { headers: { Authorization: `Bearer ${adminAccessToken}` } })
+    ).json()) as {
       email: string;
       userId: string;
     }[];
@@ -110,7 +122,7 @@ test.describe('Deactivation deletes the banking details and preserves the teache
 
 test.describe('A teacher can only be deleted once deactivated', { tag: ['@7IT4'] }, () => {
   test('refuses deletion while active, offers no delete action, and succeeds after deactivation', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('lifecycle-delete');
     const fullName = `${firstName} ${surname}`;
     await teachersPage.createTeacher({ firstName, surname });
@@ -145,14 +157,14 @@ test.describe('A teacher can only be deleted once deactivated', { tag: ['@7IT4']
 
 test.describe('A Coordinator maintains the teacher, not their lifecycle or money', { tag: ['@7IT11'] }, () => {
   test('can edit the profile but is offered and refused every lifecycle and banking action', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('lifecycle-coordinator');
     const fullName = `${firstName} ${surname}`;
     await teachersPage.createTeacher({ firstName, surname });
     await teachersPage.openTeacher(fullName);
 
-    const adminDetailPage = new TeacherDetailPage(page);
-    await adminDetailPage.captureBankingDetails(BANKING);
+    const bankingCoordinatorDetailPage = new TeacherDetailPage(page);
+    await bankingCoordinatorDetailPage.captureBankingDetails(BANKING);
     const teacherId = await teacherIdBySurname(page, surname);
 
     const coordinatorEmail = uniqueTestEmail('lifecycle-coordinator');

@@ -1,5 +1,10 @@
 import { test, expect } from '../../fixtures/base';
-import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../fixtures/testUsers';
+import {
+  uniqueTestEmail,
+  createRegisteredUser,
+  goToTeachersPageAsBankingCoordinator,
+  getAdminAccessToken,
+} from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeachersPage } from '../../pages/teachers/TeachersPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
@@ -46,7 +51,7 @@ async function teacherIdBySurname(page: import('@playwright/test').Page, surname
 
 test.describe('Banking details are captured on the teacher record', { tag: ['@7IT13'] }, () => {
   test('captures one set per teacher, edits it, and refuses a second', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('banking-capture');
     const fullName = `${firstName} ${surname}`;
     await teachersPage.createTeacher({ firstName, surname });
@@ -77,7 +82,7 @@ test.describe('Banking details are captured on the teacher record', { tag: ['@7I
 
 test.describe('The stored account number is protected, never plaintext', { tag: ['@7IT14'] }, () => {
   test('no read but the reveal action returns the number, and reveal returns it in full', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('banking-protected');
     await teachersPage.createTeacher({ firstName, surname });
     await teachersPage.openTeacher(`${firstName} ${surname}`);
@@ -103,8 +108,8 @@ test.describe('The stored account number is protected, never plaintext', { tag: 
 });
 
 test.describe('The account number is masked and revealed only deliberately', { tag: ['@7IT15'] }, () => {
-  test('an Admin can reveal it, a Coordinator sees only the mask and is refused', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+  test('a BankingCoordinator can reveal it, a Coordinator sees only the mask and is refused', async ({ page }) => {
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('banking-reveal');
     const fullName = `${firstName} ${surname}`;
     await teachersPage.createTeacher({ firstName, surname });
@@ -154,7 +159,7 @@ test.describe('The account number is masked and revealed only deliberately', { t
 
 test.describe('Every banking operation is audited', { tag: ['@7IT16'] }, () => {
   test('the activity view records the create, edit, reveal and delete with their actor', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('banking-audit');
     await teachersPage.createTeacher({ firstName, surname });
     await teachersPage.openTeacher(`${firstName} ${surname}`);
@@ -187,7 +192,7 @@ test.describe('Every banking operation is audited', { tag: ['@7IT16'] }, () => {
 
 test.describe('Audit entries carry at most the last four digits', { tag: ['@7IT17'] }, () => {
   test('no activity entry, audit row or rendered activity view holds the account number', async ({ page }) => {
-    const teachersPage = await goToTeachersPage(page);
+    const teachersPage = await goToTeachersPageAsBankingCoordinator(page);
     const { firstName, surname } = uniqueName('banking-audit-content');
     await teachersPage.createTeacher({ firstName, surname });
     await teachersPage.openTeacher(`${firstName} ${surname}`);
@@ -203,8 +208,15 @@ test.describe('Audit entries carry at most the last four digits', { tag: ['@7IT1
     const activityBody = await (
       await page.request.get(`/api/teachers/${teacherId}/banking/activity`, { headers })
     ).text();
+
+    // The audit log is a separate, unchanged area — Admin-only. Fetched with a
+    // token obtained directly over the API so the page's own BankingCoordinator
+    // session (and the detail page still open in it) is left undisturbed.
+    const adminAccessToken = await getAdminAccessToken(page);
     const auditBody = await (
-      await page.request.get('/api/audit?eventType=teachers.banking_details.revealed&page=1&pageSize=50', { headers })
+      await page.request.get('/api/audit?eventType=teachers.banking_details.revealed&page=1&pageSize=50', {
+        headers: { Authorization: `Bearer ${adminAccessToken}` },
+      })
     ).text();
 
     expect(activityBody).not.toContain(ACCOUNT_NUMBER);

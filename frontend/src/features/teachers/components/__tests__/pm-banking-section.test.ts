@@ -202,7 +202,7 @@ describe('pm-banking-section — a Coordinator gets a masked, read-only view', {
     expect(byId(element, 'readActions').hidden).toBe(true);
     expect(byId(element, 'revealBtn').hidden).toBe(true);
     expect(byId(element, 'revealNote').textContent).toBe(
-      'Your role can see the masked value only. Revealing the full number is restricted to an Admin or the linked teacher.',
+      'Your role can see the masked value only. Revealing the full number is restricted to a BankingCoordinator or the linked teacher.',
     );
     expect(byId(element, 'accountNumberValue').textContent).toBe('•••• •••• 7890');
   });

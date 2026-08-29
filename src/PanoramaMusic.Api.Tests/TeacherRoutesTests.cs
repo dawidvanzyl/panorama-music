@@ -22,11 +22,12 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 	};
 
 	[Fact]
+	[Trait("AC", "231UC1")]
 	public async Task Teacher_CreateReadUpdateLifecycle_PersistsCorrectlyEndToEnd()
 	{
-		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle", Role.Admin);
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle", Role.Coordinator);
 		var client = fixture.CreateIsolatedClient("10.0.60.1");
-		await client.LoginAsync(adminEmail, _password);
+		await client.LoginAsync(coordinatorEmail, _password);
 
 		var createResponse = await client.Client.SendAsync(
 			client.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Alice", "Vance", IsPrivate: false)),
@@ -97,7 +98,7 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "231UC5")]
-	public async Task TeacherEndpoints_CallerWithoutAdminOrCoordinator_AreRejected()
+	public async Task TeacherEndpoints_CallerWithoutCoordinatorOrBankingCoordinator_AreRejected()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-forbidden", Role.Teacher);
 		var client = fixture.CreateIsolatedClient("10.0.60.3");
@@ -121,6 +122,19 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 			client.AuthorizedPutRequest($"/api/teachers/{someId}/classification", new UpdateTeacherClassificationRequest(IsPrivate: false)),
 			TestContext.Current.CancellationToken);
 
+		// Admin is not a Teacher-role holder in this fixture, so unlike the Teacher
+		// caller above it is refused the roster read too — the area grants it
+		// nothing at all, not even the name-only projection.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-forbidden-admin", Role.Admin);
+		var adminClient = fixture.CreateIsolatedClient("10.0.60.13");
+		await adminClient.LoginAsync(adminEmail, _password);
+
+		var adminCreateResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Alice", "Vance", IsPrivate: false)),
+			TestContext.Current.CancellationToken);
+		var adminRosterResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedGetRequest("/api/teachers/roster"), TestContext.Current.CancellationToken);
+
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => getResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
@@ -132,19 +146,21 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 			// as maintaining teachers. It serves names alone.
 			() => rosterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => profileResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => classificationResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+			() => classificationResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminCreateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminRosterResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	[Fact]
 	[Trait("AC", "234UC6")]
-	public async Task LifecycleEndpoints_Coordinator_AreAllRejectedWithForbidden()
+	public async Task LifecycleEndpoints_CallerWithoutBankingCoordinator_AreAllRejectedWithForbidden()
 	{
-		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-admin", Role.Admin);
-		var adminClient = fixture.CreateIsolatedClient("10.0.60.4");
-		await adminClient.LoginAsync(adminEmail, _password);
+		var (coordinatorOwnerEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-owner", Role.Coordinator);
+		var owner = fixture.CreateIsolatedClient("10.0.60.4");
+		await owner.LoginAsync(coordinatorOwnerEmail, _password);
 
-		var createResponse = await adminClient.Client.SendAsync(
-			adminClient.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Lerato", "Dube", IsPrivate: false)),
+		var createResponse = await owner.Client.SendAsync(
+			owner.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Lerato", "Dube", IsPrivate: false)),
 			TestContext.Current.CancellationToken);
 		var teacher = await createResponse.Content.ReadFromJsonAsync<TeacherResult>(_jsonOptions, TestContext.Current.CancellationToken);
 
@@ -162,18 +178,65 @@ public sealed class TeacherRoutesTests(ApiTestFixture fixture)
 			coordinator.AuthorizedDeleteRequest($"/api/teachers/{teacher.TeacherId}"),
 			TestContext.Current.CancellationToken);
 
-		// The record is untouched by all three — the refusal is the endpoint's,
-		// not a hidden control's.
-		var afterResponse = await adminClient.Client.SendAsync(
-			adminClient.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}"), TestContext.Current.CancellationToken);
+		// Admin is refused too — the area grants it nothing, lifecycle included.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-admin", Role.Admin);
+		var adminClient = fixture.CreateIsolatedClient("10.0.60.14");
+		await adminClient.LoginAsync(adminEmail, _password);
+
+		var adminDeactivateResponse = await adminClient.Client.SendAsync(
+			adminClient.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/deactivate", new { }),
+			TestContext.Current.CancellationToken);
+
+		// The record is untouched by any of the refused callers — the refusal is
+		// the endpoint's, not a hidden control's.
+		var afterResponse = await owner.Client.SendAsync(
+			owner.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}"), TestContext.Current.CancellationToken);
 		var after = await afterResponse.Content.ReadFromJsonAsync<TeacherResult>(_jsonOptions, TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
 			() => deactivateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => reactivateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminDeactivateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => afterResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => after.ShouldNotBeNull().IsActive.ShouldBeTrue());
+	}
+
+	[Fact]
+	[Trait("AC", "273UC5")]
+	public async Task LifecycleEndpoints_BankingCoordinator_DeactivatesReactivatesAndDeletesATeacher()
+	{
+		var (coordinatorOwnerEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-bc-owner", Role.Coordinator);
+		var owner = fixture.CreateIsolatedClient("10.0.60.15");
+		await owner.LoginAsync(coordinatorOwnerEmail, _password);
+
+		var createResponse = await owner.Client.SendAsync(
+			owner.AuthorizedPostRequest("/api/teachers", new CreateTeacherRequest("Naledi", "Molefe", IsPrivate: false)),
+			TestContext.Current.CancellationToken);
+		var teacher = await createResponse.Content.ReadFromJsonAsync<TeacherResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var (bankingCoordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "teachers-lifecycle-bc", Role.BankingCoordinator);
+		var bankingCoordinator = fixture.CreateIsolatedClient("10.0.60.16");
+		await bankingCoordinator.LoginAsync(bankingCoordinatorEmail, _password);
+
+		var deactivateResponse = await bankingCoordinator.Client.SendAsync(
+			bankingCoordinator.AuthorizedPatchRequest($"/api/teachers/{teacher!.TeacherId}/deactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var reactivateResponse = await bankingCoordinator.Client.SendAsync(
+			bankingCoordinator.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/reactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var deactivateAgainResponse = await bankingCoordinator.Client.SendAsync(
+			bankingCoordinator.AuthorizedPatchRequest($"/api/teachers/{teacher.TeacherId}/deactivate", new { }),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await bankingCoordinator.Client.SendAsync(
+			bankingCoordinator.AuthorizedDeleteRequest($"/api/teachers/{teacher.TeacherId}"),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => deactivateResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => reactivateResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => deactivateAgainResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent));
 	}
 
 	[Fact]

@@ -58,7 +58,8 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/students',
     icon: 'group',
     label: 'Student Management',
-    roles: ['Teacher', 'Admin'],
+    // Students are a Teacher-owned area; Admin owns nothing in it.
+    roles: ['Teacher'],
     startsGroup: true,
   },
   {
@@ -66,7 +67,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/teachers',
     icon: 'school',
     label: 'Teacher Management',
-    roles: ['Coordinator', 'Admin'],
+    roles: ['Coordinator', 'BankingCoordinator'],
     matchesNested: true,
   },
   {
@@ -74,16 +75,17 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/courses',
     icon: 'library_music',
     label: 'Course Management',
-    roles: ['Teacher', 'Coordinator', 'Admin'],
+    // Courses are owned by Teacher and Coordinator; Admin owns nothing in it.
+    roles: ['Teacher', 'Coordinator'],
   },
   {
     id: 'extraCurricularsLink',
     path: '/extra-curriculars',
     icon: 'sports_soccer',
     label: 'Extra-Curriculars',
-    // The only entry that is not offered to Admin. Extra-curriculars are a
-    // Coordinator-owned area, and the Admin role owns nothing in it; a person
-    // who happens to be an admin reaches the page through their Teacher role.
+    // Extra-curriculars are a Coordinator-owned area, and the Admin role owns
+    // nothing in it; a person who happens to be an admin reaches the page
+    // through their Teacher role.
     roles: ['Teacher', 'Coordinator'],
   },
   {
@@ -91,7 +93,8 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/students/guardian-relationships',
     icon: 'family_restroom',
     label: 'Guardian Relationships',
-    roles: ['Coordinator', 'Admin'],
+    // Guardian Relationships are Coordinator-owned; Admin owns nothing in it.
+    roles: ['Coordinator'],
   },
 ];
 

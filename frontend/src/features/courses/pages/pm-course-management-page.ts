@@ -20,7 +20,7 @@ import type { PmCourseForm } from '../components/pm-course-form';
 import type { PmCourseTable } from '../components/pm-course-table';
 import type { PmDeleteCourseModal } from '../components/pm-delete-course-modal';
 
-const MAINTAINER_ROLES = ['Coordinator', 'Admin'];
+const MAINTAINER_ROLES = ['Coordinator'];
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`

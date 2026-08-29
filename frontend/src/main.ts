@@ -29,19 +29,16 @@ import { resolveLandingPath } from './services/nav-entries';
 // refuses and bounce straight back.
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
-const TEACHER_OR_ADMIN_PATHS = new Set(['/students']);
-const COORDINATOR_OR_ADMIN_PATHS = new Set(['/students/guardian-relationships']);
-// Open to every staff role — the screen itself is what narrows down to what a
+const TEACHER_ONLY_PATHS = new Set(['/students']);
+const COORDINATOR_ONLY_PATHS = new Set(['/students/guardian-relationships']);
+// Open to Teacher and Coordinator, never Admin: each of these areas is owned
+// by one of the two, and the screen itself narrows down to what a
 // non-maintainer may see, exactly as the endpoints do.
-const STAFF_PATHS = new Set(['/courses']);
-// Narrower than STAFF_PATHS: extra-curriculars are a Coordinator-owned area and
-// the Admin role has no rights in it at all, so a user whose only role is Admin
-// is bounced from the route as well as offered no entry.
-const TEACHER_OR_COORDINATOR_PATHS = new Set(['/extra-curriculars']);
+const TEACHER_OR_COORDINATOR_PATHS = new Set(['/courses', '/extra-curriculars']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
-function isCoordinatorOrAdminOnlyPath(basePath: string): boolean {
-  return COORDINATOR_OR_ADMIN_PATHS.has(basePath) || basePath === '/teachers' || basePath.startsWith('/teachers/');
+function isCoordinatorOrBankingCoordinatorOnlyPath(basePath: string): boolean {
+  return basePath === '/teachers' || basePath.startsWith('/teachers/');
 }
 
 const ROUTES: Record<string, () => string> = {
@@ -112,12 +109,12 @@ async function render(): Promise<void> {
     return;
   }
 
-  if (TEACHER_OR_ADMIN_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Admin'])) {
+  if (TEACHER_ONLY_PATHS.has(basePath) && !hasRole('Teacher')) {
     window.location.hash = '#/';
     return;
   }
 
-  if (STAFF_PATHS.has(basePath) && !hasAnyRole(['Teacher', 'Coordinator', 'Admin'])) {
+  if (COORDINATOR_ONLY_PATHS.has(basePath) && !hasRole('Coordinator')) {
     window.location.hash = '#/';
     return;
   }
@@ -127,7 +124,7 @@ async function render(): Promise<void> {
     return;
   }
 
-  if (isCoordinatorOrAdminOnlyPath(basePath) && !hasAnyRole(['Coordinator', 'Admin'])) {
+  if (isCoordinatorOrBankingCoordinatorOnlyPath(basePath) && !hasAnyRole(['Coordinator', 'BankingCoordinator'])) {
     window.location.hash = '#/';
     return;
   }

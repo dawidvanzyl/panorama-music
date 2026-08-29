@@ -248,14 +248,14 @@ export class PmTeacherHeader extends HTMLElement {
     this.linkBtn!.disabled = !teacher.isActive;
     // Offered only once there are banking details to have a history of.
     this.bankingActivityBtn!.hidden = teacher.banking === null;
-    // Ending a teacher's record is an Admin's to do; a Coordinator maintains the
-    // teacher, not their lifecycle. Withholding the controls is presentation
-    // only — the endpoints enforce the same rule.
+    // Ending a teacher's record is a BankingCoordinator's to do; a Coordinator
+    // maintains the teacher, not their lifecycle. Withholding the controls is
+    // presentation only — the endpoints enforce the same rule.
     //
     // Delete is absent rather than disabled while the teacher is active: the
     // action does not exist until deactivation has happened, so there is nothing
     // to present as blocked.
-    const canManageLifecycle = hasRole('Admin');
+    const canManageLifecycle = hasRole('BankingCoordinator');
     this.deactivateBtn!.hidden = !canManageLifecycle || !teacher.isActive;
     this.reactivateBtn!.hidden = !canManageLifecycle || teacher.isActive;
     this.deleteBtn!.hidden = !canManageLifecycle || teacher.isActive;

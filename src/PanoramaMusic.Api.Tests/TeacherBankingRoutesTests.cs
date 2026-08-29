@@ -36,17 +36,18 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 	[Trait("AC", "233UC3")]
 	public async Task GetTeacher_BankingDetailsCaptured_ReturnsOnlyTheLastFourDigitsOnTheRecordAndTheList()
 	{
-		var admin = await CreateClientAsync("banking-masked", "10.0.62.1", Role.Admin);
-		var teacher = await CreateTeacherAsync(admin, "Thandi", "Mokoena");
-		await CaptureBankingAsync(admin, teacher.TeacherId);
+		var coordinator = await CreateClientAsync("banking-masked", "10.0.62.1", Role.Coordinator);
+		var bankingCoordinator = await CreateClientAsync("banking-masked-bc", "10.0.62.15", Role.BankingCoordinator);
+		var teacher = await CreateTeacherAsync(coordinator, "Thandi", "Mokoena");
+		await CaptureBankingAsync(bankingCoordinator, teacher.TeacherId);
 
-		var recordResponse = await admin.Client.SendAsync(
-			admin.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}"), TestContext.Current.CancellationToken);
+		var recordResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}"), TestContext.Current.CancellationToken);
 		var recordBody = await recordResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 		var record = JsonSerializer.Deserialize<TeacherResult>(recordBody, _jsonOptions);
 
-		var listResponse = await admin.Client.SendAsync(
-			admin.AuthorizedGetRequest("/api/teachers"), TestContext.Current.CancellationToken);
+		var listResponse = await coordinator.Client.SendAsync(
+			coordinator.AuthorizedGetRequest("/api/teachers"), TestContext.Current.CancellationToken);
 		var listBody = await listResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
 		record.ShouldNotBeNull();
@@ -61,14 +62,14 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "233UC4")]
-	public async Task RevealAccountNumber_Admin_ReturnsTheFullAccountNumber()
+	public async Task RevealAccountNumber_BankingCoordinator_ReturnsTheFullAccountNumber()
 	{
-		var admin = await CreateClientAsync("banking-reveal-admin", "10.0.62.2", Role.Admin);
-		var teacher = await CreateTeacherAsync(admin, "Sipho", "Nkosi");
-		await CaptureBankingAsync(admin, teacher.TeacherId);
+		var bankingCoordinator = await CreateClientAsync("banking-reveal-bc", "10.0.62.2", Role.BankingCoordinator);
+		var teacher = await CreateTeacherAsync(bankingCoordinator, "Sipho", "Nkosi");
+		await CaptureBankingAsync(bankingCoordinator, teacher.TeacherId);
 
-		var response = await admin.Client.SendAsync(
-			admin.AuthorizedPostRequest($"/api/teachers/{teacher.TeacherId}/banking/reveal"),
+		var response = await bankingCoordinator.Client.SendAsync(
+			bankingCoordinator.AuthorizedPostRequest($"/api/teachers/{teacher.TeacherId}/banking/reveal"),
 			TestContext.Current.CancellationToken);
 		var revealed = await response.Content.ReadFromJsonAsync<RevealedAccountNumberResult>(_jsonOptions, TestContext.Current.CancellationToken);
 
@@ -79,11 +80,11 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "233UC5")]
-	public async Task RevealAccountNumber_Coordinator_IsRejectedWithForbidden()
+	public async Task RevealAccountNumber_CallerWithoutBankingCoordinator_IsRejectedWithForbidden()
 	{
-		var admin = await CreateClientAsync("banking-reveal-setup", "10.0.62.3", Role.Admin);
-		var teacher = await CreateTeacherAsync(admin, "Lerato", "Dube");
-		await CaptureBankingAsync(admin, teacher.TeacherId);
+		var bankingCoordinatorSetup = await CreateClientAsync("banking-reveal-setup", "10.0.62.3", Role.BankingCoordinator);
+		var teacher = await CreateTeacherAsync(bankingCoordinatorSetup, "Lerato", "Dube");
+		await CaptureBankingAsync(bankingCoordinatorSetup, teacher.TeacherId);
 
 		var coordinator = await CreateClientAsync("banking-reveal-coordinator", "10.0.62.4", Role.Coordinator);
 
@@ -98,20 +99,28 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 		var activityResponse = await coordinator.Client.SendAsync(
 			coordinator.AuthorizedGetRequest($"/api/teachers/{teacher.TeacherId}/banking/activity"), TestContext.Current.CancellationToken);
 
+		// Admin is refused the reveal too — the area grants it nothing at all.
+		var admin = await CreateClientAsync("banking-reveal-admin", "10.0.62.17", Role.Admin);
+		var adminRevealResponse = await admin.Client.SendAsync(
+			admin.AuthorizedPostRequest($"/api/teachers/{teacher.TeacherId}/banking/reveal"),
+			TestContext.Current.CancellationToken);
+
 		ShouldlyHelpers.Satisfy(
 			() => revealResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => recordResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
-			() => activityResponse.StatusCode.ShouldBe(HttpStatusCode.OK));
+			() => activityResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => adminRevealResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	[Fact]
 	[Trait("AC", "233UC6")]
-	public async Task BankingWrites_Coordinator_AreAllRejectedWithForbidden()
+	public async Task BankingWrites_CallerWithoutBankingCoordinator_AreAllRejectedWithForbidden()
 	{
-		var admin = await CreateClientAsync("banking-writes-setup", "10.0.62.5", Role.Admin);
-		var withDetails = await CreateTeacherAsync(admin, "Kagiso", "Molefe");
-		await CaptureBankingAsync(admin, withDetails.TeacherId);
-		var withoutDetails = await CreateTeacherAsync(admin, "Naledi", "Sithole");
+		var bankingCoordinatorSetup = await CreateClientAsync("banking-writes-setup", "10.0.62.5", Role.BankingCoordinator);
+		var coordinatorSetup = await CreateClientAsync("banking-writes-setup-coordinator", "10.0.62.18", Role.Coordinator);
+		var withDetails = await CreateTeacherAsync(coordinatorSetup, "Kagiso", "Molefe");
+		await CaptureBankingAsync(bankingCoordinatorSetup, withDetails.TeacherId);
+		var withoutDetails = await CreateTeacherAsync(coordinatorSetup, "Naledi", "Sithole");
 
 		var coordinator = await CreateClientAsync("banking-writes-coordinator", "10.0.62.6", Role.Coordinator);
 
@@ -127,17 +136,24 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 			coordinator.AuthorizedDeleteRequest($"/api/teachers/{withDetails.TeacherId}/banking"),
 			TestContext.Current.CancellationToken);
 
+		// Admin is refused too — the area grants it nothing at all.
+		var admin = await CreateClientAsync("banking-writes-admin", "10.0.62.19", Role.Admin);
+		var adminCreateResponse = await admin.Client.SendAsync(
+			admin.AuthorizedPostRequest($"/api/teachers/{withoutDetails.TeacherId}/banking", CreateRequest()),
+			TestContext.Current.CancellationToken);
+
 		ShouldlyHelpers.Satisfy(
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => adminCreateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	[Fact]
 	[Trait("AC", "233UC10")]
 	public async Task CreateBankingDetails_OperationFails_LeavesTheAccountNumberOutOfTheResponseAndEveryLogEntry()
 	{
-		var setupClient = await CreateClientAsync("banking-failure", "10.0.62.7", Role.Admin);
+		var setupClient = await CreateClientAsync("banking-failure", "10.0.62.7", Role.BankingCoordinator);
 		var teacher = await CreateTeacherAsync(setupClient, "Bongani", "Zulu");
 		await CaptureBankingAsync(setupClient, teacher.TeacherId);
 
@@ -146,8 +162,8 @@ public sealed class TeacherBankingRoutesTests(ApiTestFixture fixture)
 		// leak into a message or a log line.
 		var captureProvider = new CaptureLoggerProvider();
 		var capturingClient = fixture.CreateIsolatedClientWithCapture(captureProvider, "10.0.62.8");
-		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "banking-failure-admin", Role.Admin);
-		await capturingClient.LoginAsync(adminEmail, _password);
+		var (bankingCoordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "banking-failure-bc", Role.BankingCoordinator);
+		await capturingClient.LoginAsync(bankingCoordinatorEmail, _password);
 
 		var response = await capturingClient.Client.SendAsync(
 			capturingClient.AuthorizedPostRequest($"/api/teachers/{teacher.TeacherId}/banking", CreateRequest()),

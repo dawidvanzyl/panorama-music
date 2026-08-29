@@ -1,5 +1,11 @@
 import { test, expect } from '../../fixtures/base';
-import { uniqueTestEmail, createRegisteredUser, goToTeachersPage, goToAdminUsersPage } from '../../fixtures/testUsers';
+import {
+  uniqueTestEmail,
+  createRegisteredUser,
+  goToTeachersPage,
+  goToAdminUsersPage,
+  getAdminAccessToken,
+} from '../../fixtures/testUsers';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { TeacherDetailPage } from '../../pages/teachers/TeacherDetailPage';
 import { landingUrl } from '../../fixtures/navigation';
@@ -57,7 +63,14 @@ test.describe('Teacher account linking', { tag: ['@7IT5', '@7IT6', '@7IT7'] }, (
     const secondTeacherId = teachers.find(
       (t: { firstName: string; teacherId: string }) => t.firstName === second.firstName,
     ).teacherId;
-    const accounts = await (await page.request.get('/api/users', { headers })).json();
+
+    // User management is a separate, unchanged area — Admin-only — so it is
+    // read with a token obtained directly over the API rather than the
+    // Coordinator session's own.
+    const adminAccessToken = await getAdminAccessToken(page);
+    const accounts = await (
+      await page.request.get('/api/users', { headers: { Authorization: `Bearer ${adminAccessToken}` } })
+    ).json();
     const linkedAccountId = accounts.find((u: { email: string; userId: string }) => u.email === accountEmail).userId;
     const rolelessAccountId = accounts.find(
       (u: { email: string; userId: string }) => u.email === coordinatorAccount,
@@ -76,17 +89,17 @@ test.describe('Teacher account linking', { tag: ['@7IT5', '@7IT6', '@7IT7'] }, (
     expect(withoutTeacherRole.status()).toBe(400);
   });
 
-  test('permits linking and unlinking only for an Admin or Coordinator', async ({ page }) => {
-    const adminTeachersPage = await goToTeachersPage(page);
+  test('permits linking and unlinking only for a Coordinator or BankingCoordinator', async ({ page }) => {
+    const coordinatorTeachersPage = await goToTeachersPage(page);
     const { firstName, surname } = uniqueName('link-rbac');
-    await adminTeachersPage.createTeacher({ firstName, surname });
+    await coordinatorTeachersPage.createTeacher({ firstName, surname });
     // Wait for the create to land before reading the roster back, otherwise the
     // request races the POST it depends on.
-    await expect(adminTeachersPage.row(`${firstName} ${surname}`)).toBeVisible();
+    await expect(coordinatorTeachersPage.row(`${firstName} ${surname}`)).toBeVisible();
 
-    const adminToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+    const coordinatorToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
     const teachers = await (
-      await page.request.get('/api/teachers', { headers: { Authorization: `Bearer ${adminToken}` } })
+      await page.request.get('/api/teachers', { headers: { Authorization: `Bearer ${coordinatorToken}` } })
     ).json();
     const teacherId = teachers.find((t: { firstName: string; teacherId: string }) => t.firstName === firstName)
       .teacherId;
@@ -112,6 +125,19 @@ test.describe('Teacher account linking', { tag: ['@7IT5', '@7IT6', '@7IT7'] }, (
     expect(link.status()).toBe(403);
     expect(unlink.status()).toBe(403);
     expect(linkable.status()).toBe(403);
+
+    // An Admin is refused too — the area grants it nothing at all.
+    const adminEmail = uniqueTestEmail('link-rbac-admin');
+    await createRegisteredUser(page, adminEmail, PASSWORD, ['Admin']);
+    await loginPage.gotoLogin();
+    await loginPage.login(adminEmail, PASSWORD);
+    await expect(page).toHaveURL(landingUrl('Admin'));
+
+    const adminAccessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+    const adminLinkable = await page.request.get('/api/teachers/linkable-accounts', {
+      headers: { Authorization: `Bearer ${adminAccessToken}` },
+    });
+    expect(adminLinkable.status()).toBe(403);
   });
 });
 
@@ -140,7 +166,10 @@ test.describe('Teacher role removal is blocked while a link exists', { tag: ['@7
 });
 
 test.describe('Unlinking and account deletion leave the teacher intact', { tag: ['@7IT9'] }, () => {
-  test('an explicit unlink and a deleted account both clear the link, and the teacher survives', async ({ page }) => {
+  test('an explicit unlink and a deleted account both clear the link, and the teacher survives', async ({
+    page,
+    browser,
+  }) => {
     const unlinkEmail = uniqueTestEmail('unlink-explicit');
     await createRegisteredUser(page, unlinkEmail, PASSWORD, ['Teacher']);
 
@@ -161,9 +190,15 @@ test.describe('Unlinking and account deletion leave the teacher intact', { tag: 
     await detailPage.linkAccount(unlinkEmail);
     await expect(detailPage.accountBadge).toContainText(unlinkEmail);
 
-    const adminUsersPage = await goToAdminUsersPage(page);
+    // User management is a separate, unchanged area — Admin-only — and Admin
+    // has no access to Teachers any longer, so it runs in its own browser
+    // context rather than switching the Coordinator page above away from it.
+    const adminContext = await browser.newContext();
+    const adminPage = await adminContext.newPage();
+    const adminUsersPage = await goToAdminUsersPage(adminPage);
     await adminUsersPage.deactivateUser(unlinkEmail);
     await adminUsersPage.permanentlyDeleteUser(unlinkEmail);
+    await adminContext.close();
 
     await teachersPage.gotoTeachers();
     await expect(teachersPage.row(explicitFullName)).toBeVisible();

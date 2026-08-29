@@ -30,6 +30,19 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await expect(page).toHaveURL(landingUrl('Admin'));
 }
 
+/**
+ * Fetches an access token for the seeded Admin over the API directly, without
+ * touching the page's own session — for the rare check that needs an
+ * Admin-only read (e.g. the audit log) alongside another role's UI session.
+ */
+export async function getAdminAccessToken(page: Page): Promise<string> {
+  const response = await page.request.post('/api/auth/login', {
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  const { accessToken } = (await response.json()) as { accessToken: string };
+  return accessToken;
+}
+
 export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
   await loginAsAdmin(page);
 
@@ -39,14 +52,38 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
 }
 
 /**
+ * Creates a registered user holding exactly the given roles, signs them in,
+ * and leaves the browser on their landing page. Admin no longer owns any of
+ * Students, Guardian Relationships, Courses, or Teachers — #273 moved each to
+ * the role that actually maintains it — so every navigation helper below
+ * signs in as a purpose-built account instead of the seeded Admin.
+ */
+export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void> {
+  const email = uniqueTestEmail(roles.join('-').toLowerCase());
+  const password = 'RolesPass123!';
+  await createRegisteredUser(page, email, password, roles);
+
+  const loginPage = new LoginPage(page);
+  await loginPage.gotoLogin();
+  await loginPage.login(email, password);
+  await expect(page).toHaveURL(landingUrl(...roles));
+}
+
+/**
  * A student must be enrolled in at least one course, so a course and a teacher
  * are seeded before the screen is opened — the enroll form reads both once on
- * mount and holds them for the session, so seeding after navigation would leave
- * its selects empty.
+ * mount and holds them for the session. Student Management is this account's
+ * own landing page (Teacher is topmost among its roles), so signing in has
+ * already mounted it before the seed call below runs; a same-hash `goto` to a
+ * path the browser is already on is a no-op, not a remount, so the reload is
+ * what actually makes the enroll form's lookups see the just-seeded data.
+ * Seeding a teacher and a course needs Coordinator alongside the Teacher role
+ * this screen itself requires, so the signed-in account holds both.
  */
 export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
-  await loginAsAdmin(page);
+  await loginAsRoles(page, ['Teacher', 'Coordinator']);
   await seedEnrollmentTarget(page);
+  await page.reload();
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();
@@ -54,7 +91,7 @@ export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
 }
 
 export async function goToGuardianRelationshipsPage(page: Page): Promise<GuardianRelationshipsPage> {
-  await loginAsAdmin(page);
+  await loginAsRoles(page, ['Coordinator']);
 
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
   await guardianRelationshipsPage.gotoGuardianRelationships();
@@ -62,7 +99,7 @@ export async function goToGuardianRelationshipsPage(page: Page): Promise<Guardia
 }
 
 export async function goToCourseManagementPage(page: Page): Promise<CourseManagementPage> {
-  await loginAsAdmin(page);
+  await loginAsRoles(page, ['Coordinator']);
 
   const courseManagementPage = new CourseManagementPage(page);
   await courseManagementPage.gotoCourses();
@@ -70,19 +107,11 @@ export async function goToCourseManagementPage(page: Page): Promise<CourseManage
 }
 
 /**
- * Extra-curriculars are a Coordinator-owned area and the Admin the other
- * helpers sign in as holds no rights in it, so this one pays for an
+ * Extra-curriculars are a Coordinator-owned area, so this one pays for an
  * invite-and-register round trip before it can open the screen at all.
  */
 export async function goToExtraCurricularsPageAsCoordinator(page: Page): Promise<ExtraCurricularsPage> {
-  const email = uniqueTestEmail('ec-coordinator');
-  const password = 'CoordinatorPass123!';
-  await createRegisteredUser(page, email, password, ['Coordinator']);
-
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(email, password);
-  await expect(page).toHaveURL(landingUrl('Coordinator'));
+  await loginAsRoles(page, ['Coordinator']);
 
   const extraCurricularsPage = new ExtraCurricularsPage(page);
   await extraCurricularsPage.gotoExtraCurriculars();
@@ -90,7 +119,15 @@ export async function goToExtraCurricularsPageAsCoordinator(page: Page): Promise
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
-  await loginAsAdmin(page);
+  await loginAsRoles(page, ['Coordinator']);
+
+  const teachersPage = new TeachersPage(page);
+  await teachersPage.gotoTeachers();
+  return teachersPage;
+}
+
+export async function goToTeachersPageAsBankingCoordinator(page: Page): Promise<TeachersPage> {
+  await loginAsRoles(page, ['BankingCoordinator']);
 
   const teachersPage = new TeachersPage(page);
   await teachersPage.gotoTeachers();

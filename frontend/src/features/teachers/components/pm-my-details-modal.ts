@@ -143,7 +143,7 @@ template.innerHTML = `
           </span>
           <span class="my-details__field-value" id="classificationValue"></span>
           <span class="my-details__lock-note" id="classificationLockNote">
-            Only an Admin or Coordinator can change this classification
+            Only a Coordinator or BankingCoordinator can change this classification
           </span>
         </div>
       </div>
@@ -160,8 +160,8 @@ template.innerHTML = `
  *
  * What is absent is as deliberate as what is present. There is no account-link
  * control and no deactivate, reactivate or delete action anywhere in this view —
- * those belong to an Admin or Coordinator, and the endpoints behind them refuse
- * this caller regardless of what the interface shows.
+ * those belong to a Coordinator or BankingCoordinator, and the endpoints behind
+ * them refuse this caller regardless of what the interface shows.
  */
 export class PmMyDetailsModal extends HTMLElement {
   private editBtn: HTMLButtonElement | null = null;

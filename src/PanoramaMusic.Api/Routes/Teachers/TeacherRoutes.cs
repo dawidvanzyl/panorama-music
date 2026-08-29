@@ -14,16 +14,16 @@ public static class TeacherRoutes
 		var group = app
 			.MapGroup("/api/teachers")
 			.WithTags("Teachers")
-			.RequireAuthorization("CoordinatorOrAdminPolicy");
+			.RequireAuthorization("CoordinatorOrBankingCoordinatorPolicy");
 
 		// The lifecycle actions carry a narrower boundary than the rest of the
 		// record: a Coordinator maintains a teacher's profile but does not end
 		// one. Two independent groups rather than one branched twice, for the
 		// same reason the banking routes use two — see TeacherBankingRoutes.
-		var adminGroup = app
+		var bankingCoordinatorGroup = app
 			.MapGroup("/api/teachers")
 			.WithTags("Teachers")
-			.RequireAuthorization("AdminPolicy");
+			.RequireAuthorization("BankingCoordinatorPolicy");
 
 		// Reading the roster is open to a Teacher too — assigning a teacher to a
 		// student's enrollment on Student Management needs it, and seeing who
@@ -37,7 +37,7 @@ public static class TeacherRoutes
 		var rosterGroup = app
 			.MapGroup("/api/teachers")
 			.WithTags("Teachers")
-			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy");
+			.RequireAuthorization("TeacherCoordinatorOrBankingCoordinatorPolicy");
 
 		rosterGroup
 			.MapGet("/roster", async (GetTeacherRosterHandler handler, CancellationToken ct) =>
@@ -173,7 +173,7 @@ public static class TeacherRoutes
 		// than replacing it, so each is its own action on the resource. DELETE is
 		// reserved for the permanent removal below — the two steps of the
 		// lifecycle stay distinguishable at the URL.
-		adminGroup
+		bankingCoordinatorGroup
 			.MapPatch("/{teacherId:guid}/deactivate", async (Guid teacherId, DeactivateTeacherHandler handler, CancellationToken ct) =>
 			{
 				var command = new DeactivateTeacherCommand(teacherId);
@@ -188,7 +188,7 @@ public static class TeacherRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		adminGroup
+		bankingCoordinatorGroup
 			.MapPatch("/{teacherId:guid}/reactivate", async (Guid teacherId, ReactivateTeacherHandler handler, CancellationToken ct) =>
 			{
 				var command = new ReactivateTeacherCommand(teacherId);
@@ -206,7 +206,7 @@ public static class TeacherRoutes
 		// Refused outright while the teacher is active. The interface does not
 		// offer the action until then, but that is presentation — this endpoint
 		// is where the rule is actually enforced.
-		adminGroup
+		bankingCoordinatorGroup
 			.MapDelete("/{teacherId:guid}", async (Guid teacherId, DeleteTeacherHandler handler, CancellationToken ct) =>
 			{
 				var command = new DeleteTeacherCommand(teacherId);

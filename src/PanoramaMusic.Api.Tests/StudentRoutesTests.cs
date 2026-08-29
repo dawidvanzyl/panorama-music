@@ -222,6 +222,38 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "273UC1")]
+	public async Task StudentAndGuardianEndpoints_Admin_AreRejectedWithForbidden()
+	{
+		// Students, its enrollments and its guardians are a Teacher-owned area;
+		// Admin grants nothing here at all, unlike before this issue's realignment,
+		// where TeacherOrAdminPolicy let it through.
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-admin-forbidden", Role.Admin);
+		var client = fixture.CreateIsolatedClient("10.0.10.90");
+		await client.LoginAsync(adminEmail, _password);
+
+		var someId = Guid.NewGuid();
+
+		var listResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
+		var createResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				"/api/students",
+				new CreateStudentRequest("Admin", "Forbidden", new DateOnly(2015, 1, 1), GradeType.Private, null, null, Language.English)),
+			TestContext.Current.CancellationToken);
+		var coursesResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{someId}/courses"), TestContext.Current.CancellationToken);
+		var guardiansResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{someId}/guardians"), TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => coursesResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => guardiansResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+	}
+
+	[Fact]
 	[Trait("AC", "200UC1")]
 	public async Task CreateStudent_ValidRequest_PersistsAndReturnsStudentViaApi()
 	{

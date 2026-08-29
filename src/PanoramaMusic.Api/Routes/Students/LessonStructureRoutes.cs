@@ -8,12 +8,12 @@ public static class LessonStructureRoutes
 	public static void MapLessonStructureRoutes(this WebApplication app)
 	{
 		// The seeded set is authoritative and is never maintained at runtime, so
-		// the lookup is read-only. Every staff role needs it to pick a structure
-		// when creating a course.
+		// the lookup is read-only. Teacher and Coordinator both need it to pick a
+		// structure when creating a course.
 		app
 			.MapGroup("/api/lesson-structures")
 			.WithTags("Lesson Structures")
-			.RequireAuthorization("TeacherCoordinatorOrAdminPolicy")
+			.RequireAuthorization("TeacherOrCoordinatorPolicy")
 			.MapGet("/", async (GetLessonStructuresHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(ct);
