@@ -592,26 +592,30 @@ describe(
   },
 );
 
-describe('pm-sidebar — Waiting List is not offered to a role that is neither Teacher nor Coordinator', {
-  tags: ['292UC19'],
-}, () => {
-  let el: HTMLElement;
+describe(
+  'pm-sidebar — Waiting List is not offered to a role that is neither Teacher nor Coordinator',
+  {
+    tags: ['292UC19'],
+  },
+  () => {
+    let el: HTMLElement;
 
-  beforeEach(() => {
-    mockIsAuthenticated.mockReturnValue(true);
-    el = document.createElement('pm-sidebar');
-    document.body.appendChild(el);
-  });
+    beforeEach(() => {
+      mockIsAuthenticated.mockReturnValue(true);
+      el = document.createElement('pm-sidebar');
+      document.body.appendChild(el);
+    });
 
-  afterEach(() => {
-    document.body.removeChild(el);
-  });
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
 
-  it.each([['Admin'], ['BankingCoordinator']])('hides the entry from a %s', (role) => {
-    grantRoles(role);
+    it.each([['Admin'], ['BankingCoordinator']])('hides the entry from a %s', (role) => {
+      grantRoles(role);
 
-    renderOn('#/');
+      renderOn('#/');
 
-    expect((el.shadowRoot!.getElementById('waitingListLink') as HTMLAnchorElement).hidden).toBe(true);
-  });
-});
+      expect((el.shadowRoot!.getElementById('waitingListLink') as HTMLAnchorElement).hidden).toBe(true);
+    });
+  },
+);
