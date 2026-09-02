@@ -28,6 +28,7 @@ const ALL_LINK_IDS = [
   'adminSessionsLink',
   'activityLogLink',
   'studentManagementLink',
+  'waitingListLink',
   'teachersLink',
   'courseManagementLink',
   'extraCurricularsLink',
@@ -68,16 +69,26 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
       roles: ['Admin'],
       expected: ['userManagementLink', 'adminSessionsLink', 'activityLogLink'],
     },
-    { roles: ['Teacher'], expected: ['studentManagementLink', 'courseManagementLink', 'extraCurricularsLink'] },
+    {
+      roles: ['Teacher'],
+      expected: ['studentManagementLink', 'waitingListLink', 'courseManagementLink', 'extraCurricularsLink'],
+    },
     {
       roles: ['Coordinator'],
-      expected: ['teachersLink', 'courseManagementLink', 'extraCurricularsLink', 'guardianRelationshipsLink'],
+      expected: [
+        'waitingListLink',
+        'teachersLink',
+        'courseManagementLink',
+        'extraCurricularsLink',
+        'guardianRelationshipsLink',
+      ],
     },
     { roles: ['BankingCoordinator'], expected: ['teachersLink'] },
     {
       roles: ['Teacher', 'Coordinator'],
       expected: [
         'studentManagementLink',
+        'waitingListLink',
         'teachersLink',
         'courseManagementLink',
         'extraCurricularsLink',
@@ -526,5 +537,81 @@ describe('pm-sidebar — Guardian Relationships link gated by role', { tags: ['2
     grantRoles('Admin');
 
     expect(relationshipsLinkOn('#/admin/users').hidden).toBe(true);
+  });
+});
+
+describe(
+  'pm-sidebar — Waiting List is offered to Teachers and Coordinators, between Students and Teachers',
+  { tags: ['292UC18'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(() => {
+      mockIsAuthenticated.mockReturnValue(true);
+      el = document.createElement('pm-sidebar');
+      document.body.appendChild(el);
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    function waitingListLink(): HTMLAnchorElement {
+      return el.shadowRoot!.getElementById('waitingListLink') as HTMLAnchorElement;
+    }
+
+    it.each([['Teacher'], ['Coordinator']])('offers the entry to a %s', (role) => {
+      grantRoles(role);
+
+      renderOn('#/');
+
+      expect(waitingListLink().hidden).toBe(false);
+    });
+
+    it('renders the entry directly after Students and directly before Teacher Management', () => {
+      grantRoles('Teacher', 'Coordinator');
+
+      renderOn('#/');
+
+      const link = waitingListLink();
+      expect(link.previousElementSibling!.id).toBe('studentManagementLink');
+      expect(link.nextElementSibling!.id).toBe('teachersLink');
+      const visible = visibleLinkIds(el);
+      expect(visible.indexOf('waitingListLink')).toBe(visible.indexOf('studentManagementLink') + 1);
+      expect(visible.indexOf('waitingListLink')).toBe(visible.indexOf('teachersLink') - 1);
+    });
+
+    it('offers no entry to a user who is not signed in', () => {
+      mockIsAuthenticated.mockReturnValue(false);
+      grantRoles('Teacher');
+
+      renderOn('#/');
+
+      expect(waitingListLink().hidden).toBe(true);
+    });
+  },
+);
+
+describe('pm-sidebar — Waiting List is not offered to a role that is neither Teacher nor Coordinator', {
+  tags: ['292UC19'],
+}, () => {
+  let el: HTMLElement;
+
+  beforeEach(() => {
+    mockIsAuthenticated.mockReturnValue(true);
+    el = document.createElement('pm-sidebar');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it.each([['Admin'], ['BankingCoordinator']])('hides the entry from a %s', (role) => {
+    grantRoles(role);
+
+    renderOn('#/');
+
+    expect((el.shadowRoot!.getElementById('waitingListLink') as HTMLAnchorElement).hidden).toBe(true);
   });
 });

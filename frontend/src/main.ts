@@ -16,6 +16,7 @@ import './features/students/pages/pm-students-page';
 import './features/students/pages/pm-guardian-relationships-page';
 import './features/courses/pages/pm-course-management-page';
 import './features/extra-curriculars/pages/pm-extra-curriculars-page';
+import './features/students/pages/pm-waiting-list-page';
 import './features/teachers/pages/pm-teachers-page';
 import './features/teachers/pages/pm-teacher-detail-page';
 import './features/teachers/components/pm-my-details-menu';
@@ -34,7 +35,7 @@ const COORDINATOR_ONLY_PATHS = new Set(['/students/guardian-relationships']);
 // Open to Teacher and Coordinator, never Admin: each of these areas is owned
 // by one of the two, and the screen itself narrows down to what a
 // non-maintainer may see, exactly as the endpoints do.
-const TEACHER_OR_COORDINATOR_PATHS = new Set(['/courses', '/extra-curriculars']);
+const TEACHER_OR_COORDINATOR_PATHS = new Set(['/courses', '/extra-curriculars', '/waiting-list']);
 const REFRESH_RETRY_DELAY_MS = 3000;
 
 function isCoordinatorOrBankingCoordinatorOnlyPath(basePath: string): boolean {
@@ -53,6 +54,7 @@ const ROUTES: Record<string, () => string> = {
   '/students/guardian-relationships': () => '<pm-guardian-relationships-page></pm-guardian-relationships-page>',
   '/courses': () => '<pm-course-management-page></pm-course-management-page>',
   '/extra-curriculars': () => '<pm-extra-curriculars-page></pm-extra-curriculars-page>',
+  '/waiting-list': () => '<pm-waiting-list-page></pm-waiting-list-page>',
   '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
   // `/` renders nothing of its own — it is resolved to a landing screen below
   // before any route lookup happens.
