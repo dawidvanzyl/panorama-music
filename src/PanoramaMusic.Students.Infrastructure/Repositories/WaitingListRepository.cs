@@ -46,4 +46,61 @@ public class WaitingListRepository(IUnitOfWork unitOfWork, IDomainEventCollector
 
 		domainEventCollector.Collect(entry);
 	}
+
+	public async Task<WaitingListEntry?> GetByIdAsync(Guid waitingListEntryId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_waiting_list_entry_by_id",
+			new { p_waiting_list_entry_id = waitingListEntryId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<WaitingListEntryDto>(command);
+
+		return dto?.MapToWaitingListEntry();
+	}
+
+	public async Task<WaitingListEntry?> GetByStudentIdAsync(Guid studentId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_waiting_list_entry_by_student_id",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QuerySingleOrDefaultAsync<WaitingListEntryDto>(command);
+
+		return dto?.MapToWaitingListEntry();
+	}
+
+	public async Task UpdateAsync(WaitingListEntry entry, CancellationToken cancellationToken)
+	{
+		// added_at is absent from the parameter list, not merely left at its
+		// current value — the function has no way to write it, so no request can
+		// reach it.
+		var command = CreateCommandDefinition(
+			"students.update_waiting_list_entry",
+			new
+			{
+				p_waiting_list_entry_id = entry.WaitingListEntryId,
+				p_lesson_structure_id = entry.LessonStructure.LessonStructureId,
+				p_instrument_type = entry.InstrumentType.ToString(),
+				p_notes = entry.Notes,
+			},
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(entry);
+	}
+
+	public async Task DeleteAsync(WaitingListEntry entry, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.delete_waiting_list_entry",
+			new { p_waiting_list_entry_id = entry.WaitingListEntryId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(entry);
+	}
 }

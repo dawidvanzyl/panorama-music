@@ -21,4 +21,29 @@ public interface IWaitingListRepository
 	/// enrollment to its own constraint.
 	/// </summary>
 	Task CreateAsync(WaitingListEntry entry, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// One entry by its own identifier, carrying the student and lesson
+	/// structure it was read back with, or null when no such entry exists.
+	/// Unlike <see cref="GetAllAsync"/> this does not exclude an enrolled
+	/// student: the caller has named a specific row, and hiding it would only
+	/// turn an editable entry into a silent not-found.
+	/// </summary>
+	Task<WaitingListEntry?> GetByIdAsync(Guid waitingListEntryId, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// The entry a student holds, or null when they hold none — which is what
+	/// distinguishes a waiting-list student from any other, and so what the
+	/// removal path checks before touching the student record.
+	/// </summary>
+	Task<WaitingListEntry?> GetByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Persists a corrected entry. Only the lesson structure, instrument type
+	/// and notes are written — the added date-time is not part of the update at
+	/// all, so no request can move a row up the queue.
+	/// </summary>
+	Task UpdateAsync(WaitingListEntry entry, CancellationToken cancellationToken);
+
+	Task DeleteAsync(WaitingListEntry entry, CancellationToken cancellationToken);
 }

@@ -111,6 +111,9 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<RemoveExtraCurricularHandler>();
 		services.AddTransient<GetWaitingListHandler>();
 		services.AddTransient<CaptureWaitingListStudentHandler>();
+		services.AddTransient<UpdateWaitingListEntryHandler>();
+		services.AddTransient<UpdateWaitingListStudentHandler>();
+		services.AddTransient<RemoveWaitingListStudentHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -141,6 +144,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
 		services.AddTransient<IAuditEventTranslator, WaitingListEntryCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryRemovedTranslator>();
 
 		return services;
 	}

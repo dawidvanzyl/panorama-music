@@ -53,26 +53,7 @@ public sealed class CaptureWaitingListStudentHandler(
 
 		await waitingListRepository.CreateAsync(entry, cancellationToken);
 
-		var position = await DerivePositionAsync(entry, cancellationToken);
-		return entry.ToResult(position);
-	}
-
-	/// <summary>
-	/// The new entry's one-based position within its own occurrence type's
-	/// group, ordered by date-time added — the same derivation
-	/// <c>GetWaitingListHandler</c> applies to the whole list, run here against
-	/// the entry this call just created.
-	/// </summary>
-	private async Task<int> DerivePositionAsync(WaitingListEntry entry, CancellationToken cancellationToken)
-	{
 		var entries = await waitingListRepository.GetAllAsync(cancellationToken);
-
-		var position = entries
-			.Where(e => e.LessonStructure.OccurrenceType == entry.LessonStructure.OccurrenceType)
-			.OrderBy(e => e.AddedAt)
-			.ToList()
-			.FindIndex(e => e.WaitingListEntryId == entry.WaitingListEntryId);
-
-		return position + 1;
+		return entry.ToResult(entry.DerivePosition(entries));
 	}
 }
