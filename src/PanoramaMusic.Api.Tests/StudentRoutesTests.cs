@@ -453,6 +453,71 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 	}
 
+	/// <summary>
+	/// Ruling R9 (#293/#299): reads widen from Teacher-only to Teacher-or-
+	/// Coordinator — a Coordinator capturing a waiting-list student needs
+	/// GetStudents for the wizard's Siblings-tab candidate list. Every write
+	/// stays Teacher-only, proven directly rather than assumed, since minimal-
+	/// API route authorization is additive and a widened group policy would
+	/// silently open every write underneath it too if a write's own override
+	/// were missing or wrong.
+	/// </summary>
+	[Fact]
+	public async Task StudentEndpoints_CoordinatorOnly_ReadsArePermittedAndWritesAreForbidden()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-r9-setup", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.10.100");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+		var studentResponse = await CreateStudentAsync(teacherClient, "Priya", "Naidoo", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var student = await studentResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		var siblingResponse = await CreateStudentAsync(teacherClient, "Kabelo", "Naidoo", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var sibling = await siblingResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedPostRequest($"/api/students/{student!.StudentId}/siblings", new { SiblingId = sibling!.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-r9-coordinator", Role.Coordinator);
+		var client = fixture.CreateIsolatedClient("10.0.10.101");
+		await client.LoginAsync(coordinatorEmail, _password);
+
+		var listResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
+		var byIdResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}"), TestContext.Current.CancellationToken);
+		var getSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}/siblings"), TestContext.Current.CancellationToken);
+
+		var createResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				"/api/students",
+				new CreateStudentRequest("Coordinator", "Forbidden", new DateOnly(2015, 1, 1), GradeType.Private, null, null, Language.English)),
+			TestContext.Current.CancellationToken);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest(
+				$"/api/students/{student.StudentId}",
+				new UpdateStudentRequest("Priya", "Naidoo", new DateOnly(2014, 5, 12), GradeType.Grade4, ClassType.A1, PhaseType.Junior, Language.English)),
+			TestContext.Current.CancellationToken);
+		var addSiblingResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{student.StudentId}/siblings", new { SiblingId = Guid.NewGuid() }),
+			TestContext.Current.CancellationToken);
+		var removeSiblingResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}/siblings/{sibling.StudentId}"),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}"),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => byIdResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => getSiblingsResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => addSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => removeSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+	}
+
 	private static Task<HttpResponseMessage> CreateStudentAsync(
 		IsolatedHttpClient client,
 		string firstName,

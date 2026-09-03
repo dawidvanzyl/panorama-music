@@ -165,15 +165,19 @@ export class PmWaitingListPage extends HTMLElement {
    * the Waiting List tab's lesson-structure lookup — everything the capture
    * wizard needs before it opens.
    *
-   * Settled independently rather than as one `Promise.all`: `getStudents()`
-   * is Teacher-gated (`GET /api/students`), so a Coordinator-only session
-   * gets a 403 on it while `getGuardianRelationships()` and
-   * `getLessonStructures()` succeed. A single `Promise.all` would let that
-   * one rejection sink the whole batch, leaving the Waiting List tab's own
-   * lookup unassigned and Save silently unable to resolve a lesson structure
-   * — see #299 (ruling R8). An empty sibling-candidate list is the accepted
-   * degradation for a Coordinator-only session; widening `GET /api/students`
-   * to Coordinator to avoid it is explicitly out of scope for this story.
+   * Settled independently rather than as one `Promise.all` (ruling R8 part 1,
+   * standing): a failure on any one of these three must never sink the other
+   * two, so each lookup is assigned — or its own failure surfaced — on its
+   * own. `GET /api/students` was Teacher-gated when this was first written,
+   * which meant a Coordinator-only session predictably 403'd on
+   * `getStudents()` alone; ruling R9 widened that read to
+   * `TeacherOrCoordinatorPolicy` (a Coordinator capturing a waiting-list
+   * student needs it for the Siblings tab's own candidate list — the
+   * "accepted degradation" R8 first proposed for that gap would have gutted
+   * the tab for this story's own primary actor). A rejection here is no
+   * longer an expected, silently-absorbed outcome for anyone; it is shown
+   * the same way a `getGuardianRelationships()`/`getLessonStructures()`
+   * failure already is.
    */
   private async loadWizardLookups(): Promise<void> {
     const [studentsResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
@@ -184,10 +188,9 @@ export class PmWaitingListPage extends HTMLElement {
 
     if (studentsResult.status === 'fulfilled') {
       this._allStudents = studentsResult.value;
+    } else {
+      this.showError(studentsResult.reason);
     }
-    // A rejection here (expected for a Coordinator-only session, since the
-    // read is Teacher-gated) is not surfaced as a page error — an empty
-    // sibling-candidate list is the accepted degradation, not a failure.
 
     if (relationshipsResult.status === 'fulfilled') {
       this.wizardModal!.guardianRelationships = relationshipsResult.value;

@@ -277,18 +277,22 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
   });
 });
 
-// Regression for #299: getStudents() is Teacher-gated, so a Coordinator-only
-// session gets a 403 on it while getGuardianRelationships() and
-// getLessonStructures() succeed. Bundling all three in one Promise.all let
-// that single rejection sink the whole batch, leaving the wizard's own
-// lesson-structure lookup unassigned and Save unable to resolve anything —
-// ruling R8.
-describe('pm-waiting-list-page — wizard lookups settle independently (#299)', () => {
-  it('assigns the guardian-relationship and lesson-structure lookups even when getStudents is refused', async () => {
+// Regression for #299, updated for ruling R9. GET /api/students was
+// Teacher-gated when #299 was fixed, so a Coordinator-only session
+// predictably 403'd on getStudents() while getGuardianRelationships() and
+// getLessonStructures() succeeded — R8 part 1 required settling the three
+// independently so that one rejection could never sink the other two. R9
+// widened GET /api/students to Teacher-or-Coordinator (a Coordinator needs
+// it for the Siblings tab's own candidate list), so a getStudents() failure
+// is no longer an expected, silently-absorbed outcome — these tests prove
+// the independent-settling behaviour still holds for whichever lookup
+// actually fails, and that every failure is now shown.
+describe('pm-waiting-list-page — wizard lookups settle independently', () => {
+  it('assigns the guardian-relationship and lesson-structure lookups even when getStudents fails, and shows the error', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
     const { StudentsError } = await import('../../services/students');
-    mockGetStudents.mockRejectedValueOnce(new StudentsError('Forbidden', 403));
+    mockGetStudents.mockRejectedValueOnce(new StudentsError('Request failed', 500));
     const relationships = [{ guardianRelationshipId: 'r1', name: 'Mother' }];
     const structures = [
       { lessonStructureId: 'ls1', lessonType: 'Individual', durationType: 'Hour', occurrenceType: 'DuringSchool' },
@@ -299,9 +303,7 @@ describe('pm-waiting-list-page — wizard lookups settle independently (#299)', 
     const el = await mountPage();
     const wizard = wizardOf(el);
 
-    // A 403 on the Teacher-gated read is the accepted degradation for a
-    // Coordinator-only session, not a page error.
-    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(false);
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
 
     wizard.openForCreate([], 'waitingList');
     const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
@@ -309,12 +311,13 @@ describe('pm-waiting-list-page — wizard lookups settle independently (#299)', 
       ...(waitingListStepShadow.getElementById('occurrenceType') as HTMLSelectElement).options,
     ].map((o) => o.value);
     expect(occurrenceOptions).toContain('DuringSchool');
-    // The lesson-structure lookup reached the wizard, so the selects have
-    // something real to resolve a choice against — not just the empty state
-    // a still-unassigned lookup would leave them in.
+    // The lesson-structure lookup reached the wizard despite the students
+    // fetch failing alongside it — the selects have something real to
+    // resolve a choice against, not the empty state a still-unassigned
+    // lookup would leave them in.
   });
 
-  it('still shows an error banner when a lookup a Coordinator actually needs fails', async () => {
+  it('still assigns the students and lesson-structure lookups when getGuardianRelationships fails, and shows the error', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
     mockGetStudents.mockResolvedValueOnce([]);
