@@ -1,13 +1,11 @@
-import type {
-  CourseType,
-  DurationType,
-  EnrollableCourse,
-  EnrollmentResult,
-  InstrumentType,
-  LessonType,
-  OccurrenceType,
-  StepType,
-} from '../services/enrollments';
+import type { CourseType, EnrollableCourse, EnrollmentResult, InstrumentType, StepType } from '../services/enrollments';
+import {
+  COURSE_TYPE_LABELS,
+  LESSON_TYPE_LABELS,
+  DURATION_TYPE_LABELS,
+  OCCURRENCE_TYPE_LABELS,
+  INSTRUMENT_TYPE_LABELS,
+} from '../../../services/lesson-structure';
 
 /**
  * How enrollment values are named and shown. The server returns enum members
@@ -29,37 +27,11 @@ export const STEP_TYPES: StepType[] = [
   'Other',
 ];
 
-const COURSE_TYPE_LABELS: Record<CourseType, string> = {
-  Theory: 'Theory',
-  GREEnrichment: 'GR Enrichment',
-  G1Enrichment: 'Grade 1 Enrichment',
-  G2Recorder: 'Grade 2 Recorder',
-  Instrument: 'Instrument',
-};
-
-const LESSON_TYPE_LABELS: Record<LessonType, string> = {
-  Individual: 'Individual',
-  Group: 'Group',
-};
-
-const DURATION_TYPE_LABELS: Record<DurationType, string> = {
-  Hour: 'Hour',
-  HalfHour: 'Half Hour',
-};
-
-const OCCURRENCE_TYPE_LABELS: Record<OccurrenceType, string> = {
-  DuringSchool: 'During School',
-  AfterSchool: 'After School',
-};
-
-export const INSTRUMENT_TYPE_LABELS: Record<InstrumentType, string> = {
-  Piano: 'Piano',
-  Guitar: 'Guitar',
-  Recorder: 'Recorder',
-  Keyboard: 'Keyboard',
-  Voice: 'Voice',
-  Other: 'Other',
-};
+// Shared with the Courses feature via services/lesson-structure.ts (ruling
+// R6) — re-exported here so existing imports from this module keep working.
+// COURSE_TYPE_LABELS is used locally (courseLabel below) but not
+// re-exported: nothing outside this file has ever imported it from here.
+export { LESSON_TYPE_LABELS, DURATION_TYPE_LABELS, OCCURRENCE_TYPE_LABELS, INSTRUMENT_TYPE_LABELS };
 
 /** The bare step, as the table and the selects show it ("2A", not "Step 2A"). */
 export const STEP_TYPE_LABELS: Record<StepType, string> = {

@@ -12,6 +12,7 @@ using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
 using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
+using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Application.Validators.Students;
 using PanoramaMusic.Students.Domain.Interfaces;
@@ -61,6 +62,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
 		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
 		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
+		services.AddTransient<IWaitingListRepository, WaitingListRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -106,6 +108,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
+		services.AddTransient<GetWaitingListHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 

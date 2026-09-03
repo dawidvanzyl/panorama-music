@@ -36,6 +36,9 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 	{
 		// Student payloads carry names, dates of birth and grade/class/phase.
 		["GetStudents"] = CacheExpectation.NoStore,
+
+		// Each waiting-list row names a student and may carry their notes.
+		["GetWaitingList"] = CacheExpectation.NoStore,
 		["GetStudentById"] = CacheExpectation.NoStore,
 		["GetSiblings"] = CacheExpectation.NoStore,
 		["CreateStudent"] = CacheExpectation.NoStore,

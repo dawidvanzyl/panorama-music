@@ -1,14 +1,14 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
+import type { CourseType, LessonType, DurationType, OccurrenceType } from '../../../services/lesson-structure';
 
 const COURSES_BASE = '/api/courses';
 const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
 
-export type CourseType = 'Theory' | 'GREEnrichment' | 'G1Enrichment' | 'G2Recorder' | 'Instrument';
-export type LessonType = 'Individual' | 'Group';
-export type DurationType = 'Hour' | 'HalfHour';
-export type OccurrenceType = 'DuringSchool' | 'AfterSchool';
+// Shared with the Students feature via services/lesson-structure.ts (ruling
+// R5) — re-exported here so existing imports from this module keep working.
+export type { CourseType, LessonType, DurationType, OccurrenceType };
 
 export interface LessonStructure {
   lessonStructureId: string;

@@ -1,0 +1,234 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { WaitingListGroupResult } from '../../services/waiting-list';
+
+const mockGetWaitingList = vi.fn();
+const mockHasAnyRole = vi.fn();
+
+vi.mock('../../services/waiting-list', async () => {
+  const actual = await vi.importActual<typeof import('../../services/waiting-list')>('../../services/waiting-list');
+  return {
+    ...actual,
+    getWaitingList: () => mockGetWaitingList(),
+  };
+});
+
+vi.mock('../../../../services/token-storage', async () => {
+  const actual = await vi.importActual<typeof import('../../../../services/token-storage')>(
+    '../../../../services/token-storage',
+  );
+  return { ...actual, hasAnyRole: (roles: string[]) => mockHasAnyRole(roles) };
+});
+
+import '../pm-waiting-list-page';
+import type { PmWaitingListTable } from '../../components/pm-waiting-list-table';
+
+const duringSchoolEntry = {
+  waitingListEntryId: 'w1',
+  studentId: 's1',
+  firstName: 'Amara',
+  lastName: 'Pillay',
+  position: 1,
+  lessonType: 'Individual' as const,
+  durationType: 'HalfHour' as const,
+  instrumentType: 'Piano' as const,
+  notes: 'Sibling of Amy — prefers afternoon slot',
+  addedAt: '2026-06-02T10:00:00Z',
+};
+
+const afterSchoolEntryOne = {
+  waitingListEntryId: 'w2',
+  studentId: 's2',
+  firstName: 'Neo',
+  lastName: 'Dube',
+  position: 1,
+  lessonType: 'Group' as const,
+  durationType: 'Hour' as const,
+  instrumentType: 'Recorder' as const,
+  notes: null,
+  addedAt: '2026-07-10T09:00:00Z',
+};
+
+const afterSchoolEntryTwo = {
+  waitingListEntryId: 'w3',
+  studentId: 's3',
+  firstName: 'Mia',
+  lastName: 'Adams',
+  position: 2,
+  lessonType: 'Group' as const,
+  durationType: 'Hour' as const,
+  instrumentType: 'Voice' as const,
+  notes: null,
+  addedAt: '2026-07-11T09:00:00Z',
+};
+
+const bothGroups: WaitingListGroupResult[] = [
+  { occurrenceType: 'DuringSchool', count: 1, entries: [duringSchoolEntry] },
+  { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+];
+
+const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+async function mountPage(): Promise<HTMLElement> {
+  const el = document.createElement('pm-waiting-list-page');
+  document.body.appendChild(el);
+  await flush();
+  await flush();
+  return el;
+}
+
+function tableOf(el: HTMLElement): PmWaitingListTable {
+  return el.shadowRoot!.getElementById('table') as unknown as PmWaitingListTable;
+}
+
+function captureBtnOf(el: HTMLElement): HTMLButtonElement {
+  return el.shadowRoot!.getElementById('captureBtn') as HTMLButtonElement;
+}
+
+function groupEls(el: HTMLElement): HTMLElement[] {
+  return [...tableOf(el).shadowRoot!.querySelectorAll('.wl-table__group')] as HTMLElement[];
+}
+
+function groupHeaderText(group: HTMLElement): string {
+  return (group.querySelector('.wl-table__group-header') as HTMLElement).textContent ?? '';
+}
+
+beforeEach(() => {
+  mockGetWaitingList.mockReset();
+  mockHasAnyRole.mockReset();
+  mockHasAnyRole.mockReturnValue(false);
+});
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+describe('pm-waiting-list-page — both occurrence-type lists render with counts', { tags: ['292UC10'] }, () => {
+  it('shows a During School list and an After School list, each labelled with its count', async () => {
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+    const groups = groupEls(el);
+
+    expect(groups).toHaveLength(2);
+    expect(groupHeaderText(groups[0])).toContain('During School');
+    expect(groupHeaderText(groups[0])).toContain('· 1 waiting');
+    expect(groupHeaderText(groups[1])).toContain('After School');
+    expect(groupHeaderText(groups[1])).toContain('· 2 waiting');
+  });
+});
+
+describe(
+  'pm-waiting-list-page — an occurrence type with nothing waiting renders no list',
+  { tags: ['292UC11'] },
+  () => {
+    it('renders only the group that has entries', async () => {
+      mockGetWaitingList.mockResolvedValueOnce([
+        { occurrenceType: 'DuringSchool', count: 1, entries: [duringSchoolEntry] },
+      ]);
+
+      const el = await mountPage();
+      const groups = groupEls(el);
+
+      expect(groups).toHaveLength(1);
+      expect(groupHeaderText(groups[0])).toContain('During School');
+    });
+  },
+);
+
+describe('pm-waiting-list-page — the empty state replaces both lists', { tags: ['292UC12'] }, () => {
+  it('shows the empty-state message and renders no group at all', async () => {
+    mockGetWaitingList.mockResolvedValueOnce([]);
+
+    const el = await mountPage();
+    const table = tableOf(el);
+    const empty = table.shadowRoot!.getElementById('empty') as HTMLElement;
+
+    expect(groupEls(el)).toHaveLength(0);
+    expect(empty.hidden).toBe(false);
+    expect(empty.textContent).toContain('No students are currently on the waiting list.');
+  });
+});
+
+describe('pm-waiting-list-page — collapsing a list hides its rows', { tags: ['292UC13'] }, () => {
+  it('hides the rows on activation and shows them again on re-activation', async () => {
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    const el = await mountPage();
+    const header = groupEls(el)[0].querySelector('.wl-table__group-header') as HTMLButtonElement;
+
+    expect(groupEls(el)[0].querySelector('table')).not.toBeNull();
+
+    header.click();
+    expect(groupEls(el)[0].querySelector('table')).toBeNull();
+
+    // Re-query: activation rebuilds the group element.
+    (groupEls(el)[0].querySelector('.wl-table__group-header') as HTMLButtonElement).click();
+    expect(groupEls(el)[0].querySelector('table')).not.toBeNull();
+  });
+});
+
+describe(
+  'pm-waiting-list-page — a row shows position, student, lesson/duration/instrument, date and notes',
+  { tags: ['292UC14'] },
+  () => {
+    it('shows every field, with a placeholder where notes are absent', async () => {
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      const rows = tableOf(el).shadowRoot!.querySelectorAll('tbody tr');
+      const withNotes = rows[0];
+      const withoutNotes = [...tableOf(el).shadowRoot!.querySelectorAll('tbody tr')].find(
+        (row) => (row as HTMLElement).dataset.waitingListEntryId === 'w2',
+      ) as HTMLElement;
+
+      expect(withNotes.querySelector('.wl-table__position')!.textContent).toBe('1');
+      expect(withNotes.querySelector('.wl-table__student-name')!.textContent).toBe('Amara Pillay');
+      expect(withNotes.querySelector('.wl-table__student-meta')!.textContent).toContain(
+        'Individual · Half Hour · Piano · Added',
+      );
+      expect(withNotes.querySelector('.wl-table__notes')!.textContent).toContain('Sibling of Amy');
+      expect(withoutNotes.querySelector('.wl-table__notes')!.textContent).toBe('—');
+    });
+  },
+);
+
+describe('pm-waiting-list-page — a row shows no course type', { tags: ['292UC15'] }, () => {
+  it('carries no course-type text anywhere on the row', async () => {
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+    const rowText = tableOf(el).shadowRoot!.querySelector('tbody')!.textContent ?? '';
+
+    for (const courseType of ['Instrument', 'Theory', 'Ensemble']) {
+      expect(rowText).not.toContain(courseType);
+    }
+  });
+});
+
+describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['292UC16'] }, () => {
+  it('shows no Capture Student button and a read-only marker instead of row actions', async () => {
+    mockHasAnyRole.mockReturnValue(false);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(true);
+    const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
+    expect(actionsCell.textContent).toContain('Read only');
+    expect(actionsCell.querySelector('button')).toBeNull();
+  });
+});
+
+describe('pm-waiting-list-page — a Coordinator sees the full action set', { tags: ['292UC17'] }, () => {
+  it('shows the Capture Student button and the Enrol, Edit and Delete row actions', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(false);
+    expect(captureBtnOf(el).textContent).toContain('Capture Student');
+    const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
+    const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
+    expect(buttons).toEqual(['Enrol', 'Edit', 'Delete']);
+  });
+});
