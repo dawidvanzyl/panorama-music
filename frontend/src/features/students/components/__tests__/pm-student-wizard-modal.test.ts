@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { PmStudentWizardModal } from '../pm-student-wizard-modal';
+import { formatAddedAt } from '../waiting-list-display';
 import type { StudentResult } from '../../services/students';
 
 const alice: StudentResult = {
@@ -498,8 +499,11 @@ describe(
       mountModal();
       modal.openForCreate([], 'waitingList');
 
+      // Capture has no date added to show yet, so the read-only Date Added the
+      // edit wizard renders is absent from the tab and the hint stands in for it.
       const stepShadow = byId('waitingListStep').shadowRoot!;
-      expect(stepShadow.getElementById('addedAt')).toBeNull();
+      expect((stepShadow.getElementById('addedAtField') as HTMLElement).hidden).toBe(true);
+      expect((stepShadow.getElementById('captureHint') as HTMLElement).hidden).toBe(false);
       expect(stepShadow.textContent).toContain('set automatically');
     });
 
@@ -605,3 +609,147 @@ describe('pm-student-wizard-modal — a lesson-structure lookup that never loade
     expect(byId<HTMLButtonElement>('saveBtn').disabled).toBe(false);
   });
 });
+
+const amaraEntry = {
+  waitingListEntryId: 'w1',
+  occurrenceType: 'DuringSchool' as const,
+  lessonType: 'Individual' as const,
+  durationType: 'Hour' as const,
+  instrumentType: 'Piano' as const,
+  notes: 'Prefers mornings',
+  addedAt: '2026-06-02T10:00:00Z',
+};
+
+/** Opens the wizard on an existing waiting-list student, the way the row's Edit action does. */
+function openWaitingListEdit(): void {
+  mountModal();
+  modal.lessonStructures = [individualHourDuringSchool];
+  modal.openForWaitingListEdit(alice, amaraEntry);
+}
+
+describe(
+  'pm-student-wizard-modal — waiting-list edit mode',
+  { tags: ['294UC11', '294UC12', '294UC13', '294UC14', '294UC15'] },
+  () => {
+    it('presents the four waiting-list tabs, each directly selectable, and neither Courses nor Extra-Curriculars', () => {
+      openWaitingListEdit();
+
+      const offered = [...modal.shadowRoot!.querySelectorAll('.wizard__tab')].filter(
+        (tab) => !(tab as HTMLElement).hidden,
+      );
+      expect(offered.map((tab) => tab.textContent)).toEqual(['Student', 'Siblings', 'Guardians', 'Waiting List']);
+      expect(offered.every((tab) => !(tab as HTMLButtonElement).disabled)).toBe(true);
+      expect(byId<HTMLButtonElement>('tabCourses').hidden).toBe(true);
+      expect(byId<HTMLButtonElement>('tabExtraCurriculars').hidden).toBe(true);
+    });
+
+    it('makes every tab reachable directly rather than by stepping through the others', () => {
+      openWaitingListEdit();
+
+      // Guardians is two steps along in capture order; reaching it in one click
+      // is what "directly selectable" means, as against capture's Next sequence.
+      byId<HTMLButtonElement>('tabGuardians').click();
+      expect(byId('stepGuardians').classList.contains('wizard__step--visible')).toBe(true);
+
+      byId<HTMLButtonElement>('tabWaitingList').click();
+      expect(byId('stepWaitingList').classList.contains('wizard__step--visible')).toBe(true);
+
+      byId<HTMLButtonElement>('tabSiblings').click();
+      expect(byId('stepSiblings').classList.contains('wizard__step--visible')).toBe(true);
+
+      byId<HTMLButtonElement>('tabStudent').click();
+      expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(true);
+    });
+
+    it('titles itself with the student being edited and offers no Previous or Next on any tab', () => {
+      openWaitingListEdit();
+
+      expect(byId('title').textContent).toBe('Edit Waiting List Student: Alice Vance');
+
+      for (const tab of ['tabStudent', 'tabSiblings', 'tabGuardians', 'tabWaitingList']) {
+        byId<HTMLButtonElement>(tab).click();
+        expect(byId<HTMLButtonElement>('previousBtn').hidden).toBe(true);
+        expect(byId<HTMLButtonElement>('nextBtn').hidden).toBe(true);
+        expect(byId<HTMLButtonElement>('saveBtn').hidden).toBe(true);
+      }
+    });
+
+    it('gives the Student tab its own save and cancel, scoped to the student details', () => {
+      openWaitingListEdit();
+
+      expect(byId('studentStepActions').hidden).toBe(false);
+      expect(byId('waitingListStepActions').hidden).toBe(true);
+
+      let detail: { studentId: string; input: { firstName: string } } | null = null;
+      modal.addEventListener('student-update-requested', (event) => {
+        detail = (event as CustomEvent).detail;
+      });
+
+      const firstName = byId('studentStep').shadowRoot!.getElementById('firstName') as HTMLInputElement;
+      firstName.value = 'Alicia';
+      byId<HTMLButtonElement>('studentSaveBtn').click();
+
+      expect(detail).not.toBeNull();
+      expect(detail!.studentId).toBe('s1');
+      expect(detail!.input.firstName).toBe('Alicia');
+    });
+
+    it('gives the Waiting List tab its own save, carrying only the entry fields', () => {
+      openWaitingListEdit();
+      byId<HTMLButtonElement>('tabWaitingList').click();
+
+      expect(byId('waitingListStepActions').hidden).toBe(false);
+      expect(byId('studentStepActions').hidden).toBe(true);
+
+      let detail: { waitingListEntryId: string; input: Record<string, unknown> } | null = null;
+      modal.addEventListener('waiting-list-entry-update-requested', (event) => {
+        detail = (event as CustomEvent).detail;
+      });
+
+      const stepShadow = byId('waitingListStep').shadowRoot!;
+      (stepShadow.getElementById('notes') as HTMLTextAreaElement).value = 'Afternoons only';
+      byId<HTMLButtonElement>('waitingListSaveBtn').click();
+
+      expect(detail).not.toBeNull();
+      expect(detail!.waitingListEntryId).toBe('w1');
+      expect(detail!.input).toEqual({
+        lessonStructureId: individualHourDuringSchool.lessonStructureId,
+        instrumentType: 'Piano',
+        notes: 'Afternoons only',
+      });
+      // The entry's own save carries no added date; there is no member for one.
+      expect(Object.keys(detail!.input)).not.toContain('addedAt');
+    });
+
+    it('seeds the Waiting List tab from the entry being corrected', () => {
+      openWaitingListEdit();
+      byId<HTMLButtonElement>('tabWaitingList').click();
+
+      const stepShadow = byId('waitingListStep').shadowRoot!;
+      expect((stepShadow.getElementById('occurrenceType') as HTMLSelectElement).value).toBe('DuringSchool');
+      expect((stepShadow.getElementById('lessonType') as HTMLSelectElement).value).toBe('Individual');
+      expect((stepShadow.getElementById('durationType') as HTMLSelectElement).value).toBe('Hour');
+      expect((stepShadow.getElementById('instrumentType') as HTMLSelectElement).value).toBe('Piano');
+      expect((stepShadow.getElementById('notes') as HTMLTextAreaElement).value).toBe('Prefers mornings');
+    });
+
+    it('shows Date Added as a read-only value with no control that could change it', () => {
+      openWaitingListEdit();
+      byId<HTMLButtonElement>('tabWaitingList').click();
+
+      const stepShadow = byId('waitingListStep').shadowRoot!;
+      const addedAtField = stepShadow.getElementById('addedAtField') as HTMLElement;
+      const addedAt = stepShadow.getElementById('addedAt') as HTMLElement;
+
+      expect(addedAtField.hidden).toBe(false);
+      expect(addedAt.textContent).toBe(formatAddedAt(amaraEntry.addedAt));
+      // Static text, not a disabled input: there is no form control here at all,
+      // so no interaction the tab offers and no submission can carry a value for it.
+      expect(addedAt.tagName).toBe('DIV');
+      expect(addedAtField.querySelector('input, select, textarea, button, [contenteditable]')).toBeNull();
+      expect(stepShadow.querySelector('input[type="date"]')).toBeNull();
+      // The capture-only hint is replaced by the value itself.
+      expect((stepShadow.getElementById('captureHint') as HTMLElement).hidden).toBe(true);
+    });
+  },
+);

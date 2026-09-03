@@ -43,8 +43,12 @@ export interface LessonStructure {
   occurrenceType: OccurrenceType;
 }
 
-/** The Waiting List tab's own fields — no course, since an entry names none. */
-export interface WaitingListCaptureInput {
+/**
+ * The Waiting List tab's own fields — no course, since an entry names none,
+ * and no date added: the server assigns it at capture and nothing may change
+ * it afterwards, so there is no field here to send either way.
+ */
+export interface WaitingListEntryInput {
   lessonStructureId: string;
   instrumentType: InstrumentType;
   notes: string | null;
@@ -134,7 +138,7 @@ export async function getLessonStructures(): Promise<LessonStructure[]> {
  */
 export async function captureWaitingListStudent(
   student: StudentInput,
-  waitingList: WaitingListCaptureInput,
+  waitingList: WaitingListEntryInput,
 ): Promise<WaitingListEntryResult> {
   const response = await fetch(API_BASE, {
     method: 'POST',
@@ -144,4 +148,53 @@ export async function captureWaitingListStudent(
   const created = await handleResponse<WaitingListEntryResult>(response);
   clearWaitingListCache();
   return created;
+}
+
+/**
+ * Corrects an existing entry's own fields. The added date-time is not part of
+ * the payload — it is the queue's ordering key, and the endpoint has nowhere
+ * to put one — so an entry moved to the other occurrence type keeps its
+ * standing there rather than joining the back.
+ */
+export async function updateWaitingListEntry(
+  waitingListEntryId: string,
+  input: WaitingListEntryInput,
+): Promise<WaitingListEntryResult> {
+  const response = await fetch(`${API_BASE}/${waitingListEntryId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const updated = await handleResponse<WaitingListEntryResult>(response);
+  clearWaitingListCache();
+  return updated;
+}
+
+/**
+ * Corrects a waiting-list student's own details. Reached through the waiting
+ * list rather than through `updateStudent`, which is a Teacher's: this route
+ * is a Coordinator's, and only resolves a student who holds an entry.
+ */
+export async function updateWaitingListStudent(studentId: string, input: StudentInput): Promise<void> {
+  const response = await fetch(`${API_BASE}/students/${studentId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  await assertOk(response);
+  clearWaitingListCache();
+}
+
+/**
+ * Discards a waiting-list student: their entry and their student record go
+ * together. They were never enrolled, so nothing of theirs is kept — this is
+ * not a withdrawal.
+ */
+export async function removeWaitingListStudent(studentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/students/${studentId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearWaitingListCache();
 }

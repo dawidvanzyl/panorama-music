@@ -1,4 +1,4 @@
-import type { WaitingListGroupResult } from '../services/waiting-list';
+import type { WaitingListGroupResult, OccurrenceType } from '../services/waiting-list';
 import {
   LESSON_TYPE_LABELS,
   DURATION_TYPE_LABELS,
@@ -6,11 +6,7 @@ import {
   INSTRUMENT_TYPE_LABELS,
 } from './enrollment-options';
 
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' });
-}
+import { formatAddedAt } from './waiting-list-display';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -286,14 +282,17 @@ export class PmWaitingListTable extends HTMLElement {
 
     const tbody = document.createElement('tbody');
     for (const entry of group.entries) {
-      tbody.appendChild(this.buildRow(entry));
+      tbody.appendChild(this.buildRow(entry, group.occurrenceType));
     }
     table.appendChild(tbody);
 
     return table;
   }
 
-  private buildRow(entry: WaitingListGroupResult['entries'][number]): HTMLTableRowElement {
+  private buildRow(
+    entry: WaitingListGroupResult['entries'][number],
+    occurrenceType: OccurrenceType,
+  ): HTMLTableRowElement {
     const row = document.createElement('tr');
     row.dataset.waitingListEntryId = entry.waitingListEntryId;
 
@@ -309,7 +308,7 @@ export class PmWaitingListTable extends HTMLElement {
     meta.classList.add('wl-table__student-meta');
     meta.textContent =
       `${LESSON_TYPE_LABELS[entry.lessonType]} · ${DURATION_TYPE_LABELS[entry.durationType]} · ` +
-      `${INSTRUMENT_TYPE_LABELS[entry.instrumentType]} · Added ${formatDate(entry.addedAt)}`;
+      `${INSTRUMENT_TYPE_LABELS[entry.instrumentType]} · Added ${formatAddedAt(entry.addedAt)}`;
     studentCell.append(name, meta);
 
     const notesCell = document.createElement('td');
@@ -320,7 +319,7 @@ export class PmWaitingListTable extends HTMLElement {
     const actionsCell = document.createElement('td');
     actionsCell.classList.add('wl-table__actions');
     if (this._showActions) {
-      actionsCell.appendChild(this.buildActions());
+      actionsCell.appendChild(this.buildActions(entry, occurrenceType));
     } else {
       const readOnly = document.createElement('span');
       readOnly.classList.add('wl-table__read-only');
@@ -333,11 +332,16 @@ export class PmWaitingListTable extends HTMLElement {
   }
 
   /**
-   * Enrol, Edit and Delete are shown as the design calls for, but wired to
-   * nothing yet — capturing, editing and enrolling off the list are later M9
-   * stories, and this one is read-only.
+   * The row's actions. Edit and Delete announce the entry and the occurrence
+   * type its group was rendered under — that type is the group's, not the
+   * row's, so it has to travel with the request rather than be re-derived from
+   * the entry later. Enrol is shown as the design calls for but wired to
+   * nothing yet; enrolling off the list is a later M9 story.
    */
-  private buildActions(): HTMLElement {
+  private buildActions(
+    entry: WaitingListGroupResult['entries'][number],
+    occurrenceType: OccurrenceType,
+  ): HTMLElement {
     const container = document.createElement('div');
 
     const enrolBtn = document.createElement('button');
@@ -349,14 +353,26 @@ export class PmWaitingListTable extends HTMLElement {
     editBtn.type = 'button';
     editBtn.classList.add('wl-table__btn', 'wl-table__btn--secondary');
     editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => this.emit('waiting-list-edit-requested', entry, occurrenceType));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.classList.add('wl-table__btn', 'wl-table__btn--danger');
     deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => this.emit('waiting-list-remove-requested', entry, occurrenceType));
 
     container.append(enrolBtn, editBtn, deleteBtn);
     return container;
+  }
+
+  private emit(
+    name: string,
+    entry: WaitingListGroupResult['entries'][number],
+    occurrenceType: OccurrenceType,
+  ): void {
+    this.dispatchEvent(
+      new CustomEvent(name, { bubbles: true, composed: true, detail: { entry, occurrenceType } }),
+    );
   }
 
   private toggleGroup(occurrenceType: string): void {

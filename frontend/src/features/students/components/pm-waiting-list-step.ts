@@ -7,8 +7,20 @@ import {
   type OccurrenceType,
   type LessonType,
   type DurationType,
+  type InstrumentType,
 } from '../../../services/lesson-structure';
-import type { WaitingListCaptureInput, LessonStructure } from '../services/waiting-list';
+import { formatAddedAt } from './waiting-list-display';
+import type { WaitingListEntryInput, LessonStructure } from '../services/waiting-list';
+
+/** An existing entry as the tab shows it, with the added date-time it is fixed at. */
+export interface WaitingListStepValues {
+  occurrenceType: OccurrenceType;
+  lessonType: LessonType;
+  durationType: DurationType;
+  instrumentType: InstrumentType;
+  notes: string | null;
+  addedAt: string;
+}
 
 const OCCURRENCE_TYPES = Object.keys(OCCURRENCE_TYPE_LABELS) as OccurrenceType[];
 const LESSON_TYPES = Object.keys(LESSON_TYPE_LABELS) as LessonType[];
@@ -60,6 +72,21 @@ styles.replaceSync(`
       padding: 10px 12px;
       resize: vertical;
     }
+    .waiting-list-step__readonly {
+      box-sizing: border-box;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text-muted);
+      font-size: 14px;
+    }
+    [hidden] {
+      display: none !important;
+    }
     .waiting-list-step__hint {
       font-size: 12px;
       color: var(--pm-text-muted);
@@ -101,12 +128,16 @@ template.innerHTML = `
         <label class="waiting-list-step__label" for="instrumentType">Instrument Type</label>
         <select class="waiting-list-step__select" id="instrumentType" required></select>
       </div>
+      <div class="waiting-list-step__field" id="addedAtField" hidden>
+        <label class="waiting-list-step__label" id="addedAtLabel">Date Added</label>
+        <div class="waiting-list-step__readonly" id="addedAt" aria-labelledby="addedAtLabel"></div>
+      </div>
       <div class="waiting-list-step__field waiting-list-step__field--wide">
         <label class="waiting-list-step__label" for="notes">Notes</label>
         <textarea class="waiting-list-step__textarea" id="notes" rows="4" maxlength="${NOTES_MAX_LENGTH}"></textarea>
       </div>
     </div>
-    <p class="waiting-list-step__hint">Date added is set automatically to today and cannot be edited.</p>
+    <p class="waiting-list-step__hint" id="captureHint">Date added is set automatically to today and cannot be edited.</p>
   </form>
   <div class="waiting-list-step__message" id="message"></div>
 `;
@@ -119,6 +150,9 @@ export class PmWaitingListStep extends HTMLElement {
   private instrumentTypeSelect: HTMLSelectElement | null = null;
   private notesTextarea: HTMLTextAreaElement | null = null;
   private message: HTMLElement | null = null;
+  private addedAtField: HTMLElement | null = null;
+  private addedAtValue: HTMLElement | null = null;
+  private captureHint: HTMLElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
 
@@ -137,6 +171,9 @@ export class PmWaitingListStep extends HTMLElement {
     this.instrumentTypeSelect = this.shadowRoot!.getElementById('instrumentType') as HTMLSelectElement;
     this.notesTextarea = this.shadowRoot!.getElementById('notes') as HTMLTextAreaElement;
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
+    this.addedAtField = this.shadowRoot!.getElementById('addedAtField') as HTMLElement;
+    this.addedAtValue = this.shadowRoot!.getElementById('addedAt') as HTMLElement;
+    this.captureHint = this.shadowRoot!.getElementById('captureHint') as HTMLElement;
 
     populateSelectOptions(this.occurrenceTypeSelect, OCCURRENCE_TYPES, (v) => OCCURRENCE_TYPE_LABELS[v]);
     populateSelectOptions(this.lessonTypeSelect, LESSON_TYPES, (v) => LESSON_TYPE_LABELS[v]);
@@ -157,9 +194,36 @@ export class PmWaitingListStep extends HTMLElement {
       addPlaceholderOption(select.element, select.label);
       select.element.value = '';
     }
+    // Capture has no date added to show yet — the server assigns one when the
+    // entry is created — so the field is absent and the hint says so instead.
+    this.addedAtField!.hidden = true;
+    this.addedAtValue!.textContent = '';
+    this.captureHint!.hidden = false;
   }
 
-  getValues(): WaitingListCaptureInput {
+  /**
+   * Seeds the tab from an entry being corrected. Date Added is rendered as
+   * static text with no control of any kind: it is the queue's ordering key,
+   * so there is deliberately nothing here to type in, pick from or clear —
+   * not a disabled input that a submission could still carry a value for.
+   */
+  setValues(values: WaitingListStepValues): void {
+    this.clearError();
+    for (const select of this.selects()) {
+      addPlaceholderOption(select.element, select.label);
+    }
+    this.occurrenceTypeSelect!.value = values.occurrenceType;
+    this.lessonTypeSelect!.value = values.lessonType;
+    this.durationTypeSelect!.value = values.durationType;
+    this.instrumentTypeSelect!.value = values.instrumentType;
+    this.notesTextarea!.value = values.notes ?? '';
+
+    this.addedAtValue!.textContent = formatAddedAt(values.addedAt);
+    this.addedAtField!.hidden = false;
+    this.captureHint!.hidden = true;
+  }
+
+  getValues(): WaitingListEntryInput {
     const structure = this._lessonStructures.find(
       (s) =>
         s.occurrenceType === this.occurrenceTypeSelect!.value &&
@@ -174,7 +238,7 @@ export class PmWaitingListStep extends HTMLElement {
 
     return {
       lessonStructureId: structure.lessonStructureId,
-      instrumentType: this.instrumentTypeSelect!.value as WaitingListCaptureInput['instrumentType'],
+      instrumentType: this.instrumentTypeSelect!.value as WaitingListEntryInput['instrumentType'],
       notes: this.notesTextarea!.value.trim() || null,
     };
   }

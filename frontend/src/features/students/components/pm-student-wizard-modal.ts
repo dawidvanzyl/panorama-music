@@ -16,7 +16,12 @@ import type { PmSiblingsStep } from './pm-siblings-step';
 import type { PmGuardiansStep } from './pm-guardians-step';
 import type { PmCoursesStep } from './pm-courses-step';
 import type { PmExtraCurricularsStep } from './pm-extra-curriculars-step';
-import type { PmWaitingListStep } from './pm-waiting-list-step';
+import type { PmWaitingListStep, WaitingListStepValues } from './pm-waiting-list-step';
+
+/** The entry an edit-mode open is opened against: its own identifier and its current values. */
+export interface WaitingListEditTarget extends WaitingListStepValues {
+  waitingListEntryId: string;
+}
 
 type Mode = 'create' | 'edit';
 type Step = 'student' | 'siblings' | 'guardians' | 'courses' | 'extraCurriculars' | 'waitingList';
@@ -162,6 +167,10 @@ template.innerHTML = `
       </div>
       <div class="wizard__step" id="stepWaitingList" role="tabpanel" aria-labelledby="tabWaitingList">
         <pm-waiting-list-step id="waitingListStep"></pm-waiting-list-step>
+        <div class="wizard__step-actions" id="waitingListStepActions" hidden>
+          <button type="button" class="wizard__btn wizard__btn--cancel" id="waitingListCloseBtn">Close</button>
+          <button type="button" class="wizard__btn wizard__btn--primary" id="waitingListSaveBtn">Save</button>
+        </div>
       </div>
       <div class="wizard__actions">
         <button type="button" class="wizard__btn wizard__btn--cancel" id="cancelBtn">Cancel</button>
@@ -200,11 +209,16 @@ export class PmStudentWizardModal extends HTMLElement {
   private studentStepActions: HTMLElement | null = null;
   private studentCancelBtn: HTMLButtonElement | null = null;
   private studentSaveBtn: HTMLButtonElement | null = null;
+  private waitingListStepActions: HTMLElement | null = null;
+  private waitingListCloseBtn: HTMLButtonElement | null = null;
+  private waitingListSaveBtn: HTMLButtonElement | null = null;
 
   private _mode: Mode = 'create';
   private _wizardMode: WizardMode = 'enrolled';
   private _activeStep: Step = 'student';
   private _studentId: string | null = null;
+  /** The entry being corrected, in waiting-list edit mode only. */
+  private _waitingListEntryId: string | null = null;
   /** The student's own phase, which is what limits the activities the picker offers. */
   private _phase: PhaseType | null = null;
 
@@ -244,6 +258,12 @@ export class PmStudentWizardModal extends HTMLElement {
     this.studentStepActions = this.shadowRoot!.getElementById('studentStepActions') as HTMLElement;
     this.studentCancelBtn = this.shadowRoot!.getElementById('studentCancelBtn') as HTMLButtonElement;
     this.studentSaveBtn = this.shadowRoot!.getElementById('studentSaveBtn') as HTMLButtonElement;
+    this.waitingListStepActions = this.shadowRoot!.getElementById('waitingListStepActions') as HTMLElement;
+    this.waitingListCloseBtn = this.shadowRoot!.getElementById('waitingListCloseBtn') as HTMLButtonElement;
+    this.waitingListSaveBtn = this.shadowRoot!.getElementById('waitingListSaveBtn') as HTMLButtonElement;
+
+    this.waitingListCloseBtn.addEventListener('click', () => this.close());
+    this.waitingListSaveBtn.addEventListener('click', () => this.handleWaitingListEntrySave());
 
     this.tabStudent.addEventListener('click', () => this.goToStep('student'));
     this.tabSiblings.addEventListener('click', () => this.handleSiblingsTabClick());
@@ -295,6 +315,7 @@ export class PmStudentWizardModal extends HTMLElement {
   openForEdit(student: StudentResult): void {
     this._mode = 'edit';
     this._wizardMode = 'enrolled';
+    this._waitingListEntryId = null;
     this._studentId = student.studentId;
     this.titleEl!.textContent = `Edit Student: ${student.firstName} ${student.lastName}`;
     // Seeded from the stored student so the tab is already right for this one
@@ -306,6 +327,29 @@ export class PmStudentWizardModal extends HTMLElement {
     this.applyWizardModeTabs();
     this.saveBtn!.disabled = false;
     this.studentSaveBtn!.disabled = false;
+    this.goToStep('student');
+    this.setAttribute('open', '');
+  }
+
+  /**
+   * Opens the wizard on an existing waiting-list student. Every tab is
+   * directly selectable and each saves on its own terms, so there is no
+   * Previous/Next sequence to walk and no single overall Save — correcting a
+   * name is not a reason to revisit the entry's own fields.
+   */
+  openForWaitingListEdit(student: StudentResult, entry: WaitingListEditTarget): void {
+    this._mode = 'edit';
+    this._wizardMode = 'waitingList';
+    this._studentId = student.studentId;
+    this._waitingListEntryId = entry.waitingListEntryId;
+    this.titleEl!.textContent = `Edit Waiting List Student: ${student.firstName} ${student.lastName}`;
+    this.applyPhase((student.phase as PhaseType | null) ?? null);
+    this.studentStep!.setValues(student);
+    this.waitingListStep!.setValues(entry);
+    this.applyWizardModeTabs();
+    this.saveBtn!.disabled = false;
+    this.studentSaveBtn!.disabled = false;
+    this.waitingListSaveBtn!.disabled = false;
     this.goToStep('student');
     this.setAttribute('open', '');
   }
@@ -356,15 +400,16 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   /**
-   * Capture is one atomic request, so a failure here is the whole save
+   * Capture is one atomic request, so a failure there is the whole save
    * failing — the same reasoning `showStudentError` re-enables Save for the
-   * enrolled-mode student-tab error, applied to waiting-list mode's own last
-   * step instead.
+   * enrolled-mode student-tab error. In edit mode the failed save is the
+   * tab's own, so its Save is the one that has to come back.
    */
   showWaitingListError(message: string): void {
     this.waitingListStep!.showError(message);
     this.saveBtn!.disabled = false;
     this.studentSaveBtn!.disabled = false;
+    this.waitingListSaveBtn!.disabled = false;
   }
 
   /** Collapses the Guardians step's Add/Edit form panel (if open) and returns to the list view. */
@@ -604,10 +649,14 @@ export class PmStudentWizardModal extends HTMLElement {
    * misleadingly implied it covered the other tabs too. So in edit mode, Student's
    * own Cancel/Save live next to its fields instead of the shared footer, and the
    * footer falls back to a plain Close (nothing left for it to cancel) on the other tabs.
+   * The Waiting List tab is the same shape as Student — its own Close/Save next to
+   * its own fields, since it writes the entry and nothing else does.
    */
   private updateFooter(): void {
     const isCreate = this._mode === 'create';
     const onStudentTab = this._activeStep === 'student';
+    const onWaitingListTab = this._activeStep === 'waitingList';
+    const editingEntry = !isCreate && onWaitingListTab;
 
     this.tabSiblings!.disabled = isCreate;
     this.tabGuardians!.disabled = isCreate;
@@ -625,9 +674,10 @@ export class PmStudentWizardModal extends HTMLElement {
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
     this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
     this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
-    this.cancelBtn!.hidden = !isCreate && onStudentTab;
+    this.cancelBtn!.hidden = !isCreate && (onStudentTab || onWaitingListTab);
     this.cancelBtn!.textContent = isCreate ? 'Cancel' : 'Close';
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
+    this.waitingListStepActions!.hidden = !editingEntry;
   }
 
   private handlePrevious(): void {
@@ -684,6 +734,32 @@ export class PmStudentWizardModal extends HTMLElement {
 
       this.goToStep('extraCurriculars');
     }
+  }
+
+  /**
+   * The Waiting List tab's own save, scoped to the entry's fields. It does not
+   * touch the Student tab: correcting an occurrence type is not a reason to
+   * also require a valid name, and the two are separate writes on the server.
+   */
+  private handleWaitingListEntrySave(): void {
+    if (!this.waitingListStep!.reportValidity()) return;
+
+    let input;
+    try {
+      input = this.waitingListStep!.getValues();
+    } catch (err) {
+      this.showWaitingListError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      return;
+    }
+
+    this.waitingListSaveBtn!.disabled = true;
+    this.dispatchEvent(
+      new CustomEvent('waiting-list-entry-update-requested', {
+        bubbles: true,
+        composed: true,
+        detail: { waitingListEntryId: this._waitingListEntryId, input },
+      }),
+    );
   }
 
   private handleSave(): void {
