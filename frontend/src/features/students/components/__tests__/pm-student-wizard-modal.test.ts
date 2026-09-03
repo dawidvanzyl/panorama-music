@@ -113,7 +113,12 @@ describe('pm-student-wizard-modal — the Extra-Curriculars tab', { tags: ['277U
   it('offers an Extra-Curriculars tab immediately after the Courses tab', () => {
     mountModal();
 
-    const tabs = [...modal.shadowRoot!.querySelectorAll('.wizard__tab')] as HTMLButtonElement[];
+    // Waiting List is present in the DOM but starts hidden — this mount never
+    // called openForCreate/openForEdit — so only visible tabs are asserted
+    // here; 293UC13 covers the full enrolled-mode set explicitly.
+    const tabs = ([...modal.shadowRoot!.querySelectorAll('.wizard__tab')] as HTMLButtonElement[]).filter(
+      (tab) => !tab.hidden,
+    );
 
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Student',
@@ -365,5 +370,238 @@ describe('pm-student-wizard-modal — changing a grade to Private in edit mode',
 
     expect(byId('tabExtraCurriculars').hidden).toBe(true);
     expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(false);
+  });
+});
+
+const individualHourDuringSchool = {
+  lessonStructureId: 'ls1',
+  lessonType: 'Individual' as const,
+  durationType: 'Hour' as const,
+  occurrenceType: 'DuringSchool' as const,
+};
+
+/** Fills the Waiting List tab's selects with a known, seeded combination. */
+function fillWaitingListStep(): void {
+  const stepShadow = byId('waitingListStep').shadowRoot!;
+  (stepShadow.getElementById('occurrenceType') as HTMLSelectElement).value = individualHourDuringSchool.occurrenceType;
+  (stepShadow.getElementById('lessonType') as HTMLSelectElement).value = individualHourDuringSchool.lessonType;
+  (stepShadow.getElementById('durationType') as HTMLSelectElement).value = individualHourDuringSchool.durationType;
+  (stepShadow.getElementById('instrumentType') as HTMLSelectElement).value = 'Piano';
+}
+
+describe('pm-student-wizard-modal — waiting-list mode tabs', { tags: ['293UC12', '293UC13'] }, () => {
+  it('presents exactly Student, Siblings, Guardians and Waiting List in waiting-list mode', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+
+    const visibleTabs = ([...modal.shadowRoot!.querySelectorAll('.wizard__tab')] as HTMLButtonElement[]).filter(
+      (tab) => !tab.hidden,
+    );
+
+    expect(visibleTabs.map((tab) => tab.textContent)).toEqual(['Student', 'Siblings', 'Guardians', 'Waiting List']);
+  });
+
+  it('presents exactly Student, Siblings, Guardians, Courses and Extra-Curriculars in enrolled mode', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    choosePhase('Junior');
+
+    const visibleTabs = ([...modal.shadowRoot!.querySelectorAll('.wizard__tab')] as HTMLButtonElement[]).filter(
+      (tab) => !tab.hidden,
+    );
+
+    expect(visibleTabs.map((tab) => tab.textContent)).toEqual([
+      'Student',
+      'Siblings',
+      'Guardians',
+      'Courses',
+      'Extra-Curriculars',
+    ]);
+  });
+
+  it('titles the modal for capture', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+
+    expect(byId('title').textContent).toBe('Capture Waiting List Student');
+  });
+});
+
+describe(
+  'pm-student-wizard-modal — waiting-list capture is a linear wizard',
+  { tags: ['293UC14', '293UC15', '293UC16', '293UC17'] },
+  () => {
+    it('opens with the Student tab active, the other tabs not directly selectable, and Previous/Next offered', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+
+      expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId<HTMLButtonElement>('tabSiblings').disabled).toBe(true);
+      expect(byId<HTMLButtonElement>('tabGuardians').disabled).toBe(true);
+      expect(byId<HTMLButtonElement>('tabWaitingList').disabled).toBe(true);
+      expect(byId('nextBtn').hidden).toBe(false);
+      expect(byId('saveBtn').hidden).toBe(true);
+    });
+
+    it('advances Student to Siblings to Guardians to Waiting List in order, offering Save only on the last', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+      fillStudentStep();
+
+      byId<HTMLButtonElement>('nextBtn').click();
+      expect(byId('stepSiblings').classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId('saveBtn').hidden).toBe(true);
+
+      byId<HTMLButtonElement>('nextBtn').click();
+      expect(byId('stepGuardians').classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId('saveBtn').hidden).toBe(true);
+
+      byId<HTMLButtonElement>('nextBtn').click();
+      expect(byId('stepWaitingList').classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId('saveBtn').hidden).toBe(false);
+      expect(byId('nextBtn').hidden).toBe(true);
+    });
+
+    it('returns from Waiting List to Guardians on Previous', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+      fillStudentStep();
+      byId<HTMLButtonElement>('nextBtn').click();
+      byId<HTMLButtonElement>('nextBtn').click();
+      byId<HTMLButtonElement>('nextBtn').click();
+
+      byId<HTMLButtonElement>('previousBtn').click();
+
+      expect(byId('stepGuardians').classList.contains('wizard__step--visible')).toBe(true);
+    });
+  },
+);
+
+describe(
+  'pm-student-wizard-modal — the Waiting List tab',
+  { tags: ['293UC18', '293UC19', '293UC20', '293UC21'] },
+  () => {
+    it('offers Occurrence, Lesson, Duration and Instrument Type, and no course field', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+
+      const stepShadow = byId('waitingListStep').shadowRoot!;
+      expect(stepShadow.getElementById('occurrenceType')).not.toBeNull();
+      expect(stepShadow.getElementById('lessonType')).not.toBeNull();
+      expect(stepShadow.getElementById('durationType')).not.toBeNull();
+      expect(stepShadow.getElementById('instrumentType')).not.toBeNull();
+      expect(stepShadow.querySelector('[id*="course" i]')).toBeNull();
+    });
+
+    it('states that Date Added is set automatically instead of offering a field for it', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+
+      const stepShadow = byId('waitingListStep').shadowRoot!;
+      expect(stepShadow.getElementById('addedAt')).toBeNull();
+      expect(stepShadow.textContent).toContain('set automatically');
+    });
+
+    it('constrains Notes to the documented maximum length', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+
+      const notes = byId('waitingListStep').shadowRoot!.getElementById('notes') as HTMLTextAreaElement;
+
+      expect(notes.maxLength).toBe(500);
+    });
+
+    it('hides Class and Phase when Grade is Private in waiting-list mode too', () => {
+      mountModal();
+      modal.openForCreate([], 'waitingList');
+
+      chooseGrade('Private');
+
+      const studentShadow = byId('studentStep').shadowRoot!;
+      expect((studentShadow.getElementById('classField') as HTMLElement).hidden).toBe(true);
+      expect((studentShadow.getElementById('phaseField') as HTMLElement).hidden).toBe(true);
+    });
+  },
+);
+
+describe('pm-student-wizard-modal — saving a waiting-list capture', { tags: ['293UC22'] }, () => {
+  it('dispatches waiting-list-capture-requested carrying the student, siblings, guardians and waiting-list details', () => {
+    mountModal();
+    modal.lessonStructures = [individualHourDuringSchool];
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    fillWaitingListStep();
+
+    let detail: unknown = null;
+    modal.addEventListener('waiting-list-capture-requested', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expect(detail).toMatchObject({
+      input: { firstName: 'Nadia', lastName: 'Vance' },
+      pendingSiblingIds: [],
+      pendingGuardians: [],
+      waitingListInput: {
+        lessonStructureId: 'ls1',
+        instrumentType: 'Piano',
+        notes: null,
+      },
+    });
+  });
+
+  it('refuses to save and stays on the Waiting List tab when a required field is left unchosen', () => {
+    mountModal();
+    modal.lessonStructures = [individualHourDuringSchool];
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    // Instrument Type left at its placeholder.
+
+    let dispatched = false;
+    modal.addEventListener('waiting-list-capture-requested', () => {
+      dispatched = true;
+    });
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expect(dispatched).toBe(false);
+    expect(byId('stepWaitingList').classList.contains('wizard__step--visible')).toBe(true);
+  });
+});
+
+// Regression for #299: getValues() throws synchronously when the chosen
+// triple resolves against no lesson structure (reachable in practice only
+// when the page's lookup fetch never assigned modal.lessonStructures — see
+// pm-waiting-list-page's own fix). Save must surface that as a real error
+// rather than letting the throw escape the click handler uncaught, which
+// left Save disabled with nothing dispatched and nothing shown.
+describe('pm-student-wizard-modal — a lesson-structure lookup that never loaded (#299)', () => {
+  it('shows an error and re-enables Save instead of throwing uncaught', () => {
+    mountModal();
+    // lessonStructures deliberately left unset — the #299 scenario.
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    fillWaitingListStep();
+
+    let dispatched = false;
+    modal.addEventListener('waiting-list-capture-requested', () => {
+      dispatched = true;
+    });
+
+    expect(() => byId<HTMLButtonElement>('saveBtn').click()).not.toThrow();
+
+    expect(dispatched).toBe(false);
+    const waitingListStepShadow = byId('waitingListStep').shadowRoot!;
+    expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('No seeded lesson structure');
+    expect(byId<HTMLButtonElement>('saveBtn').disabled).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Students.Infrastructure.Repositories;
 
-public class WaitingListRepository(IUnitOfWork unitOfWork)
+public class WaitingListRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
 	: RepositoryBase(unitOfWork), IWaitingListRepository
 {
 	public async Task<IList<WaitingListEntry>> GetAllAsync(CancellationToken cancellationToken)
@@ -25,5 +25,25 @@ public class WaitingListRepository(IUnitOfWork unitOfWork)
 		var dtos = await Connection.QueryAsync<WaitingListEntryDto>(command);
 
 		return [.. dtos.Select(dto => dto.MapToWaitingListEntry())];
+	}
+
+	public async Task CreateAsync(WaitingListEntry entry, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.create_waiting_list_entry",
+			new
+			{
+				p_waiting_list_entry_id = entry.WaitingListEntryId,
+				p_student_id = entry.Student.StudentId,
+				p_lesson_structure_id = entry.LessonStructure.LessonStructureId,
+				p_instrument_type = entry.InstrumentType.ToString(),
+				p_notes = entry.Notes,
+				p_added_at = entry.AddedAt,
+			},
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(entry);
 	}
 }

@@ -2,6 +2,8 @@ using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Requests.GuardianRelationships;
+using PanoramaMusic.Students.Application.Requests.Guardians;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Enums;
 using Shouldly;
@@ -451,6 +453,134 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 		var response = await fixture.CreateClient().GetAsync($"/api/students/{Guid.NewGuid()}/siblings", TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+	}
+
+	/// <summary>
+	/// Rulings R9 and R10 (#293/#299): reads widen from Teacher-only to
+	/// Teacher-or-Coordinator — a Coordinator capturing a waiting-list
+	/// student needs GetStudents for the wizard's Siblings-tab candidate
+	/// list. AddSibling widens too (R10): the capture wizard links staged
+	/// siblings to the student it just created, and 403 on that step after
+	/// the student already exists is a half-captured student, not just a
+	/// blocked action. Every other write stays Teacher-only, proven directly
+	/// rather than assumed, since minimal-API route authorization is
+	/// additive and a widened group policy would silently open every write
+	/// underneath it too if a write's own override were missing or wrong.
+	/// </summary>
+	[Fact]
+	public async Task StudentEndpoints_CoordinatorOnly_ReadsAndAddSiblingArePermittedOtherWritesAreForbidden()
+	{
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-r9-setup", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.10.100");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+		var studentResponse = await CreateStudentAsync(teacherClient, "Priya", "Naidoo", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var student = await studentResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		var linkedSiblingResponse = await CreateStudentAsync(teacherClient, "Kabelo", "Naidoo", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var linkedSibling = await linkedSiblingResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+		await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedPostRequest($"/api/students/{student!.StudentId}/siblings", new { SiblingId = linkedSibling!.StudentId }),
+			TestContext.Current.CancellationToken);
+		var newSiblingResponse = await CreateStudentAsync(teacherClient, "Zanele", "Naidoo", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var newSibling = await newSiblingResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-r9-coordinator", Role.Coordinator);
+		var client = fixture.CreateIsolatedClient("10.0.10.101");
+		await client.LoginAsync(coordinatorEmail, _password);
+
+		var listResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
+		var byIdResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}"), TestContext.Current.CancellationToken);
+		var getSiblingsResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}/siblings"), TestContext.Current.CancellationToken);
+		var addSiblingResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{student.StudentId}/siblings", new { SiblingId = newSibling!.StudentId }),
+			TestContext.Current.CancellationToken);
+
+		var createResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				"/api/students",
+				new CreateStudentRequest("Coordinator", "Forbidden", new DateOnly(2015, 1, 1), GradeType.Private, null, null, Language.English)),
+			TestContext.Current.CancellationToken);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest(
+				$"/api/students/{student.StudentId}",
+				new UpdateStudentRequest("Priya", "Naidoo", new DateOnly(2014, 5, 12), GradeType.Grade4, ClassType.A1, PhaseType.Junior, Language.English)),
+			TestContext.Current.CancellationToken);
+		var removeSiblingResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}/siblings/{linkedSibling.StudentId}"),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}"),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => listResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => byIdResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => getSiblingsResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => addSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => removeSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+	}
+
+	/// <summary>
+	/// Ruling R10 (#293/#299): the capture wizard previews and links
+	/// guardians for the student it just created, so AddGuardian and
+	/// GetGuardians widen to Teacher-or-Coordinator. UnlinkGuardian,
+	/// SyncGuardians and GetMissingSiblingGuardians are not reachable from
+	/// the capture flow at all (its Guardians step only ever runs in create
+	/// mode, and the sync affordance plus the missing-sibling-guardians
+	/// check are edit-mode-only — see pm-guardians-step.ts and
+	/// pm-students-page.ts) and stay Teacher-only, proven directly for the
+	/// same additive-composition reason StudentEndpoints_CoordinatorOnly...
+	/// above proves it for /api/students.
+	/// </summary>
+	[Fact]
+	public async Task GuardianEndpoints_CoordinatorOnly_AddAndGetArePermittedUnlinkSyncAndMissingAreForbidden()
+	{
+		// CreateStudent stays Teacher-only (proven by the composition test
+		// above), so a Teacher seeds the student the Coordinator's guardian
+		// calls below need to target.
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "guardians-r10-setup", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.10.111");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+		var createdStudentResponse = await CreateStudentAsync(teacherClient, "Lindiwe", "Molefe", GradeType.Grade4, ClassType.A1, PhaseType.Junior);
+		var student = await createdStudentResponse.Content.ReadFromJsonAsync<StudentResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "guardians-r10-coordinator", Role.Coordinator);
+		var client = fixture.CreateIsolatedClient("10.0.10.110");
+		await client.LoginAsync(coordinatorEmail, _password);
+
+		var relationshipResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/guardian-relationships", new CreateGuardianRelationshipRequest($"Aunt-{Guid.NewGuid():N}")),
+			TestContext.Current.CancellationToken);
+		var relationship = await relationshipResponse.Content.ReadFromJsonAsync<GuardianRelationshipResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var addGuardianResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				$"/api/students/{student!.StudentId}/guardians",
+				new AddGuardianRequest(relationship!.GuardianRelationshipId, "Naledi", "Molefe", null, null, true, true, false)),
+			TestContext.Current.CancellationToken);
+		var guardian = await addGuardianResponse.Content.ReadFromJsonAsync<GuardianResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
+		var getGuardiansResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}/guardians"), TestContext.Current.CancellationToken);
+		var missingResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/students/{student.StudentId}/guardians/missing"), TestContext.Current.CancellationToken);
+		var syncResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{student.StudentId}/guardians/sync"), TestContext.Current.CancellationToken);
+		var unlinkResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}/guardians/{guardian!.GuardianId}"),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => addGuardianResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => getGuardiansResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => missingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => syncResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			() => unlinkResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	private static Task<HttpResponseMessage> CreateStudentAsync(

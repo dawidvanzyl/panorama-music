@@ -71,6 +71,11 @@ export class StudentsPage extends BasePage {
     await this.goto('/#/students');
   }
 
+  /** The wizard's own tab strip, restricted to the tabs currently offered (not `hidden`). */
+  visibleTabs(): Locator {
+    return this.wizardModal.locator('.wizard__tab:not([hidden])');
+  }
+
   /**
    * Steps the create wizard through all five tabs (Student → Siblings →
    * Guardians → Courses → Extra-Curriculars) without adding any siblings or

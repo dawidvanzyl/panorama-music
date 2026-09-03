@@ -1,6 +1,9 @@
 using PanoramaMusic.Api.Extensions;
+using PanoramaMusic.Api.Filters;
+using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Requests.WaitingList;
 
 namespace PanoramaMusic.Api.Routes.Students;
 
@@ -8,9 +11,9 @@ public static class WaitingListRoutes
 {
 	public static void MapWaitingListRoutes(this WebApplication app)
 	{
-		// Read-only for this story: a Teacher and a Coordinator may both read the
-		// list. Capture, edit, delete and enrol arrive in later M9 stories, each
-		// under its own, narrower policy — do not widen this one to admit them.
+		// Read-only for this group: a Teacher and a Coordinator may both read the
+		// list. Edit, delete and enrol arrive in later M9 stories, each under its
+		// own, narrower policy — do not widen this one to admit them.
 		app
 			.MapGroup("/api/waiting-list")
 			.WithTags("WaitingList")
@@ -25,6 +28,26 @@ public static class WaitingListRoutes
 			// same terms as GetStudents.
 			.MarkSensitiveResponse()
 			.Produces<IList<WaitingListGroupResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		// Capture is the only way onto the waiting list, and it is Coordinator-only
+		// — a Teacher gets no affordance for it and is refused by the endpoint too.
+		app
+			.MapGroup("/api/waiting-list")
+			.WithTags("WaitingList")
+			.RequireAuthorization("CoordinatorPolicy")
+			.MapPost("/", async (CaptureWaitingListStudentRequest request, CaptureWaitingListStudentHandler handler, CancellationToken ct) =>
+			{
+				var command = new CaptureWaitingListStudentCommand(request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Created($"/api/waiting-list/{result.WaitingListEntryId}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<CaptureWaitingListStudentRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("CaptureWaitingListStudent")
+			.Produces<WaitingListEntryResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 	}

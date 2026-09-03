@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { WaitingListGroupResult } from '../../services/waiting-list';
+import type { WaitingListGroupResult, WaitingListEntryResult } from '../../services/waiting-list';
 
 const mockGetWaitingList = vi.fn();
+const mockGetLessonStructures = vi.fn();
+const mockCaptureWaitingListStudent = vi.fn();
+const mockGetStudents = vi.fn();
+const mockAddSibling = vi.fn();
+const mockGetGuardianRelationships = vi.fn();
+const mockGetGuardians = vi.fn();
+const mockAddGuardian = vi.fn();
 const mockHasAnyRole = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
@@ -9,6 +16,27 @@ vi.mock('../../services/waiting-list', async () => {
   return {
     ...actual,
     getWaitingList: () => mockGetWaitingList(),
+    getLessonStructures: () => mockGetLessonStructures(),
+    captureWaitingListStudent: (...args: unknown[]) => mockCaptureWaitingListStudent(...args),
+  };
+});
+
+vi.mock('../../services/students', async () => {
+  const actual = await vi.importActual<typeof import('../../services/students')>('../../services/students');
+  return {
+    ...actual,
+    getStudents: () => mockGetStudents(),
+    addSibling: (...args: unknown[]) => mockAddSibling(...args),
+  };
+});
+
+vi.mock('../../services/guardians', async () => {
+  const actual = await vi.importActual<typeof import('../../services/guardians')>('../../services/guardians');
+  return {
+    ...actual,
+    getGuardianRelationships: () => mockGetGuardianRelationships(),
+    getGuardians: (...args: unknown[]) => mockGetGuardians(...args),
+    addGuardian: (...args: unknown[]) => mockAddGuardian(...args),
   };
 });
 
@@ -21,6 +49,7 @@ vi.mock('../../../../services/token-storage', async () => {
 
 import '../pm-waiting-list-page';
 import type { PmWaitingListTable } from '../../components/pm-waiting-list-table';
+import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 
 const duringSchoolEntry = {
   waitingListEntryId: 'w1',
@@ -92,8 +121,23 @@ function groupHeaderText(group: HTMLElement): string {
   return (group.querySelector('.wl-table__group-header') as HTMLElement).textContent ?? '';
 }
 
+function wizardOf(el: HTMLElement): PmStudentWizardModal {
+  return el.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
+}
+
+function successBannerOf(el: HTMLElement): HTMLElement {
+  return el.shadowRoot!.getElementById('success') as HTMLElement;
+}
+
 beforeEach(() => {
   mockGetWaitingList.mockReset();
+  mockGetLessonStructures.mockReset().mockResolvedValue([]);
+  mockCaptureWaitingListStudent.mockReset();
+  mockGetStudents.mockReset().mockResolvedValue([]);
+  mockAddSibling.mockReset();
+  mockGetGuardianRelationships.mockReset().mockResolvedValue([]);
+  mockGetGuardians.mockReset();
+  mockAddGuardian.mockReset();
   mockHasAnyRole.mockReset();
   mockHasAnyRole.mockReturnValue(false);
 });
@@ -230,5 +274,241 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
     const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
     const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
     expect(buttons).toEqual(['Enrol', 'Edit', 'Delete']);
+  });
+});
+
+// Regression for #299, updated for ruling R9. GET /api/students was
+// Teacher-gated when #299 was fixed, so a Coordinator-only session
+// predictably 403'd on getStudents() while getGuardianRelationships() and
+// getLessonStructures() succeeded — R8 part 1 required settling the three
+// independently so that one rejection could never sink the other two. R9
+// widened GET /api/students to Teacher-or-Coordinator (a Coordinator needs
+// it for the Siblings tab's own candidate list), so a getStudents() failure
+// is no longer an expected, silently-absorbed outcome — these tests prove
+// the independent-settling behaviour still holds for whichever lookup
+// actually fails, and that every failure is now shown.
+describe('pm-waiting-list-page — wizard lookups settle independently', () => {
+  it('assigns the guardian-relationship and lesson-structure lookups even when getStudents fails, and shows the error', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    const { StudentsError } = await import('../../services/students');
+    mockGetStudents.mockRejectedValueOnce(new StudentsError('Request failed', 500));
+    const relationships = [{ guardianRelationshipId: 'r1', name: 'Mother' }];
+    const structures = [
+      { lessonStructureId: 'ls1', lessonType: 'Individual', durationType: 'Hour', occurrenceType: 'DuringSchool' },
+    ];
+    mockGetGuardianRelationships.mockResolvedValueOnce(relationships);
+    mockGetLessonStructures.mockResolvedValueOnce(structures);
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+
+    wizard.openForCreate([], 'waitingList');
+    const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
+    const occurrenceOptions = [
+      ...(waitingListStepShadow.getElementById('occurrenceType') as HTMLSelectElement).options,
+    ].map((o) => o.value);
+    expect(occurrenceOptions).toContain('DuringSchool');
+    // The lesson-structure lookup reached the wizard despite the students
+    // fetch failing alongside it — the selects have something real to
+    // resolve a choice against, not the empty state a still-unassigned
+    // lookup would leave them in.
+  });
+
+  it('still assigns the students and lesson-structure lookups when getGuardianRelationships fails, and shows the error', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    mockGetStudents.mockResolvedValueOnce([]);
+    const { GuardiansError } = await import('../../services/guardians');
+    mockGetGuardianRelationships.mockRejectedValueOnce(new GuardiansError('Request failed', 500));
+    mockGetLessonStructures.mockResolvedValueOnce([]);
+
+    const el = await mountPage();
+
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+  });
+});
+
+describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] }, () => {
+  const created: WaitingListEntryResult = {
+    waitingListEntryId: 'w9',
+    studentId: 's9',
+    firstName: 'Amara',
+    lastName: 'Pillay',
+    position: 1,
+    lessonType: 'Individual',
+    durationType: 'Hour',
+    instrumentType: 'Piano',
+    notes: null,
+    addedAt: '2026-09-03T10:00:00Z',
+  };
+
+  it('closes the wizard, shows a success message naming the student, and refreshes the list', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(mockCaptureWaitingListStudent).toHaveBeenCalledTimes(1);
+    expect(wizard.hasAttribute('open')).toBe(false);
+    expect(successBannerOf(el).textContent).toContain('Amara Pillay was added to the waiting list.');
+    expect(mockGetWaitingList).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the refusal on the wizard and leaves it open when capture fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockCaptureWaitingListStudent.mockRejectedValueOnce(new WaitingListError('Lesson structure does not exist.', 400));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Refused',
+            lastName: 'Student',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'unknown', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+
+    expect(wizard.hasAttribute('open')).toBe(true);
+    const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
+    expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('Lesson structure does not exist.');
+  });
+
+  // Reviewer finding on PR #298: the student and their waiting-list entry are
+  // already created by the time siblings/guardians are linked, so a failure
+  // there is a partial capture, not a failed one — but showSuccess ran
+  // unconditionally regardless, so the success and error banners could both
+  // render at once, contradicting each other.
+  it('shows only the error banner, never the success banner too, when linking a staged sibling fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+    const { StudentsError } = await import('../../services/students');
+    mockAddSibling.mockRejectedValueOnce(new StudentsError('Sibling link failed.', 500));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: ['s10'],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+  });
+
+  it('shows only the error banner, never the success banner too, when linking a staged guardian fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+    const { GuardiansError } = await import('../../services/guardians');
+    mockAddGuardian.mockRejectedValueOnce(new GuardiansError('Guardian link failed.', 500));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [
+            {
+              guardianRelationshipId: 'r1',
+              firstName: 'Naledi',
+              surname: 'Pillay',
+              cell: null,
+              email: null,
+              receivesCorrespondence: true,
+              responsibleForPayment: true,
+              married: false,
+            },
+          ],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
   });
 });

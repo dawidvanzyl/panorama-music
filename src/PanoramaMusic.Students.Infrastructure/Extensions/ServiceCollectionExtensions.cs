@@ -27,6 +27,7 @@ using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentCourses;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
+using PanoramaMusic.Students.Infrastructure.Translators.WaitingList;
 using PanoramaMusic.Students.Infrastructure.TypeHandlers;
 
 namespace PanoramaMusic.Students.Infrastructure.Extensions;
@@ -109,6 +110,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
 		services.AddTransient<GetWaitingListHandler>();
+		services.AddTransient<CaptureWaitingListStudentHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -138,6 +140,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryCreatedTranslator>();
 
 		return services;
 	}

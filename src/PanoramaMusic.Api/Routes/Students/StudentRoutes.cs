@@ -14,10 +14,21 @@ public static class StudentRoutes
 {
 	public static void MapStudentRoutes(this WebApplication app)
 	{
+		// Reads are open to Teacher and Coordinator — a Coordinator capturing a
+		// waiting-list student needs GetStudents for the wizard's Siblings-tab
+		// candidate list (ruling R9, reversing R8's "do not widen"; a Coordinator
+		// who cannot read students cannot link siblings during the one flow they
+		// own). Most writes stay Teacher-gated below via an explicit override —
+		// minimal-API route authorization is additive, so re-declaring
+		// TeacherPolicy on each write is what actually narrows it back down.
+		// AddSibling is the one exception (ruling R10): the capture wizard links
+		// staged siblings to the student it just created, and a half-captured
+		// student with a 403 on that step is a worse outcome than the write
+		// being reachable a beat earlier than the rest.
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("Students")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		group
 			.MapGet("/", async (GetStudentsHandler handler, CancellationToken ct) =>
@@ -52,6 +63,7 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{result.StudentId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<CreateStudentRequest>>()
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("CreateStudent")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
@@ -67,6 +79,7 @@ public static class StudentRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<UpdateStudentRequest>>()
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("UpdateStudent")
 			.Produces<StudentResult>(StatusCodes.Status200OK)
@@ -82,6 +95,7 @@ public static class StudentRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.WithName("DeleteStudent")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -96,6 +110,10 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{studentId}/siblings/{request.SiblingId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<AddSiblingRequest>>()
+			// Coordinator-permitted (ruling R10): the waiting-list capture wizard
+			// links staged siblings to the student it just created, so this write
+			// stays under the group's own TeacherOrCoordinatorPolicy rather than
+			// being re-tightened like the other four writes in this file.
 			.MarkSensitiveResponse()
 			.WithName("AddSibling")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
@@ -124,6 +142,7 @@ public static class StudentRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.WithName("RemoveSibling")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
