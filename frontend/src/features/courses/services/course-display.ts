@@ -1,4 +1,10 @@
 import type { Course, CourseType, DurationType, LessonStructure, LessonType, OccurrenceType } from './courses';
+import {
+  COURSE_TYPE_LABELS,
+  LESSON_TYPE_LABELS,
+  DURATION_TYPE_LABELS,
+  OCCURRENCE_TYPE_LABELS,
+} from '../../../services/lesson-structure';
 
 /**
  * How course values are named and shown. The server returns enum members only,
@@ -11,28 +17,9 @@ export const LESSON_TYPES: LessonType[] = ['Individual', 'Group'];
 export const DURATION_TYPES: DurationType[] = ['Hour', 'HalfHour'];
 export const OCCURRENCE_TYPES: OccurrenceType[] = ['DuringSchool', 'AfterSchool'];
 
-export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
-  Theory: 'Theory',
-  GREEnrichment: 'GR Enrichment',
-  G1Enrichment: 'Grade 1 Enrichment',
-  G2Recorder: 'Grade 2 Recorder',
-  Instrument: 'Instrument',
-};
-
-export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
-  Individual: 'Individual',
-  Group: 'Group',
-};
-
-export const DURATION_TYPE_LABELS: Record<DurationType, string> = {
-  Hour: 'Hour',
-  HalfHour: 'Half Hour',
-};
-
-export const OCCURRENCE_TYPE_LABELS: Record<OccurrenceType, string> = {
-  DuringSchool: 'During School',
-  AfterSchool: 'After School',
-};
+// Shared with the Students feature via services/lesson-structure.ts (ruling
+// R6) — re-exported here so existing imports from this module keep working.
+export { COURSE_TYPE_LABELS, LESSON_TYPE_LABELS, DURATION_TYPE_LABELS, OCCURRENCE_TYPE_LABELS };
 
 /** What the lesson structure dropdown offers: all three dimensions of the structure. */
 export function lessonStructureOptionLabel(structure: LessonStructure): string {
