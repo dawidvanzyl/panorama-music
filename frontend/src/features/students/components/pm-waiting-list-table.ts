@@ -1,28 +1,10 @@
-import type { WaitingListGroupResult, LessonType, DurationType, InstrumentType } from '../services/waiting-list';
-
-const OCCURRENCE_LABELS: Record<string, string> = {
-  DuringSchool: 'During School',
-  AfterSchool: 'After School',
-};
-
-const LESSON_TYPE_LABELS: Record<LessonType, string> = {
-  Individual: 'Individual',
-  Group: 'Group',
-};
-
-const DURATION_TYPE_LABELS: Record<DurationType, string> = {
-  Hour: 'Hour',
-  HalfHour: 'Half Hour',
-};
-
-const INSTRUMENT_TYPE_LABELS: Record<InstrumentType, string> = {
-  Piano: 'Piano',
-  Guitar: 'Guitar',
-  Recorder: 'Recorder',
-  Keyboard: 'Keyboard',
-  Voice: 'Voice',
-  Other: 'Other',
-};
+import type { WaitingListGroupResult } from '../services/waiting-list';
+import {
+  LESSON_TYPE_LABELS,
+  DURATION_TYPE_LABELS,
+  OCCURRENCE_TYPE_LABELS,
+  INSTRUMENT_TYPE_LABELS,
+} from './enrollment-options';
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -267,7 +249,7 @@ export class PmWaitingListTable extends HTMLElement {
 
     const title = document.createElement('h2');
     title.classList.add('wl-table__group-title');
-    title.textContent = OCCURRENCE_LABELS[group.occurrenceType] ?? group.occurrenceType;
+    title.textContent = OCCURRENCE_TYPE_LABELS[group.occurrenceType];
 
     const count = document.createElement('span');
     count.classList.add('wl-table__group-count');

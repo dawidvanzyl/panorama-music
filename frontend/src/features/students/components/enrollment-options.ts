@@ -37,17 +37,17 @@ const COURSE_TYPE_LABELS: Record<CourseType, string> = {
   Instrument: 'Instrument',
 };
 
-const LESSON_TYPE_LABELS: Record<LessonType, string> = {
+export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   Individual: 'Individual',
   Group: 'Group',
 };
 
-const DURATION_TYPE_LABELS: Record<DurationType, string> = {
+export const DURATION_TYPE_LABELS: Record<DurationType, string> = {
   Hour: 'Hour',
   HalfHour: 'Half Hour',
 };
 
-const OCCURRENCE_TYPE_LABELS: Record<OccurrenceType, string> = {
+export const OCCURRENCE_TYPE_LABELS: Record<OccurrenceType, string> = {
   DuringSchool: 'During School',
   AfterSchool: 'After School',
 };

@@ -1,13 +1,16 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
+import type { OccurrenceType, LessonType, DurationType, InstrumentType } from './enrollments';
 
 const API_BASE = '/api/waiting-list';
 
-export type OccurrenceType = 'DuringSchool' | 'AfterSchool';
-export type LessonType = 'Individual' | 'Group';
-export type DurationType = 'Hour' | 'HalfHour';
-export type InstrumentType = 'Piano' | 'Guitar' | 'Recorder' | 'Keyboard' | 'Voice' | 'Other';
+// Milestone-wide vocabulary, not waiting-list vocabulary — owned by
+// enrollments.ts (courses.ts holds its own copy too; that duplication is
+// pre-existing and out of scope here). Re-exported so this module stays the
+// one import site for a waiting-list consumer, without minting a fourth
+// declaration of the same unions.
+export type { OccurrenceType, LessonType, DurationType, InstrumentType };
 
 export interface WaitingListEntryResult {
   waitingListEntryId: string;
