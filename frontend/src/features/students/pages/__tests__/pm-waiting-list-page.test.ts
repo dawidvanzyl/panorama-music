@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { WaitingListGroupResult } from '../../services/waiting-list';
+import type { WaitingListGroupResult, WaitingListEntryResult } from '../../services/waiting-list';
 
 const mockGetWaitingList = vi.fn();
+const mockGetLessonStructures = vi.fn();
+const mockCaptureWaitingListStudent = vi.fn();
+const mockGetStudents = vi.fn();
+const mockAddSibling = vi.fn();
+const mockGetGuardianRelationships = vi.fn();
+const mockGetGuardians = vi.fn();
+const mockAddGuardian = vi.fn();
 const mockHasAnyRole = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
@@ -9,6 +16,27 @@ vi.mock('../../services/waiting-list', async () => {
   return {
     ...actual,
     getWaitingList: () => mockGetWaitingList(),
+    getLessonStructures: () => mockGetLessonStructures(),
+    captureWaitingListStudent: (...args: unknown[]) => mockCaptureWaitingListStudent(...args),
+  };
+});
+
+vi.mock('../../services/students', async () => {
+  const actual = await vi.importActual<typeof import('../../services/students')>('../../services/students');
+  return {
+    ...actual,
+    getStudents: () => mockGetStudents(),
+    addSibling: (...args: unknown[]) => mockAddSibling(...args),
+  };
+});
+
+vi.mock('../../services/guardians', async () => {
+  const actual = await vi.importActual<typeof import('../../services/guardians')>('../../services/guardians');
+  return {
+    ...actual,
+    getGuardianRelationships: () => mockGetGuardianRelationships(),
+    getGuardians: (...args: unknown[]) => mockGetGuardians(...args),
+    addGuardian: (...args: unknown[]) => mockAddGuardian(...args),
   };
 });
 
@@ -21,6 +49,7 @@ vi.mock('../../../../services/token-storage', async () => {
 
 import '../pm-waiting-list-page';
 import type { PmWaitingListTable } from '../../components/pm-waiting-list-table';
+import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 
 const duringSchoolEntry = {
   waitingListEntryId: 'w1',
@@ -92,8 +121,23 @@ function groupHeaderText(group: HTMLElement): string {
   return (group.querySelector('.wl-table__group-header') as HTMLElement).textContent ?? '';
 }
 
+function wizardOf(el: HTMLElement): PmStudentWizardModal {
+  return el.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
+}
+
+function successBannerOf(el: HTMLElement): HTMLElement {
+  return el.shadowRoot!.getElementById('success') as HTMLElement;
+}
+
 beforeEach(() => {
   mockGetWaitingList.mockReset();
+  mockGetLessonStructures.mockReset().mockResolvedValue([]);
+  mockCaptureWaitingListStudent.mockReset();
+  mockGetStudents.mockReset().mockResolvedValue([]);
+  mockAddSibling.mockReset();
+  mockGetGuardianRelationships.mockReset().mockResolvedValue([]);
+  mockGetGuardians.mockReset();
+  mockAddGuardian.mockReset();
   mockHasAnyRole.mockReset();
   mockHasAnyRole.mockReturnValue(false);
 });
@@ -230,5 +274,95 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
     const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
     const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
     expect(buttons).toEqual(['Enrol', 'Edit', 'Delete']);
+  });
+});
+
+describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] }, () => {
+  const created: WaitingListEntryResult = {
+    waitingListEntryId: 'w9',
+    studentId: 's9',
+    firstName: 'Amara',
+    lastName: 'Pillay',
+    position: 1,
+    lessonType: 'Individual',
+    durationType: 'Hour',
+    instrumentType: 'Piano',
+    notes: null,
+    addedAt: '2026-09-03T10:00:00Z',
+  };
+
+  it('closes the wizard, shows a success message naming the student, and refreshes the list', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(mockCaptureWaitingListStudent).toHaveBeenCalledTimes(1);
+    expect(wizard.hasAttribute('open')).toBe(false);
+    expect(successBannerOf(el).textContent).toContain('Amara Pillay was added to the waiting list.');
+    expect(mockGetWaitingList).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the refusal on the wizard and leaves it open when capture fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockCaptureWaitingListStudent.mockRejectedValueOnce(new WaitingListError('Lesson structure does not exist.', 400));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Refused',
+            lastName: 'Student',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'unknown', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+
+    expect(wizard.hasAttribute('open')).toBe(true);
+    const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
+    expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('Lesson structure does not exist.');
   });
 });

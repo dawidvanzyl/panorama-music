@@ -2,14 +2,16 @@ import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
 import type { OccurrenceType, LessonType, DurationType, InstrumentType } from './enrollments';
+import type { StudentInput } from './students';
 
 const API_BASE = '/api/waiting-list';
+const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
 
 // Milestone-wide vocabulary, not waiting-list vocabulary — owned by
-// enrollments.ts (courses.ts holds its own copy too; that duplication is
-// pre-existing and out of scope here). Re-exported so this module stays the
-// one import site for a waiting-list consumer, without minting a fourth
-// declaration of the same unions.
+// enrollments.ts, which itself re-exports it from services/lesson-structure.ts
+// (ruling R5/R6). Re-exported so this module stays the one import site for a
+// waiting-list consumer, without minting a fourth declaration of the same
+// unions.
 export type { OccurrenceType, LessonType, DurationType, InstrumentType };
 
 export interface WaitingListEntryResult {
@@ -31,6 +33,21 @@ export interface WaitingListGroupResult {
   count: number;
   /** In queue order — position 1 first. An occurrence type with no entries is omitted entirely. */
   entries: WaitingListEntryResult[];
+}
+
+/** The seeded occurrence/lesson/duration combination a waiting-list entry is captured against. */
+export interface LessonStructure {
+  lessonStructureId: string;
+  lessonType: LessonType;
+  durationType: DurationType;
+  occurrenceType: OccurrenceType;
+}
+
+/** The Waiting List tab's own fields — no course, since an entry names none. */
+export interface WaitingListCaptureInput {
+  lessonStructureId: string;
+  instrumentType: InstrumentType;
+  notes: string | null;
 }
 
 export class WaitingListError extends Error {
@@ -85,4 +102,46 @@ export async function getWaitingList(): Promise<WaitingListGroupResult[]> {
   const response = await fetch(API_BASE, { headers: authHeaders() });
   _waitingListCache = await handleResponse<WaitingListGroupResult[]>(response);
   return _waitingListCache;
+}
+
+let _lessonStructuresCache: LessonStructure[] | null = null;
+
+export function clearLessonStructuresCache(): void {
+  _lessonStructuresCache = null;
+}
+
+registerSessionCache(clearLessonStructuresCache);
+
+/**
+ * The seeded lesson-structure lookup, cached the same way the catalogue
+ * screen's own copy is (`features/courses/services/courses.ts`). Fetched
+ * again here, rather than imported across features, for the same reason
+ * `getWaitingList` lives in this feature at all — both are self-contained
+ * (ruling R5).
+ */
+export async function getLessonStructures(): Promise<LessonStructure[]> {
+  if (_lessonStructuresCache) return _lessonStructuresCache;
+
+  const response = await fetch(LESSON_STRUCTURES_BASE, { headers: authHeaders() });
+  _lessonStructuresCache = await handleResponse<LessonStructure[]>(response);
+  return _lessonStructuresCache;
+}
+
+/**
+ * Captures a student and their single waiting-list entry together. The
+ * server assigns the added date-time — this input carries no such field, and
+ * none exists to omit.
+ */
+export async function captureWaitingListStudent(
+  student: StudentInput,
+  waitingList: WaitingListCaptureInput,
+): Promise<WaitingListEntryResult> {
+  const response = await fetch(API_BASE, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ ...student, ...waitingList }),
+  });
+  const created = await handleResponse<WaitingListEntryResult>(response);
+  clearWaitingListCache();
+  return created;
 }
