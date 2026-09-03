@@ -1,3 +1,4 @@
+using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Models;
 
@@ -20,6 +21,9 @@ public static class WaitingListRoutes
 				return Results.Ok(result);
 			})
 			.WithName("GetWaitingList")
+			// Each row names a student and may carry their notes — sensitive on the
+			// same terms as GetStudents.
+			.MarkSensitiveResponse()
 			.Produces<IList<WaitingListGroupResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
