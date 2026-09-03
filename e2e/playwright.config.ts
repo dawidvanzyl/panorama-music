@@ -24,6 +24,21 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      // The empty-state Waiting List spec needs the whole WaitingList table
+      // clean at read time (see that file's own comment), so it runs in its
+      // own project instead — excluded here to avoid running it twice.
+      testIgnore: '**/waiting-list-empty-state.spec.ts',
+    },
+    {
+      name: 'waiting-list-empty-state',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/waiting-list-empty-state.spec.ts',
+      fullyParallel: false,
+      // Runs only after every `chromium` test — including the rest of this
+      // story's own — has finished writing to the WaitingList table, so its
+      // "no entries at all" and "occurrence type omitted" checks read a table
+      // nothing else is still populating.
+      dependencies: ['chromium'],
     },
   ],
 });
