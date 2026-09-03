@@ -43,6 +43,27 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "292UC5")]
+	public async Task GetStudents_AStudentHoldingBothAWaitingListEntryAndACourseEnrollment_IsIncludedInTheRoster()
+	{
+		// The milestone rule (#272 Overview) is that a student is on the waiting
+		// list or enrolled, never both and never neither. get_waiting_list already
+		// resolves the overlap by excluding an enrolled student; get_students must
+		// mirror that rather than excluding unconditionally on the waiting-list row
+		// alone — otherwise a student holding both states vanishes from both
+		// screens with no way back through the UI (ruling R3).
+		var both = await GivenStudentAsync("Both", $"Student {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(both, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		await GivenEnrollmentAsync(both, courseId);
+
+		var studentIds = await ReadStudentIdsAsync();
+
+		// Enrollment wins: the student is not invisible.
+		studentIds.ShouldContain(both);
+	}
+
+	[Fact]
 	[Trait("AC", "292UC6")]
 	public async Task GetWaitingList_AStudentWithACourseEnrollment_IsExcludedFromTheWaitingList()
 	{
