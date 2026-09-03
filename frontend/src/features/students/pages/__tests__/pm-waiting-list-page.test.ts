@@ -277,6 +277,57 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
   });
 });
 
+// Regression for #299: getStudents() is Teacher-gated, so a Coordinator-only
+// session gets a 403 on it while getGuardianRelationships() and
+// getLessonStructures() succeed. Bundling all three in one Promise.all let
+// that single rejection sink the whole batch, leaving the wizard's own
+// lesson-structure lookup unassigned and Save unable to resolve anything —
+// ruling R8.
+describe('pm-waiting-list-page — wizard lookups settle independently (#299)', () => {
+  it('assigns the guardian-relationship and lesson-structure lookups even when getStudents is refused', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    const { StudentsError } = await import('../../services/students');
+    mockGetStudents.mockRejectedValueOnce(new StudentsError('Forbidden', 403));
+    const relationships = [{ guardianRelationshipId: 'r1', name: 'Mother' }];
+    const structures = [
+      { lessonStructureId: 'ls1', lessonType: 'Individual', durationType: 'Hour', occurrenceType: 'DuringSchool' },
+    ];
+    mockGetGuardianRelationships.mockResolvedValueOnce(relationships);
+    mockGetLessonStructures.mockResolvedValueOnce(structures);
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+
+    // A 403 on the Teacher-gated read is the accepted degradation for a
+    // Coordinator-only session, not a page error.
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(false);
+
+    wizard.openForCreate([], 'waitingList');
+    const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
+    const occurrenceOptions = [
+      ...(waitingListStepShadow.getElementById('occurrenceType') as HTMLSelectElement).options,
+    ].map((o) => o.value);
+    expect(occurrenceOptions).toContain('DuringSchool');
+    // The lesson-structure lookup reached the wizard, so the selects have
+    // something real to resolve a choice against — not just the empty state
+    // a still-unassigned lookup would leave them in.
+  });
+
+  it('still shows an error banner when a lookup a Coordinator actually needs fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    mockGetStudents.mockResolvedValueOnce([]);
+    const { GuardiansError } = await import('../../services/guardians');
+    mockGetGuardianRelationships.mockRejectedValueOnce(new GuardiansError('Request failed', 500));
+    mockGetLessonStructures.mockResolvedValueOnce([]);
+
+    const el = await mountPage();
+
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+  });
+});
+
 describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] }, () => {
   const created: WaitingListEntryResult = {
     waitingListEntryId: 'w9',

@@ -574,3 +574,34 @@ describe('pm-student-wizard-modal — saving a waiting-list capture', { tags: ['
     expect(byId('stepWaitingList').classList.contains('wizard__step--visible')).toBe(true);
   });
 });
+
+// Regression for #299: getValues() throws synchronously when the chosen
+// triple resolves against no lesson structure (reachable in practice only
+// when the page's lookup fetch never assigned modal.lessonStructures — see
+// pm-waiting-list-page's own fix). Save must surface that as a real error
+// rather than letting the throw escape the click handler uncaught, which
+// left Save disabled with nothing dispatched and nothing shown.
+describe('pm-student-wizard-modal — a lesson-structure lookup that never loaded (#299)', () => {
+  it('shows an error and re-enables Save instead of throwing uncaught', () => {
+    mountModal();
+    // lessonStructures deliberately left unset — the #299 scenario.
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    fillWaitingListStep();
+
+    let dispatched = false;
+    modal.addEventListener('waiting-list-capture-requested', () => {
+      dispatched = true;
+    });
+
+    expect(() => byId<HTMLButtonElement>('saveBtn').click()).not.toThrow();
+
+    expect(dispatched).toBe(false);
+    const waitingListStepShadow = byId('waitingListStep').shadowRoot!;
+    expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('No seeded lesson structure');
+    expect(byId<HTMLButtonElement>('saveBtn').disabled).toBe(false);
+  });
+});

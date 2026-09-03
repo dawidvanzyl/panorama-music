@@ -698,6 +698,20 @@ export class PmStudentWizardModal extends HTMLElement {
         return;
       }
 
+      // getValues() resolves the chosen triple against the fetched
+      // lesson-structure lookup and throws if nothing matches — reachable in
+      // practice only if that lookup never loaded (#299), not through any
+      // combination the form itself can select. Caught here rather than left
+      // to propagate uncaught out of a click handler, which would leave Save
+      // disabled with no dispatch and no visible error at all.
+      let waitingListInput;
+      try {
+        waitingListInput = this.waitingListStep!.getValues();
+      } catch (err) {
+        this.showWaitingListError(err instanceof Error ? err.message : 'An unexpected error occurred');
+        return;
+      }
+
       const input = this.studentStep!.getValues();
       this.saveBtn!.disabled = true;
       this.studentSaveBtn!.disabled = true;
@@ -709,7 +723,7 @@ export class PmStudentWizardModal extends HTMLElement {
             input,
             pendingSiblingIds: this.siblingsStep!.pendingSiblingIds,
             pendingGuardians: this.guardiansStep!.pendingGuardians,
-            waitingListInput: this.waitingListStep!.getValues(),
+            waitingListInput,
           },
         }),
       );

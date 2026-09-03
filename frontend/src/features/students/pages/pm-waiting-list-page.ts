@@ -160,19 +160,45 @@ export class PmWaitingListPage extends HTMLElement {
     }
   }
 
-  /** The Siblings/Guardians tabs' candidate list and relationship options, and the Waiting List tab's lesson-structure lookup — everything the capture wizard needs before it opens. */
+  /**
+   * The Siblings/Guardians tabs' candidate list and relationship options, and
+   * the Waiting List tab's lesson-structure lookup — everything the capture
+   * wizard needs before it opens.
+   *
+   * Settled independently rather than as one `Promise.all`: `getStudents()`
+   * is Teacher-gated (`GET /api/students`), so a Coordinator-only session
+   * gets a 403 on it while `getGuardianRelationships()` and
+   * `getLessonStructures()` succeed. A single `Promise.all` would let that
+   * one rejection sink the whole batch, leaving the Waiting List tab's own
+   * lookup unassigned and Save silently unable to resolve a lesson structure
+   * — see #299 (ruling R8). An empty sibling-candidate list is the accepted
+   * degradation for a Coordinator-only session; widening `GET /api/students`
+   * to Coordinator to avoid it is explicitly out of scope for this story.
+   */
   private async loadWizardLookups(): Promise<void> {
-    try {
-      const [students, relationships, lessonStructures] = await Promise.all([
-        getStudents(),
-        getGuardianRelationships(),
-        getLessonStructures(),
-      ]);
-      this._allStudents = students;
-      this.wizardModal!.guardianRelationships = relationships;
-      this.wizardModal!.lessonStructures = lessonStructures;
-    } catch (err) {
-      this.showError(err);
+    const [studentsResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
+      getStudents(),
+      getGuardianRelationships(),
+      getLessonStructures(),
+    ]);
+
+    if (studentsResult.status === 'fulfilled') {
+      this._allStudents = studentsResult.value;
+    }
+    // A rejection here (expected for a Coordinator-only session, since the
+    // read is Teacher-gated) is not surfaced as a page error — an empty
+    // sibling-candidate list is the accepted degradation, not a failure.
+
+    if (relationshipsResult.status === 'fulfilled') {
+      this.wizardModal!.guardianRelationships = relationshipsResult.value;
+    } else {
+      this.showError(relationshipsResult.reason);
+    }
+
+    if (lessonStructuresResult.status === 'fulfilled') {
+      this.wizardModal!.lessonStructures = lessonStructuresResult.value;
+    } else {
+      this.showError(lessonStructuresResult.reason);
     }
   }
 
