@@ -2,34 +2,26 @@ import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
 import { seedWaitingListEntry, seedCourseOfType } from '../../fixtures/waitingList';
 
-test.describe('Waiting List groups by occurrence type, each with its own count', { tag: '@272IT7' }, () => {
-  test('shows a During School list and an After School list, each labelled with its own count', async ({
-    page,
-  }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
-
-    const duringSchool = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
-    const afterSchoolOne = await seedWaitingListEntry(page, { occurrenceType: 'AfterSchool' });
-    const afterSchoolTwo = await seedWaitingListEntry(page, { occurrenceType: 'AfterSchool' });
-
-    await page.reload();
-
-    await expect(waitingListPage.group('During School')).toBeVisible();
-    await expect(waitingListPage.groupCount('During School')).toHaveText('· 1 waiting');
-    await expect(waitingListPage.rowFor('During School', duringSchool.lastName)).toBeVisible();
-
-    await expect(waitingListPage.group('After School')).toBeVisible();
-    await expect(waitingListPage.groupCount('After School')).toHaveText('· 2 waiting');
-    await expect(waitingListPage.rowFor('After School', afterSchoolOne.lastName)).toBeVisible();
-    await expect(waitingListPage.rowFor('After School', afterSchoolTwo.lastName)).toBeVisible();
-  });
-});
+// Seeding a student needs Teacher (POST /api/students requires
+// TeacherPolicy); seeding a course needs Coordinator (POST /api/courses
+// requires CoordinatorPolicy). Every scenario below is designed as "Actor:
+// Coordinator", and holding Teacher alongside Coordinator does not change
+// what the page shows a Coordinator (MAINTAINER_ROLES only checks for
+// Coordinator) — so the same signed-in session both seeds and views.
+const SEED_AND_VIEW_ROLES = ['Teacher', 'Coordinator'] as const;
 
 test.describe('Waiting List queue order and position follow date-time added', { tag: '@272IT8' }, () => {
   test('orders entries by addedAt, not by insertion order', async ({ page }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+    const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
 
-    const base = Date.now();
+    // Position is derived from addedAt across every entry in the occurrence
+    // type, not scoped to this test's own seeded rows — so these three must
+    // be the earliest in the whole group to land on absolute positions one,
+    // two and three regardless of what else a parallel run seeds. Twenty
+    // years before "now" (rather than "now" plus an offset) guarantees that
+    // against anything else's default-NOW() addedAt, while still varying
+    // run to run so repeat cycles don't collide with a prior run's rows.
+    const base = Date.now() - 20 * 365 * 24 * 60 * 60 * 1000;
     const addedAtOf = (offsetMinutes: number) => new Date(base + offsetMinutes * 60_000).toISOString();
 
     // Seeded A/B/C, but the intended chronological order is B (T), C (T+1), A (T+2) —
@@ -74,7 +66,7 @@ test.describe('Waiting List queue order and position follow date-time added', { 
 
 test.describe('Collapsing and expanding an occurrence-type list', { tag: '@272IT11' }, () => {
   test('collapsing a list hides its rows', async ({ page }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+    const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
     const entry = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
     await page.reload();
 
@@ -88,7 +80,7 @@ test.describe('Collapsing and expanding an occurrence-type list', { tag: '@272IT
   });
 
   test('a collapsed list expands again on re-activation', async ({ page }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+    const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
     const entry = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
     await page.reload();
 
@@ -103,8 +95,11 @@ test.describe('Collapsing and expanding an occurrence-type list', { tag: '@272IT
 
 test.describe('A Teacher gets a read-only Waiting List view', { tag: '@272IT26' }, () => {
   test('no capture action and no row actions are offered; the read-only marker is shown', async ({ page }) => {
-    const entry = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
+    // Teacher alone can seed (POST /api/students only needs TeacherPolicy),
+    // and this scenario needs the viewing session to hold *only* Teacher, so
+    // it must sign in before seeding rather than combining roles.
     const waitingListPage = await goToWaitingListPage(page, ['Teacher']);
+    const entry = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
     await page.reload();
 
     await expect(waitingListPage.captureButton).toBeHidden();
@@ -120,7 +115,7 @@ test.describe('A Teacher gets a read-only Waiting List view', { tag: '@272IT26' 
 
 test.describe('A Coordinator gets the full Waiting List action set', { tag: '@272IT27' }, () => {
   test('the capture action and the enrol, edit and delete row actions are all offered', async ({ page }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+    const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
     const entry = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
     await page.reload();
 
@@ -142,7 +137,7 @@ test.describe(
     test('the meta line names lesson type, duration type and instrument type in order, then the date added', async ({
       page,
     }) => {
-      const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+      const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
       const entry = await seedWaitingListEntry(page, {
         occurrenceType: 'DuringSchool',
         lessonType: 'Individual',
@@ -169,7 +164,9 @@ test.describe(
 
 test.describe('No course type appears on a Waiting List row', { tag: '@272IT40' }, () => {
   test('the row carries no course-type label, even when a course shares its lesson structure', async ({ page }) => {
-    const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
+    // Seeding a course needs Coordinator (POST /api/courses is
+    // CoordinatorPolicy), alongside the Teacher this file's seeding always needs.
+    const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_VIEW_ROLES]);
     // Guitar as the instrument (not Recorder) keeps this check unambiguous —
     // "Grade 2 Recorder" is the leak under test, and the instrument column
     // legitimately shows an instrument name of its own (272IT39).

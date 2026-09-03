@@ -33,12 +33,18 @@ export default defineConfig({
       name: 'waiting-list-empty-state',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/waiting-list-empty-state.spec.ts',
+      // Serial, single-worker: the three scenarios in this file each
+      // truncate the WaitingList table for themselves (see that file's own
+      // comment) rather than depending on the `chromium` project finishing
+      // first — a `dependencies: ['chromium']` wiring was tried and dropped:
+      // it forces the *entire* chromium project to re-run as a prerequisite
+      // even for a single-code `--grep` invocation, which is both far more
+      // expensive than this story's QA loop can afford and, by re-running
+      // already-passed specs, mutates the very table these tests need clean.
+      // Running the whole suite in one shot (no --grep) can still interleave
+      // the two projects' workers; running each IT code through its own
+      // `--grep` invocation, as this story's QA process does, does not.
       fullyParallel: false,
-      // Runs only after every `chromium` test — including the rest of this
-      // story's own — has finished writing to the WaitingList table, so its
-      // "no entries at all" and "occurrence type omitted" checks read a table
-      // nothing else is still populating.
-      dependencies: ['chromium'],
     },
   ],
 });

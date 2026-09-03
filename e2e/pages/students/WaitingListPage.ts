@@ -10,9 +10,9 @@ export class WaitingListPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.captureButton = page.locator('#captureBtn');
-    this.errorBanner = page.locator('#error');
-    this.emptyState = page.locator('#empty');
+    this.captureButton = page.locator('pm-waiting-list-page #captureBtn');
+    this.errorBanner = page.locator('pm-waiting-list-page #error');
+    this.emptyState = page.locator('pm-waiting-list-table #empty');
   }
 
   async gotoWaitingList(): Promise<void> {
@@ -22,7 +22,7 @@ export class WaitingListPage extends BasePage {
   /** The occurrence-type group card, matched on its heading text. */
   group(occurrenceLabel: OccurrenceLabel): Locator {
     return this.page
-      .locator('.wl-table__group')
+      .locator('pm-waiting-list-table .wl-table__group')
       .filter({ has: this.page.getByRole('heading', { name: occurrenceLabel, exact: true }) });
   }
 
