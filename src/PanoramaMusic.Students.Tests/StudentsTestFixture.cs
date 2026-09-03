@@ -87,5 +87,6 @@ public sealed class StudentsTestFixture
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
 		services.AddTransient<GetWaitingListHandler>();
+		services.AddTransient<CaptureWaitingListStudentHandler>();
 	}
 }

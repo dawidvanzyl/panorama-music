@@ -1,5 +1,6 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.WaitingList;
 
 namespace PanoramaMusic.Students.Domain.Entities;
 
@@ -12,10 +13,11 @@ namespace PanoramaMusic.Students.Domain.Entities;
 /// reasoning <see cref="Course"/> follows for its own lesson structure.
 /// <para>
 /// It names no course: which course a student ends up in is settled at
-/// enrolment, a later story's concern. This story only reads entries back, so
-/// no factory exists yet to create one — the next story adds it, at which point
-/// the rule that a student holds at most one entry, and that the added
-/// date-time is set once, on creation, are this aggregate's to enforce.
+/// enrolment, a later story's concern. A student holds at most one entry — the
+/// database's own unique constraint on student_id is what actually settles
+/// that against a race, the same way <see cref="Course"/>'s duplicate
+/// enrollment is settled — and the added date-time is set once, at creation,
+/// and never changed afterwards.
 /// </para>
 /// </summary>
 public sealed class WaitingListEntry : AggregateRoot
@@ -34,6 +36,26 @@ public sealed class WaitingListEntry : AggregateRoot
 		InstrumentType = instrumentType;
 		Notes = notes;
 		AddedAt = addedAt;
+	}
+
+	/// <summary>
+	/// Captures a student onto the waiting list. <paramref name="addedAt"/> is
+	/// supplied by the caller rather than read from the clock here so a handler
+	/// under test controls it directly — the API layer is what pins it to
+	/// <see cref="DateTime.UtcNow"/>, never a client-supplied value.
+	/// </summary>
+	public static WaitingListEntry Create(
+		Guid waitingListEntryId,
+		Student student,
+		LessonStructure lessonStructure,
+		InstrumentType instrumentType,
+		string? notes,
+		DateTime addedAt)
+	{
+		var entry = new WaitingListEntry(waitingListEntryId, student, lessonStructure, instrumentType, notes, addedAt);
+
+		entry.Raise(new WaitingListEntryCreated(entry));
+		return entry;
 	}
 
 	public Guid WaitingListEntryId { get; }

@@ -64,6 +64,23 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "293UC6")]
+	public async Task CreateWaitingListEntry_AStudentWhoAlreadyHoldsAnEntry_TheSecondInsertIsRejected()
+	{
+		// A capture always creates a brand-new student, so no handler path can
+		// ever reach this rule — it is the table's own unique constraint that
+		// actually settles it, the same reasoning WaitingListEntry's own remarks
+		// give for leaving the check to the database. Only a real Postgres insert
+		// can prove the constraint exists and fires.
+		var student = await GivenStudentAsync("Duplicate", $"Student {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(student, _duringSchoolLessonStructureId);
+
+		var duplicate = async () => await GivenWaitingListEntryAsync(student, _duringSchoolLessonStructureId);
+
+		await Should.ThrowAsync<PostgresException>(duplicate);
+	}
+
+	[Fact]
 	[Trait("AC", "292UC6")]
 	public async Task GetWaitingList_AStudentWithACourseEnrollment_IsExcludedFromTheWaitingList()
 	{

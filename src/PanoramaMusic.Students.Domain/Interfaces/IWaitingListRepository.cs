@@ -13,4 +13,12 @@ public interface IWaitingListRepository
 	/// concern, not this read's.
 	/// </summary>
 	Task<IList<WaitingListEntry>> GetAllAsync(CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Persists a captured entry. A student who already holds one fails on the
+	/// table's own unique constraint rather than a pre-check here — the same
+	/// reasoning <c>IStudentCourseRepository.CreateAsync</c> leaves a duplicate
+	/// enrollment to its own constraint.
+	/// </summary>
+	Task CreateAsync(WaitingListEntry entry, CancellationToken cancellationToken);
 }
