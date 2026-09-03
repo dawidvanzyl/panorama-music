@@ -16,12 +16,12 @@ public static class StudentRoutes
 	{
 		// Reads are open to Teacher and Coordinator — a Coordinator capturing a
 		// waiting-list student needs GetStudents for the wizard's Siblings-tab
-		// candidate list (ruling R9, reversing R8's "do not widen"; a Coordinator
-		// who cannot read students cannot link siblings during the one flow they
-		// own). Most writes stay Teacher-gated below via an explicit override —
-		// minimal-API route authorization is additive, so re-declaring
-		// TeacherPolicy on each write is what actually narrows it back down.
-		// AddSibling is the one exception (ruling R10): the capture wizard links
+		// candidate list — a Coordinator who cannot read students cannot link
+		// siblings during the one flow they own. Most writes stay Teacher-gated
+		// below via an explicit override — minimal-API route authorization is
+		// additive, so re-declaring TeacherPolicy on each write is what actually
+		// narrows it back down.
+		// AddSibling is the one exception: the capture wizard links
 		// staged siblings to the student it just created, and a half-captured
 		// student with a 403 on that step is a worse outcome than the write
 		// being reachable a beat earlier than the rest.
@@ -110,7 +110,7 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{studentId}/siblings/{request.SiblingId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<AddSiblingRequest>>()
-			// Coordinator-permitted (ruling R10): the waiting-list capture wizard
+			// Coordinator-permitted: the waiting-list capture wizard
 			// links staged siblings to the student it just created, so this write
 			// stays under the group's own TeacherOrCoordinatorPolicy rather than
 			// being re-tightened like the other four writes in this file.

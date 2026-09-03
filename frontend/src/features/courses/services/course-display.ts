@@ -17,8 +17,8 @@ export const LESSON_TYPES: LessonType[] = ['Individual', 'Group'];
 export const DURATION_TYPES: DurationType[] = ['Hour', 'HalfHour'];
 export const OCCURRENCE_TYPES: OccurrenceType[] = ['DuringSchool', 'AfterSchool'];
 
-// Shared with the Students feature via services/lesson-structure.ts (ruling
-// R6) — re-exported here so existing imports from this module keep working.
+// Shared with the Students feature via services/lesson-structure.ts —
+// re-exported here so existing imports from this module keep working.
 export { COURSE_TYPE_LABELS, LESSON_TYPE_LABELS, DURATION_TYPE_LABELS, OCCURRENCE_TYPE_LABELS };
 
 /** What the lesson structure dropdown offers: all three dimensions of the structure. */

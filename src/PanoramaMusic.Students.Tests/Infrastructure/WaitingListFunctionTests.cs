@@ -51,7 +51,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		// resolves the overlap by excluding an enrolled student; get_students must
 		// mirror that rather than excluding unconditionally on the waiting-list row
 		// alone — otherwise a student holding both states vanishes from both
-		// screens with no way back through the UI (ruling R3).
+		// screens with no way back through the UI.
 		var both = await GivenStudentAsync("Both", $"Student {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(both, _duringSchoolLessonStructureId);
 		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);

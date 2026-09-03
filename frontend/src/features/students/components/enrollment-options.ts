@@ -27,8 +27,8 @@ export const STEP_TYPES: StepType[] = [
   'Other',
 ];
 
-// Shared with the Courses feature via services/lesson-structure.ts (ruling
-// R6) — re-exported here so existing imports from this module keep working.
+// Shared with the Courses feature via services/lesson-structure.ts —
+// re-exported here so existing imports from this module keep working.
 // COURSE_TYPE_LABELS is used locally (courseLabel below) but not
 // re-exported: nothing outside this file has ever imported it from here.
 export { LESSON_TYPE_LABELS, DURATION_TYPE_LABELS, OCCURRENCE_TYPE_LABELS, INSTRUMENT_TYPE_LABELS };

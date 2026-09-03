@@ -11,7 +11,7 @@ public static class GuardianRoutes
 {
 	public static void MapGuardianRoutes(this WebApplication app)
 	{
-		// Ruling R10: the waiting-list capture wizard previews and links
+		// The waiting-list capture wizard previews and links
 		// guardians for the student it just created, so AddGuardian and
 		// GetGuardians stay under this group's own TeacherOrCoordinatorPolicy.
 		// UnlinkGuardian, SyncGuardians and GetMissingSiblingGuardians are not

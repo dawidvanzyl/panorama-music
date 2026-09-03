@@ -456,11 +456,10 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	}
 
 	/// <summary>
-	/// Rulings R9 and R10 (#293/#299): reads widen from Teacher-only to
-	/// Teacher-or-Coordinator — a Coordinator capturing a waiting-list
-	/// student needs GetStudents for the wizard's Siblings-tab candidate
-	/// list. AddSibling widens too (R10): the capture wizard links staged
-	/// siblings to the student it just created, and 403 on that step after
+	/// Reads are open to Teacher and Coordinator — a Coordinator capturing a
+	/// waiting-list student needs GetStudents for the wizard's Siblings-tab
+	/// candidate list. AddSibling is open to both too: the capture wizard
+	/// links staged siblings to the student it just created, and 403 on that step after
 	/// the student already exists is a half-captured student, not just a
 	/// blocked action. Every other write stays Teacher-only, proven directly
 	/// rather than assumed, since minimal-API route authorization is
@@ -526,9 +525,9 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	}
 
 	/// <summary>
-	/// Ruling R10 (#293/#299): the capture wizard previews and links
-	/// guardians for the student it just created, so AddGuardian and
-	/// GetGuardians widen to Teacher-or-Coordinator. UnlinkGuardian,
+	/// The capture wizard previews and links guardians for the student it
+	/// just created, so AddGuardian and GetGuardians are open to Teacher and
+	/// Coordinator alike. UnlinkGuardian,
 	/// SyncGuardians and GetMissingSiblingGuardians are not reachable from
 	/// the capture flow at all (its Guardians step only ever runs in create
 	/// mode, and the sync affordance plus the missing-sibling-guardians
