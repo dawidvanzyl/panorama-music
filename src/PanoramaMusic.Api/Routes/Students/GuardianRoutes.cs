@@ -11,10 +11,22 @@ public static class GuardianRoutes
 {
 	public static void MapGuardianRoutes(this WebApplication app)
 	{
+		// Ruling R10: the waiting-list capture wizard previews and links
+		// guardians for the student it just created, so AddGuardian and
+		// GetGuardians stay under this group's own TeacherOrCoordinatorPolicy.
+		// UnlinkGuardian, SyncGuardians and GetMissingSiblingGuardians are not
+		// reachable from that flow at all — the wizard's Guardians step only
+		// ever runs in create mode during capture, and its sync affordance and
+		// missing-sibling-guardians check are edit-mode-only (see
+		// pm-guardians-step.ts's own `_mode !== 'edit'` gate on the Sync
+		// button, and pm-students-page.ts as the sole caller of both reads) —
+		// so those three stay re-tightened to Teacher, the same reasoning
+		// StudentRoutes.cs applies to the writes the capture wizard does not
+		// call.
 		var studentGroup = app
 			.MapGroup("/api/students")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		studentGroup
 			.MapPost("/{studentId:guid}/guardians", async (Guid studentId, AddGuardianRequest request, AddGuardianHandler handler, CancellationToken ct) =>
@@ -52,6 +64,7 @@ public static class GuardianRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.WithName("UnlinkGuardian")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -64,6 +77,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("SyncGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
@@ -77,6 +91,7 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("GetMissingSiblingGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)

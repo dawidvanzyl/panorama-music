@@ -419,4 +419,96 @@ describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] },
     const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
     expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('Lesson structure does not exist.');
   });
+
+  // Reviewer finding on PR #298: the student and their waiting-list entry are
+  // already created by the time siblings/guardians are linked, so a failure
+  // there is a partial capture, not a failed one — but showSuccess ran
+  // unconditionally regardless, so the success and error banners could both
+  // render at once, contradicting each other.
+  it('shows only the error banner, never the success banner too, when linking a staged sibling fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+    const { StudentsError } = await import('../../services/students');
+    mockAddSibling.mockRejectedValueOnce(new StudentsError('Sibling link failed.', 500));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: ['s10'],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+  });
+
+  it('shows only the error banner, never the success banner too, when linking a staged guardian fails', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce([]).mockResolvedValueOnce(bothGroups);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(created);
+    const { GuardiansError } = await import('../../services/guardians');
+    mockAddGuardian.mockRejectedValueOnce(new GuardiansError('Guardian link failed.', 500));
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [
+            {
+              guardianRelationshipId: 'r1',
+              firstName: 'Naledi',
+              surname: 'Pillay',
+              cell: null,
+              email: null,
+              receivesCorrespondence: true,
+              responsibleForPayment: true,
+              married: false,
+            },
+          ],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+    expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
+  });
 });

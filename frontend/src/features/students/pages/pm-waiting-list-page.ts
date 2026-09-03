@@ -220,17 +220,26 @@ export class PmWaitingListPage extends HTMLElement {
       }>
     ).detail;
     this.clearError();
+    this.clearSuccess();
     try {
       const created = await captureWaitingListStudent(input, waitingListInput);
       this.wizardModal!.close();
       await this.loadWaitingList();
-      if (pendingSiblingIds.length > 0) {
-        await this.linkPendingSiblings(created.studentId, pendingSiblingIds);
+
+      // The student and their waiting-list entry are already created and
+      // visible by this point — a failure linking a sibling or guardian is a
+      // partial capture, not a failed one, so the outcome must read as one or
+      // the other, never both. showError leaves its banner up; the success
+      // banner is skipped so the page never claims completion over a capture
+      // that landed only part-way.
+      const siblingsLinked =
+        pendingSiblingIds.length === 0 || (await this.linkPendingSiblings(created.studentId, pendingSiblingIds));
+      const guardiansLinked =
+        pendingGuardians.length === 0 || (await this.linkPendingGuardians(created.studentId, pendingGuardians));
+
+      if (siblingsLinked && guardiansLinked) {
+        this.showSuccess(`${created.firstName} ${created.lastName} was added to the waiting list.`);
       }
-      if (pendingGuardians.length > 0) {
-        await this.linkPendingGuardians(created.studentId, pendingGuardians);
-      }
-      this.showSuccess(`${created.firstName} ${created.lastName} was added to the waiting list.`);
     } catch (err) {
       this.wizardModal!.showWaitingListError(
         err instanceof WaitingListError ? err.message : 'An unexpected error occurred',
@@ -258,25 +267,31 @@ export class PmWaitingListPage extends HTMLElement {
    * The student is already created and visible on the list by this point, so
    * a failure here surfaces on the page banner rather than reopening the
    * (now-closed) wizard — the same reasoning the Students screen's own
-   * create flow follows for its post-creation steps.
+   * create flow follows for its post-creation steps. Returns whether every
+   * staged sibling linked, so the caller knows not to also claim success.
    */
-  private async linkPendingSiblings(studentId: string, siblingIds: string[]): Promise<void> {
+  private async linkPendingSiblings(studentId: string, siblingIds: string[]): Promise<boolean> {
     try {
       for (const siblingId of siblingIds) {
         await addSibling(studentId, siblingId);
       }
+      return true;
     } catch (err) {
       this.showError(err);
+      return false;
     }
   }
 
-  private async linkPendingGuardians(studentId: string, guardians: GuardianInput[]): Promise<void> {
+  /** Returns whether every staged guardian linked — see linkPendingSiblings. */
+  private async linkPendingGuardians(studentId: string, guardians: GuardianInput[]): Promise<boolean> {
     try {
       for (const guardian of guardians) {
         await addGuardian(studentId, guardian);
       }
+      return true;
     } catch (err) {
       this.showError(err);
+      return false;
     }
   }
 
