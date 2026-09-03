@@ -124,8 +124,13 @@ as green, which is worse than an obvious gap.
 For each code, do not assume location — search the whole frontend test suite:
 
 ```bash
-npx vitest run --reporter=verbose --tags-filter="AC=CODE"
+npx vitest run --reporter=verbose --tags-filter="CODE"
 ```
+
+The tag is the bare code. Frontend suites tag with `{ tags: ['292UC10'] }`, not
+`AC=292UC10`, so the `AC=` form the backend filter uses matches nothing here and
+reports every code as an unverifiable failure. Only the backend `dotnet test
+--filter "AC=CODE"` takes the `AC=` prefix, because xUnit traits are key-value.
 
 - No tests matched the tag → ❌ FAIL ("no test tagged with this AC code").
 - Tests matched and passed → ✅ PASS
