@@ -1,15 +1,20 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import type {
+  CourseType,
+  LessonType,
+  DurationType,
+  OccurrenceType,
+  InstrumentType,
+} from '../../../services/lesson-structure';
 
 const STUDENTS_BASE = '/api/students';
 const COURSES_BASE = '/api/courses';
 const TEACHERS_ROSTER = '/api/teachers/roster';
 
-export type CourseType = 'Theory' | 'GREEnrichment' | 'G1Enrichment' | 'G2Recorder' | 'Instrument';
-export type LessonType = 'Individual' | 'Group';
-export type DurationType = 'Hour' | 'HalfHour';
-export type OccurrenceType = 'DuringSchool' | 'AfterSchool';
-export type InstrumentType = 'Piano' | 'Guitar' | 'Recorder' | 'Keyboard' | 'Voice' | 'Other';
+// Shared with the Courses feature via services/lesson-structure.ts (ruling R5)
+// — re-exported here so existing imports from this module keep working.
+export type { CourseType, LessonType, DurationType, OccurrenceType, InstrumentType };
 export type StepType = 'Step1A' | 'Step1B' | 'Step2A' | 'Step2B' | 'Step3A' | 'Step3B' | 'Step4A' | 'Step4B' | 'Other';
 
 /** A course as the enroll form offers it — its identity, type and lesson structure. */
