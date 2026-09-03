@@ -75,7 +75,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		var student = await GivenStudentAsync("Duplicate", $"Student {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(student, _duringSchoolLessonStructureId);
 
-		var duplicate = async () => await GivenWaitingListEntryAsync(student, _duringSchoolLessonStructureId);
+		async Task duplicate() => await GivenWaitingListEntryAsync(student, _duringSchoolLessonStructureId);
 
 		await Should.ThrowAsync<PostgresException>(duplicate);
 	}
