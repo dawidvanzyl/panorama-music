@@ -274,6 +274,99 @@ export class WaitingListPage extends BasePage {
     return this.dateAddedField().locator('input, select, textarea, button, [contenteditable]');
   }
 
+  // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---
+
+  /** Opens a row's student in the wizard and selects the Guardians tab. */
+  async openGuardiansTab(row: Locator): Promise<void> {
+    await this.openEditWizard(row);
+    await this.selectTab('Guardians');
+  }
+
+  private guardiansStep(): Locator {
+    return this.wizardModal.locator('#guardiansStep');
+  }
+
+  /** One guardian's row in the list, matched on their name. */
+  guardianRow(name: string): Locator {
+    return this.guardiansStep().locator('#guardianList').locator('tr').filter({ hasText: name });
+  }
+
+  guardianEditButton(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__btn--edit');
+  }
+
+  guardianDeleteButton(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__btn--delete');
+  }
+
+  /** The affordance shown in place of the edit action on a guardian this caller may not change. */
+  guardianRestrictionIcon(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__info');
+  }
+
+  /** The reason itself, revealed by the affordance. */
+  guardianRestrictionText(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__info-text');
+  }
+
+  async openAddGuardianForm(): Promise<void> {
+    await this.guardiansStep().locator('#addBtn').click();
+  }
+
+  /**
+   * Adds a guardian through the tab's own form, the way a user does. The
+   * relationship is picked by option label, since the seeded lookup is what
+   * populates it.
+   */
+  async addGuardian(input: {
+    firstName: string;
+    surname: string;
+    relationshipLabel: string;
+    cell?: string;
+    email?: string;
+  }): Promise<void> {
+    await this.openAddGuardianForm();
+
+    const form = this.guardiansStep().locator('#guardianForm');
+    await form.locator('#firstName').fill(input.firstName);
+    await form.locator('#surname').fill(input.surname);
+    await form.locator('#relationship').selectOption({ label: input.relationshipLabel });
+    if (input.cell !== undefined) await form.locator('#cell').fill(input.cell);
+    if (input.email !== undefined) await form.locator('#email').fill(input.email);
+    await form.locator('#confirmBtn').click();
+  }
+
+  syncGuardiansButton(): Locator {
+    return this.guardiansStep().locator('#syncBtn');
+  }
+
+  async syncGuardians(): Promise<void> {
+    await this.syncGuardiansButton().click();
+  }
+
+  /**
+   * Scoped to this page's own host: the Students screen carries a guardian
+   * delete modal under the same id, and a bare `#deleteGuardianModal` pierces
+   * both shadow roots.
+   */
+  private deleteGuardianModal(): Locator {
+    return this.page.locator('pm-waiting-list-page #deleteGuardianModal');
+  }
+
+  /** The wording shown when only the link to this student can be removed. */
+  guardianDeleteRestrictedMessage(): Locator {
+    return this.deleteGuardianModal().locator('#restrictedBody');
+  }
+
+  /** The remove-from-this-student-or-delete-the-record choice, offered only when there is one. */
+  guardianDeleteScopeChoice(): Locator {
+    return this.deleteGuardianModal().locator('#scopeChoice');
+  }
+
+  async confirmGuardianDelete(): Promise<void> {
+    await this.deleteGuardianModal().locator('#deleteBtn').click();
+  }
+
   // --- Removal confirmation ---
 
   async openDeleteConfirmation(row: Locator): Promise<void> {
