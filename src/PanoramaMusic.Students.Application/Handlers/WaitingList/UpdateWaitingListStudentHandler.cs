@@ -1,6 +1,7 @@
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
@@ -41,7 +42,8 @@ public sealed class UpdateWaitingListStudentHandler(
 			request.Grade,
 			request.Class,
 			request.Phase,
-			request.Language);
+			request.Language,
+			StudentWriteSource.WaitingList);
 
 		await studentRepository.UpdateAsync(student, cancellationToken);
 

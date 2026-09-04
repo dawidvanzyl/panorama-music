@@ -20,6 +20,13 @@ public sealed class StudentUpdatedTranslator(IAuditContext auditContext, IUserCo
 		var updated = (StudentUpdated)domainEvent;
 		var after = updated.After;
 
+		var detail = new Dictionary<string, object?>
+		{
+			["targetDisplay"] = $"{after.FirstName} {after.LastName}",
+			["changes"] = Diff(updated.Before, after),
+		};
+		StudentWriteSourceDetail.Apply(detail, updated.Source);
+
 		return new AuditEvent(
 			Guid.NewGuid(),
 			DateTime.UtcNow,
@@ -32,11 +39,7 @@ public sealed class StudentUpdatedTranslator(IAuditContext auditContext, IUserCo
 			auditContext.CorrelationId,
 			"success",
 			null,
-			new Dictionary<string, object?>
-			{
-				["targetDisplay"] = $"{after.FirstName} {after.LastName}",
-				["changes"] = Diff(updated.Before, after),
-			});
+			detail);
 	}
 
 	/// <summary>

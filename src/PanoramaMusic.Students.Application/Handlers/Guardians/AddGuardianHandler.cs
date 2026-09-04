@@ -1,18 +1,30 @@
 using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 
+/// <summary>
+/// Creates a guardian and links it to the student, and to their siblings —
+/// a guardian belongs to the family, not to one child.
+/// <para>
+/// A caller the guardian maintenance scope applies to links only the siblings
+/// who are not enrolled: adding a guardian to an enrolled student changes a
+/// record that student's own screens depend on, which such a caller may not do.
+/// The guardian itself is always created, whoever the siblings are.
+/// </para>
+/// </summary>
 public sealed class AddGuardianHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
 	IGuardianRepository guardianRepository,
 	IStudentGuardianRepository studentGuardianRepository,
-	IGuardianRelationshipRepository guardianRelationshipRepository)
+	IGuardianRelationshipRepository guardianRelationshipRepository,
+	GuardianMaintenanceScope guardianMaintenanceScope)
 {
 	public async Task<GuardianResult> HandleAsync(AddGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -36,6 +48,12 @@ public sealed class AddGuardianHandler(
 		await guardianRepository.CreateAsync(guardian, cancellationToken);
 
 		var siblings = await siblingRepository.GetSiblingsAsync(student.StudentId, cancellationToken);
+		if (guardianMaintenanceScope.AppliesToCaller)
+		{
+			var enrolledSiblingIds = await siblingRepository.GetEnrolledSiblingIdsAsync(student.StudentId, cancellationToken);
+			siblings = [.. siblings.Where(sibling => !enrolledSiblingIds.Contains(sibling.StudentId))];
+		}
+
 		var studentsToLink = new List<Student> { student };
 		studentsToLink.AddRange(siblings);
 

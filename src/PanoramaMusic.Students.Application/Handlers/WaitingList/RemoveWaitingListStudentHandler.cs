@@ -1,4 +1,5 @@
 using PanoramaMusic.Students.Application.Commands.WaitingList;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
@@ -28,7 +29,7 @@ public sealed class RemoveWaitingListStudentHandler(
 		var student = entry.Student;
 
 		entry.MarkRemoved();
-		student.MarkDeleted();
+		student.MarkDeleted(StudentWriteSource.WaitingList);
 
 		// The entry is deleted explicitly rather than left to the table's
 		// ON DELETE CASCADE, so the removal reads as the pair it is and both

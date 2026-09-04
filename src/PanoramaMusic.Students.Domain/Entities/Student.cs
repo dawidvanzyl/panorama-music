@@ -70,6 +70,11 @@ public sealed class Student : AggregateRoot
 	/// Snapshots the current values as the "before" picture, applies the new
 	/// values to this instance, and raises a <see cref="StudentUpdated"/>
 	/// event carrying both the before snapshot and this now-updated instance.
+	/// <para>
+	/// <paramref name="source"/> names the surface the write came through and
+	/// travels on the event so the audit record can say which one it was. The
+	/// caller states it; nothing downstream infers it.
+	/// </para>
 	/// </summary>
 	public void Update(
 		string firstName,
@@ -78,7 +83,8 @@ public sealed class Student : AggregateRoot
 		GradeType grade,
 		ClassType? @class,
 		PhaseType? phase,
-		Language language)
+		Language language,
+		StudentWriteSource source)
 	{
 		var before = new Student(
 			StudentId,
@@ -98,12 +104,16 @@ public sealed class Student : AggregateRoot
 		Phase = phase;
 		Language = language;
 
-		Raise(new StudentUpdated(before, this));
+		Raise(new StudentUpdated(before, this, source));
 	}
 
-	public void MarkDeleted()
+	/// <summary>
+	/// Raises <see cref="StudentDeleted"/> carrying the surface the deletion
+	/// came through, on the same terms as <see cref="Update"/>.
+	/// </summary>
+	public void MarkDeleted(StudentWriteSource source)
 	{
-		Raise(new StudentDeleted(this));
+		Raise(new StudentDeleted(this, source));
 	}
 
 	/// <summary>
