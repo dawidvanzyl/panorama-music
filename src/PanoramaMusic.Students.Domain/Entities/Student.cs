@@ -42,6 +42,11 @@ public sealed class Student : AggregateRoot
 
 	public Language Language { get; private set; }
 
+	/// <summary>
+	/// Raises <see cref="StudentCreated"/> carrying the surface the student was
+	/// created through — a capture onto the waiting list and a roster addition
+	/// both land here, on the same terms as <see cref="Update"/>.
+	/// </summary>
 	public static Student Create(
 		Guid studentId,
 		string firstName,
@@ -50,7 +55,8 @@ public sealed class Student : AggregateRoot
 		GradeType grade,
 		ClassType? @class,
 		PhaseType? phase,
-		Language language)
+		Language language,
+		StudentWriteSource source)
 	{
 		var student = new Student(
 			studentId,
@@ -62,7 +68,7 @@ public sealed class Student : AggregateRoot
 			phase,
 			language);
 
-		student.Raise(new StudentCreated(student));
+		student.Raise(new StudentCreated(student, source));
 		return student;
 	}
 

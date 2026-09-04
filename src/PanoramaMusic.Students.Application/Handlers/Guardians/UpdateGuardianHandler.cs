@@ -10,7 +10,8 @@ namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 public sealed class UpdateGuardianHandler(
 	IGuardianRepository guardianRepository,
 	IGuardianRelationshipRepository guardianRelationshipRepository,
-	GuardianMaintenanceScope guardianMaintenanceScope)
+	GuardianMaintenanceScope guardianMaintenanceScope,
+	StudentWriteSourceResolver studentWriteSourceResolver)
 {
 	public async Task<GuardianResult> HandleAsync(UpdateGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -23,6 +24,10 @@ public sealed class UpdateGuardianHandler(
 		_ = await guardianRelationshipRepository.GetByIdAsync(request.GuardianRelationshipId, cancellationToken)
 			?? throw new DomainException($"Guardian relationship {request.GuardianRelationshipId} was not found.");
 
+		// The route names a guardian and no student, so the guardian's own links
+		// are what say which surface could have reached it.
+		var source = await studentWriteSourceResolver.ForGuardianAsync(guardian.GuardianId, cancellationToken);
+
 		guardian.Update(
 			request.GuardianRelationshipId,
 			request.FirstName,
@@ -31,7 +36,8 @@ public sealed class UpdateGuardianHandler(
 			request.Email,
 			request.ReceivesCorrespondence,
 			request.ResponsibleForPayment,
-			request.Married);
+			request.Married,
+			source);
 
 		await guardianRepository.UpdateAsync(guardian, cancellationToken);
 

@@ -18,6 +18,13 @@ public sealed class SiblingAddedTranslator(IAuditContext auditContext, IUserCont
 	{
 		var siblingAdded = (SiblingAdded)domainEvent;
 
+		var detail = new Dictionary<string, object?>
+		{
+			["siblingId"] = siblingAdded.Sibling.StudentId,
+			["targetDisplay"] = $"{siblingAdded.Student.FirstName} {siblingAdded.Student.LastName} ↔ {siblingAdded.Sibling.FirstName} {siblingAdded.Sibling.LastName}",
+		};
+		StudentWriteSourceDetail.Apply(detail, siblingAdded.Source);
+
 		return new AuditEvent(
 			Guid.NewGuid(),
 			DateTime.UtcNow,
@@ -30,10 +37,6 @@ public sealed class SiblingAddedTranslator(IAuditContext auditContext, IUserCont
 			auditContext.CorrelationId,
 			"success",
 			null,
-			new Dictionary<string, object?>
-			{
-				["siblingId"] = siblingAdded.Sibling.StudentId,
-				["targetDisplay"] = $"{siblingAdded.Student.FirstName} {siblingAdded.Student.LastName} ↔ {siblingAdded.Sibling.FirstName} {siblingAdded.Sibling.LastName}",
-			});
+			detail);
 	}
 }

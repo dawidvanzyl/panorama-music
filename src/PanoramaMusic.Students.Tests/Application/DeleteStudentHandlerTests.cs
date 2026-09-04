@@ -3,6 +3,8 @@ using Moq;
 using PanoramaMusic.Students.Application.Commands.Students;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Students;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -50,5 +52,23 @@ public class DeleteStudentHandlerTests : IClassFixture<StudentsTestFixture>
 
 		await Should.ThrowAsync<EntityNotFoundException>(
 			() => _handler.HandleAsync(new DeleteStudentCommand(studentId), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_ARosterDeletion_RaisesTheDeletionNamingTheRosterAsItsSource()
+	{
+		// The roster is where a student record lives, and its source is what
+		// makes the audit record it produces byte-identical to what this path
+		// emitted before the waiting list needed naming.
+		var student = StudentFactory.Create();
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+
+		await _handler.HandleAsync(new DeleteStudentCommand(student.StudentId), TestContext.Current.CancellationToken);
+
+		var deleted = student.DrainEvents().OfType<StudentDeleted>().Single();
+		deleted.Source.ShouldBe(StudentWriteSource.Roster);
 	}
 }

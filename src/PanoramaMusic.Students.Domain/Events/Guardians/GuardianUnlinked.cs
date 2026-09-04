@@ -1,6 +1,7 @@
 using PanoramaMusic.Domain;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Students.Domain.Events.Guardians;
 
-public sealed record GuardianUnlinked(Student Student, Guardian Guardian) : IDomainEvent;
+public sealed record GuardianUnlinked(Student Student, Guardian Guardian, StudentWriteSource Source) : IDomainEvent;

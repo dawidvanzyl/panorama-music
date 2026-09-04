@@ -16,6 +16,15 @@ public interface IStudentGuardianRepository
 	Task<bool> HasEnrolledLinkAsync(Guid guardianId, CancellationToken cancellationToken);
 
 	/// <summary>
+	/// Whether every student linked to this guardian is a waiting-list student.
+	/// The guardian endpoints name a guardian with no student in scope, so this
+	/// is what says which surface reached it. Stricter than
+	/// <see cref="HasEnrolledLinkAsync"/>: a roster student who is not enrolled
+	/// yet has no enrolled link either, and their guardian is still the roster's.
+	/// </summary>
+	Task<bool> BelongsToWaitingListOnlyAsync(Guid guardianId, CancellationToken cancellationToken);
+
+	/// <summary>
 	/// Of the guardians reachable from this student — their own and their
 	/// siblings' — those linked to at least one enrolled student. One query
 	/// rather than a per-guardian lookup over the list being rendered.

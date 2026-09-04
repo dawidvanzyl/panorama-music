@@ -13,7 +13,8 @@ namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 /// </summary>
 public sealed class DeleteGuardianHandler(
 	IGuardianRepository guardianRepository,
-	GuardianMaintenanceScope guardianMaintenanceScope)
+	GuardianMaintenanceScope guardianMaintenanceScope,
+	StudentWriteSourceResolver studentWriteSourceResolver)
 {
 	public async Task HandleAsync(DeleteGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -22,7 +23,11 @@ public sealed class DeleteGuardianHandler(
 
 		await guardianMaintenanceScope.EnsureMaintainableAsync(guardian, cancellationToken);
 
-		guardian.MarkDeleted();
+		// The route names a guardian and no student, so the guardian's own links
+		// are what say which surface could have reached it.
+		var source = await studentWriteSourceResolver.ForGuardianAsync(guardian.GuardianId, cancellationToken);
+
+		guardian.MarkDeleted(source);
 
 		await guardianRepository.DeleteAsync(guardian, cancellationToken);
 	}

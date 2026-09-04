@@ -24,7 +24,8 @@ public sealed class AddGuardianHandler(
 	IGuardianRepository guardianRepository,
 	IStudentGuardianRepository studentGuardianRepository,
 	IGuardianRelationshipRepository guardianRelationshipRepository,
-	GuardianMaintenanceScope guardianMaintenanceScope)
+	GuardianMaintenanceScope guardianMaintenanceScope,
+	StudentWriteSourceResolver studentWriteSourceResolver)
 {
 	public async Task<GuardianResult> HandleAsync(AddGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -35,6 +36,10 @@ public sealed class AddGuardianHandler(
 		_ = await guardianRelationshipRepository.GetByIdAsync(request.GuardianRelationshipId, cancellationToken)
 			?? throw new DomainException($"Guardian relationship {request.GuardianRelationshipId} was not found.");
 
+		// The Guardians tab is the same screen in both modes, so the student the
+		// guardian is being added to is what says which one the request came from.
+		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+
 		var guardian = Guardian.Create(
 			Guid.NewGuid(),
 			request.GuardianRelationshipId,
@@ -44,7 +49,8 @@ public sealed class AddGuardianHandler(
 			request.Email,
 			request.ReceivesCorrespondence,
 			request.ResponsibleForPayment,
-			request.Married);
+			request.Married,
+			source);
 		await guardianRepository.CreateAsync(guardian, cancellationToken);
 
 		var siblings = await siblingRepository.GetSiblingsAsync(student.StudentId, cancellationToken);
@@ -59,7 +65,7 @@ public sealed class AddGuardianHandler(
 
 		foreach (var target in studentsToLink)
 		{
-			var link = StudentGuardian.Create(target, guardian);
+			var link = StudentGuardian.Create(target, guardian, source);
 			await studentGuardianRepository.CreateAsync(link, cancellationToken);
 		}
 

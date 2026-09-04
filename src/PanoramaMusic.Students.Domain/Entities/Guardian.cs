@@ -1,4 +1,5 @@
 using PanoramaMusic.Domain;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Guardians;
 
 namespace PanoramaMusic.Students.Domain.Entities;
@@ -45,6 +46,12 @@ public sealed class Guardian : AggregateRoot
 
 	public bool Married { get; private set; }
 
+	/// <summary>
+	/// The Guardians tab is the same screen from the roster and from the waiting
+	/// list, so <paramref name="source"/> names which one reached it and travels
+	/// on the event for the audit record. The caller states it; nothing
+	/// downstream infers it.
+	/// </summary>
 	public static Guardian Create(
 		Guid guardianId,
 		Guid guardianRelationshipId,
@@ -54,7 +61,8 @@ public sealed class Guardian : AggregateRoot
 		string? email,
 		bool receivesCorrespondence,
 		bool responsibleForPayment,
-		bool married)
+		bool married,
+		StudentWriteSource source)
 	{
 		var guardian = new Guardian(
 			guardianId,
@@ -67,7 +75,7 @@ public sealed class Guardian : AggregateRoot
 			responsibleForPayment,
 			married);
 
-		guardian.Raise(new GuardianCreated(guardian));
+		guardian.Raise(new GuardianCreated(guardian, source));
 		return guardian;
 	}
 
@@ -86,7 +94,8 @@ public sealed class Guardian : AggregateRoot
 		string? email,
 		bool receivesCorrespondence,
 		bool responsibleForPayment,
-		bool married)
+		bool married,
+		StudentWriteSource source)
 	{
 		var before = new Guardian(
 			GuardianId,
@@ -108,11 +117,11 @@ public sealed class Guardian : AggregateRoot
 		ResponsibleForPayment = responsibleForPayment;
 		Married = married;
 
-		Raise(new GuardianUpdated(before, this));
+		Raise(new GuardianUpdated(before, this, source));
 	}
 
-	public void MarkDeleted()
+	public void MarkDeleted(StudentWriteSource source)
 	{
-		Raise(new GuardianDeleted(this));
+		Raise(new GuardianDeleted(this, source));
 	}
 }

@@ -1,4 +1,5 @@
 using PanoramaMusic.Students.Application.Commands.Guardians;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
@@ -13,7 +14,8 @@ namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 public sealed class UnlinkGuardianHandler(
 	IStudentRepository studentRepository,
 	IGuardianRepository guardianRepository,
-	IStudentGuardianRepository studentGuardianRepository)
+	IStudentGuardianRepository studentGuardianRepository,
+	StudentWriteSourceResolver studentWriteSourceResolver)
 {
 	public async Task HandleAsync(UnlinkGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -30,14 +32,18 @@ public sealed class UnlinkGuardianHandler(
 		if (!linkedGuardians.Any(g => g.GuardianId == guardian.GuardianId))
 			throw new DomainException($"{guardian.FirstName} {guardian.Surname} is not linked to {student.FirstName} {student.LastName}.");
 
+		// The unlink is made against this student, and so is the deletion that
+		// follows when it was the guardian's last link.
+		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+
 		var link = new StudentGuardian(student.StudentId, guardian.GuardianId);
-		link.MarkUnlinked(student, guardian);
+		link.MarkUnlinked(student, guardian, source);
 		await studentGuardianRepository.DeleteAsync(link, cancellationToken);
 
 		var remainingLinks = await studentGuardianRepository.GetLinkCountAsync(guardian.GuardianId, cancellationToken);
 		if (remainingLinks == 0)
 		{
-			guardian.MarkDeleted();
+			guardian.MarkDeleted(source);
 			await guardianRepository.DeleteAsync(guardian, cancellationToken);
 		}
 	}

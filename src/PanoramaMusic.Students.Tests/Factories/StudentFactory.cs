@@ -15,7 +15,10 @@ public static class StudentFactory
 		// neither: grade and phase are biconditional in the domain.
 		ClassType? @class = ClassType.A1,
 		PhaseType? phase = PhaseType.Junior,
-		Language language = Language.English) =>
+		Language language = Language.English,
+		// The roster is where a student record lives, so a test that is not
+		// about the audit trail's surface does not have to name one.
+		StudentWriteSource source = StudentWriteSource.Roster) =>
 		Student.Create(
 			studentId ?? Guid.NewGuid(),
 			firstName,
@@ -24,5 +27,6 @@ public static class StudentFactory
 			grade,
 			@class,
 			phase,
-			language);
+			language,
+			source);
 }

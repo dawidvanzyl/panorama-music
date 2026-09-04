@@ -1,7 +1,9 @@
 using PanoramaMusic.Students.Application.Commands.Siblings;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
@@ -10,7 +12,8 @@ namespace PanoramaMusic.Students.Application.Handlers.Siblings;
 public sealed class AddSiblingHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
-	IStudentGuardianRepository studentGuardianRepository)
+	IStudentGuardianRepository studentGuardianRepository,
+	StudentWriteSourceResolver studentWriteSourceResolver)
 {
 	public async Task<StudentResult> HandleAsync(AddSiblingCommand command, CancellationToken cancellationToken)
 	{
@@ -20,7 +23,10 @@ public sealed class AddSiblingHandler(
 		var siblingStudent = await studentRepository.GetByIdAsync(command.SiblingId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {command.SiblingId} was not found.");
 
-		var sibling = Sibling.Create(student, siblingStudent);
+		// The Siblings tab is the same screen in both modes, so the student being
+		// maintained is what says which one the request came from.
+		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+		var sibling = Sibling.Create(student, siblingStudent, source);
 
 		var existingSiblings = await siblingRepository.GetSiblingsAsync(command.StudentId, cancellationToken);
 		if (existingSiblings.Any(s => s.StudentId == siblingStudent.StudentId))
@@ -28,7 +34,7 @@ public sealed class AddSiblingHandler(
 
 		await siblingRepository.AddAsync(sibling, cancellationToken);
 
-		await ShareGuardiansAsync(student, siblingStudent, cancellationToken);
+		await ShareGuardiansAsync(student, siblingStudent, source, cancellationToken);
 
 		return siblingStudent.ToResult();
 	}
@@ -37,7 +43,11 @@ public sealed class AddSiblingHandler(
 	/// Linking two students as siblings shares each student's existing
 	/// guardians with the other, in both directions.
 	/// </summary>
-	private async Task ShareGuardiansAsync(Student student, Student siblingStudent, CancellationToken cancellationToken)
+	private async Task ShareGuardiansAsync(
+		Student student,
+		Student siblingStudent,
+		StudentWriteSource source,
+		CancellationToken cancellationToken)
 	{
 		var studentGuardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken);
 		var siblingGuardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(siblingStudent.StudentId, cancellationToken);
@@ -46,13 +56,13 @@ public sealed class AddSiblingHandler(
 
 		foreach (var guardian in studentGuardians.Where(g => !siblingGuardianIds.Contains(g.GuardianId)))
 		{
-			var link = StudentGuardian.Create(siblingStudent, guardian);
+			var link = StudentGuardian.Create(siblingStudent, guardian, source);
 			await studentGuardianRepository.CreateAsync(link, cancellationToken);
 		}
 
 		foreach (var guardian in siblingGuardians.Where(g => !studentGuardianIds.Contains(g.GuardianId)))
 		{
-			var link = StudentGuardian.Create(student, guardian);
+			var link = StudentGuardian.Create(student, guardian, source);
 			await studentGuardianRepository.CreateAsync(link, cancellationToken);
 		}
 	}
