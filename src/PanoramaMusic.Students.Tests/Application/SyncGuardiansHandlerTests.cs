@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Guardians;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -112,5 +114,49 @@ public class SyncGuardiansHandlerTests : IClassFixture<StudentsTestFixture>
 			// A pulled guardian the enrolled sibling holds comes back flagged, so
 			// the screen that just synced knows it cannot be edited.
 			() => result.ShouldHaveSingleItem().Restricted.ShouldBeTrue());
+	}
+
+	[Fact]
+	[Trait("AC", "300UC17")]
+	public async Task HandleAsync_AWaitingListStudentSyncing_NamesTheWaitingListOnEveryLinkItWrites()
+	{
+		var linked = await SyncAGuardianOnto(onTheWaitingList: true);
+
+		linked.Source.ShouldBe(StudentWriteSource.WaitingList);
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_ARosterStudentSyncing_NamesTheRosterOnEveryLinkItWrites()
+	{
+		var linked = await SyncAGuardianOnto(onTheWaitingList: false);
+
+		linked.Source.ShouldBe(StudentWriteSource.Roster);
+	}
+
+	private async Task<GuardianLinked> SyncAGuardianOnto(bool onTheWaitingList)
+	{
+		var student = StudentFactory.Create();
+		var siblingGuardian = GuardianFactory.Create();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetMissingSiblingGuardiansAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([siblingGuardian]);
+
+		if (onTheWaitingList)
+			_context.GivenAWaitingListStudent(student);
+
+		StudentGuardian? createdLink = null;
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()))
+			.Callback<StudentGuardian, CancellationToken>((link, _) => createdLink = link)
+			.Returns(Task.CompletedTask);
+
+		await _handler.HandleAsync(student.StudentId, TestContext.Current.CancellationToken);
+
+		return createdLink.ShouldNotBeNull().DrainEvents().OfType<GuardianLinked>().Single();
 	}
 }

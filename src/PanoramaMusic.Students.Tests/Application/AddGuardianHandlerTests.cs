@@ -4,6 +4,8 @@ using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Application.Requests.Guardians;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Guardians;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -245,5 +247,68 @@ public class AddGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 				Times.Once),
 			() => _context.Repositories.SiblingRepositoryMock.Verify(
 				r => r.GetEnrolledSiblingIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC17")]
+	public async Task HandleAsync_AGuardianAddedToAWaitingListStudent_NamesTheWaitingListOnBothTheGuardianAndTheLink()
+	{
+		var (created, linked) = await AddAGuardianTo(onTheWaitingList: true);
+
+		ShouldlyHelpers.Satisfy(
+			() => created.Source.ShouldBe(StudentWriteSource.WaitingList),
+			// Creating a guardian and linking it are one action from the tab, so
+			// the two records it writes agree on where it came from.
+			() => linked.Source.ShouldBe(StudentWriteSource.WaitingList));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_AGuardianAddedToARosterStudent_NamesTheRosterOnBothTheGuardianAndTheLink()
+	{
+		var (created, linked) = await AddAGuardianTo(onTheWaitingList: false);
+
+		ShouldlyHelpers.Satisfy(
+			() => created.Source.ShouldBe(StudentWriteSource.Roster),
+			() => linked.Source.ShouldBe(StudentWriteSource.Roster));
+	}
+
+	private async Task<(GuardianCreated Created, GuardianLinked Linked)> AddAGuardianTo(bool onTheWaitingList)
+	{
+		var student = StudentFactory.Create();
+		var relationship = new GuardianRelationship(Guid.NewGuid(), "Mother");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRelationshipRepositoryMock
+			.Setup(r => r.GetByIdAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(relationship);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+
+		if (onTheWaitingList)
+			_context.GivenAWaitingListStudent(student);
+
+		Guardian? createdGuardian = null;
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()))
+			.Callback<Guardian, CancellationToken>((guardian, _) => createdGuardian = guardian)
+			.Returns(Task.CompletedTask);
+
+		StudentGuardian? createdLink = null;
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()))
+			.Callback<StudentGuardian, CancellationToken>((link, _) => createdLink = link)
+			.Returns(Task.CompletedTask);
+
+		await _handler.HandleAsync(
+			new AddGuardianCommand(student.StudentId, BuildRequest(relationship.GuardianRelationshipId)),
+			TestContext.Current.CancellationToken);
+
+		return (
+			createdGuardian.ShouldNotBeNull().DrainEvents().OfType<GuardianCreated>().Single(),
+			createdLink.ShouldNotBeNull().DrainEvents().OfType<GuardianLinked>().Single());
 	}
 }

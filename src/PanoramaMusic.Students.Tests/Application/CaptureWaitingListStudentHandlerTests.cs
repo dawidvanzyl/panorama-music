@@ -5,6 +5,7 @@ using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Students;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -168,4 +169,27 @@ public class CaptureWaitingListStudentHandlerTests : IClassFixture<StudentsTestF
 			lessonStructureId,
 			InstrumentType.Piano,
 			null);
+
+	[Fact]
+	[Trait("AC", "300UC15")]
+	public async Task HandleAsync_AStudentCapturedOntoTheWaitingList_RaisesTheCreationNamingTheWaitingListAsItsSource()
+	{
+		var lessonStructure = LessonStructureFactory.Create();
+		SetupLessonStructure(lessonStructure);
+		SetupNoOtherEntries();
+
+		Student? created = null;
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()))
+			.Callback<Student, CancellationToken>((student, _) => created = student)
+			.Returns(Task.CompletedTask);
+
+		await _handler.HandleAsync(
+			new CaptureWaitingListStudentCommand(ValidRequest(lessonStructure.LessonStructureId)),
+			TestContext.Current.CancellationToken);
+
+		// The entry does not exist yet when the student is created, so this
+		// handler states the surface outright rather than resolving it.
+		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentWriteSource.WaitingList);
+	}
 }

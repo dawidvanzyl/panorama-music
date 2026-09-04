@@ -3,6 +3,8 @@ using Moq;
 using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Guardians;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -145,5 +147,65 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
 			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
 				r => r.HasEnrolledLinkAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC17")]
+	public async Task HandleAsync_AGuardianUnlinkedFromAWaitingListStudent_NamesTheWaitingListOnTheUnlinkAndTheDeletion()
+	{
+		var (unlinked, deleted) = await UnlinkTheLastGuardianOf(onTheWaitingList: true);
+
+		ShouldlyHelpers.Satisfy(
+			() => unlinked.Source.ShouldBe(StudentWriteSource.WaitingList),
+			// A guardian never exists standalone, so losing its last link deletes
+			// the row — a consequence of this student's unlink, and named as such.
+			() => deleted.Source.ShouldBe(StudentWriteSource.WaitingList));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_AGuardianUnlinkedFromARosterStudent_NamesTheRosterOnTheUnlinkAndTheDeletion()
+	{
+		var (unlinked, deleted) = await UnlinkTheLastGuardianOf(onTheWaitingList: false);
+
+		ShouldlyHelpers.Satisfy(
+			() => unlinked.Source.ShouldBe(StudentWriteSource.Roster),
+			() => deleted.Source.ShouldBe(StudentWriteSource.Roster));
+	}
+
+	private async Task<(GuardianUnlinked Unlinked, GuardianDeleted Deleted)> UnlinkTheLastGuardianOf(bool onTheWaitingList)
+	{
+		var student = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+		guardian.DrainEvents();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(0);
+
+		if (onTheWaitingList)
+			_context.GivenAWaitingListStudent(student);
+
+		StudentGuardian? deletedLink = null;
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()))
+			.Callback<StudentGuardian, CancellationToken>((link, _) => deletedLink = link)
+			.Returns(Task.CompletedTask);
+
+		await _handler.HandleAsync(
+			new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
+
+		return (
+			deletedLink.ShouldNotBeNull().DrainEvents().OfType<GuardianUnlinked>().Single(),
+			guardian.DrainEvents().OfType<GuardianDeleted>().Single());
 	}
 }

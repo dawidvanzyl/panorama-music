@@ -5,6 +5,7 @@ using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Students;
 using Shouldly;
 using Xunit;
 
@@ -53,5 +54,25 @@ public class CreateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 				() => result.Language.ShouldBe(Language.English)),
 			() => _context.Repositories.StudentRepositoryMock.Verify(
 				r => r.CreateAsync(It.IsAny<Student>(), TestContext.Current.CancellationToken), Times.Once));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_AStudentAddedOnTheStudentsScreen_RaisesTheCreationNamingTheRosterAsItsSource()
+	{
+		// A capture creates a student too, so this path says which one it is
+		// rather than leaving the two creations indistinguishable.
+		Student? created = null;
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()))
+			.Callback<Student, CancellationToken>((student, _) => created = student)
+			.Returns(Task.CompletedTask);
+
+		var request = new CreateStudentRequest(
+			"Alice", "Vance", new DateOnly(2014, 5, 12), GradeType.Grade4, ClassType.A1, PhaseType.Junior, Language.English);
+
+		await _handler.HandleAsync(new CreateStudentCommand(request), TestContext.Current.CancellationToken);
+
+		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentWriteSource.Roster);
 	}
 }

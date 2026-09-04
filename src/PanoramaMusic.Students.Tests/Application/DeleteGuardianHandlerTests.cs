@@ -3,6 +3,7 @@ using Moq;
 using PanoramaMusic.Students.Application.Commands.Guardians;
 using PanoramaMusic.Students.Application.Handlers.Guardians;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Guardians;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
@@ -95,5 +96,44 @@ public class DeleteGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 
 		_context.Repositories.GuardianRepositoryMock.Verify(
 			r => r.DeleteAsync(It.Is<Guardian>(g => g.GuardianId == guardian.GuardianId), It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "300UC17")]
+	public async Task HandleAsync_AGuardianOnlyWaitingListStudentsHold_RaisesTheDeletionNamingTheWaitingList()
+	{
+		var deleted = await DeleteAGuardian(waitingListOnly: true);
+
+		deleted.Source.ShouldBe(StudentWriteSource.WaitingList);
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_AGuardianARosterStudentHolds_RaisesTheDeletionNamingTheRoster()
+	{
+		var deleted = await DeleteAGuardian(waitingListOnly: false);
+
+		deleted.Source.ShouldBe(StudentWriteSource.Roster);
+	}
+
+	/// <summary>
+	/// The route names a guardian and no student, so it is the guardian's own
+	/// links that say which surface could have reached it.
+	/// </summary>
+	private async Task<GuardianDeleted> DeleteAGuardian(bool waitingListOnly)
+	{
+		var guardian = GuardianFactory.Create();
+		guardian.DrainEvents();
+
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.BelongsToWaitingListOnlyAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(waitingListOnly);
+
+		await _handler.HandleAsync(new DeleteGuardianCommand(guardian.GuardianId), TestContext.Current.CancellationToken);
+
+		return guardian.DrainEvents().OfType<GuardianDeleted>().Single();
 	}
 }

@@ -1,6 +1,8 @@
 using Moq;
 using PanoramaMusic.Students.Application.Interfaces;
+using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Tests.Factories;
 
 namespace PanoramaMusic.Students.Tests;
 
@@ -28,6 +30,17 @@ public sealed class StudentsTestContext
 	/// Teacher — the one the guardian maintenance scope restricts.
 	/// </summary>
 	public void ActAsCoordinator() => UserContextMock.SetupGet(c => c.IsTeacher).Returns(false);
+
+	/// <summary>
+	/// Puts this student on the waiting list, which is what the write-source
+	/// resolver reads to tell a write made through the waiting-list wizard from
+	/// the same write made on the Students screen. Unset, a student is the
+	/// roster's, which is the default every other test wants.
+	/// </summary>
+	public void GivenAWaitingListStudent(Student student) =>
+		Repositories.WaitingListRepositoryMock
+			.Setup(r => r.GetByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(WaitingListEntryFactory.Create(student: student));
 
 	public IServiceProvider ServiceProvider { get; }
 
