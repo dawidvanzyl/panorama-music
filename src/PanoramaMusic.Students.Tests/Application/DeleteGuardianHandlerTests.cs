@@ -80,6 +80,7 @@ public class DeleteGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "300UC21")]
 	public async Task HandleAsync_CoordinatorDeletingAGuardianNoEnrolledStudentHolds_DeletesTheRecord()
 	{
 		_context.ActAsCoordinator();
