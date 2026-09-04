@@ -39,8 +39,10 @@ public sealed class GuardianMaintenanceScope(
 			return;
 
 		if (await studentGuardianRepository.HasEnrolledLinkAsync(guardian.GuardianId, cancellationToken))
+		{
 			throw new ForbiddenException(
 				$"{guardian.FirstName} {guardian.Surname} is shared with an enrolled student and cannot be maintained here.");
+		}
 	}
 
 	/// <summary>
