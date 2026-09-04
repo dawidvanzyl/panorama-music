@@ -12,8 +12,8 @@ const STUDENTS_BASE = '/api/students';
 const COURSES_BASE = '/api/courses';
 const TEACHERS_ROSTER = '/api/teachers/roster';
 
-// Shared with the Courses feature via services/lesson-structure.ts (ruling R5)
-// — re-exported here so existing imports from this module keep working.
+// Shared with the Courses feature via services/lesson-structure.ts —
+// re-exported here so existing imports from this module keep working.
 export type { CourseType, LessonType, DurationType, OccurrenceType, InstrumentType };
 export type StepType = 'Step1A' | 'Step1B' | 'Step2A' | 'Step2B' | 'Step3A' | 'Step3B' | 'Step4A' | 'Step4B' | 'Other';
 

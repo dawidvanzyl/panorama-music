@@ -6,8 +6,8 @@ import type { CourseType, LessonType, DurationType, OccurrenceType } from '../..
 const COURSES_BASE = '/api/courses';
 const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
 
-// Shared with the Students feature via services/lesson-structure.ts (ruling
-// R5) — re-exported here so existing imports from this module keep working.
+// Shared with the Students feature via services/lesson-structure.ts —
+// re-exported here so existing imports from this module keep working.
 export type { CourseType, LessonType, DurationType, OccurrenceType };
 
 export interface LessonStructure {

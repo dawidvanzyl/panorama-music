@@ -277,16 +277,10 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
   });
 });
 
-// Regression for #299, updated for ruling R9. GET /api/students was
-// Teacher-gated when #299 was fixed, so a Coordinator-only session
-// predictably 403'd on getStudents() while getGuardianRelationships() and
-// getLessonStructures() succeeded — R8 part 1 required settling the three
-// independently so that one rejection could never sink the other two. R9
-// widened GET /api/students to Teacher-or-Coordinator (a Coordinator needs
-// it for the Siblings tab's own candidate list), so a getStudents() failure
-// is no longer an expected, silently-absorbed outcome — these tests prove
-// the independent-settling behaviour still holds for whichever lookup
-// actually fails, and that every failure is now shown.
+// Regression for #299. The wizard's three lookups settle independently so
+// that one rejection can never sink the other two — these tests prove that
+// holds for whichever lookup actually fails, and that every failure is shown
+// rather than silently absorbed.
 describe('pm-waiting-list-page — wizard lookups settle independently', () => {
   it('assigns the guardian-relationship and lesson-structure lookups even when getStudents fails, and shows the error', async () => {
     mockHasAnyRole.mockReturnValue(true);

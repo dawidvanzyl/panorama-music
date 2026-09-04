@@ -11,9 +11,6 @@ public static class WaitingListRoutes
 {
 	public static void MapWaitingListRoutes(this WebApplication app)
 	{
-		// Read-only for this group: a Teacher and a Coordinator may both read the
-		// list. Edit, delete and enrol arrive in later M9 stories, each under its
-		// own, narrower policy — do not widen this one to admit them.
 		app
 			.MapGroup("/api/waiting-list")
 			.WithTags("WaitingList")
