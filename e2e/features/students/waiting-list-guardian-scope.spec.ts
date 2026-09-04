@@ -121,7 +121,7 @@ test.describe(
       await expect(waitingList.guardianEditButton(guardian.fullName)).toBeVisible();
       await expect(waitingList.guardianEditButton(guardian.fullName)).toBeEnabled();
       await expect(waitingList.guardianRestrictionIcon(guardian.fullName)).toHaveCount(0);
-      await expect(waitingList.guardianRestrictionText(guardian.fullName)).toHaveCount(0);
+      await expect(row).not.toContainText('not maintainable here');
 
       await coordinator.close();
     });
@@ -150,14 +150,14 @@ test.describe(
       await expect(waitingList.guardianRow(name)).toBeVisible();
       await expect(waitingList.guardianEditButton(name)).toHaveCount(0);
 
+      // The affordance carries the reason itself: resting on it is the
+      // activation, so the wording lives on the control rather than beside it.
       const info = waitingList.guardianRestrictionIcon(name);
       await expect(info).toBeVisible();
-      await info.click();
-
-      const reason = waitingList.guardianRestrictionText(name);
-      await expect(reason).toBeVisible();
-      await expect(reason).toContainText('shared with an enrolled student');
-      await expect(reason).toContainText('not maintainable here');
+      await expect(info).toHaveAttribute('title', /shared with an enrolled student/);
+      await expect(info).toHaveAttribute('title', /not maintainable here/);
+      await expect(info).toHaveAttribute('aria-label', /shared with an enrolled student/);
+      await expect(info).toHaveAttribute('aria-label', /not maintainable here/);
 
       await coordinator.close();
     });

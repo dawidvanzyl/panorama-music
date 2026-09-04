@@ -299,14 +299,13 @@ export class WaitingListPage extends BasePage {
     return this.guardianRow(name).locator('.guardian-list__btn--delete');
   }
 
-  /** The affordance shown in place of the edit action on a guardian this caller may not change. */
+  /**
+   * The affordance shown in place of the edit action on a guardian this caller
+   * may not change. The reason travels on the affordance itself, as its
+   * accessible name and its hover title.
+   */
   guardianRestrictionIcon(name: string): Locator {
     return this.guardianRow(name).locator('.guardian-list__info');
-  }
-
-  /** The reason itself, revealed by the affordance. */
-  guardianRestrictionText(name: string): Locator {
-    return this.guardianRow(name).locator('.guardian-list__info-text');
   }
 
   async openAddGuardianForm(): Promise<void> {
