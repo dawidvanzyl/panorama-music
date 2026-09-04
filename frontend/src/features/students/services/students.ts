@@ -94,6 +94,16 @@ export async function createStudent(input: StudentInput): Promise<StudentResult>
   return result;
 }
 
+/**
+ * One student's own details. Uncached and read directly, unlike
+ * `getStudents`: a waiting-list student is deliberately absent from that
+ * roster, so it is the only way to reach the details behind such a row.
+ */
+export async function getStudentById(studentId: string): Promise<StudentResult> {
+  const response = await fetch(`${API_BASE}/${studentId}`, { headers: authHeaders() });
+  return handleResponse<StudentResult>(response);
+}
+
 export async function updateStudent(studentId: string, input: StudentInput): Promise<StudentResult> {
   const response = await fetch(`${API_BASE}/${studentId}`, {
     method: 'PUT',

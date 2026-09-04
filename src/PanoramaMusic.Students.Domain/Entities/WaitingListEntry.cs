@@ -58,15 +58,54 @@ public sealed class WaitingListEntry : AggregateRoot
 		return entry;
 	}
 
+	/// <summary>
+	/// Applies a correction to the entry's own details: the structure the
+	/// student is waiting for, the instrument they intend to take up and their
+	/// notes. Snapshots the current values as the "before" picture first, the
+	/// same shape <see cref="Student.Update"/> follows.
+	/// <para>
+	/// <see cref="AddedAt"/> is deliberately not a parameter. Queue position is
+	/// derived from it, so allowing it to be reassigned would let a row be moved
+	/// up the queue by editing; changing the occurrence type re-derives the
+	/// position from this original value instead of sending the entry to the back.
+	/// </para>
+	/// </summary>
+	public void Update(LessonStructure lessonStructure, InstrumentType instrumentType, string? notes)
+	{
+		var before = new WaitingListEntry(
+			WaitingListEntryId,
+			Student,
+			LessonStructure,
+			InstrumentType,
+			Notes,
+			AddedAt);
+
+		LessonStructure = lessonStructure;
+		InstrumentType = instrumentType;
+		Notes = notes;
+
+		Raise(new WaitingListEntryUpdated(before, this));
+	}
+
+	/// <summary>
+	/// Marks the entry as leaving the list along with the student it belongs to.
+	/// A waiting-list student was never enrolled, so nothing of theirs is kept —
+	/// this is a discard, not a withdrawal.
+	/// </summary>
+	public void MarkRemoved()
+	{
+		Raise(new WaitingListEntryRemoved(this));
+	}
+
 	public Guid WaitingListEntryId { get; }
 
 	public Student Student { get; }
 
-	public LessonStructure LessonStructure { get; }
+	public LessonStructure LessonStructure { get; private set; }
 
-	public InstrumentType InstrumentType { get; }
+	public InstrumentType InstrumentType { get; private set; }
 
-	public string? Notes { get; }
+	public string? Notes { get; private set; }
 
 	/// <summary>
 	/// When the student was added to the list. Set once, at creation, and never

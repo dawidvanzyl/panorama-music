@@ -18,6 +18,9 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	// Individual · Hour · DuringSchool, from seed_lesson_structures.sql.
 	private static readonly Guid _duringSchoolLessonStructureId = Guid.Parse("e9ac58cc-d6a5-406e-b6a2-55076a0a3565");
 
+	// Individual · Hour · AfterSchool, from seed_lesson_structures.sql.
+	private static readonly Guid _afterSchoolLessonStructureId = Guid.Parse("42e1c54f-aa5d-4dd0-ab1a-aced05dd3c54");
+
 	private readonly StudentsDatabaseFixture _fixture;
 
 	public WaitingListFunctionTests(StudentsDatabaseFixture fixture)
@@ -100,6 +103,99 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			() => waitingListStudentIds.ShouldContain(stillWaitingStudent));
 	}
 
+	[Fact]
+	public async Task GetWaitingListEntryById_AnEnrolledStudentsEntry_IsStillReturned()
+	{
+		// The read named by entry carries no enrollment exclusion, deliberately:
+		// it serves the entry-scoped update, which writes the entry and nothing
+		// else, and hiding a row the caller named by its own id would turn an
+		// entry that exists into a silent not-found — a 404 for a row still on
+		// screen. Only a real Postgres read can show it, and its contrast with
+		// the by-student read below is the whole point of both tests.
+		var student = await GivenStudentAsync("Enrolled", $"Maintained {Guid.NewGuid()}");
+		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		await GivenEnrollmentAsync(student, courseId);
+
+		var byId = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_id(@p_id);", ("p_id", entryId));
+
+		byId.ShouldBe(student);
+	}
+
+	[Fact]
+	[Trait("AC", "294UC7")]
+	public async Task GetWaitingListEntryByStudentId_AnEnrolledStudentHoldingAStaleEntry_IsNotResolved()
+	{
+		// This read is the only way the update and the removal paths reach a
+		// student record from the waiting list, so what it resolves is exactly
+		// what those two writes may touch. An enrolled student may still hold a
+		// row here — enrolment does not consume it — and they are not a
+		// waiting-list student, so resolving them would let this screen rewrite
+		// or delete an enrolled student's record. Both writes refuse on a null,
+		// so this read is where the refusal is decided; no mocked repository can
+		// prove it.
+		var enrolled = await GivenStudentAsync("Enrolled", $"Stale {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(enrolled, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		await GivenEnrollmentAsync(enrolled, courseId);
+
+		var stillWaiting = await GivenStudentAsync("StillWaiting", $"Live {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(stillWaiting, _duringSchoolLessonStructureId);
+
+		var enrolledEntry = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_student_id(@p_id);", ("p_id", enrolled));
+		var stillWaitingEntry = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_student_id(@p_id);", ("p_id", stillWaiting));
+
+		ShouldlyHelpers.Satisfy(
+			() => enrolledEntry.ShouldBeNull(),
+			// The exclusion is the enrollment, not the read going blind.
+			() => stillWaitingEntry.ShouldBe(stillWaiting));
+	}
+
+	[Fact]
+	[Trait("AC", "294UC3")]
+	public async Task UpdateWaitingListEntry_ChangingTheStructure_LeavesAddedAtUntouched()
+	{
+		// The function takes no added_at parameter, so this proves the column
+		// survives an actual UPDATE rather than merely being absent from a DTO.
+		var student = await GivenStudentAsync("Immutable", $"AddedAt {Guid.NewGuid()}");
+		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
+		var before = await ReadAddedAtAsync(entryId);
+
+		await CallAsync(
+			"SELECT students.update_waiting_list_entry(@p_id, @p_structure, @p_instrument, @p_notes);",
+			("p_id", entryId),
+			("p_structure", _afterSchoolLessonStructureId),
+			("p_instrument", "Guitar"),
+			("p_notes", "Moved lists"));
+
+		var after = await ReadAddedAtAsync(entryId);
+
+		after.ShouldBe(before);
+	}
+
+	[Fact]
+	[Trait("AC", "294UC6")]
+	public async Task DeleteWaitingListEntry_ThenTheStudent_RemovesBoth()
+	{
+		var student = await GivenStudentAsync("Discarded", $"Student {Guid.NewGuid()}");
+		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
+
+		await CallAsync("SELECT students.delete_waiting_list_entry(@p_id);", ("p_id", entryId));
+		await CallAsync("SELECT students.delete_student(@p_id);", ("p_id", student));
+
+		var remainingEntry = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_id(@p_id);", ("p_id", entryId));
+		var remainingStudent = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_student_by_id(@p_id);", ("p_id", student));
+
+		ShouldlyHelpers.Satisfy(
+			() => remainingEntry.ShouldBeNull(),
+			() => remainingStudent.ShouldBeNull());
+	}
+
 	private async Task<Guid> GivenStudentAsync(string firstName, string lastName)
 	{
 		var studentId = Guid.NewGuid();
@@ -115,6 +211,44 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			("p_date_of_birth", new DateOnly(2015, 3, 1)));
 
 		return studentId;
+	}
+
+	private async Task<Guid> GivenWaitingListEntryReturningIdAsync(Guid studentId, Guid lessonStructureId)
+	{
+		var entryId = Guid.NewGuid();
+
+		await CallAsync(
+			"SELECT students.create_waiting_list_entry(@p_id, @p_student_id, @p_structure, @p_instrument, @p_notes, @p_added_at);",
+			("p_id", entryId),
+			("p_student_id", studentId),
+			("p_structure", lessonStructureId),
+			("p_instrument", "Piano"),
+			("p_notes", null),
+			("p_added_at", new DateTime(2026, 4, 7, 6, 30, 0, DateTimeKind.Utc)));
+
+		return entryId;
+	}
+
+	private async Task<Guid?> ReadEntryStudentIdAsync(string sql, params (string Name, object? Value)[] parameters)
+	{
+		await using var command = _fixture.Connection.CreateCommand();
+		command.CommandText = sql;
+		foreach (var (name, value) in parameters)
+		{
+			command.Parameters.Add(new NpgsqlParameter(name, value ?? DBNull.Value));
+		}
+
+		var result = await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+		return result is Guid id ? id : null;
+	}
+
+	private async Task<DateTime> ReadAddedAtAsync(Guid entryId)
+	{
+		await using var command = _fixture.Connection.CreateCommand();
+		command.CommandText = "SELECT added_at FROM students.waiting_list WHERE waiting_list_entry_id = @p_id;";
+		command.Parameters.Add(new NpgsqlParameter("p_id", entryId));
+
+		return (DateTime)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
 	}
 
 	private Task GivenWaitingListEntryAsync(Guid studentId, Guid lessonStructureId) =>

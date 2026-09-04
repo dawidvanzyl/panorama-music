@@ -21,10 +21,11 @@ public static class StudentRoutes
 		// below via an explicit override — minimal-API route authorization is
 		// additive, so re-declaring TeacherPolicy on each write is what actually
 		// narrows it back down.
-		// AddSibling is the one exception: the capture wizard links
-		// staged siblings to the student it just created, and a half-captured
-		// student with a 403 on that step is a worse outcome than the write
-		// being reachable a beat earlier than the rest.
+		// The sibling links are the exception: the shared student wizard's
+		// Siblings tab both links and unlinks them, and a Coordinator drives that
+		// wizard from the Waiting List screen — capturing a student onto the list
+		// and maintaining one already on it. A student's own record stays a
+		// Teacher's to create, rewrite or delete.
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("Students")
@@ -110,10 +111,6 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{studentId}/siblings/{request.SiblingId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<AddSiblingRequest>>()
-			// Coordinator-permitted: the waiting-list capture wizard
-			// links staged siblings to the student it just created, so this write
-			// stays under the group's own TeacherOrCoordinatorPolicy rather than
-			// being re-tightened like the other four writes in this file.
 			.MarkSensitiveResponse()
 			.WithName("AddSibling")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
@@ -142,7 +139,6 @@ public static class StudentRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
-			.RequireAuthorization("TeacherPolicy")
 			.WithName("RemoveSibling")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)

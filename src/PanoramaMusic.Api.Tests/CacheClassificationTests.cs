@@ -40,6 +40,8 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// Each waiting-list row names a student and may carry their notes.
 		["GetWaitingList"] = CacheExpectation.NoStore,
 		["CaptureWaitingListStudent"] = CacheExpectation.NoStore,
+		["UpdateWaitingListEntry"] = CacheExpectation.NoStore,
+		["UpdateWaitingListStudent"] = CacheExpectation.NoStore,
 		["GetStudentById"] = CacheExpectation.NoStore,
 		["GetSiblings"] = CacheExpectation.NoStore,
 		["CreateStudent"] = CacheExpectation.NoStore,

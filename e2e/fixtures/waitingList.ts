@@ -205,6 +205,133 @@ export async function fetchAnyLessonStructureId(page: Page): Promise<string> {
 }
 
 /**
+ * The three write surfaces this story exposes, reached directly from the
+ * signed-in session. A Teacher is offered no Edit and no Delete on the page at
+ * all (272IT26), so the refusal boundary has no UI path to attempt it through
+ * — the same reasoning `attemptCaptureWaitingListStudent` follows for capture.
+ */
+export interface EntryUpdateAttempt {
+  lessonStructureId: string;
+  instrumentType: InstrumentType;
+  notes: string | null;
+}
+
+export async function attemptUpdateWaitingListEntry(
+  page: Page,
+  waitingListEntryId: string,
+  input: EntryUpdateAttempt,
+): Promise<number> {
+  return page.evaluate(
+    async ({ waitingListEntryId, input }) => {
+      const response = await fetch(`/api/waiting-list/${waitingListEntryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify(input),
+      });
+      return response.status;
+    },
+    { waitingListEntryId, input },
+  );
+}
+
+export async function attemptUpdateWaitingListStudent(
+  page: Page,
+  studentId: string,
+  firstName: string,
+  lastName: string,
+): Promise<number> {
+  return page.evaluate(
+    async ({ studentId, firstName, lastName }) => {
+      const response = await fetch(`/api/waiting-list/students/${studentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          dateOfBirth: '2013-03-01',
+          grade: 'Grade4',
+          class: 'A1',
+          phase: 'Junior',
+          language: 'English',
+        }),
+      });
+      return response.status;
+    },
+    { studentId, firstName, lastName },
+  );
+}
+
+export async function attemptRemoveWaitingListStudent(page: Page, studentId: string): Promise<number> {
+  return page.evaluate(async (studentId) => {
+    const response = await fetch(`/api/waiting-list/students/${studentId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    return response.status;
+  }, studentId);
+}
+
+export interface StudentReadResult {
+  status: number;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+/**
+ * Reads one student back by id — for the checks a screen cannot show: that a
+ * removed student's record is really gone, and that a refused write left the
+ * record it named untouched.
+ */
+export async function fetchStudentById(page: Page, studentId: string): Promise<StudentReadResult> {
+  return page.evaluate(async (studentId) => {
+    const response = await fetch(`/api/students/${studentId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    if (!response.ok) return { status: response.status, firstName: null, lastName: null };
+    const student = (await response.json()) as { firstName: string; lastName: string };
+    return { status: response.status, firstName: student.firstName, lastName: student.lastName };
+  }, studentId);
+}
+
+export interface WaitingListEntryRead {
+  waitingListEntryId: string;
+  instrumentType: string;
+  notes: string | null;
+}
+
+/** The seeded entry as the list read returns it, or null if it is no longer there. */
+export async function fetchWaitingListEntry(
+  page: Page,
+  waitingListEntryId: string,
+): Promise<WaitingListEntryRead | null> {
+  return page.evaluate(async (waitingListEntryId) => {
+    const response = await fetch('/api/waiting-list', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const groups = (await response.json()) as {
+      entries: { waitingListEntryId: string; instrumentType: string; notes: string | null }[];
+    }[];
+    for (const group of groups) {
+      const entry = group.entries.find((e) => e.waitingListEntryId === waitingListEntryId);
+      if (entry) {
+        return {
+          waitingListEntryId: entry.waitingListEntryId,
+          instrumentType: entry.instrumentType,
+          notes: entry.notes,
+        };
+      }
+    }
+    return null;
+  }, waitingListEntryId);
+}
+
+/**
  * Creates a course of the given type on the given lesson structure, through
  * the real `/api/courses` POST — used only to prove a course-type leak would
  * be observable (272IT40, S14), never to enrol the seeded waiting-list

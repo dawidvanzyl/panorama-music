@@ -22,4 +22,27 @@ public static class WaitingListEntryExtensions
 			entry.InstrumentType,
 			entry.Notes,
 			entry.AddedAt);
+
+	/// <summary>
+	/// The entry's one-based position within its own occurrence type's group,
+	/// ordered by date-time added — the same derivation
+	/// <c>GetWaitingListHandler</c> applies across the whole list, run here
+	/// against one entry so a write path can answer with the position its
+	/// result will hold on the next read.
+	/// <para>
+	/// Because it is derived rather than stored, an entry moved to the other
+	/// occurrence type takes its standing there from its original added
+	/// date-time and does not join the back of that list.
+	/// </para>
+	/// </summary>
+	public static int DerivePosition(this WaitingListEntry entry, IEnumerable<WaitingListEntry> entries)
+	{
+		var index = entries
+			.Where(e => e.LessonStructure.OccurrenceType == entry.LessonStructure.OccurrenceType)
+			.OrderBy(e => e.AddedAt)
+			.ToList()
+			.FindIndex(e => e.WaitingListEntryId == entry.WaitingListEntryId);
+
+		return index + 1;
+	}
 }

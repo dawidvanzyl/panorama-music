@@ -10,6 +10,10 @@ const mockGetGuardianRelationships = vi.fn();
 const mockGetGuardians = vi.fn();
 const mockAddGuardian = vi.fn();
 const mockHasAnyRole = vi.fn();
+const mockUpdateWaitingListEntry = vi.fn();
+const mockUpdateWaitingListStudent = vi.fn();
+const mockRemoveWaitingListStudent = vi.fn();
+const mockGetStudentById = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
   const actual = await vi.importActual<typeof import('../../services/waiting-list')>('../../services/waiting-list');
@@ -18,6 +22,9 @@ vi.mock('../../services/waiting-list', async () => {
     getWaitingList: () => mockGetWaitingList(),
     getLessonStructures: () => mockGetLessonStructures(),
     captureWaitingListStudent: (...args: unknown[]) => mockCaptureWaitingListStudent(...args),
+    updateWaitingListEntry: (...args: unknown[]) => mockUpdateWaitingListEntry(...args),
+    updateWaitingListStudent: (...args: unknown[]) => mockUpdateWaitingListStudent(...args),
+    removeWaitingListStudent: (...args: unknown[]) => mockRemoveWaitingListStudent(...args),
   };
 });
 
@@ -26,6 +33,7 @@ vi.mock('../../services/students', async () => {
   return {
     ...actual,
     getStudents: () => mockGetStudents(),
+    getStudentById: (...args: unknown[]) => mockGetStudentById(...args),
     addSibling: (...args: unknown[]) => mockAddSibling(...args),
   };
 });
@@ -129,6 +137,28 @@ function successBannerOf(el: HTMLElement): HTMLElement {
   return el.shadowRoot!.getElementById('success') as HTMLElement;
 }
 
+function deleteModalOf(el: HTMLElement): HTMLElement {
+  return el.shadowRoot!.getElementById('deleteModal') as HTMLElement;
+}
+
+function rowNames(el: HTMLElement): string[] {
+  return [...tableOf(el).shadowRoot!.querySelectorAll('.wl-table__student-name')].map((n) => n.textContent ?? '');
+}
+
+function rowFor(el: HTMLElement, name: string): HTMLElement {
+  const row = [...tableOf(el).shadowRoot!.querySelectorAll('tbody tr')].find((r) =>
+    r.querySelector('.wl-table__student-name')?.textContent?.includes(name),
+  );
+  if (!row) throw new Error(`No waiting-list row found for ${name}`);
+  return row as HTMLElement;
+}
+
+function actionButton(el: HTMLElement, name: string, label: string): HTMLButtonElement {
+  const button = [...rowFor(el, name).querySelectorAll('button')].find((b) => b.textContent === label);
+  if (!button) throw new Error(`No ${label} action on the row for ${name}`);
+  return button as HTMLButtonElement;
+}
+
 beforeEach(() => {
   mockGetWaitingList.mockReset();
   mockGetLessonStructures.mockReset().mockResolvedValue([]);
@@ -140,6 +170,10 @@ beforeEach(() => {
   mockAddGuardian.mockReset();
   mockHasAnyRole.mockReset();
   mockHasAnyRole.mockReturnValue(false);
+  mockUpdateWaitingListEntry.mockReset();
+  mockUpdateWaitingListStudent.mockReset();
+  mockRemoveWaitingListStudent.mockReset();
+  mockGetStudentById.mockReset();
 });
 
 afterEach(() => {
@@ -506,3 +540,61 @@ describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] },
     expect(el.shadowRoot!.getElementById('error')!.classList.contains('waiting-list-page__error--visible')).toBe(true);
   });
 });
+
+describe(
+  'pm-waiting-list-page — removing a student from the waiting list',
+  { tags: ['294UC16', '294UC17', '294UC18'] },
+  () => {
+    it('opens a confirmation naming the student and stating their student record will be deleted', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      actionButton(el, 'Amara Pillay', 'Delete').click();
+      const modal = deleteModalOf(el);
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.textContent).toContain('Amara Pillay');
+      expect(modal.shadowRoot!.textContent).toContain('delete their student record');
+      expect(modal.shadowRoot!.textContent).toContain('cannot be undone');
+      expect(mockRemoveWaitingListStudent).not.toHaveBeenCalled();
+    });
+
+    it('deletes nothing and leaves the row in place when the confirmation is cancelled', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      actionButton(el, 'Amara Pillay', 'Delete').click();
+      const modal = deleteModalOf(el);
+      (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
+      await flush();
+
+      expect(modal.hasAttribute('open')).toBe(false);
+      expect(mockRemoveWaitingListStudent).not.toHaveBeenCalled();
+      expect(rowNames(el)).toContain('Amara Pillay');
+      expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+    });
+
+    it('removes the row and shows a success message naming the student when confirmed', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList
+        .mockResolvedValueOnce(bothGroups)
+        .mockResolvedValueOnce([
+          { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+        ]);
+      mockRemoveWaitingListStudent.mockResolvedValueOnce(undefined);
+
+      const el = await mountPage();
+      actionButton(el, 'Amara Pillay', 'Delete').click();
+      (deleteModalOf(el).shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
+      await flush();
+      await flush();
+
+      expect(mockRemoveWaitingListStudent).toHaveBeenCalledWith('s1');
+      expect(rowNames(el)).not.toContain('Amara Pillay');
+      expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(true);
+      expect(successBannerOf(el).textContent).toContain('Amara Pillay');
+    });
+  },
+);
