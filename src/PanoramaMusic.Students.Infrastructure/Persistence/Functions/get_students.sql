@@ -4,7 +4,7 @@
 -- A student holding a waiting-list entry is excluded (#292) — unless they also
 -- hold a course enrollment, in which case enrollment wins: the milestone rule
 -- is a student is on the waiting list or enrolled, never both and never
--- neither (see #272 Overview and ruling R3), so a student who somehow holds
+-- neither (see #272 Overview), so a student who somehow holds
 -- both stays visible here rather than disappearing from both screens.
 
 DROP FUNCTION IF EXISTS students.get_students(TEXT, TEXT, TEXT);

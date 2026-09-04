@@ -9,7 +9,7 @@ const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
 
 // Milestone-wide vocabulary, not waiting-list vocabulary — owned by
 // enrollments.ts, which itself re-exports it from services/lesson-structure.ts
-// (ruling R5/R6). Re-exported so this module stays the one import site for a
+// Re-exported so this module stays the one import site for a
 // waiting-list consumer, without minting a fourth declaration of the same
 // unions.
 export type { OccurrenceType, LessonType, DurationType, InstrumentType };
@@ -120,8 +120,7 @@ registerSessionCache(clearLessonStructuresCache);
  * The seeded lesson-structure lookup, cached the same way the catalogue
  * screen's own copy is (`features/courses/services/courses.ts`). Fetched
  * again here, rather than imported across features, for the same reason
- * `getWaitingList` lives in this feature at all — both are self-contained
- * (ruling R5).
+ * `getWaitingList` lives in this feature at all — both are self-contained.
  */
 export async function getLessonStructures(): Promise<LessonStructure[]> {
   if (_lessonStructuresCache) return _lessonStructuresCache;

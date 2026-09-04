@@ -7,7 +7,7 @@
  * pair moves together. Both `features/courses` and `features/students` are
  * self-contained today, and neither imports the other — this module is the
  * one shared home for the vocabulary both need, declared once here rather
- * than duplicated per feature (ruling R5, widened to labels by ruling R6).
+ * than duplicated per feature.
  */
 
 export type CourseType = 'Theory' | 'GREEnrichment' | 'G1Enrichment' | 'G2Recorder' | 'Instrument';
