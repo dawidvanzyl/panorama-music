@@ -16,7 +16,14 @@ public sealed class GuardianDeletedTranslator(IAuditContext auditContext, IUserC
 
 	public AuditEvent Translate(IDomainEvent domainEvent)
 	{
-		var guardian = ((GuardianDeleted)domainEvent).Guardian;
+		var deleted = (GuardianDeleted)domainEvent;
+		var guardian = deleted.Guardian;
+
+		var detail = new Dictionary<string, object?>
+		{
+			["targetDisplay"] = $"{guardian.FirstName} {guardian.Surname}",
+		};
+		StudentWriteSourceDetail.Apply(detail, deleted.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),
@@ -30,9 +37,6 @@ public sealed class GuardianDeletedTranslator(IAuditContext auditContext, IUserC
 			auditContext.CorrelationId,
 			"success",
 			null,
-			new Dictionary<string, object?>
-			{
-				["targetDisplay"] = $"{guardian.FirstName} {guardian.Surname}",
-			});
+			detail);
 	}
 }

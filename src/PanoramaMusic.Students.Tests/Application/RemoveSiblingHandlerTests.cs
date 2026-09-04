@@ -3,6 +3,8 @@ using Moq;
 using PanoramaMusic.Students.Application.Commands.Siblings;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Siblings;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -65,5 +67,58 @@ public class RemoveSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 
 		await Should.ThrowAsync<EntityNotFoundException>(
 			() => _handler.HandleAsync(new RemoveSiblingCommand(student.StudentId, siblingId), TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC16")]
+	public async Task HandleAsync_AWaitingListStudentsSibling_RaisesTheRemovalNamingTheWaitingListAsItsSource()
+	{
+		var removed = await RemoveASiblingOf(GivenStudentAndSibling(onTheWaitingList: true));
+
+		removed.Source.ShouldBe(StudentWriteSource.WaitingList);
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_ARosterStudentsSibling_RaisesTheRemovalNamingTheRosterAsItsSource()
+	{
+		// The Siblings tab is the same screen in both modes, so the same request
+		// against a student the roster holds is unchanged by this story.
+		var removed = await RemoveASiblingOf(GivenStudentAndSibling(onTheWaitingList: false));
+
+		removed.Source.ShouldBe(StudentWriteSource.Roster);
+	}
+
+	private (Student Student, Student Sibling) GivenStudentAndSibling(bool onTheWaitingList)
+	{
+		var student = StudentFactory.Create();
+		var siblingStudent = StudentFactory.Create(firstName: "Julian", lastName: "Thorne");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([siblingStudent]);
+
+		if (onTheWaitingList)
+			_context.GivenAWaitingListStudent(student);
+
+		return (student, siblingStudent);
+	}
+
+	private async Task<SiblingRemoved> RemoveASiblingOf((Student Student, Student Sibling) pair)
+	{
+		Sibling? deleted = null;
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.DeleteAsync(It.IsAny<Sibling>(), It.IsAny<CancellationToken>()))
+			.Callback<Sibling, CancellationToken>((sibling, _) => deleted = sibling)
+			.Returns(Task.CompletedTask);
+
+		await _handler.HandleAsync(
+			new RemoveSiblingCommand(pair.Student.StudentId, pair.Sibling.StudentId),
+			TestContext.Current.CancellationToken);
+
+		return deleted.ShouldNotBeNull().DrainEvents().OfType<SiblingRemoved>().Single();
 	}
 }

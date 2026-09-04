@@ -1,6 +1,12 @@
 using Microsoft.AspNetCore.Diagnostics;
 using PanoramaMusic.Api.Exceptions;
 using PanoramaMusic.Api.Extensions;
+using PanoramaMusic.Audit.Application.Factories;
+using PanoramaMusic.Audit.Domain;
+using PanoramaMusic.Audit.Domain.Interfaces;
+using PanoramaMusic.Identity.Application.Constants;
+using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Persistence.Transactions;
 using System.Text.Json;
 using IdentityExceptions = PanoramaMusic.Identity.Domain.Exceptions;
 using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
@@ -64,6 +70,18 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
+		// An authorization refusal decided by the record being written rather
+		// than by the route, which the authorization middleware never sees. It
+		// is audited on the same terms as a policy denial, since ASVS
+		// 5.0.0-16.3.2 is about the attempt, not about which layer refused it.
+		if (exception is StudentsExceptions.ForbiddenException)
+		{
+			LogHandled(exception, StatusCodes.Status403Forbidden, correlationId);
+			await AuditDeniedAsync(httpContext, exception.Message, cancellationToken);
+			await WriteAsync(httpContext, StatusCodes.Status403Forbidden, new { error = exception.Message, correlationId }, cancellationToken);
+			return true;
+		}
+
 		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException or TeachersExceptions.EntityNotFoundException)
 		{
 			LogHandled(exception, StatusCodes.Status404NotFound, correlationId);
@@ -96,6 +114,51 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			new { error = "An unexpected error occurred.", correlationId },
 			cancellationToken);
 		return true;
+	}
+
+	/// <summary>
+	/// Records a refusal the authorization middleware never saw, as the same
+	/// <c>identity.authorization.denied</c> event a policy denial produces —
+	/// the attempt is the same thing whichever layer refused it.
+	/// <para>
+	/// Written on its own connection because the refusal reaches here as an
+	/// exception, and the request's transaction is rolled back by the time it
+	/// does. A failure to record it is logged and swallowed: losing the audit
+	/// record is bad, but turning a refusal into a 500 would be worse, and the
+	/// caller was still refused either way.
+	/// </para>
+	/// </summary>
+	private async Task AuditDeniedAsync(HttpContext httpContext, string reason, CancellationToken cancellationToken)
+	{
+		try
+		{
+			var services = httpContext.RequestServices;
+			var userContext = services.GetRequiredService<IUserContext>();
+			var auditLogger = services.GetRequiredService<IAuditLogger>();
+			var auditEventFactory = services.GetRequiredService<IAuditEventFactory>();
+			var unitOfWork = services.GetRequiredService<IUnitOfWork>();
+
+			var auditEvent = auditEventFactory.Create(
+				IdentityAuditEventTypes.AuthorizationDenied,
+				userContext.UserId,
+				userContext.Email,
+				targetId: null,
+				AuditOutcomes.Failure,
+				reason: "Forbidden",
+				detail: new Dictionary<string, object?>
+				{
+					["path"] = httpContext.Request.Path.Value,
+					["denial"] = reason,
+				});
+
+			await unitOfWork.ExecuteIsolatedAsync(
+				() => auditLogger.CreateAsync(auditEvent, cancellationToken),
+				cancellationToken);
+		}
+		catch (Exception auditFailure)
+		{
+			logger.LogError(auditFailure, "Failed to record an authorization denial in the audit trail");
+		}
 	}
 
 	private void LogHandled(Exception exception, int statusCode, string? correlationId) =>

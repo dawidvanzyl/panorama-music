@@ -2,6 +2,7 @@ using PanoramaMusic.Students.Application.Commands.Students;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Application.Handlers.Students;
@@ -19,7 +20,8 @@ public sealed class CreateStudentHandler(IStudentRepository studentRepository)
 			request.Grade,
 			request.Class,
 			request.Phase,
-			request.Language);
+			request.Language,
+			StudentWriteSource.Roster);
 
 		await studentRepository.CreateAsync(student, cancellationToken);
 

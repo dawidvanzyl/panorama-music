@@ -28,7 +28,8 @@ public sealed class UpdateStudentHandler(
 			request.Grade,
 			request.Class,
 			request.Phase,
-			request.Language);
+			request.Language,
+			StudentWriteSource.Roster);
 
 		await studentRepository.UpdateAsync(student, cancellationToken);
 

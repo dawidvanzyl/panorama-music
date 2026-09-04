@@ -1,4 +1,5 @@
 using PanoramaMusic.Domain;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Guardians;
 
 namespace PanoramaMusic.Students.Domain.Entities;
@@ -20,15 +21,21 @@ public sealed class StudentGuardian : AggregateRoot
 
 	public Guid GuardianId { get; }
 
-	public static StudentGuardian Create(Student student, Guardian guardian)
+	/// <summary>
+	/// The Guardians tab is the same screen from the roster and from the waiting
+	/// list, so <paramref name="source"/> names which one reached it and travels
+	/// on the event for the audit record. The caller states it; nothing
+	/// downstream infers it.
+	/// </summary>
+	public static StudentGuardian Create(Student student, Guardian guardian, StudentWriteSource source)
 	{
 		var link = new StudentGuardian(student.StudentId, guardian.GuardianId);
-		link.Raise(new GuardianLinked(student, guardian));
+		link.Raise(new GuardianLinked(student, guardian, source));
 		return link;
 	}
 
-	public void MarkUnlinked(Student student, Guardian guardian)
+	public void MarkUnlinked(Student student, Guardian guardian, StudentWriteSource source)
 	{
-		Raise(new GuardianUnlinked(student, guardian));
+		Raise(new GuardianUnlinked(student, guardian, source));
 	}
 }

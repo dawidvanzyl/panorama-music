@@ -14,6 +14,7 @@ using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Interfaces;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Application.Validators.Students;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Contexts;
@@ -74,6 +75,8 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<AddSiblingHandler>();
 		services.AddTransient<GetSiblingsHandler>();
 		services.AddTransient<RemoveSiblingHandler>();
+		services.AddTransient<GuardianMaintenanceScope>();
+		services.AddTransient<StudentWriteSourceResolver>();
 		services.AddTransient<AddGuardianHandler>();
 		services.AddTransient<UpdateGuardianHandler>();
 		services.AddTransient<GetGuardiansHandler>();

@@ -1,4 +1,5 @@
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Students.Tests.Factories;
 
@@ -13,7 +14,10 @@ public static class GuardianFactory
 		string? email = "nomvula.dube@example.com",
 		bool receivesCorrespondence = true,
 		bool responsibleForPayment = true,
-		bool married = false) =>
+		bool married = false,
+		// The roster is where a guardian's students live unless a test says
+		// otherwise, so only the audit-surface tests have to name one.
+		StudentWriteSource source = StudentWriteSource.Roster) =>
 		Guardian.Create(
 			guardianId ?? Guid.NewGuid(),
 			guardianRelationshipId ?? Guid.NewGuid(),
@@ -23,5 +27,6 @@ public static class GuardianFactory
 			email,
 			receivesCorrespondence,
 			responsibleForPayment,
-			married);
+			married,
+			source);
 }

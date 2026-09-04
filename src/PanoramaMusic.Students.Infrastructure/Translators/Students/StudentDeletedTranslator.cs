@@ -16,7 +16,14 @@ public sealed class StudentDeletedTranslator(IAuditContext auditContext, IUserCo
 
 	public AuditEvent Translate(IDomainEvent domainEvent)
 	{
-		var student = ((StudentDeleted)domainEvent).Student;
+		var deleted = (StudentDeleted)domainEvent;
+		var student = deleted.Student;
+
+		var detail = new Dictionary<string, object?>
+		{
+			["targetDisplay"] = $"{student.FirstName} {student.LastName}",
+		};
+		StudentWriteSourceDetail.Apply(detail, deleted.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),
@@ -30,9 +37,6 @@ public sealed class StudentDeletedTranslator(IAuditContext auditContext, IUserCo
 			auditContext.CorrelationId,
 			"success",
 			null,
-			new Dictionary<string, object?>
-			{
-				["targetDisplay"] = $"{student.FirstName} {student.LastName}",
-			});
+			detail);
 	}
 }

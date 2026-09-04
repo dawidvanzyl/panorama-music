@@ -34,6 +34,18 @@ public class SiblingRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		return [.. dtos.Select(dto => dto.MapToStudent())];
 	}
 
+	public async Task<IList<Guid>> GetEnrolledSiblingIdsAsync(Guid studentId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_enrolled_sibling_ids",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var siblingIds = await Connection.QueryAsync<Guid>(command);
+
+		return [.. siblingIds];
+	}
+
 	public async Task AddAsync(Sibling sibling, CancellationToken cancellationToken)
 	{
 		await CreateDirectionAsync(sibling.StudentId, sibling.SiblingId, cancellationToken);

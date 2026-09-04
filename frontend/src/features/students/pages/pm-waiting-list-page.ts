@@ -462,6 +462,7 @@ export class PmWaitingListPage extends HTMLElement {
         guardian.guardianId,
         `${guardian.firstName} ${guardian.surname}`,
         shared,
+        guardian.restricted,
       );
     } catch (err) {
       this.wizardModal!.showGuardiansError(

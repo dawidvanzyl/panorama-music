@@ -15,6 +15,7 @@ function guardian(overrides: Partial<GuardianResult> = {}): GuardianResult {
     receivesCorrespondence: true,
     responsibleForPayment: true,
     married: true,
+    restricted: false,
     ...overrides,
   };
 }

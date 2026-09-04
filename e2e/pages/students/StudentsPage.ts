@@ -474,6 +474,16 @@ export class StudentsPage extends BasePage {
     }
   }
 
+  /** Every guardian row currently listed, for a check that nothing else was added or removed. */
+  guardianListRows(): Locator {
+    return this.wizardModal.locator('#guardiansStep').locator('#guardianList').locator('tbody tr');
+  }
+
+  /** The affordance shown in place of the edit action on a guardian this caller may not change. */
+  guardianRestrictionIcon(name: string): Locator {
+    return this.guardianListRow(name).locator('.guardian-list__info');
+  }
+
   guardianListRow(name: string): Locator {
     return this.wizardModal
       .locator('#guardiansStep')

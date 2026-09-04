@@ -5,6 +5,7 @@ using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Students;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -73,6 +74,23 @@ public class UpdateWaitingListStudentHandlerTests : IClassFixture<StudentsTestFi
 
 		_context.Repositories.StudentRepositoryMock.Verify(
 			r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "300UC12")]
+	public async Task HandleAsync_AWaitingListEdit_RaisesTheUpdateNamingTheWaitingListAsItsSource()
+	{
+		var student = StudentFactory.Create(firstName: "Amara", lastName: "Pillay");
+		SetupEntry(WaitingListEntryFactory.Create(student: student));
+
+		await _handler.HandleAsync(
+			new UpdateWaitingListStudentCommand(student.StudentId, Request("Amarah", "Pillay")),
+			TestContext.Current.CancellationToken);
+
+		// The handler states the surface; nothing downstream works it out. The
+		// roster's own update handler states the roster on the same terms.
+		var updated = student.DrainEvents().OfType<StudentUpdated>().Single();
+		updated.Source.ShouldBe(StudentWriteSource.WaitingList);
 	}
 
 	private void SetupEntry(WaitingListEntry entry) =>

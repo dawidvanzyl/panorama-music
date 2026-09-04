@@ -1,11 +1,15 @@
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 
-public sealed class GetGuardiansHandler(IStudentRepository studentRepository, IStudentGuardianRepository studentGuardianRepository)
+public sealed class GetGuardiansHandler(
+	IStudentRepository studentRepository,
+	IStudentGuardianRepository studentGuardianRepository,
+	GuardianMaintenanceScope guardianMaintenanceScope)
 {
 	public async Task<IList<GuardianResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
 	{
@@ -13,7 +17,8 @@ public sealed class GetGuardiansHandler(IStudentRepository studentRepository, IS
 			?? throw new EntityNotFoundException($"Student {studentId} was not found.");
 
 		var guardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(studentId, cancellationToken);
+		var restrictedIds = await guardianMaintenanceScope.RestrictedGuardianIdsAsync(studentId, cancellationToken);
 
-		return [.. guardians.Select(guardian => guardian.ToResult())];
+		return [.. guardians.Select(guardian => guardian.ToResult(restrictedIds.Contains(guardian.GuardianId)))];
 	}
 }

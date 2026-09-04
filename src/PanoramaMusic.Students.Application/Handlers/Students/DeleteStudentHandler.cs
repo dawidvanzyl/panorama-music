@@ -1,4 +1,5 @@
 using PanoramaMusic.Students.Application.Commands.Students;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
@@ -11,7 +12,7 @@ public sealed class DeleteStudentHandler(IStudentRepository studentRepository)
 		var student = await studentRepository.GetByIdAsync(command.StudentId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {command.StudentId} was not found.");
 
-		student.MarkDeleted();
+		student.MarkDeleted(StudentWriteSource.Roster);
 
 		await studentRepository.DeleteAsync(student, cancellationToken);
 	}

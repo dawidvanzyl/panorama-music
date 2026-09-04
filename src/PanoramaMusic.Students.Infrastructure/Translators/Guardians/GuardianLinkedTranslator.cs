@@ -18,6 +18,13 @@ public sealed class GuardianLinkedTranslator(IAuditContext auditContext, IUserCo
 	{
 		var linked = (GuardianLinked)domainEvent;
 
+		var detail = new Dictionary<string, object?>
+		{
+			["guardianId"] = linked.Guardian.GuardianId,
+			["targetDisplay"] = $"{linked.Student.FirstName} {linked.Student.LastName} ↔ {linked.Guardian.FirstName} {linked.Guardian.Surname}",
+		};
+		StudentWriteSourceDetail.Apply(detail, linked.Source);
+
 		return new AuditEvent(
 			Guid.NewGuid(),
 			DateTime.UtcNow,
@@ -30,10 +37,6 @@ public sealed class GuardianLinkedTranslator(IAuditContext auditContext, IUserCo
 			auditContext.CorrelationId,
 			"success",
 			null,
-			new Dictionary<string, object?>
-			{
-				["guardianId"] = linked.Guardian.GuardianId,
-				["targetDisplay"] = $"{linked.Student.FirstName} {linked.Student.LastName} ↔ {linked.Guardian.FirstName} {linked.Guardian.Surname}",
-			});
+			detail);
 	}
 }

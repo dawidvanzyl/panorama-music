@@ -6,6 +6,7 @@ using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.StudentExtraCurriculars;
+using PanoramaMusic.Students.Domain.Events.Students;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -57,6 +58,35 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 				() => result.Language.ShouldBe(Language.Afrikaans)),
 			() => _context.Repositories.StudentRepositoryMock.Verify(
 				r => r.UpdateAsync(student, TestContext.Current.CancellationToken), Times.Once));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC14")]
+	public async Task HandleAsync_ARosterEdit_RaisesTheUpdateNamingTheRosterAsItsSource()
+	{
+		// The roster is where a student record lives, and its source is what
+		// makes the audit record it produces byte-identical to what this path
+		// emitted before the waiting list needed naming.
+		var student = StudentFactory.Create(firstName: "Alice", lastName: "Vance");
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+
+		var request = new UpdateStudentRequest(
+			"Alicia",
+			"Vance",
+			student.DateOfBirth,
+			GradeType.Grade5,
+			ClassType.E1,
+			PhaseType.Senior,
+			Language.Afrikaans);
+
+		await _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, request),
+			TestContext.Current.CancellationToken);
+
+		var updated = student.DrainEvents().OfType<StudentUpdated>().Single();
+		updated.Source.ShouldBe(StudentWriteSource.Roster);
 	}
 
 	[Fact]
