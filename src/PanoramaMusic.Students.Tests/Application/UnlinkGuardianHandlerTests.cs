@@ -39,9 +39,10 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync([guardian]);
+		// Counted before this unlink, so a second link is what makes the record survive it.
 		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(1);
+			.ReturnsAsync(2);
 
 		await _handler.HandleAsync(new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
 
@@ -73,7 +74,7 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			.ReturnsAsync([guardian]);
 		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(0);
+			.ReturnsAsync(1);
 
 		await _handler.HandleAsync(new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
 
@@ -129,7 +130,7 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		// remains after this student's is gone.
 		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(1);
+			.ReturnsAsync(2);
 
 		await _handler.HandleAsync(
 			new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
@@ -147,6 +148,81 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
 			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
 				r => r.HasEnrolledLinkAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
+	public async Task HandleAsync_CoordinatorUnlinkingTheLastLinkOfAGuardianAnEnrolledStudentHolds_IsRefusedAndBothSurvive()
+	{
+		// The cascade would destroy the shared row, which is the deletion this
+		// caller is refused on the guardian's own route.
+		_context.ActAsCoordinator();
+
+		var student = StudentFactory.Create();
+		var guardian = GuardianFactory.Create(firstName: "Nomvula", surname: "Dube");
+		guardian.DrainEvents();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(1);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.HasEnrolledLinkAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
+
+		await Should.ThrowAsync<ForbiddenException>(
+			() => _handler.HandleAsync(new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			// Refused whole: the link is not removed either, so the operation
+			// cannot leave a student unlinked from a guardian that survives.
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => guardian.DrainEvents().ShouldNotContain(e => e is GuardianDeleted));
+	}
+
+	[Fact]
+	public async Task HandleAsync_CoordinatorUnlinkingTheLastLinkOfAGuardianNoEnrolledStudentHolds_DeletesTheGuardian()
+	{
+		_context.ActAsCoordinator();
+
+		var student = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(1);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.HasEnrolledLinkAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(false);
+
+		await _handler.HandleAsync(
+			new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Once),
+			// A guardian only waiting-list students hold is this caller's to delete.
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.Is<Guardian>(g => g.GuardianId == guardian.GuardianId), It.IsAny<CancellationToken>()), Times.Once));
 	}
 
 	[Fact]
@@ -190,7 +266,7 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			.ReturnsAsync([guardian]);
 		_context.Repositories.StudentGuardianRepositoryMock
 			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(0);
+			.ReturnsAsync(1);
 
 		if (onTheWaitingList)
 			_context.GivenAWaitingListStudent(student);
