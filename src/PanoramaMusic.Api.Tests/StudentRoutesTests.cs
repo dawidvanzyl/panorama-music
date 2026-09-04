@@ -458,16 +458,17 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 	/// <summary>
 	/// Reads are open to Teacher and Coordinator — a Coordinator capturing a
 	/// waiting-list student needs GetStudents for the wizard's Siblings-tab
-	/// candidate list. AddSibling is open to both too: the capture wizard
-	/// links staged siblings to the student it just created, and 403 on that step after
-	/// the student already exists is a half-captured student, not just a
-	/// blocked action. Every other write stays Teacher-only, proven directly
-	/// rather than assumed, since minimal-API route authorization is
-	/// additive and a widened group policy would silently open every write
-	/// underneath it too if a write's own override were missing or wrong.
+	/// candidate list. The sibling links are open to both too: the wizard's
+	/// Siblings tab links and unlinks them in the flows a Coordinator drives
+	/// from the Waiting List screen, and a 403 mid-flow leaves a student
+	/// half-recorded rather than merely blocking an action. A student's own
+	/// record stays Teacher-only, proven directly rather than assumed, since
+	/// minimal-API route authorization is additive and a widened group policy
+	/// would silently open every write underneath it too if a write's own
+	/// override were missing or wrong.
 	/// </summary>
 	[Fact]
-	public async Task StudentEndpoints_CoordinatorOnly_ReadsAndAddSiblingArePermittedOtherWritesAreForbidden()
+	public async Task StudentEndpoints_CoordinatorOnly_ReadsAndSiblingLinksArePermittedRecordWritesAreForbidden()
 	{
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "students-r9-setup", Role.Teacher);
 		var teacherClient = fixture.CreateIsolatedClient("10.0.10.100");
@@ -518,26 +519,23 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 			() => byIdResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => getSiblingsResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => addSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => removeSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
 			() => createResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => removeSiblingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
 			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
 	}
 
 	/// <summary>
-	/// The capture wizard previews and links guardians for the student it
-	/// just created, so AddGuardian and GetGuardians are open to Teacher and
-	/// Coordinator alike. UnlinkGuardian,
-	/// SyncGuardians and GetMissingSiblingGuardians are not reachable from
-	/// the capture flow at all (its Guardians step only ever runs in create
-	/// mode, and the sync affordance plus the missing-sibling-guardians
-	/// check are edit-mode-only — see pm-guardians-step.ts and
-	/// pm-students-page.ts) and stay Teacher-only, proven directly for the
-	/// same additive-composition reason StudentEndpoints_CoordinatorOnly...
-	/// above proves it for /api/students.
+	/// The shared student wizard's Guardians step reaches every guardian
+	/// endpoint, and a Coordinator drives that wizard from the Waiting List
+	/// screen both while capturing a student onto the list and while
+	/// maintaining one already on it. All of them are therefore open to
+	/// Teacher and Coordinator alike, proven directly for the same
+	/// additive-composition reason StudentEndpoints_CoordinatorOnly... above
+	/// proves the narrowing for /api/students.
 	/// </summary>
 	[Fact]
-	public async Task GuardianEndpoints_CoordinatorOnly_AddAndGetArePermittedUnlinkSyncAndMissingAreForbidden()
+	public async Task GuardianEndpoints_CoordinatorOnly_EveryEndpointTheWizardCallsIsPermitted()
 	{
 		// CreateStudent stays Teacher-only (proven by the composition test
 		// above), so a Teacher seeds the student the Coordinator's guardian
@@ -570,16 +568,40 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 			client.AuthorizedGetRequest($"/api/students/{student.StudentId}/guardians/missing"), TestContext.Current.CancellationToken);
 		var syncResponse = await client.Client.SendAsync(
 			client.AuthorizedPostRequest($"/api/students/{student.StudentId}/guardians/sync"), TestContext.Current.CancellationToken);
+		var sharedResponse = await client.Client.SendAsync(
+			client.AuthorizedGetRequest($"/api/guardians/{guardian!.GuardianId}/shared"), TestContext.Current.CancellationToken);
+		var updateResponse = await client.Client.SendAsync(
+			client.AuthorizedPutRequest(
+				$"/api/guardians/{guardian.GuardianId}",
+				new UpdateGuardianRequest(relationship.GuardianRelationshipId, "Naledi", "Molefe-Dube", null, null, true, true, false)),
+			TestContext.Current.CancellationToken);
+		// Deleting a guardian outright and unlinking one from a student are
+		// separate affordances, so they are proven against separate guardians:
+		// unlinking the last link already disposes of the guardian, which would
+		// leave the delete below with nothing to address.
+		var secondGuardianResponse = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				$"/api/students/{student.StudentId}/guardians",
+				new AddGuardianRequest(relationship.GuardianRelationshipId, "Thabo", "Molefe", null, null, false, false, false)),
+			TestContext.Current.CancellationToken);
+		var secondGuardian = await secondGuardianResponse.Content.ReadFromJsonAsync<GuardianResult>(_jsonOptions, TestContext.Current.CancellationToken);
+
 		var unlinkResponse = await client.Client.SendAsync(
-			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}/guardians/{guardian!.GuardianId}"),
+			client.AuthorizedDeleteRequest($"/api/students/{student.StudentId}/guardians/{guardian.GuardianId}"),
+			TestContext.Current.CancellationToken);
+		var deleteResponse = await client.Client.SendAsync(
+			client.AuthorizedDeleteRequest($"/api/guardians/{secondGuardian!.GuardianId}"),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
 			() => addGuardianResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
 			() => getGuardiansResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
-			() => missingResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => syncResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
-			() => unlinkResponse.StatusCode.ShouldBe(HttpStatusCode.Forbidden));
+			() => missingResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => syncResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => sharedResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => unlinkResponse.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => deleteResponse.StatusCode.ShouldBe(HttpStatusCode.OK));
 	}
 
 	private static Task<HttpResponseMessage> CreateStudentAsync(

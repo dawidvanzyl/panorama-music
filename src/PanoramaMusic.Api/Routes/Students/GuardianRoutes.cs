@@ -11,18 +11,12 @@ public static class GuardianRoutes
 {
 	public static void MapGuardianRoutes(this WebApplication app)
 	{
-		// The waiting-list capture wizard previews and links
-		// guardians for the student it just created, so AddGuardian and
-		// GetGuardians stay under this group's own TeacherOrCoordinatorPolicy.
-		// UnlinkGuardian, SyncGuardians and GetMissingSiblingGuardians are not
-		// reachable from that flow at all — the wizard's Guardians step only
-		// ever runs in create mode during capture, and its sync affordance and
-		// missing-sibling-guardians check are edit-mode-only (see
-		// pm-guardians-step.ts's own `_mode !== 'edit'` gate on the Sync
-		// button, and pm-students-page.ts as the sole caller of both reads) —
-		// so those three stay re-tightened to Teacher, the same reasoning
-		// StudentRoutes.cs applies to the writes the capture wizard does not
-		// call.
+		// Teacher or Coordinator throughout. The shared student wizard reaches
+		// every guardian endpoint below, and a Coordinator drives that wizard in
+		// both its modes from the Waiting List screen — capturing a student onto
+		// the list, and maintaining one already on it. A Coordinator who cannot
+		// link, correct, unlink or sync a guardian cannot finish either flow, and
+		// a capture that fails part-way leaves a student half-recorded.
 		var studentGroup = app
 			.MapGroup("/api/students")
 			.WithTags("Guardians")
@@ -64,7 +58,6 @@ public static class GuardianRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
-			.RequireAuthorization("TeacherPolicy")
 			.WithName("UnlinkGuardian")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -77,7 +70,6 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
-			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("SyncGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
@@ -91,7 +83,6 @@ public static class GuardianRoutes
 				var result = await handler.HandleAsync(studentId, ct);
 				return Results.Ok(result);
 			})
-			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("GetMissingSiblingGuardians")
 			.Produces<IList<GuardianResult>>(StatusCodes.Status200OK)
@@ -99,10 +90,14 @@ public static class GuardianRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
+		// A guardian addressed by their own id rather than through a student.
+		// The wizard's Guardians step reaches all three while editing: the
+		// delete affordance asks whether the guardian is shared before it
+		// offers a choice, then either unlinks or deletes outright.
 		var guardianGroup = app
 			.MapGroup("/api/guardians")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		guardianGroup
 			.MapPut("/{guardianId:guid}", async (Guid guardianId, UpdateGuardianRequest request, UpdateGuardianHandler handler, CancellationToken ct) =>

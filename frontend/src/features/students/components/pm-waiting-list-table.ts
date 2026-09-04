@@ -338,10 +338,7 @@ export class PmWaitingListTable extends HTMLElement {
    * the entry later. Enrol is shown as the design calls for but wired to
    * nothing yet; enrolling off the list is a later M9 story.
    */
-  private buildActions(
-    entry: WaitingListGroupResult['entries'][number],
-    occurrenceType: OccurrenceType,
-  ): HTMLElement {
+  private buildActions(entry: WaitingListGroupResult['entries'][number], occurrenceType: OccurrenceType): HTMLElement {
     const container = document.createElement('div');
 
     const enrolBtn = document.createElement('button');
@@ -365,14 +362,8 @@ export class PmWaitingListTable extends HTMLElement {
     return container;
   }
 
-  private emit(
-    name: string,
-    entry: WaitingListGroupResult['entries'][number],
-    occurrenceType: OccurrenceType,
-  ): void {
-    this.dispatchEvent(
-      new CustomEvent(name, { bubbles: true, composed: true, detail: { entry, occurrenceType } }),
-    );
+  private emit(name: string, entry: WaitingListGroupResult['entries'][number], occurrenceType: OccurrenceType): void {
+    this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, detail: { entry, occurrenceType } }));
   }
 
   private toggleGroup(occurrenceType: string): void {
