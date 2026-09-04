@@ -2,9 +2,12 @@ using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Requests.Courses;
+using PanoramaMusic.Students.Application.Requests.StudentCourses;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Teachers.Application.Models;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;
@@ -250,6 +253,65 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 	}
 
 	[Fact]
+	[Trait("AC", "294UC7")]
+	public async Task MaintainWaitingList_AnEnrolledStudentHoldingAStaleEntry_IsRefusedByBothStudentScopedRoutes()
+	{
+		// Enrolment does not consume the waiting-list row, so a student can hold
+		// an entry and an enrollment at once. Such a student is not a waiting-list
+		// student, and their record belongs to the roster — where a Coordinator is
+		// refused both the update and the delete. These two routes reach a student
+		// record through the waiting list, so they must resolve the same narrower
+		// set, or they are a way around that refusal.
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrolled-coordinator", Role.Coordinator);
+		var coordinatorClient = fixture.CreateIsolatedClient("10.0.73.23");
+		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
+		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+
+		var uniqueName = $"Enrolled-{Guid.NewGuid():N}";
+		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Stale", uniqueName);
+		var course = await CreateCourseAsync(coordinatorClient, CourseType.Instrument, 450.00m, structure.LessonStructureId);
+		var teacher = await CreateTeacherAsync(coordinatorClient, "Lindiwe", $"Mabaso-{Guid.NewGuid():N}");
+
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrolled-teacher", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.73.24");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+
+		var enrollment = await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedPostRequest(
+				$"/api/students/{captured.StudentId}/courses",
+				new EnrollStudentRequest(
+					course.CourseId,
+					teacher.TeacherId,
+					InstrumentType.Piano,
+					StepType.Step1A,
+					new DateOnly(2026, 1, 15))),
+			TestContext.Current.CancellationToken);
+		enrollment.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+		var attemptedName = $"Renamed-{Guid.NewGuid():N}";
+		var studentUpdate = await coordinatorClient.Client.SendAsync(
+			coordinatorClient.AuthorizedPutRequest(
+				$"/api/waiting-list/students/{captured.StudentId}", ValidStudentUpdate(attemptedName)),
+			TestContext.Current.CancellationToken);
+
+		var removal = await coordinatorClient.Client.SendAsync(
+			coordinatorClient.AuthorizedDeleteRequest($"/api/waiting-list/students/{captured.StudentId}"),
+			TestContext.Current.CancellationToken);
+
+		var roster = await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
+		var payload = await roster.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => studentUpdate.StatusCode.ShouldBe(HttpStatusCode.NotFound),
+			() => removal.StatusCode.ShouldBe(HttpStatusCode.NotFound),
+			// The student is still on the roster under the name they were captured
+			// with: neither refusal took anything with it.
+			() => payload.ShouldContain(uniqueName),
+			() => payload.ShouldNotContain(attemptedName));
+	}
+
+	[Fact]
 	[Trait("AC", "294UC10")]
 	public async Task MaintainWaitingList_UnauthenticatedRequests_AreRejected()
 	{
@@ -309,6 +371,32 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 		return JsonSerializer.Deserialize<WaitingListEntryResult>(payload, _jsonOptions).ShouldNotBeNull();
+	}
+
+	private static async Task<CourseResult> CreateCourseAsync(
+		IsolatedHttpClient client,
+		CourseType courseType,
+		decimal cost,
+		Guid lessonStructureId)
+	{
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/courses", new CreateCourseRequest(courseType, cost, lessonStructureId)),
+			TestContext.Current.CancellationToken);
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		return JsonSerializer.Deserialize<CourseResult>(payload, _jsonOptions).ShouldNotBeNull();
+	}
+
+	private static async Task<TeacherResult> CreateTeacherAsync(IsolatedHttpClient client, string firstName, string surname)
+	{
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest("/api/teachers", new { firstName, surname, isPrivate = false }),
+			TestContext.Current.CancellationToken);
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		return JsonSerializer.Deserialize<TeacherResult>(payload, _jsonOptions).ShouldNotBeNull();
 	}
 
 	private static UpdateStudentRequest ValidStudentUpdate(string firstName) =>

@@ -10,7 +10,8 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// per-request transaction, so a failure on either side leaves both in place.
 /// This is a discard rather than a withdrawal — nothing of theirs is kept.
 /// <para>
-/// Only a student who holds an entry can be removed this way. Without that the
+/// Only a waiting-list student can be removed this way — and an enrolled student
+/// is not one, whatever row this table still holds for them. Without that the
 /// route would be a way to delete any enrolled student's record from the
 /// waiting list, which is not what a removal from a queue means.
 /// </para>

@@ -104,17 +104,14 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	}
 
 	[Fact]
-	[Trait("AC", "294UC7")]
 	public async Task GetWaitingListEntryById_AnEnrolledStudentsEntry_IsStillReturned()
 	{
-		// Whether a maintenance call is refused turns entirely on whether these
-		// reads find a row, so this is the complement of the refusal: a student
-		// who does hold an entry is found even once they are enrolled.
-		// The single-entry reads deliberately carry no enrollment exclusion,
-		// unlike get_waiting_list. Only a real Postgres read can show the
-		// difference: hiding a row the caller named by its own id would turn an
-		// entry that exists into a silent not-found, and the maintenance path
-		// would answer 404 for a row still on screen.
+		// The read named by entry carries no enrollment exclusion, deliberately:
+		// it serves the entry-scoped update, which writes the entry and nothing
+		// else, and hiding a row the caller named by its own id would turn an
+		// entry that exists into a silent not-found — a 404 for a row still on
+		// screen. Only a real Postgres read can show it, and its contrast with
+		// the by-student read below is the whole point of both tests.
 		var student = await GivenStudentAsync("Enrolled", $"Maintained {Guid.NewGuid()}");
 		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
 		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
@@ -122,12 +119,39 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 
 		var byId = await ReadEntryStudentIdAsync(
 			"SELECT student_id FROM students.get_waiting_list_entry_by_id(@p_id);", ("p_id", entryId));
-		var byStudentId = await ReadEntryStudentIdAsync(
-			"SELECT student_id FROM students.get_waiting_list_entry_by_student_id(@p_id);", ("p_id", student));
+
+		byId.ShouldBe(student);
+	}
+
+	[Fact]
+	[Trait("AC", "294UC7")]
+	public async Task GetWaitingListEntryByStudentId_AnEnrolledStudentHoldingAStaleEntry_IsNotResolved()
+	{
+		// This read is the only way the update and the removal paths reach a
+		// student record from the waiting list, so what it resolves is exactly
+		// what those two writes may touch. An enrolled student may still hold a
+		// row here — enrolment does not consume it — and they are not a
+		// waiting-list student, so resolving them would let this screen rewrite
+		// or delete an enrolled student's record. Both writes refuse on a null,
+		// so this read is where the refusal is decided; no mocked repository can
+		// prove it.
+		var enrolled = await GivenStudentAsync("Enrolled", $"Stale {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(enrolled, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		await GivenEnrollmentAsync(enrolled, courseId);
+
+		var stillWaiting = await GivenStudentAsync("StillWaiting", $"Live {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(stillWaiting, _duringSchoolLessonStructureId);
+
+		var enrolledEntry = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_student_id(@p_id);", ("p_id", enrolled));
+		var stillWaitingEntry = await ReadEntryStudentIdAsync(
+			"SELECT student_id FROM students.get_waiting_list_entry_by_student_id(@p_id);", ("p_id", stillWaiting));
 
 		ShouldlyHelpers.Satisfy(
-			() => byId.ShouldBe(student),
-			() => byStudentId.ShouldBe(student));
+			() => enrolledEntry.ShouldBeNull(),
+			// The exclusion is the enrollment, not the read going blind.
+			() => stillWaitingEntry.ShouldBe(stillWaiting));
 	}
 
 	[Fact]

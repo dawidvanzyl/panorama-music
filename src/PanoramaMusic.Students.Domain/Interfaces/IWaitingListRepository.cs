@@ -32,9 +32,12 @@ public interface IWaitingListRepository
 	Task<WaitingListEntry?> GetByIdAsync(Guid waitingListEntryId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// The entry a student holds, or null when they hold none — which is what
-	/// distinguishes a waiting-list student from any other, and so what the
-	/// removal path checks before touching the student record.
+	/// The entry a <em>waiting-list</em> student holds, or null when they are not
+	/// one — which is what the update and removal paths check before touching the
+	/// student record. Unlike <see cref="GetByIdAsync"/> this does exclude an
+	/// enrolled student, matching <see cref="GetAllAsync"/>: holding a row in the
+	/// table is a wider condition than being on the waiting list, and only the
+	/// narrower one may reach a student record through this screen.
 	/// </summary>
 	Task<WaitingListEntry?> GetByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
 

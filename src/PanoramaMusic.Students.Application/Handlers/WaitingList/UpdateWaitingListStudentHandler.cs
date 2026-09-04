@@ -12,11 +12,12 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// rather than by discarding and recapturing the student, which would move them
 /// to the back of the queue.
 /// <para>
-/// The student is reached through their waiting-list entry, so one who holds no
-/// entry cannot be reached at all. This route is a Coordinator's, where the
-/// roster's own update is a Teacher's; reading the student directly instead
-/// would make it a way to edit any enrolled student's record from the one
-/// screen a Coordinator owns.
+/// The student is reached through their waiting-list entry, so one who is not on
+/// the waiting list cannot be reached at all — including an enrolled student
+/// still holding a stale row, which the read behind this resolution excludes.
+/// This route is a Coordinator's, where the roster's own update is a Teacher's;
+/// reading the student directly instead would make it a way to edit any enrolled
+/// student's record from the one screen a Coordinator owns.
 /// </para>
 /// </summary>
 public sealed class UpdateWaitingListStudentHandler(
