@@ -104,9 +104,12 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	}
 
 	[Fact]
-	[Trait("AC", "294UC2")]
+	[Trait("AC", "294UC7")]
 	public async Task GetWaitingListEntryById_AnEnrolledStudentsEntry_IsStillReturned()
 	{
+		// Whether a maintenance call is refused turns entirely on whether these
+		// reads find a row, so this is the complement of the refusal: a student
+		// who does hold an entry is found even once they are enrolled.
 		// The single-entry reads deliberately carry no enrollment exclusion,
 		// unlike get_waiting_list. Only a real Postgres read can show the
 		// difference: hiding a row the caller named by its own id would turn an
