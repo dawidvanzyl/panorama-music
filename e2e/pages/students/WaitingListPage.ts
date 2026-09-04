@@ -16,12 +16,16 @@ export interface WaitingListStepInput {
   notes?: string;
 }
 
+/** The wizard's tabs, named as a caller reads them off the tab strip. */
+export type WizardTabName = 'Student' | 'Siblings' | 'Guardians' | 'Waiting List';
+
 export class WaitingListPage extends BasePage {
   readonly captureButton: Locator;
   readonly errorBanner: Locator;
   readonly successBanner: Locator;
   readonly emptyState: Locator;
   readonly wizardModal: Locator;
+  readonly deleteModal: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -30,6 +34,10 @@ export class WaitingListPage extends BasePage {
     this.successBanner = page.locator('pm-waiting-list-page #success');
     this.emptyState = page.locator('pm-waiting-list-table #empty');
     this.wizardModal = page.locator('pm-waiting-list-page #wizardModal');
+    // Scoped to this page's own host: the Students screen's delete modal
+    // carries the same id, and both shadow roots are pierced by a bare
+    // `#deleteModal`.
+    this.deleteModal = page.locator('pm-waiting-list-page #deleteModal');
   }
 
   async gotoWaitingList(): Promise<void> {
@@ -191,5 +199,105 @@ export class WaitingListPage extends BasePage {
 
   deleteButton(row: Locator): Locator {
     return row.getByRole('button', { name: 'Delete' });
+  }
+
+  // --- Edit wizard (the same shared modal, opened on an existing entry) ---
+
+  /**
+   * Opens the wizard on a row's student. Unlike `openCaptureWizard` this waits
+   * for the modal to be populated — the student's own details are read back
+   * over the network before it opens, so the click alone does not mean it is
+   * there yet.
+   */
+  async openEditWizard(row: Locator): Promise<void> {
+    await this.editButton(row).click();
+    await this.wizardModal.locator('.modal__card').waitFor({ state: 'visible' });
+  }
+
+  wizardTitle(): Locator {
+    return this.wizardModal.locator('#title');
+  }
+
+  tab(name: WizardTabName): Locator {
+    const ids: Record<WizardTabName, string> = {
+      Student: '#tabStudent',
+      Siblings: '#tabSiblings',
+      Guardians: '#tabGuardians',
+      'Waiting List': '#tabWaitingList',
+    };
+    return this.wizardModal.locator(ids[name]);
+  }
+
+  /** Selects a tab by clicking it, with no stepping through the ones before it. */
+  async selectTab(name: WizardTabName): Promise<void> {
+    await this.tab(name).click();
+  }
+
+  activeTab(): Locator {
+    return this.wizardModal.locator('.wizard__tab--active');
+  }
+
+  previousButton(): Locator {
+    return this.wizardModal.locator('#previousBtn');
+  }
+
+  /** The Student tab's own inline save, scoped to the student's details. */
+  studentSaveButton(): Locator {
+    return this.wizardModal.locator('#studentSaveBtn');
+  }
+
+  async saveStudentDetails(): Promise<void> {
+    await this.studentSaveButton().click();
+  }
+
+  /** The Waiting List tab's own inline save, scoped to the entry's fields. */
+  waitingListSaveButton(): Locator {
+    return this.wizardModal.locator('#waitingListSaveBtn');
+  }
+
+  async saveWaitingListEntry(): Promise<void> {
+    await this.waitingListSaveButton().click();
+  }
+
+  /** The Date Added field's wrapper — present only when an existing entry is open. */
+  dateAddedField(): Locator {
+    return this.wizardModal.locator('#waitingListStep').locator('#addedAtField');
+  }
+
+  /** The rendered Date Added value. */
+  dateAdded(): Locator {
+    return this.wizardModal.locator('#waitingListStep').locator('#addedAt');
+  }
+
+  /** Anything within the Date Added field a user could type in, pick from or press. */
+  dateAddedControls(): Locator {
+    return this.dateAddedField().locator('input, select, textarea, button, [contenteditable]');
+  }
+
+  // --- Removal confirmation ---
+
+  async openDeleteConfirmation(row: Locator): Promise<void> {
+    await this.deleteButton(row).click();
+    await this.deleteConfirmationMessage().waitFor({ state: 'visible' });
+  }
+
+  deleteConfirmationMessage(): Locator {
+    return this.deleteModal.locator('.modal__body');
+  }
+
+  deleteConfirmationCancelButton(): Locator {
+    return this.deleteModal.locator('#cancelBtn');
+  }
+
+  deleteConfirmationDeleteButton(): Locator {
+    return this.deleteModal.locator('#deleteBtn');
+  }
+
+  async cancelDelete(): Promise<void> {
+    await this.deleteConfirmationCancelButton().click();
+  }
+
+  async confirmDelete(): Promise<void> {
+    await this.deleteConfirmationDeleteButton().click();
   }
 }
