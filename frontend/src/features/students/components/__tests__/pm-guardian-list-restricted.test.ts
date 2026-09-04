@@ -37,10 +37,6 @@ function infoIcon(list: PmGuardianList): HTMLButtonElement | null {
   return list.shadowRoot!.querySelector('#rows .guardian-list__info');
 }
 
-function infoText(list: PmGuardianList): HTMLElement | null {
-  return list.shadowRoot!.querySelector('#rows .guardian-list__info-text');
-}
-
 describe('pm-guardian-list restricted guardians', { tags: ['300UC8', '300UC9', '300UC10', '300UC11'] }, () => {
   it('offers no edit affordance and shows an information affordance in its place', { tags: ['300UC8'] }, () => {
     const list = mount([guardian({ restricted: true })]);
@@ -49,25 +45,20 @@ describe('pm-guardian-list restricted guardians', { tags: ['300UC8', '300UC9', '
     expect(labels).not.toContain('Edit');
     expect(labels).not.toContain('Change');
     expect(infoIcon(list)).not.toBeNull();
+    // The row itself stays uncluttered; the icon carries the wording.
+    expect(list.shadowRoot!.getElementById('rows')!.textContent).not.toContain(RESTRICTED_GUARDIAN_MESSAGE);
   });
 
   it('states why the guardian is not maintainable when the affordance is activated', { tags: ['300UC9'] }, () => {
     const list = mount([guardian({ restricted: true })]);
 
     const icon = infoIcon(list)!;
-    // Available on hover without an activation too, so the reason is never
-    // hidden behind a click alone.
+    // Resting on the icon is the activation: the reason rides on the icon
+    // itself rather than expanding into the row.
     expect(icon.title).toBe(RESTRICTED_GUARDIAN_MESSAGE);
-
-    const text = infoText(list)!;
-    expect(text.hidden).toBe(true);
-
-    icon.click();
-
-    expect(text.hidden).toBe(false);
-    expect(text.textContent).toBe(RESTRICTED_GUARDIAN_MESSAGE);
-    expect(text.textContent).toContain('shared with an enrolled student');
-    expect(text.textContent).toContain('not maintainable here');
+    expect(icon.getAttribute('aria-label')).toBe(RESTRICTED_GUARDIAN_MESSAGE);
+    expect(icon.title).toContain('shared with an enrolled student');
+    expect(icon.title).toContain('not maintainable here');
   });
 
   it('still offers the unlink action', { tags: ['300UC10'] }, () => {
@@ -94,7 +85,7 @@ describe('pm-guardian-list restricted guardians', { tags: ['300UC8', '300UC9', '
     expect(labels).toContain('Edit');
     expect(labels).toContain('Delete');
     expect(infoIcon(list)).toBeNull();
-    expect(infoText(list)).toBeNull();
+    expect(list.shadowRoot!.textContent).not.toContain(RESTRICTED_GUARDIAN_MESSAGE);
   });
 
   it('restricts per guardian, not per student', { tags: ['300UC8', '300UC11'] }, () => {

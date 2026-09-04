@@ -136,15 +136,6 @@ styles.replaceSync(`
     .guardian-list__info:hover {
       color: var(--pm-accent);
     }
-    .guardian-list__info-text {
-      display: block;
-      margin-top: 6px;
-      font-size: 12px;
-      font-weight: 400;
-      text-align: right;
-      white-space: normal;
-      color: var(--pm-text-muted);
-    }
     .guardian-list__empty {
       color: var(--pm-text-muted);
       font-size: 13px;
@@ -333,11 +324,8 @@ export class PmGuardianList extends HTMLElement {
       // action, never a disabled control with nothing to explain it. Removing
       // it from this student changes only this student's link, so that action
       // stays.
-      let restrictionText: HTMLElement | null = null;
       if (guardian.restricted) {
-        const affordance = this.buildInfoAffordance();
-        restrictionText = affordance.text;
-        actionsCell.appendChild(affordance.icon);
+        actionsCell.appendChild(this.buildInfoAffordance());
       } else {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
@@ -361,8 +349,6 @@ export class PmGuardianList extends HTMLElement {
       deleteBtn.disabled = isAnotherRowEditing;
       deleteBtn.addEventListener('click', () => this.handleDelete(guardian));
       actionsCell.appendChild(deleteBtn);
-
-      if (restrictionText) actionsCell.appendChild(restrictionText);
     }
 
     row.append(
@@ -378,27 +364,16 @@ export class PmGuardianList extends HTMLElement {
     return row;
   }
 
-  /**
-   * The reason is on the icon itself for a hover, and revealed in full next to
-   * it when the icon is used — so it is discoverable either way rather than
-   * only to someone who happens to rest the pointer on it.
-   */
-  private buildInfoAffordance(): { icon: HTMLButtonElement; text: HTMLElement } {
-    const text = document.createElement('span');
-    text.classList.add('guardian-list__info-text');
-    text.textContent = RESTRICTED_GUARDIAN_MESSAGE;
-    text.hidden = true;
-
+  /** The reason travels on the icon itself, surfacing on hover rather than crowding the row. */
+  private buildInfoAffordance(): HTMLButtonElement {
     const icon = document.createElement('button');
     icon.type = 'button';
     icon.classList.add('guardian-list__info');
     icon.textContent = 'info';
     icon.title = RESTRICTED_GUARDIAN_MESSAGE;
-    icon.addEventListener('click', () => {
-      text.hidden = !text.hidden;
-    });
+    icon.setAttribute('aria-label', RESTRICTED_GUARDIAN_MESSAGE);
 
-    return { icon, text };
+    return icon;
   }
 
   private buildEditableRow(guardian: GuardianListItem): HTMLTableRowElement {
