@@ -122,6 +122,29 @@ styles.replaceSync(`
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
+    .guardian-list__info {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 18px;
+      line-height: 1;
+      vertical-align: middle;
+      padding: 4px;
+      border: none;
+      background: transparent;
+      color: var(--pm-text-muted);
+      cursor: pointer;
+    }
+    .guardian-list__info:hover {
+      color: var(--pm-accent);
+    }
+    .guardian-list__info-text {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 400;
+      text-align: right;
+      white-space: normal;
+      color: var(--pm-text-muted);
+    }
     .guardian-list__empty {
       color: var(--pm-text-muted);
       font-size: 13px;
@@ -182,6 +205,14 @@ template.innerHTML = `
 `;
 
 export type GuardianListItem = GuardianResult & { readOnly?: boolean };
+
+/**
+ * Shown against a guardian the signed-in user may not change. Withholding the
+ * edit action without saying why reads as a broken screen, so the reason
+ * travels with the affordance that replaces it.
+ */
+export const RESTRICTED_GUARDIAN_MESSAGE =
+  'This guardian is shared with an enrolled student, so their details are not maintainable here.';
 
 interface EditRowInputs {
   firstNameInput: HTMLInputElement;
@@ -298,16 +329,27 @@ export class PmGuardianList extends HTMLElement {
     } else {
       const isAnotherRowEditing = this._editingGuardianId !== null;
 
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.classList.add(
-        'guardian-list__btn',
-        this._isPersisted ? 'guardian-list__btn--edit' : 'guardian-list__btn--change',
-      );
-      editBtn.textContent = this._isPersisted ? 'Edit' : 'Change';
-      editBtn.disabled = isAnotherRowEditing;
-      editBtn.addEventListener('click', () => this.handleEditClicked(guardian));
-      actionsCell.appendChild(editBtn);
+      // A restricted guardian gets the explanation in place of the edit
+      // action, never a disabled control with nothing to explain it. Removing
+      // it from this student changes only this student's link, so that action
+      // stays.
+      let restrictionText: HTMLElement | null = null;
+      if (guardian.restricted) {
+        const affordance = this.buildInfoAffordance();
+        restrictionText = affordance.text;
+        actionsCell.appendChild(affordance.icon);
+      } else {
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.classList.add(
+          'guardian-list__btn',
+          this._isPersisted ? 'guardian-list__btn--edit' : 'guardian-list__btn--change',
+        );
+        editBtn.textContent = this._isPersisted ? 'Edit' : 'Change';
+        editBtn.disabled = isAnotherRowEditing;
+        editBtn.addEventListener('click', () => this.handleEditClicked(guardian));
+        actionsCell.appendChild(editBtn);
+      }
 
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
@@ -319,6 +361,8 @@ export class PmGuardianList extends HTMLElement {
       deleteBtn.disabled = isAnotherRowEditing;
       deleteBtn.addEventListener('click', () => this.handleDelete(guardian));
       actionsCell.appendChild(deleteBtn);
+
+      if (restrictionText) actionsCell.appendChild(restrictionText);
     }
 
     row.append(
@@ -332,6 +376,29 @@ export class PmGuardianList extends HTMLElement {
       actionsCell,
     );
     return row;
+  }
+
+  /**
+   * The reason is on the icon itself for a hover, and revealed in full next to
+   * it when the icon is used — so it is discoverable either way rather than
+   * only to someone who happens to rest the pointer on it.
+   */
+  private buildInfoAffordance(): { icon: HTMLButtonElement; text: HTMLElement } {
+    const text = document.createElement('span');
+    text.classList.add('guardian-list__info-text');
+    text.textContent = RESTRICTED_GUARDIAN_MESSAGE;
+    text.hidden = true;
+
+    const icon = document.createElement('button');
+    icon.type = 'button';
+    icon.classList.add('guardian-list__info');
+    icon.textContent = 'info';
+    icon.title = RESTRICTED_GUARDIAN_MESSAGE;
+    icon.addEventListener('click', () => {
+      text.hidden = !text.hidden;
+    });
+
+    return { icon, text };
   }
 
   private buildEditableRow(guardian: GuardianListItem): HTMLTableRowElement {

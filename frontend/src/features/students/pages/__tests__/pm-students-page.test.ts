@@ -148,6 +148,7 @@ const nomvula: GuardianResult = {
   receivesCorrespondence: true,
   responsibleForPayment: true,
   married: false,
+  restricted: false,
 };
 
 const pianoCourse: EnrollableCourse = {

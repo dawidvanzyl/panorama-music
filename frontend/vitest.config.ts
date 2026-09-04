@@ -262,6 +262,10 @@ export default defineConfig({
       { name: '294UC16', description: 'Delete on a waiting-list row opens a confirmation naming the student and stating their student record will be deleted' },
       { name: '294UC17', description: 'Cancelling the waiting-list delete confirmation deletes nothing and leaves the row in place' },
       { name: '294UC18', description: 'Confirming the waiting-list delete removes the row and shows a success message naming the student' },
+      { name: '300UC8', description: 'A restricted guardian is offered no edit affordance and shows an information affordance in its place' },
+      { name: '300UC9', description: "Activating a restricted guardian's information affordance states it is shared with an enrolled student and not maintainable here" },
+      { name: '300UC10', description: 'A restricted guardian still offers its unlink action' },
+      { name: '300UC11', description: 'An unrestricted guardian is fully maintainable with no information affordance' },
     ],
   },
 })
