@@ -70,4 +70,47 @@ public class SyncGuardiansHandlerTests : IClassFixture<StudentsTestFixture>
 			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
 				r => r.CreateAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never));
 	}
+
+	[Fact]
+	[Trait("AC", "300UC6")]
+	public async Task HandleAsync_CoordinatorSyncingAgainstAnEnrolledSibling_WritesToTheSyncedStudentOnly()
+	{
+		_context.ActAsCoordinator();
+
+		var student = StudentFactory.Create();
+		// The guardian an enrolled sibling holds — the sync pulls it in, and the
+		// sibling it came from is what must stay untouched.
+		var sharedGuardian = GuardianFactory.Create(firstName: "Nomvula", surname: "Dube");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetMissingSiblingGuardiansAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([sharedGuardian]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetEnrolledLinkedGuardianIdsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([sharedGuardian.GuardianId]);
+
+		var result = await _handler.HandleAsync(student.StudentId, TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(
+					It.Is<StudentGuardian>(l => l.StudentId == student.StudentId && l.GuardianId == sharedGuardian.GuardianId),
+					It.IsAny<CancellationToken>()),
+				Times.Once),
+			// The pull is one-directional: no link is written for the sibling the
+			// guardian came from, and the guardian's own row is never touched.
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.Is<StudentGuardian>(l => l.StudentId != student.StudentId), It.IsAny<CancellationToken>()),
+				Times.Never),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			// A pulled guardian the enrolled sibling holds comes back flagged, so
+			// the screen that just synced knows it cannot be edited.
+			() => result.ShouldHaveSingleItem().Restricted.ShouldBeTrue());
+	}
 }

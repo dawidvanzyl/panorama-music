@@ -169,4 +169,81 @@ public class AddGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			() => _context.Repositories.GuardianRepositoryMock.Verify(
 				r => r.CreateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Exactly(2)));
 	}
+
+	[Fact]
+	[Trait("AC", "300UC5")]
+	public async Task HandleAsync_CoordinatorAddingToAStudentWithAnEnrolledSibling_LinksTheStudentButNotThatSibling()
+	{
+		_context.ActAsCoordinator();
+
+		var student = StudentFactory.Create();
+		var enrolledSibling = StudentFactory.Create(firstName: "Julian", lastName: "Thorne");
+		var waitingSibling = StudentFactory.Create(firstName: "Priya", lastName: "Okafor");
+		var relationship = new GuardianRelationship(Guid.NewGuid(), "Mother");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRelationshipRepositoryMock
+			.Setup(r => r.GetByIdAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(relationship);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([enrolledSibling, waitingSibling]);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetEnrolledSiblingIdsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([enrolledSibling.StudentId]);
+
+		var result = await _handler.HandleAsync(
+			new AddGuardianCommand(student.StudentId, BuildRequest(relationship.GuardianRelationshipId)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.FirstName.ShouldBe("Nomvula"),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Once),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.Is<StudentGuardian>(l => l.StudentId == student.StudentId), It.IsAny<CancellationToken>()),
+				Times.Once),
+			// A sibling still on the waiting list is family data this caller
+			// owns, so sharing across the group is unaffected there.
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.Is<StudentGuardian>(l => l.StudentId == waitingSibling.StudentId), It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.Is<StudentGuardian>(l => l.StudentId == enrolledSibling.StudentId), It.IsAny<CancellationToken>()),
+				Times.Never));
+	}
+
+	[Fact]
+	[Trait("AC", "300UC5")]
+	public async Task HandleAsync_TeacherAddingToAStudentWithAnEnrolledSibling_StillLinksThatSibling()
+	{
+		// The fixture's caller is a Teacher, whose sharing across the family is
+		// unchanged by this story.
+		var student = StudentFactory.Create();
+		var enrolledSibling = StudentFactory.Create(firstName: "Julian", lastName: "Thorne");
+		var relationship = new GuardianRelationship(Guid.NewGuid(), "Mother");
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRelationshipRepositoryMock
+			.Setup(r => r.GetByIdAsync(relationship.GuardianRelationshipId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(relationship);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([enrolledSibling]);
+
+		await _handler.HandleAsync(
+			new AddGuardianCommand(student.StudentId, BuildRequest(relationship.GuardianRelationshipId)),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.Is<StudentGuardian>(l => l.StudentId == enrolledSibling.StudentId), It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => _context.Repositories.SiblingRepositoryMock.Verify(
+				r => r.GetEnrolledSiblingIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
 }

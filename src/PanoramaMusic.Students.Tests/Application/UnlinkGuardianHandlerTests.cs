@@ -104,4 +104,46 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 			() => _context.Repositories.GuardianRepositoryMock.Verify(
 				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never));
 	}
+
+	[Fact]
+	[Trait("AC", "300UC4")]
+	public async Task HandleAsync_CoordinatorUnlinkingAGuardianAnEnrolledStudentHolds_UnlinksThisStudentOnly()
+	{
+		_context.ActAsCoordinator();
+
+		var student = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.GuardianRepositoryMock
+			.Setup(r => r.GetByIdAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(guardian);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([guardian]);
+		// The enrolled sibling's link is the one that survives, so a link
+		// remains after this student's is gone.
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetLinkCountAsync(guardian.GuardianId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(1);
+
+		await _handler.HandleAsync(
+			new UnlinkGuardianCommand(student.StudentId, guardian.GuardianId), TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(
+					It.Is<StudentGuardian>(l => l.StudentId == student.StudentId && l.GuardianId == guardian.GuardianId),
+					It.IsAny<CancellationToken>()),
+				Times.Once),
+			// An unlink touches one student's association, never the shared row
+			// the enrolled student also holds, so the restriction does not reach
+			// it and enrolment is not consulted.
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.HasEnrolledLinkAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
 }
