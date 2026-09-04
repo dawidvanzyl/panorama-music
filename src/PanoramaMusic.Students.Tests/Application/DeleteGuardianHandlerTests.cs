@@ -53,6 +53,7 @@ public class DeleteGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "300UC18")]
 	public async Task HandleAsync_CoordinatorDeletingAGuardianAnEnrolledStudentHolds_IsRefusedAndTheRecordSurvives()
 	{
 		// Destroying the shared row reaches every linked student, which is

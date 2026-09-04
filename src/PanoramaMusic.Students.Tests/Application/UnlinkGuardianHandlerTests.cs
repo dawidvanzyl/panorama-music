@@ -151,6 +151,7 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "300UC19")]
 	public async Task HandleAsync_CoordinatorUnlinkingTheLastLinkOfAGuardianAnEnrolledStudentHolds_IsRefusedAndBothSurvive()
 	{
 		// The cascade would destroy the shared row, which is the deletion this
@@ -191,6 +192,7 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	}
 
 	[Fact]
+	[Trait("AC", "300UC20")]
 	public async Task HandleAsync_CoordinatorUnlinkingTheLastLinkOfAGuardianNoEnrolledStudentHolds_DeletesTheGuardian()
 	{
 		_context.ActAsCoordinator();
