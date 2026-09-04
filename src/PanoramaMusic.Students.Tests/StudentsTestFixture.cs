@@ -8,6 +8,7 @@ using PanoramaMusic.Students.Application.Handlers.StudentCourses;
 using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
+using PanoramaMusic.Students.Application.Services;
 
 namespace PanoramaMusic.Students.Tests;
 
@@ -40,6 +41,8 @@ public sealed class StudentsTestFixture
 		services.AddTransient(sp => context.Repositories.StudentExtraCurricularRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.WaitingListRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.TeacherDirectoryMock.Object);
+		services.AddTransient(sp => context.UserContextMock.Object);
+		services.AddTransient<GuardianMaintenanceScope>();
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)

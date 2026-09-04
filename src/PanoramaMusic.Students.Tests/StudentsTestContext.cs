@@ -1,4 +1,5 @@
 using Moq;
+using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Tests;
@@ -7,11 +8,26 @@ public sealed class StudentsTestContext
 {
 	public StudentsTestContext(Func<StudentsTestContext, IServiceProvider> serviceProviderConfig)
 	{
+		UserContextMock.SetupGet(c => c.IsTeacher).Returns(true);
+
 		ServiceProvider = serviceProviderConfig(this)
 			?? throw new ArgumentNullException(nameof(serviceProviderConfig));
 	}
 
 	public RepositoryMocks Repositories { get; } = new RepositoryMocks();
+
+	/// <summary>
+	/// The caller the handlers under test run as. Defaults to a Teacher, whose
+	/// rights are unrestricted, so a test says so explicitly when it wants the
+	/// narrower caller.
+	/// </summary>
+	public Mock<IUserContext> UserContextMock { get; } = new Mock<IUserContext>();
+
+	/// <summary>
+	/// Runs the rest of this test as a caller who holds Coordinator but not
+	/// Teacher — the one the guardian maintenance scope restricts.
+	/// </summary>
+	public void ActAsCoordinator() => UserContextMock.SetupGet(c => c.IsTeacher).Returns(false);
 
 	public IServiceProvider ServiceProvider { get; }
 
