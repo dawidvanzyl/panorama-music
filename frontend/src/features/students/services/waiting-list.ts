@@ -1,7 +1,15 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
-import type { OccurrenceType, LessonType, DurationType, InstrumentType } from './enrollments';
+import type {
+  OccurrenceType,
+  LessonType,
+  DurationType,
+  InstrumentType,
+  StepType,
+  EnrollmentInput,
+  EnrollmentResult,
+} from './enrollments';
 import type { StudentInput } from './students';
 
 const API_BASE = '/api/waiting-list';
@@ -12,7 +20,7 @@ const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
 // Re-exported so this module stays the one import site for a
 // waiting-list consumer, without minting a fourth declaration of the same
 // unions.
-export type { OccurrenceType, LessonType, DurationType, InstrumentType };
+export type { OccurrenceType, LessonType, DurationType, InstrumentType, StepType };
 
 export interface WaitingListEntryResult {
   waitingListEntryId: string;
@@ -196,4 +204,23 @@ export async function removeWaitingListStudent(studentId: string): Promise<void>
   });
   await assertOk(response);
   clearWaitingListCache();
+}
+
+/**
+ * Enrols a waiting-list student, consuming their entry. Reached through the
+ * waiting list rather than through `enrollStudent`, which is a Teacher's: this
+ * route is a Coordinator's, resolves only a student who holds an entry, and
+ * refuses a course offered under a different occurrence type from the one the
+ * student waited under. The entry and the enrollment are settled together on
+ * the server, so a refusal leaves the student on the list.
+ */
+export async function enrolWaitingListStudent(studentId: string, input: EnrollmentInput): Promise<EnrollmentResult> {
+  const response = await fetch(`${API_BASE}/students/${studentId}/enrollment`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const enrolled = await handleResponse<EnrollmentResult>(response);
+  clearWaitingListCache();
+  return enrolled;
 }

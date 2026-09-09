@@ -2,6 +2,7 @@ import '../components/pm-waiting-list-table';
 import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-waiting-list-entry-modal';
 import '../components/pm-delete-guardian-modal';
+import '../components/pm-enrol-waiting-list-student-modal';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   getWaitingList,
@@ -10,11 +11,18 @@ import {
   updateWaitingListEntry,
   updateWaitingListStudent,
   removeWaitingListStudent,
+  enrolWaitingListStudent,
   WaitingListError,
   type OccurrenceType,
   type WaitingListEntryInput,
   type WaitingListEntryResult,
 } from '../services/waiting-list';
+import {
+  getEnrollableCourses,
+  getAssignableTeachers,
+  EnrollmentsError,
+  type EnrollmentInput,
+} from '../services/enrollments';
 import {
   getStudents,
   getStudentById,
@@ -43,6 +51,7 @@ import type { PmWaitingListTable } from '../components/pm-waiting-list-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteWaitingListEntryModal } from '../components/pm-delete-waiting-list-entry-modal';
 import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
+import type { PmEnrolWaitingListStudentModal } from '../components/pm-enrol-waiting-list-student-modal';
 
 /** Who may capture a student and act on a row. A Teacher gets a read-only page. */
 const MAINTAINER_ROLES = ['Coordinator'];
@@ -125,6 +134,7 @@ template.innerHTML = `
   <pm-student-wizard-modal id="wizardModal"></pm-student-wizard-modal>
   <pm-delete-waiting-list-entry-modal id="deleteModal"></pm-delete-waiting-list-entry-modal>
   <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
+  <pm-enrol-waiting-list-student-modal id="enrolModal"></pm-enrol-waiting-list-student-modal>
 `;
 
 export class PmWaitingListPage extends HTMLElement {
@@ -133,6 +143,7 @@ export class PmWaitingListPage extends HTMLElement {
   private wizardModal: PmStudentWizardModal | null = null;
   private deleteModal: PmDeleteWaitingListEntryModal | null = null;
   private deleteGuardianModal: PmDeleteGuardianModal | null = null;
+  private enrolModal: PmEnrolWaitingListStudentModal | null = null;
   private errorBanner: HTMLElement | null = null;
   private successBanner: HTMLElement | null = null;
   private _allStudents: StudentResult[] = [];
@@ -152,6 +163,7 @@ export class PmWaitingListPage extends HTMLElement {
     this.deleteGuardianModal = this.shadowRoot!.getElementById(
       'deleteGuardianModal',
     ) as unknown as PmDeleteGuardianModal;
+    this.enrolModal = this.shadowRoot!.getElementById('enrolModal') as unknown as PmEnrolWaitingListStudentModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.successBanner = this.shadowRoot!.getElementById('success') as HTMLElement;
 
@@ -179,11 +191,14 @@ export class PmWaitingListPage extends HTMLElement {
     this.shadowRoot!.addEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
     this.shadowRoot!.addEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
     this.shadowRoot!.addEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
+    this.shadowRoot!.addEventListener('waiting-list-enrol-requested', this.handleEnrolRequested);
+    this.shadowRoot!.addEventListener('waiting-list-enrol-confirmed', this.handleEnrolConfirmed);
 
     void this.loadWaitingList();
 
     if (canMaintain) {
       void this.loadWizardLookups();
+      void this.loadEnrolLookups();
     }
   }
 
@@ -208,6 +223,8 @@ export class PmWaitingListPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('guardian-delete-requested', this.handleGuardianDeleteRequested);
     this.shadowRoot!.removeEventListener('guardian-delete-confirmed', this.handleGuardianDeleteConfirmed);
     this.shadowRoot!.removeEventListener('guardians-sync-requested', this.handleGuardiansSyncRequested);
+    this.shadowRoot!.removeEventListener('waiting-list-enrol-requested', this.handleEnrolRequested);
+    this.shadowRoot!.removeEventListener('waiting-list-enrol-confirmed', this.handleEnrolConfirmed);
   }
 
   private async loadWaitingList(): Promise<void> {
@@ -255,6 +272,56 @@ export class PmWaitingListPage extends HTMLElement {
       this.showError(lessonStructuresResult.reason);
     }
   }
+
+  /**
+   * The catalogue and teacher roster the Enrol modal offers. Settled
+   * independently of one another, and of the wizard's own lookups, for the same
+   * reason those are: one failure must not take the rest with it.
+   */
+  private async loadEnrolLookups(): Promise<void> {
+    const [coursesResult, teachersResult] = await Promise.allSettled([getEnrollableCourses(), getAssignableTeachers()]);
+
+    if (coursesResult.status === 'fulfilled') {
+      this.enrolModal!.courses = coursesResult.value;
+    } else {
+      this.showError(coursesResult.reason);
+    }
+
+    if (teachersResult.status === 'fulfilled') {
+      this.enrolModal!.teachers = teachersResult.value;
+    } else {
+      this.showError(teachersResult.reason);
+    }
+  }
+
+  private handleEnrolRequested = (event: Event): void => {
+    const { entry, occurrenceType } = (
+      event as CustomEvent<{ entry: WaitingListEntryResult; occurrenceType: OccurrenceType }>
+    ).detail;
+    this.clearError();
+    this.clearSuccess();
+    this.enrolModal!.show(entry, occurrenceType);
+  };
+
+  /**
+   * The enrolment and the entry's removal are one operation on the server, so a
+   * refusal leaves the row exactly where it was — the modal stays open with the
+   * reason, and nothing here needs to put the row back.
+   */
+  private handleEnrolConfirmed = async (event: Event): Promise<void> => {
+    const { studentId, name, input } = (
+      event as CustomEvent<{ studentId: string; name: string; input: EnrollmentInput }>
+    ).detail;
+    this.clearError();
+    try {
+      await enrolWaitingListStudent(studentId, input);
+      this.enrolModal!.close();
+      await this.loadWaitingList();
+      this.showSuccess(`${name} was enrolled and removed from the waiting list.`);
+    } catch (err) {
+      this.enrolModal!.showError(err instanceof WaitingListError ? err.message : 'An unexpected error occurred');
+    }
+  };
 
   private handleCaptureClick = (): void => {
     this.clearSuccess();
@@ -580,7 +647,10 @@ export class PmWaitingListPage extends HTMLElement {
 
   private showError(err: unknown): void {
     this.errorBanner!.textContent =
-      err instanceof WaitingListError || err instanceof StudentsError || err instanceof GuardiansError
+      err instanceof WaitingListError ||
+      err instanceof StudentsError ||
+      err instanceof GuardiansError ||
+      err instanceof EnrollmentsError
         ? err.message
         : 'An unexpected error occurred';
     this.errorBanner!.classList.add('waiting-list-page__error--visible');
