@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { WaitingListGroupResult, WaitingListEntryResult } from '../../services/waiting-list';
+import type { AssignableTeacher, EnrollableCourse } from '../../services/enrollments';
+import { todayIsoDate } from '../../components/enrollment-options';
 
 const mockGetWaitingList = vi.fn();
 const mockGetLessonStructures = vi.fn();
@@ -14,6 +16,9 @@ const mockUpdateWaitingListEntry = vi.fn();
 const mockUpdateWaitingListStudent = vi.fn();
 const mockRemoveWaitingListStudent = vi.fn();
 const mockGetStudentById = vi.fn();
+const mockEnrolWaitingListStudent = vi.fn();
+const mockGetEnrollableCourses = vi.fn();
+const mockGetAssignableTeachers = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
   const actual = await vi.importActual<typeof import('../../services/waiting-list')>('../../services/waiting-list');
@@ -25,6 +30,16 @@ vi.mock('../../services/waiting-list', async () => {
     updateWaitingListEntry: (...args: unknown[]) => mockUpdateWaitingListEntry(...args),
     updateWaitingListStudent: (...args: unknown[]) => mockUpdateWaitingListStudent(...args),
     removeWaitingListStudent: (...args: unknown[]) => mockRemoveWaitingListStudent(...args),
+    enrolWaitingListStudent: (...args: unknown[]) => mockEnrolWaitingListStudent(...args),
+  };
+});
+
+vi.mock('../../services/enrollments', async () => {
+  const actual = await vi.importActual<typeof import('../../services/enrollments')>('../../services/enrollments');
+  return {
+    ...actual,
+    getEnrollableCourses: () => mockGetEnrollableCourses(),
+    getAssignableTeachers: () => mockGetAssignableTeachers(),
   };
 });
 
@@ -153,6 +168,53 @@ function rowFor(el: HTMLElement, name: string): HTMLElement {
   return row as HTMLElement;
 }
 
+/**
+ * One course matching the During School row's own structure, one under the same
+ * occurrence type but a different structure, and one under the other occurrence
+ * type entirely — so the picker's filtering is falsifiable.
+ */
+const enrollableCourses: EnrollableCourse[] = [
+  {
+    courseId: 'c1',
+    courseType: 'G2Recorder',
+    lessonType: 'Individual',
+    durationType: 'HalfHour',
+    occurrenceType: 'DuringSchool',
+  },
+  {
+    courseId: 'c2',
+    courseType: 'Instrument',
+    lessonType: 'Group',
+    durationType: 'Hour',
+    occurrenceType: 'DuringSchool',
+  },
+  {
+    courseId: 'c3',
+    courseType: 'Theory',
+    lessonType: 'Individual',
+    durationType: 'HalfHour',
+    occurrenceType: 'AfterSchool',
+  },
+];
+
+const assignableTeachers: AssignableTeacher[] = [
+  { teacherId: 't1', firstName: 'Zanele', surname: 'Mokoena', isActive: true },
+];
+
+function enrolModalOf(el: HTMLElement): HTMLElement {
+  return el.shadowRoot!.getElementById('enrolModal') as HTMLElement;
+}
+
+function enrolFieldOf(el: HTMLElement, id: string): HTMLElement {
+  return enrolModalOf(el).shadowRoot!.getElementById(id) as HTMLElement;
+}
+
+async function openEnrolModal(el: HTMLElement, name: string): Promise<HTMLElement> {
+  actionButton(el, name, 'Enrol').click();
+  await flush();
+  return enrolModalOf(el);
+}
+
 function actionButton(el: HTMLElement, name: string, label: string): HTMLButtonElement {
   const button = [...rowFor(el, name).querySelectorAll('button')].find((b) => b.textContent === label);
   if (!button) throw new Error(`No ${label} action on the row for ${name}`);
@@ -174,6 +236,9 @@ beforeEach(() => {
   mockUpdateWaitingListStudent.mockReset();
   mockRemoveWaitingListStudent.mockReset();
   mockGetStudentById.mockReset();
+  mockEnrolWaitingListStudent.mockReset();
+  mockGetEnrollableCourses.mockReset().mockResolvedValue(enrollableCourses);
+  mockGetAssignableTeachers.mockReset().mockResolvedValue(assignableTeachers);
 });
 
 afterEach(() => {
@@ -595,6 +660,191 @@ describe(
       expect(rowNames(el)).not.toContain('Amara Pillay');
       expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(true);
       expect(successBannerOf(el).textContent).toContain('Amara Pillay');
+    });
+  },
+);
+
+describe(
+  'pm-waiting-list-page — the enrol modal opens pre-filled from the entry',
+  { tags: ['295UC12', '295UC15', '295UC16'] },
+  () => {
+    it('pre-fills the lesson, duration and instrument types and today as the enrolled date', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      const modal = await openEnrolModal(el, 'Amara Pillay');
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect((enrolFieldOf(el, 'lessonType') as HTMLSelectElement).value).toBe('Individual');
+      expect((enrolFieldOf(el, 'durationType') as HTMLSelectElement).value).toBe('HalfHour');
+      expect((enrolFieldOf(el, 'instrumentType') as HTMLSelectElement).value).toBe('Piano');
+      expect((enrolFieldOf(el, 'enrolledDate') as HTMLInputElement).value).toBe(todayIsoDate());
+    });
+
+    it('states that the named student will be removed from the waiting list once enrolled', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Amara Pillay');
+
+      expect(enrolFieldOf(el, 'notice').textContent).toBe(
+        'Amara Pillay will be removed from the waiting list once enrolled.',
+      );
+    });
+
+    it('leaves the teacher unchosen on its placeholder rather than defaulting to one', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Amara Pillay');
+      const teacher = enrolFieldOf(el, 'teacher') as HTMLSelectElement;
+
+      expect(teacher.value).toBe('');
+      expect(teacher.required).toBe(true);
+      // A teacher is on offer — the empty value is a placeholder, not an empty
+      // list that could satisfy this by accident.
+      expect([...teacher.options].map((o) => o.value)).toContain('t1');
+    });
+  },
+);
+
+describe(
+  'pm-waiting-list-page — the occurrence type is a fixed value while everything else is changeable',
+  { tags: ['295UC13', '295UC14'] },
+  () => {
+    it('shows the entry occurrence type marked as locked at waitlist, with no control to change it', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Amara Pillay');
+      const field = enrolFieldOf(el, 'occurrenceType');
+
+      expect(field.textContent).toContain('During School');
+      expect(field.textContent).toContain('Locked at waitlist');
+      // A disabled select reads as fixed but is not one; nothing inside this
+      // field may be typed in, picked from or pressed at all.
+      expect(field.querySelector('input, select, textarea, button, [contenteditable]')).toBeNull();
+    });
+
+    it('shows the other occurrence type for a row from the other list', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Neo Dube');
+
+      expect(enrolFieldOf(el, 'occurrenceType').textContent).toContain('After School');
+    });
+
+    it('offers the lesson, duration, instrument, teacher and enrolled date as changeable controls', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Amara Pillay');
+
+      for (const id of ['lessonType', 'durationType', 'instrumentType', 'teacher', 'enrolledDate']) {
+        const control = enrolFieldOf(el, id) as HTMLSelectElement | HTMLInputElement;
+        expect(control.disabled).toBe(false);
+        expect(control instanceof HTMLInputElement ? control.readOnly : false).toBe(false);
+      }
+    });
+  },
+);
+
+describe(
+  'pm-waiting-list-page — the course picker is scoped to the entry occurrence type',
+  { tags: ['295UC13'] },
+  () => {
+    it('offers only courses delivered under the occurrence type the student waited for', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+      const el = await mountPage();
+      await openEnrolModal(el, 'Amara Pillay');
+      const course = enrolFieldOf(el, 'course') as HTMLSelectElement;
+
+      // c3 is the same lesson structure under After School, so only the
+      // occurrence-type filter can be what excludes it.
+      expect([...course.options].map((o) => o.value)).not.toContain('c3');
+      expect(course.value).toBe('c1');
+    });
+  },
+);
+
+describe('pm-waiting-list-page — cancelling the enrolment submits nothing', { tags: ['295UC17'] }, () => {
+  it('closes the modal, sends no enrolment and leaves the row on the list', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+    const modal = await openEnrolModal(el, 'Amara Pillay');
+    (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(modal.hasAttribute('open')).toBe(false);
+    expect(mockEnrolWaitingListStudent).not.toHaveBeenCalled();
+    expect(rowNames(el)).toContain('Amara Pillay');
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+  });
+});
+
+describe(
+  'pm-waiting-list-page — a confirmed enrolment takes the row off the list',
+  { tags: ['295UC18', '295UC19'] },
+  () => {
+    it('closes the modal, removes the row and shows a success message naming the student', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList
+        .mockResolvedValueOnce(bothGroups)
+        .mockResolvedValueOnce([
+          { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+        ]);
+      mockEnrolWaitingListStudent.mockResolvedValueOnce({ studentCourseId: 'sc1' });
+
+      const el = await mountPage();
+      const modal = await openEnrolModal(el, 'Amara Pillay');
+      (enrolFieldOf(el, 'teacher') as HTMLSelectElement).value = 't1';
+      (modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement).click();
+      await flush();
+      await flush();
+
+      expect(mockEnrolWaitingListStudent).toHaveBeenCalledWith('s1', {
+        courseId: 'c1',
+        teacherId: 't1',
+        instrumentType: null,
+        stepType: null,
+        enrolledDate: todayIsoDate(),
+      });
+      expect(modal.hasAttribute('open')).toBe(false);
+      expect(rowNames(el)).not.toContain('Amara Pillay');
+      expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(true);
+      expect(successBannerOf(el).textContent).toBe('Amara Pillay was enrolled and removed from the waiting list.');
+    });
+
+    it('renders no list at all for an occurrence type whose last row was enrolled off it', async () => {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList
+        .mockResolvedValueOnce(bothGroups)
+        .mockResolvedValueOnce([
+          { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+        ]);
+      mockEnrolWaitingListStudent.mockResolvedValueOnce({ studentCourseId: 'sc1' });
+
+      const el = await mountPage();
+      const modal = await openEnrolModal(el, 'Amara Pillay');
+      (enrolFieldOf(el, 'teacher') as HTMLSelectElement).value = 't1';
+      (modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement).click();
+      await flush();
+      await flush();
+
+      const groups = groupEls(el);
+      expect(groups).toHaveLength(1);
+      expect(groupHeaderText(groups[0])).toContain('After School');
     });
   },
 );

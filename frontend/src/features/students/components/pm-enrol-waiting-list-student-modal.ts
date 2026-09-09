@@ -225,7 +225,11 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.errorMessage = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     populateSelectOptions<LessonType>(this.lessonTypeSelect, LESSON_TYPES, (value) => LESSON_TYPE_LABELS[value]);
-    populateSelectOptions<DurationType>(this.durationTypeSelect, DURATION_TYPES, (value) => DURATION_TYPE_LABELS[value]);
+    populateSelectOptions<DurationType>(
+      this.durationTypeSelect,
+      DURATION_TYPES,
+      (value) => DURATION_TYPE_LABELS[value],
+    );
     populateSelectOptions<InstrumentType>(
       this.instrumentTypeSelect,
       INSTRUMENT_TYPES,
