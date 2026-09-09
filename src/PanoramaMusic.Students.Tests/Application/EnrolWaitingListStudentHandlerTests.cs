@@ -39,7 +39,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		var course = CourseFactory.Create(
 			courseType: CourseType.G2Recorder,
 			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(entry, course);
+		var teacher = GivenCourseAndTeacher(course);
 
 		var result = await _handler.HandleAsync(
 			EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId),
@@ -67,7 +67,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		var course = CourseFactory.Create(
 			courseType: CourseType.G2Recorder,
 			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.AfterSchool));
-		var teacher = GivenCourseAndTeacher(entry, course);
+		var teacher = GivenCourseAndTeacher(course);
 
 		await Should.ThrowAsync<DomainException>(() =>
 			_handler.HandleAsync(
@@ -97,7 +97,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 				lessonType: LessonType.Group,
 				durationType: DurationType.HalfHour,
 				occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(entry, course);
+		var teacher = GivenCourseAndTeacher(course);
 
 		var result = await _handler.HandleAsync(
 			EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId),
@@ -122,7 +122,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		var course = CourseFactory.Create(
 			courseType: CourseType.Instrument,
 			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(entry, course);
+		var teacher = GivenCourseAndTeacher(course);
 
 		await Should.ThrowAsync<DomainException>(() =>
 			_handler.HandleAsync(
@@ -161,7 +161,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		return entry;
 	}
 
-	private DirectoryTeacher GivenCourseAndTeacher(WaitingListEntry entry, Course course)
+	private DirectoryTeacher GivenCourseAndTeacher(Course course)
 	{
 		var teacher = DirectoryTeacherFactory.Create();
 
