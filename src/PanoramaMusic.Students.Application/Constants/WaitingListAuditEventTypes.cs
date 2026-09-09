@@ -13,4 +13,12 @@ public static class WaitingListAuditEventTypes
 	public const string WaitingListEntryUpdated = "students.waiting_list_entry.updated";
 
 	public const string WaitingListEntryRemoved = "students.waiting_list_entry.removed";
+
+	/// <summary>
+	/// The entry was consumed by an enrollment. Separate from
+	/// <see cref="WaitingListEntryRemoved"/>, which is a discard that takes the
+	/// student's record with it — the row leaves the table either way, and only
+	/// the action tells the two apart.
+	/// </summary>
+	public const string WaitingListEntryEnrolled = "students.waiting_list_entry.enrolled";
 }

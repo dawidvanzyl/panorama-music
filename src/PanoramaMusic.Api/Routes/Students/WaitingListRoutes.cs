@@ -3,6 +3,7 @@ using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Requests.StudentCourses;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 
@@ -108,6 +109,32 @@ public static class WaitingListRoutes
 			})
 			.WithName("RemoveWaitingListStudent")
 			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		// Enrolling off the list, which consumes the entry. Separate from the
+		// roster's POST /api/students/{id}/courses, which is a Teacher's: this
+		// one is a Coordinator's, only resolves a student who actually holds an
+		// entry, and refuses a course offered under a different occurrence type
+		// from the one the student waited under. It carries the same request as
+		// the roster's, because an enrollment needs the same fields either way.
+		maintain
+			.MapPost("/students/{studentId:guid}/enrollment", async (
+				Guid studentId,
+				EnrollStudentRequest request,
+				EnrolWaitingListStudentHandler handler,
+				CancellationToken ct) =>
+			{
+				var command = new EnrolWaitingListStudentCommand(studentId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Created($"/api/students/{studentId}/courses/{result.StudentCourseId}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<EnrollStudentRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("EnrolWaitingListStudent")
+			.Produces<StudentCourseResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);

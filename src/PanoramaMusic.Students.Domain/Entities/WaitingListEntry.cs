@@ -12,8 +12,8 @@ namespace PanoramaMusic.Students.Domain.Entities;
 /// can only be built from records that were actually read back — the same
 /// reasoning <see cref="Course"/> follows for its own lesson structure.
 /// <para>
-/// It names no course: which course a student ends up in is settled at
-/// enrolment, a later story's concern. A student holds at most one entry — the
+/// It names no course: which course a student ends up in is chosen at
+/// enrollment, and the entry is consumed by it. A student holds at most one entry — the
 /// database's own unique constraint on student_id is what actually settles
 /// that against a race, the same way <see cref="Course"/>'s duplicate
 /// enrollment is settled — and the added date-time is set once, at creation,
@@ -95,6 +95,17 @@ public sealed class WaitingListEntry : AggregateRoot
 	public void MarkRemoved()
 	{
 		Raise(new WaitingListEntryRemoved(this));
+	}
+
+	/// <summary>
+	/// Marks the entry as consumed by the enrollment that was just created for
+	/// the student it belongs to. The student is kept and is now enrolled, so
+	/// this is the opposite outcome to <see cref="MarkRemoved"/> even though both
+	/// end with the row gone.
+	/// </summary>
+	public void MarkEnrolled(StudentCourse enrollment)
+	{
+		Raise(new WaitingListEntryEnrolled(this, enrollment));
 	}
 
 	public Guid WaitingListEntryId { get; }
