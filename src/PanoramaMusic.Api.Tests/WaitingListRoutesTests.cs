@@ -338,6 +338,82 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 			() => removal.StatusCode.ShouldBe(HttpStatusCode.Unauthorized));
 	}
 
+	[Fact]
+	[Trait("AC", "295UC9")]
+	public async Task EnrolWaitingListStudent_CallerHoldingCoordinator_IsPermittedAndTheEntryIsConsumed()
+	{
+		var (email, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrol-coordinator", Role.Coordinator);
+		var client = fixture.CreateIsolatedClient("10.0.73.30");
+		await client.LoginAsync(email, _password);
+		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		var uniqueName = $"Enrolled-Off-{Guid.NewGuid():N}";
+		var captured = await CaptureAsync(client, structure.LessonStructureId, "Enrol", uniqueName);
+		var course = await CreateCourseAsync(client, CourseType.G2Recorder, 375.00m, structure.LessonStructureId);
+		var teacher = await CreateTeacherAsync(client, "Naledi", $"Khumalo-{Guid.NewGuid():N}");
+
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				$"/api/waiting-list/students/{captured.StudentId}/enrollment",
+				new EnrollStudentRequest(course.CourseId, teacher.TeacherId, null, null, new DateOnly(2026, 9, 9))),
+			TestContext.Current.CancellationToken);
+
+		var afterList = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/waiting-list"), TestContext.Current.CancellationToken);
+		var payload = await afterList.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => payload.ShouldNotContain(uniqueName));
+	}
+
+	[Fact]
+	[Trait("AC", "295UC10")]
+	public async Task EnrolWaitingListStudent_CallerHoldingOnlyTeacher_IsForbiddenAndTheEntryRemains()
+	{
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrol-lookup", Role.Coordinator);
+		var coordinatorClient = fixture.CreateIsolatedClient("10.0.73.31");
+		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
+		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		var uniqueName = $"Enrol-Refused-{Guid.NewGuid():N}";
+		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Still", uniqueName);
+		var course = await CreateCourseAsync(coordinatorClient, CourseType.G2Recorder, 376.00m, structure.LessonStructureId);
+		var teacher = await CreateTeacherAsync(coordinatorClient, "Sipho", $"Ndlovu-{Guid.NewGuid():N}");
+
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrol-teacher", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.73.32");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+
+		var response = await teacherClient.Client.SendAsync(
+			teacherClient.AuthorizedPostRequest(
+				$"/api/waiting-list/students/{captured.StudentId}/enrollment",
+				new EnrollStudentRequest(course.CourseId, teacher.TeacherId, null, null, new DateOnly(2026, 9, 9))),
+			TestContext.Current.CancellationToken);
+
+		var afterList = await coordinatorClient.Client.SendAsync(
+			coordinatorClient.AuthorizedGetRequest("/api/waiting-list"), TestContext.Current.CancellationToken);
+		var payload = await afterList.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.Forbidden),
+			// Still waiting under the name they were captured with: the refusal
+			// consumed nothing.
+			() => payload.ShouldContain(uniqueName));
+	}
+
+	[Fact]
+	[Trait("AC", "295UC11")]
+	public async Task EnrolWaitingListStudent_UnauthenticatedRequest_IsRejected()
+	{
+		var client = fixture.CreateClient();
+
+		var response = await client.PostAsJsonAsync(
+			$"/api/waiting-list/students/{Guid.NewGuid()}/enrollment",
+			new EnrollStudentRequest(Guid.NewGuid(), Guid.NewGuid(), null, null, new DateOnly(2026, 9, 9)),
+			TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+	}
+
 	private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
 	{
 		Converters = { new JsonStringEnumConverter() },

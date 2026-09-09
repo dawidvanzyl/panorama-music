@@ -196,6 +196,46 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			() => remainingStudent.ShouldBeNull());
 	}
 
+	[Fact]
+	[Trait("AC", "295UC5")]
+	public async Task GetStudents_AStudentEnrolledOffTheWaitingList_IsIncludedInTheRoster()
+	{
+		// The entry is consumed by the enrollment, so the student crosses from one
+		// listing to the other. Only a real read can show the crossing lands: the
+		// roster's exclusion is written in SQL against the waiting_list row.
+		var student = await GivenStudentAsync("Enrolled Off", $"Student {Guid.NewGuid()}");
+		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+
+		await GivenEnrollmentAsync(student, courseId);
+		await CallAsync("SELECT students.delete_waiting_list_entry(@p_id);", ("p_id", entryId));
+
+		var studentIds = await ReadStudentIdsAsync();
+
+		studentIds.ShouldContain(student);
+	}
+
+	[Fact]
+	[Trait("AC", "295UC6")]
+	public async Task GetWaitingList_AStudentEnrolledOffTheWaitingList_IsNoLongerOnTheList()
+	{
+		var student = await GivenStudentAsync("Enrolled Off", $"Student {Guid.NewGuid()}");
+		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
+		var stillWaiting = await GivenStudentAsync("StillWaiting", $"Student {Guid.NewGuid()}");
+		await GivenWaitingListEntryAsync(stillWaiting, _duringSchoolLessonStructureId);
+		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+
+		await GivenEnrollmentAsync(student, courseId);
+		await CallAsync("SELECT students.delete_waiting_list_entry(@p_id);", ("p_id", entryId));
+
+		var waitingListStudentIds = await ReadWaitingListStudentIdsAsync();
+
+		ShouldlyHelpers.Satisfy(
+			() => waitingListStudentIds.ShouldNotContain(student),
+			// The list still holds everyone else — the consumption took one row.
+			() => waitingListStudentIds.ShouldContain(stillWaiting));
+	}
+
 	private async Task<Guid> GivenStudentAsync(string firstName, string lastName)
 	{
 		var studentId = Guid.NewGuid();
