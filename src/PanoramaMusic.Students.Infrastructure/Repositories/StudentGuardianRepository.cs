@@ -3,6 +3,7 @@ using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
@@ -79,6 +80,20 @@ public class StudentGuardianRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		var dtos = await Connection.QueryAsync<GuardianDto>(command);
 
 		return [.. dtos.Select(dto => dto.MapToGuardian())];
+	}
+
+	public async Task<IList<MissingGuardianLink>> GetMissingEnrolledSiblingLinksAsync(
+		Guid studentId,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_missing_enrolled_sibling_guardian_links",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<MissingGuardianLinkDto>(command);
+
+		return [.. dtos.Select(dto => new MissingGuardianLink(dto.Student_Id, dto.Guardian_Id))];
 	}
 
 	public async Task CreateAsync(StudentGuardian link, CancellationToken cancellationToken)

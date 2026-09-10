@@ -1,6 +1,7 @@
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
@@ -30,13 +31,21 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// is not one whatever row this table still holds for them — the same narrower
 /// resolution the update and removal paths use.
 /// </para>
+/// <para>
+/// Enrolling also settles the family's guardians. A guardian added while the
+/// student was waiting was kept from their enrolled siblings, and enrolling is
+/// the moment that reason expires — so the missing links are created here, on the
+/// same unit of work, and a refused enrolment leaves every sibling exactly as
+/// they were.
+/// </para>
 /// </summary>
 public sealed class EnrolWaitingListStudentHandler(
 	IWaitingListRepository waitingListRepository,
 	ILessonStructureRepository lessonStructureRepository,
 	ICourseRepository courseRepository,
 	IStudentCourseRepository studentCourseRepository,
-	ITeacherDirectory teacherDirectory)
+	ITeacherDirectory teacherDirectory,
+	FamilyGuardianReconciler familyGuardianReconciler)
 {
 	public async Task<StudentCourseResult> HandleAsync(
 		EnrolWaitingListStudentCommand command,
@@ -83,6 +92,13 @@ public sealed class EnrolWaitingListStudentHandler(
 		// discard path raises.
 		entry.MarkEnrolled(enrollment);
 		await waitingListRepository.DeleteAsync(entry, cancellationToken);
+
+		// Last, so that every refusal above has already had its say: a student who
+		// does not end up enrolled must leave their siblings untouched. The links
+		// created here are the Coordinator's enrolment, not a guardian they linked
+		// by hand, and the audit trail says so.
+		await familyGuardianReconciler.ReconcileEnrolledSiblingsAsync(
+			entry.Student, StudentWriteSource.WaitingList, cancellationToken);
 
 		return enrollment.ToResult(teacher);
 	}
