@@ -102,7 +102,7 @@ test.describe('A confirmed enrolment takes the row off the list', { tag: '@272IT
     await waitingListPage.chooseEnrolTeacher(target.teacherName);
     await waitingListPage.confirmEnrol();
 
-    await expect(waitingListPage.enrolModal).toBeHidden();
+    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
     await expect(waitingListPage.successBanner).toHaveText(
       `${entry.firstName} ${entry.lastName} was enrolled and removed from the waiting list.`,
     );
@@ -143,7 +143,7 @@ test.describe('A confirmed enrolment takes the row off the list', { tag: '@272IT
     await expect(waitingListPage.enrolTeacher()).toHaveValue('');
     await waitingListPage.confirmEnrol();
 
-    await expect(waitingListPage.enrolModal).toBeVisible();
+    await expect(waitingListPage.enrolModal).toHaveAttribute('open', '');
     await expect(waitingListPage.successBanner).toBeHidden();
     expect(await fetchStudentEnrollments(page, entry.studentId)).toHaveLength(0);
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(true);
@@ -176,7 +176,7 @@ test.describe('Cancelling the enrolment form submits nothing', { tag: '@272IT17'
     await waitingListPage.chooseEnrolTeacher(target.teacherName);
     await waitingListPage.cancelEnrol();
 
-    await expect(waitingListPage.enrolModal).toBeHidden();
+    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
     await expect(waitingListPage.successBanner).toBeHidden();
     expect(await fetchStudentEnrollments(page, entry.studentId)).toHaveLength(0);
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(true);
@@ -207,7 +207,7 @@ test.describe('An enrolled student is not shown on the Waiting List', { tag: '@2
     await waitingListPage.enrolCourse().selectOption(courseId);
     await waitingListPage.chooseEnrolTeacher(target.teacherName);
     await waitingListPage.confirmEnrol();
-    await expect(waitingListPage.enrolModal).toBeHidden();
+    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
 
     // Away and back, so the page is read fresh rather than from what the
     // confirmation left behind.
@@ -332,9 +332,7 @@ test.describe('The occurrence type is fixed at the value the student waited unde
 });
 
 test.describe('Everything but the occurrence type is the Coordinator to change', { tag: '@272IT37' }, () => {
-  test('the changed values are accepted and the enrolment keeps the waited-under occurrence type', async ({
-    page,
-  }) => {
+  test('the changed values are accepted and the enrolment keeps the waited-under occurrence type', async ({ page }) => {
     const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_ENROL_ROLES]);
     const target = await seedEnrollmentTarget(page);
     const entry = await seedWaitingListEntry(page, {
@@ -366,7 +364,7 @@ test.describe('Everything but the occurrence type is the Coordinator to change',
     await waitingListPage.chooseEnrolTeacher(target.teacherName);
     await waitingListPage.confirmEnrol();
 
-    await expect(waitingListPage.enrolModal).toBeHidden();
+    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
     await expect(waitingListPage.successBanner).toContainText(`${entry.firstName} ${entry.lastName}`);
     await expect(waitingListPage.rowFor('During School', entry.lastName)).toHaveCount(0);
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(false);

@@ -1,4 +1,4 @@
-import { type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import type { StudentInput } from './StudentsPage';
 
@@ -371,13 +371,15 @@ export class WaitingListPage extends BasePage {
   // --- Enrol modal (opened from a row's Enrol action) ---
 
   /**
-   * Opens the enrol modal on a row and waits for it to be shown. The modal's
-   * host is display:none until it is opened, so the click alone is not proof
-   * it is there.
+   * Opens the enrol modal on a row and waits for it to be shown. Openness is
+   * read off the host's `open` attribute, the way the other modals on this
+   * page are: everything the host renders is a fixed-position backdrop, so the
+   * host's own box is empty and a visibility wait would never settle.
    */
   async openEnrolModal(row: Locator): Promise<void> {
     await this.enrolButton(row).click();
-    await this.enrolModal.waitFor({ state: 'visible' });
+    await this.enrolModal.waitFor({ state: 'attached' });
+    await expect(this.enrolModal).toHaveAttribute('open', '');
   }
 
   /** The notice above the fields, naming the student and the consequence. */

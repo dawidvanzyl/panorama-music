@@ -76,10 +76,9 @@ export async function waitingListEntryExists(waitingListEntryId: string): Promis
   const client = createClient();
   await client.connect();
   try {
-    const result = await client.query(
-      'SELECT 1 FROM students.waiting_list WHERE waiting_list_entry_id = $1',
-      [waitingListEntryId],
-    );
+    const result = await client.query('SELECT 1 FROM students.waiting_list WHERE waiting_list_entry_id = $1', [
+      waitingListEntryId,
+    ]);
     return result.rowCount === 1;
   } finally {
     await client.end();
