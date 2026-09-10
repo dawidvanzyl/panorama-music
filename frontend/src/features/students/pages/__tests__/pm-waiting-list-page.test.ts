@@ -852,3 +852,83 @@ describe(
     });
   },
 );
+
+describe('pm-waiting-list-page — a refused enrolment stays recoverable', { tags: ['295UC21'] }, () => {
+  const refusal = 'The school offers no instrument course for that lesson structure.';
+
+  it('shows the refusal in the modal and leaves it open with every choice still made', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockEnrolWaitingListStudent.mockRejectedValueOnce(new WaitingListError(refusal, 400));
+
+    const el = await mountPage();
+    const modal = await openEnrolModal(el, 'Amara Pillay');
+    completeEnrolForm(el);
+    (modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement).click();
+    await flush();
+    await flush();
+
+    const error = enrolFieldOf(el, 'error');
+    expect(error.textContent).toBe(refusal);
+    expect(error.classList.contains('enrol__error--visible')).toBe(true);
+
+    // The reason is only half of it: a closed modal would make the refusal a
+    // dead end, so the modal stays up with what the Coordinator chose still on
+    // it — otherwise there is nothing to change and retry.
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect((enrolFieldOf(el, 'lessonType') as HTMLSelectElement).value).toBe('Individual');
+    expect((enrolFieldOf(el, 'durationType') as HTMLSelectElement).value).toBe('HalfHour');
+    expect((enrolFieldOf(el, 'instrumentType') as HTMLSelectElement).value).toBe('Piano');
+    expect((enrolFieldOf(el, 'teacher') as HTMLSelectElement).value).toBe('t1');
+    expect((enrolFieldOf(el, 'step') as HTMLSelectElement).value).toBe('Step2A');
+    expect((enrolFieldOf(el, 'enrolledDate') as HTMLInputElement).value).toBe(todayIsoDate());
+
+    // Nothing moved: the row is still on the list and nothing claims success.
+    expect(rowNames(el)).toContain('Amara Pillay');
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+  });
+
+  it('accepts a changed choice submitted again from the still-open modal', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList
+      .mockResolvedValueOnce(bothGroups)
+      .mockResolvedValueOnce([
+        { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+      ]);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockEnrolWaitingListStudent
+      .mockRejectedValueOnce(new WaitingListError(refusal, 400))
+      .mockResolvedValueOnce({ studentCourseId: 'sc1' });
+
+    const el = await mountPage();
+    const modal = await openEnrolModal(el, 'Amara Pillay');
+    completeEnrolForm(el);
+    const confirmBtn = modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
+    confirmBtn.click();
+    await flush();
+    await flush();
+
+    // The retry the refusal left room for: a different lesson structure under
+    // the same occurrence type, chosen on the modal that never closed.
+    const lessonType = enrolFieldOf(el, 'lessonType') as HTMLSelectElement;
+    lessonType.value = 'Group';
+    lessonType.dispatchEvent(new Event('change'));
+    (enrolFieldOf(el, 'durationType') as HTMLSelectElement).value = 'Hour';
+    confirmBtn.click();
+    await flush();
+    await flush();
+
+    expect(mockEnrolWaitingListStudent).toHaveBeenCalledTimes(2);
+    expect(mockEnrolWaitingListStudent).toHaveBeenLastCalledWith('s1', {
+      lessonStructureId: 'ls-group-hour-during',
+      teacherId: 't1',
+      instrumentType: 'Piano',
+      stepType: 'Step2A',
+      enrolledDate: todayIsoDate(),
+    });
+    expect(modal.hasAttribute('open')).toBe(false);
+    expect(rowNames(el)).not.toContain('Amara Pillay');
+    expect(successBannerOf(el).textContent).toBe('Amara Pillay was enrolled and removed from the waiting list.');
+  });
+});
