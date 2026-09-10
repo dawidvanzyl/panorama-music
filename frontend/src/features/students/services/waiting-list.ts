@@ -7,7 +7,6 @@ import type {
   DurationType,
   InstrumentType,
   StepType,
-  EnrollmentInput,
   EnrollmentResult,
 } from './enrollments';
 import type { StudentInput } from './students';
@@ -60,6 +59,21 @@ export interface WaitingListEntryInput {
   lessonStructureId: string;
   instrumentType: InstrumentType;
   notes: string | null;
+}
+
+/**
+ * What an enrolment off the waiting list sends. It names the lesson structure
+ * the Coordinator settled on rather than a course: an entry is a wait for an
+ * instrument course, and the server takes the one offered under that structure.
+ * The occurrence type is not sent — it is fixed at the entry, and the structure
+ * named here is checked against it.
+ */
+export interface WaitingListEnrolmentInput {
+  lessonStructureId: string;
+  teacherId: string;
+  instrumentType: InstrumentType;
+  stepType: StepType;
+  enrolledDate: string;
 }
 
 export class WaitingListError extends Error {
@@ -210,11 +224,14 @@ export async function removeWaitingListStudent(studentId: string): Promise<void>
  * Enrols a waiting-list student, consuming their entry. Reached through the
  * waiting list rather than through `enrollStudent`, which is a Teacher's: this
  * route is a Coordinator's, resolves only a student who holds an entry, and
- * refuses a course offered under a different occurrence type from the one the
- * student waited under. The entry and the enrollment are settled together on
- * the server, so a refusal leaves the student on the list.
+ * refuses a lesson structure carrying a different occurrence type from the one
+ * the student waited under. The entry and the enrollment are settled together
+ * on the server, so a refusal leaves the student on the list.
  */
-export async function enrolWaitingListStudent(studentId: string, input: EnrollmentInput): Promise<EnrollmentResult> {
+export async function enrolWaitingListStudent(
+  studentId: string,
+  input: WaitingListEnrolmentInput,
+): Promise<EnrollmentResult> {
   const response = await fetch(`${API_BASE}/students/${studentId}/enrollment`, {
     method: 'POST',
     headers: authHeaders(),

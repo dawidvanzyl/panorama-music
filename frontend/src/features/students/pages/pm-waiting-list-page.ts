@@ -14,15 +14,11 @@ import {
   enrolWaitingListStudent,
   WaitingListError,
   type OccurrenceType,
+  type WaitingListEnrolmentInput,
   type WaitingListEntryInput,
   type WaitingListEntryResult,
 } from '../services/waiting-list';
-import {
-  getEnrollableCourses,
-  getAssignableTeachers,
-  EnrollmentsError,
-  type EnrollmentInput,
-} from '../services/enrollments';
+import { getAssignableTeachers, EnrollmentsError } from '../services/enrollments';
 import {
   getStudents,
   getStudentById,
@@ -238,8 +234,8 @@ export class PmWaitingListPage extends HTMLElement {
 
   /**
    * The Siblings/Guardians tabs' candidate list and relationship options, and
-   * the Waiting List tab's lesson-structure lookup — everything the capture
-   * wizard needs before it opens.
+   * the seeded lesson-structure grid — everything the capture wizard needs
+   * before it opens, and the grid the Enrol modal resolves against too.
    *
    * Settled independently rather than as one `Promise.all`: a failure on any
    * one of these three must never sink the other two, so each lookup is
@@ -268,29 +264,24 @@ export class PmWaitingListPage extends HTMLElement {
 
     if (lessonStructuresResult.status === 'fulfilled') {
       this.wizardModal!.lessonStructures = lessonStructuresResult.value;
+      // The same seeded grid the Enrol modal resolves its structure against —
+      // read once and given to both, rather than fetched twice.
+      this.enrolModal!.lessonStructures = lessonStructuresResult.value;
     } else {
       this.showError(lessonStructuresResult.reason);
     }
   }
 
   /**
-   * The catalogue and teacher roster the Enrol modal offers. Settled
-   * independently of one another, and of the wizard's own lookups, for the same
-   * reason those are: one failure must not take the rest with it.
+   * The teacher roster the Enrol modal offers. Settled independently of the
+   * wizard's own lookups, for the same reason those are settled independently
+   * of one another: one failure must not take the rest with it.
    */
   private async loadEnrolLookups(): Promise<void> {
-    const [coursesResult, teachersResult] = await Promise.allSettled([getEnrollableCourses(), getAssignableTeachers()]);
-
-    if (coursesResult.status === 'fulfilled') {
-      this.enrolModal!.courses = coursesResult.value;
-    } else {
-      this.showError(coursesResult.reason);
-    }
-
-    if (teachersResult.status === 'fulfilled') {
-      this.enrolModal!.teachers = teachersResult.value;
-    } else {
-      this.showError(teachersResult.reason);
+    try {
+      this.enrolModal!.teachers = await getAssignableTeachers();
+    } catch (err) {
+      this.showError(err);
     }
   }
 
@@ -310,7 +301,7 @@ export class PmWaitingListPage extends HTMLElement {
    */
   private handleEnrolConfirmed = async (event: Event): Promise<void> => {
     const { studentId, name, input } = (
-      event as CustomEvent<{ studentId: string; name: string; input: EnrollmentInput }>
+      event as CustomEvent<{ studentId: string; name: string; input: WaitingListEnrolmentInput }>
     ).detail;
     this.clearError();
     try {

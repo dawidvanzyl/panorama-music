@@ -8,18 +8,17 @@ import {
   LESSON_TYPE_LABELS,
   DURATION_TYPE_LABELS,
   OCCURRENCE_TYPE_LABELS,
-  courseLabel,
-  recordsInstrumentType,
-  recordsStep,
   todayIsoDate,
 } from './enrollment-options';
-import type { AssignableTeacher, EnrollableCourse, EnrollmentInput } from '../services/enrollments';
+import type { AssignableTeacher } from '../services/enrollments';
 import type {
   DurationType,
   InstrumentType,
+  LessonStructure,
   LessonType,
   OccurrenceType,
   StepType,
+  WaitingListEnrolmentInput,
   WaitingListEntryResult,
 } from '../services/waiting-list';
 
@@ -136,10 +135,6 @@ template.innerHTML = `
             <label class="enrol__label" for="durationType">Duration Type</label>
             <select class="enrol__select" id="durationType" required></select>
           </div>
-          <div class="enrol__field enrol__field--wide">
-            <label class="enrol__label" for="course">Course</label>
-            <select class="enrol__select" id="course" required></select>
-          </div>
           <div class="enrol__field">
             <label class="enrol__label" for="teacher">Teacher</label>
             <select class="enrol__select" id="teacher" required></select>
@@ -148,9 +143,9 @@ template.innerHTML = `
             <label class="enrol__label" for="instrumentType">Instrument Type</label>
             <select class="enrol__select" id="instrumentType"></select>
           </div>
-          <div class="enrol__field" id="stepField" hidden>
+          <div class="enrol__field" id="stepField">
             <label class="enrol__label" for="step">Step</label>
-            <select class="enrol__select" id="step"></select>
+            <select class="enrol__select" id="step" required></select>
           </div>
           <div class="enrol__field">
             <label class="enrol__label" for="enrolledDate">Enrolled Date</label>
@@ -175,12 +170,11 @@ template.innerHTML = `
  *
  * <p>
  * The occurrence type is a value, not a control, because it is the one thing an
- * enrolment off the list cannot change. The Course picker is what keeps it that
- * way: it offers only courses delivered under the entry's own occurrence type,
- * so no choice available here can move the student to the other list. A course
- * has to be picked rather than derived — an entry records no course type, and
- * several courses can share one lesson structure, so a structure names no single
- * course.
+ * enrolment off the list cannot change. There is no course control at all: an
+ * entry records an intended instrument, and only an instrument course records
+ * one, so the course follows from the structure and the server resolves it.
+ * Where the school offers none under the structure chosen, the refusal is shown
+ * here — never an empty control with nothing to submit.
  * </p>
  */
 export class PmEnrolWaitingListStudentModal extends HTMLElement {
@@ -189,15 +183,13 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private occurrenceTypeValue: HTMLElement | null = null;
   private lessonTypeSelect: HTMLSelectElement | null = null;
   private durationTypeSelect: HTMLSelectElement | null = null;
-  private courseSelect: HTMLSelectElement | null = null;
   private teacherSelect: HTMLSelectElement | null = null;
   private instrumentTypeSelect: HTMLSelectElement | null = null;
-  private stepField: HTMLElement | null = null;
   private stepSelect: HTMLSelectElement | null = null;
   private enrolledDateInput: HTMLInputElement | null = null;
   private errorMessage: HTMLElement | null = null;
 
-  private _courses: EnrollableCourse[] = [];
+  private _lessonStructures: LessonStructure[] = [];
   private _teachers: AssignableTeacher[] = [];
   private _studentId = '';
   private _studentName = '';
@@ -216,10 +208,8 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.occurrenceTypeValue = this.shadowRoot!.getElementById('occurrenceTypeValue') as HTMLElement;
     this.lessonTypeSelect = this.shadowRoot!.getElementById('lessonType') as HTMLSelectElement;
     this.durationTypeSelect = this.shadowRoot!.getElementById('durationType') as HTMLSelectElement;
-    this.courseSelect = this.shadowRoot!.getElementById('course') as HTMLSelectElement;
     this.teacherSelect = this.shadowRoot!.getElementById('teacher') as HTMLSelectElement;
     this.instrumentTypeSelect = this.shadowRoot!.getElementById('instrumentType') as HTMLSelectElement;
-    this.stepField = this.shadowRoot!.getElementById('stepField') as HTMLElement;
     this.stepSelect = this.shadowRoot!.getElementById('step') as HTMLSelectElement;
     this.enrolledDateInput = this.shadowRoot!.getElementById('enrolledDate') as HTMLInputElement;
     this.errorMessage = this.shadowRoot!.getElementById('error') as HTMLElement;
@@ -238,22 +228,17 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     populateSelectOptions<StepType>(this.stepSelect, STEP_TYPES, (value) => STEP_TYPE_LABELS[value]);
     addPlaceholderOption(this.stepSelect, 'Select step');
 
-    this.lessonTypeSelect.addEventListener('change', this.handleStructureChanged);
-    this.durationTypeSelect.addEventListener('change', this.handleStructureChanged);
-    this.courseSelect.addEventListener('change', this.handleCourseChanged);
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('confirmBtn')!.addEventListener('click', this.handleConfirm);
   }
 
-  disconnectedCallback(): void {
-    this.lessonTypeSelect?.removeEventListener('change', this.handleStructureChanged);
-    this.durationTypeSelect?.removeEventListener('change', this.handleStructureChanged);
-    this.courseSelect?.removeEventListener('change', this.handleCourseChanged);
-  }
-
-  set courses(value: EnrollableCourse[]) {
-    this._courses = value;
-    this.renderCourseOptions();
+  /**
+   * The seeded lesson-structure grid, which the occurrence type and the chosen
+   * lesson and duration types resolve against. The grid is a full cross
+   * product, so every combination the two selects can produce names one.
+   */
+  set lessonStructures(value: LessonStructure[]) {
+    this._lessonStructures = value;
   }
 
   set teachers(value: AssignableTeacher[]) {
@@ -282,7 +267,6 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.renderTeacherOptions();
     this.teacherSelect!.value = '';
     this.stepSelect!.value = '';
-    this.renderCourseOptions();
 
     this.setAttribute('open', '');
   }
@@ -302,43 +286,16 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   }
 
   /**
-   * The courses on offer: those delivered under the entry's occurrence type, and
-   * among those the ones matching the lesson and duration types currently
-   * chosen. The occurrence-type half is the rule; the other half is what makes
-   * changing lesson or duration mean something.
-   *
-   * A single match is selected outright — one option is not a choice — and
-   * anything else opens on the placeholder so the Coordinator settles it. No
-   * course under this occurrence type leaves the picker empty and nothing to
-   * submit.
+   * The structure the enrolment names: the occurrence type the student waited
+   * under, together with the lesson and duration types now chosen.
    */
-  private renderCourseOptions(): void {
-    if (!this.courseSelect) return;
-
-    const previous = this.courseSelect.value;
-    const offered = this._courses.filter(
-      (course) =>
-        course.occurrenceType === this._occurrenceType &&
-        course.lessonType === this.lessonTypeSelect!.value &&
-        course.durationType === this.durationTypeSelect!.value,
+  private selectedLessonStructure(): LessonStructure | undefined {
+    return this._lessonStructures.find(
+      (structure) =>
+        structure.occurrenceType === this._occurrenceType &&
+        structure.lessonType === this.lessonTypeSelect!.value &&
+        structure.durationType === this.durationTypeSelect!.value,
     );
-
-    this.courseSelect.innerHTML = '';
-    for (const course of offered) {
-      const option = document.createElement('option');
-      option.value = course.courseId;
-      option.textContent = courseLabel(course);
-      this.courseSelect.appendChild(option);
-    }
-
-    if (offered.length === 1) {
-      this.courseSelect.value = offered[0].courseId;
-    } else {
-      addPlaceholderOption(this.courseSelect, 'Select course');
-      this.courseSelect.value = offered.some((course) => course.courseId === previous) ? previous : '';
-    }
-
-    this.applyCourseTypeRules();
   }
 
   private renderTeacherOptions(): void {
@@ -356,34 +313,6 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.teacherSelect.value = previous;
   }
 
-  /**
-   * The chosen course's type governs the step, exactly as it does on the
-   * Students screen's own enroll form. The instrument type stays on screen
-   * either way — it is what the student came onto the list wanting, and hiding
-   * it would drop that from view — but it only reaches the enrollment when the
-   * course type records one.
-   */
-  private applyCourseTypeRules(): void {
-    const course = this.selectedCourse();
-    const offersStep = course !== undefined && recordsStep(course.courseType);
-
-    this.stepField!.hidden = !offersStep;
-    this.stepSelect!.required = offersStep;
-    if (!offersStep) this.stepSelect!.value = '';
-  }
-
-  private selectedCourse(): EnrollableCourse | undefined {
-    return this._courses.find((course) => course.courseId === this.courseSelect!.value);
-  }
-
-  private handleStructureChanged = (): void => {
-    this.renderCourseOptions();
-  };
-
-  private handleCourseChanged = (): void => {
-    this.applyCourseTypeRules();
-  };
-
   private handleCancel = (): void => {
     this.close();
   };
@@ -391,16 +320,19 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private handleConfirm = (): void => {
     if (!this.form!.reportValidity()) return;
 
-    const course = this.selectedCourse();
-    if (course === undefined) return;
+    const lessonStructure = this.selectedLessonStructure();
+    if (lessonStructure === undefined) {
+      this.showError('That lesson type and duration are not offered under this occurrence type.');
+      return;
+    }
 
-    const input: EnrollmentInput = {
-      courseId: course.courseId,
+    this.clearError();
+
+    const input: WaitingListEnrolmentInput = {
+      lessonStructureId: lessonStructure.lessonStructureId,
       teacherId: this.teacherSelect!.value,
-      instrumentType: recordsInstrumentType(course.courseType)
-        ? (this.instrumentTypeSelect!.value as InstrumentType)
-        : null,
-      stepType: this.stepField!.hidden ? null : (this.stepSelect!.value as StepType),
+      instrumentType: this.instrumentTypeSelect!.value as InstrumentType,
+      stepType: this.stepSelect!.value as StepType,
       enrolledDate: this.enrolledDateInput!.value,
     };
 
