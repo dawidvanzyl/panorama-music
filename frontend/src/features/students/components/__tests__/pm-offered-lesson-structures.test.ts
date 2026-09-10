@@ -184,3 +184,23 @@ describe('a school running no instrument courses at all', { tags: ['309UC9'] }, 
     expect((root.getElementById('confirmBtn') as HTMLButtonElement).hidden).toBe(true);
   });
 });
+
+/**
+ * The enrol modal's occurrence type is fixed by the entry, so it has a dead end
+ * of its own: courses exist, but none under the occurrence type this student
+ * waited on. Same empty controls, so the same treatment — said in the narrower
+ * wording that tells the Coordinator which of the two dead ends they are at.
+ */
+describe('a school running no instrument course under the entry own occurrence type', { tags: ['309UC9'] }, () => {
+  it('is stated in the narrower wording, with the form and Enrol withdrawn', () => {
+    const modal = mountEnrolModal([duringSchoolGroupHalfHour]);
+    modal.show(entryOnAnOfferedStructure, 'AfterSchool');
+
+    const root = modal.shadowRoot!;
+    const notice = root.getElementById('noOfferedStructures') as HTMLElement;
+    expect(notice.hidden).toBe(false);
+    expect(notice.textContent).toContain('under this occurrence type');
+    expect((root.getElementById('form') as HTMLElement).hidden).toBe(true);
+    expect((root.getElementById('confirmBtn') as HTMLButtonElement).hidden).toBe(true);
+  });
+});
