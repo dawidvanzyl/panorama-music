@@ -6,6 +6,7 @@ import { waitingListEntryExists } from '../../fixtures/db';
 import {
   seedWaitingListEntry,
   seedCourseOfType,
+  ensureInstrumentCourse,
   fetchLessonStructureId,
   fetchStructureWithoutInstrumentCourse,
   fetchAnyEnrolmentTarget,
@@ -41,6 +42,9 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
       durationType: 'Hour',
       instrumentType: 'Piano',
     });
+    // As above: a pre-fill assertion needs the entry's own combination to be
+    // one the modal still offers.
+    await ensureInstrumentCourse(page, entry.lessonStructureId);
     await page.reload();
 
     await waitingListPage.openEnrolModal(waitingListPage.rowFor('During School', entry.lastName));
@@ -66,7 +70,11 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
     // The assertion that catches a re-introduced course picker, which is what
     // could present a Coordinator with nothing to choose and no way forward.
     await expect(waitingListPage.enrolCourseControls()).toHaveCount(0);
-    await expect(waitingListPage.enrolCard()).not.toContainText(/course/i);
+    // Read as the Coordinator reads it. The modal also carries a notice for
+    // the case where the school runs no instrument course under this
+    // occurrence type, and that wording names courses on purpose — it is not
+    // shown here, and a check against raw text content would find it anyway.
+    await expect(waitingListPage.enrolCard()).not.toContainText(/course/i, { useInnerText: true });
   });
 
   test('the pre-fill follows the entry rather than a fixed default', async ({ page }) => {
@@ -79,6 +87,10 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
       durationType: 'HalfHour',
       instrumentType: 'Guitar',
     });
+    // The pre-fill can only carry the entry's own combination while the school
+    // runs an instrument course for it — the modal offers nothing else. That
+    // is the precondition of a pre-fill assertion, not part of its subject.
+    await ensureInstrumentCourse(page, entry.lessonStructureId);
     await page.reload();
 
     await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));

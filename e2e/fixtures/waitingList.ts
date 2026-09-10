@@ -395,6 +395,31 @@ export async function seedCourseOfType(page: Page, lessonStructureId: string, co
 }
 
 /**
+ * Makes sure the school runs an instrument course for a structure, creating
+ * one only if it does not already. A scenario whose precondition is "this
+ * combination is offered" wants the state, not a new row: several specs share
+ * the same anchor structure, and a course type and a lesson structure identify
+ * at most one course once that uniqueness is enforced.
+ *
+ * <p>
+ * **Reserved structure:** never call this against
+ * `COURSE_FREE_LESSON_STRUCTURE`. See that constant for why.
+ * </p>
+ */
+export async function ensureInstrumentCourse(page: Page, lessonStructureId: string): Promise<void> {
+  const alreadyOffered = await page.evaluate(async (lessonStructureId) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+      courseType: string;
+      lessonStructureId: string;
+    }[];
+    return courses.some((c) => c.courseType === 'Instrument' && c.lessonStructureId === lessonStructureId);
+  }, lessonStructureId);
+
+  if (!alreadyOffered) await seedCourseOfType(page, lessonStructureId, 'Instrument');
+}
+
+/**
  * The lesson-structure id for one exact occurrence/lesson/duration triple —
  * for a scenario that needs a course on a structure other than the entry's:
  * the combination the Coordinator changes to under the same occurrence type,
