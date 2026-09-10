@@ -274,6 +274,10 @@ export default defineConfig({
       { name: '295UC17', description: 'Cancelling the enrol modal submits no enrolment and leaves the row on the list' },
       { name: '295UC18', description: 'A successful enrolment closes the modal, removes the row and shows a success message naming the student' },
       { name: '295UC19', description: 'An occurrence type whose last row was enrolled off it renders no list at all' },
+      { name: '309UC6', description: 'The capture wizard Waiting List tab offers only combinations the school runs an instrument course for' },
+      { name: '309UC7', description: 'The edit wizard Waiting List tab offers only combinations the school runs an instrument course for' },
+      { name: '309UC8', description: 'The enrol modal offers only combinations the school runs an instrument course for' },
+      { name: '309UC9', description: 'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control' },
     ],
   },
 })
