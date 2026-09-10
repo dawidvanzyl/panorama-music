@@ -42,6 +42,7 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["CaptureWaitingListStudent"] = CacheExpectation.NoStore,
 		["UpdateWaitingListEntry"] = CacheExpectation.NoStore,
 		["UpdateWaitingListStudent"] = CacheExpectation.NoStore,
+		["EnrolWaitingListStudent"] = CacheExpectation.NoStore,
 		["GetStudentById"] = CacheExpectation.NoStore,
 		["GetSiblings"] = CacheExpectation.NoStore,
 		["CreateStudent"] = CacheExpectation.NoStore,

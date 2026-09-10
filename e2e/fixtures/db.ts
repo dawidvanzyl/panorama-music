@@ -67,6 +67,25 @@ export async function insertWaitingListEntry(entry: WaitingListEntryRow): Promis
 }
 
 /**
+ * Whether the `students.waiting_list` row still exists, read straight from
+ * Postgres. The list endpoint excludes any student who holds an enrollment, so
+ * a row that has been consumed and a row that is merely hidden read the same
+ * way through `/api/waiting-list` — only the table itself tells them apart.
+ */
+export async function waitingListEntryExists(waitingListEntryId: string): Promise<boolean> {
+  const client = createClient();
+  await client.connect();
+  try {
+    const result = await client.query('SELECT 1 FROM students.waiting_list WHERE waiting_list_entry_id = $1', [
+      waitingListEntryId,
+    ]);
+    return result.rowCount === 1;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
  * Empties `students.waiting_list` entirely. Only the empty-state scenario
  * (272IT10, "no waiting-list entries at all") needs this — that behaviour is
  * defined by the absence of data across the whole table, which no filter or

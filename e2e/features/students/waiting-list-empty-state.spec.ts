@@ -1,7 +1,8 @@
 import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
-import { seedWaitingListEntry } from '../../fixtures/waitingList';
-import { truncateWaitingList } from '../../fixtures/db';
+import { seedWaitingListEntry, seedCourseOfType } from '../../fixtures/waitingList';
+import { seedEnrollmentTarget } from '../../fixtures/enrollment';
+import { truncateWaitingList, waitingListEntryExists } from '../../fixtures/db';
 
 /**
  * Every scenario in this file needs the whole `WaitingList` table under its
@@ -30,6 +31,10 @@ import { truncateWaitingList } from '../../fixtures/db';
  *  3. 272IT7 — truncate again for a table this scenario fully controls, seed
  *     exactly one During School entry and two After School entries, and
  *     assert the exact counts the design specifies.
+ *  4. 272IT16 — truncate again, seed a single entry, enrol it away, and
+ *     assert the list it was under stops being rendered. That an occurrence
+ *     type renders at all is a property of the whole table, so this scenario
+ *     belongs here rather than alongside the other enrolment specs.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -70,9 +75,7 @@ test.describe('Waiting List groups by occurrence type, each with its own count',
     await truncateWaitingList();
   });
 
-  test('shows a During School list and an After School list, each labelled with its own count', async ({
-    page,
-  }) => {
+  test('shows a During School list and an After School list, each labelled with its own count', async ({ page }) => {
     const waitingListPage = await goToWaitingListPage(page, ['Teacher', 'Coordinator']);
 
     const duringSchool = await seedWaitingListEntry(page, { occurrenceType: 'DuringSchool' });
@@ -89,5 +92,45 @@ test.describe('Waiting List groups by occurrence type, each with its own count',
     await expect(waitingListPage.groupCount('After School')).toHaveText('· 2 waiting');
     await expect(waitingListPage.rowFor('After School', afterSchoolOne.lastName)).toBeVisible();
     await expect(waitingListPage.rowFor('After School', afterSchoolTwo.lastName)).toBeVisible();
+  });
+});
+
+test.describe('Enrolling the last row under an occurrence type takes its list with it', { tag: '@272IT16' }, () => {
+  test.beforeAll(async () => {
+    // The assertion below is that a list stops being rendered, which only
+    // means anything if this scenario's entry is the only one in the table.
+    await truncateWaitingList();
+  });
+
+  test('the After School list is no longer rendered and the empty state stands in its place', async ({ page }) => {
+    const waitingListPage = await goToWaitingListPage(page, ['Teacher', 'Coordinator']);
+    const target = await seedEnrollmentTarget(page);
+    const entry = await seedWaitingListEntry(page, {
+      occurrenceType: 'AfterSchool',
+      lessonType: 'Individual',
+      durationType: 'Hour',
+      instrumentType: 'Piano',
+    });
+    // An instrument course on the entry's own structure: the enrolment
+    // resolves that type and no other, so any other course type here would
+    // leave the enrolment refused rather than accepted.
+    await seedCourseOfType(page, entry.lessonStructureId, 'Instrument');
+    await page.reload();
+
+    await expect(waitingListPage.group('After School')).toBeVisible();
+
+    await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));
+    await waitingListPage.chooseEnrolTeacher(target.teacherName);
+    await waitingListPage.enrolStep().selectOption('Step2A');
+    await waitingListPage.confirmEnrol();
+
+    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
+    expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(false);
+
+    // Not rendered empty — not rendered at all, with the empty state standing
+    // in place of both lists now the table holds nothing.
+    await expect(waitingListPage.group('After School')).toBeHidden();
+    await expect(waitingListPage.group('During School')).toBeHidden();
+    await expect(waitingListPage.emptyState).toBeVisible();
   });
 });

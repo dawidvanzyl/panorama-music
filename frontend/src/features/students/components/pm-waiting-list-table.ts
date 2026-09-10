@@ -335,8 +335,7 @@ export class PmWaitingListTable extends HTMLElement {
    * The row's actions. Edit and Delete announce the entry and the occurrence
    * type its group was rendered under — that type is the group's, not the
    * row's, so it has to travel with the request rather than be re-derived from
-   * the entry later. Enrol is shown as the design calls for but wired to
-   * nothing yet; enrolling off the list is a later M9 story.
+   * the entry later.
    */
   private buildActions(entry: WaitingListGroupResult['entries'][number], occurrenceType: OccurrenceType): HTMLElement {
     const container = document.createElement('div');
@@ -345,6 +344,7 @@ export class PmWaitingListTable extends HTMLElement {
     enrolBtn.type = 'button';
     enrolBtn.classList.add('wl-table__btn', 'wl-table__btn--primary');
     enrolBtn.textContent = 'Enrol';
+    enrolBtn.addEventListener('click', () => this.emit('waiting-list-enrol-requested', entry, occurrenceType));
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';

@@ -49,6 +49,13 @@ export class CourseManagementPage extends BasePage {
     return this.courseTable.locator('tbody tr').count();
   }
 
+  /**
+   * Creates a course through the screen's own form. One lesson structure is off
+   * limits for the `Instrument` course type: After School · Group · Hour, kept
+   * free of instrument courses by convention so that enrolling off the waiting
+   * list can still be refused for want of one. See
+   * `COURSE_FREE_LESSON_STRUCTURE` in `e2e/fixtures/waitingList.ts`.
+   */
   async createCourse(input: CourseInput): Promise<void> {
     await this.courseForm.locator('#courseType').selectOption({ label: input.courseTypeLabel });
     await this.courseForm.locator('#cost').fill(input.cost);

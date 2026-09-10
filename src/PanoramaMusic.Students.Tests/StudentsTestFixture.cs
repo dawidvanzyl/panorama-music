@@ -95,5 +95,6 @@ public sealed class StudentsTestFixture
 		services.AddTransient<UpdateWaitingListEntryHandler>();
 		services.AddTransient<UpdateWaitingListStudentHandler>();
 		services.AddTransient<RemoveWaitingListStudentHandler>();
+		services.AddTransient<EnrolWaitingListStudentHandler>();
 	}
 }

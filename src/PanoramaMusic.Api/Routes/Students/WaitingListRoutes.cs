@@ -111,5 +111,32 @@ public static class WaitingListRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
+
+		// Enrolling off the list, which consumes the entry. Separate from the
+		// roster's POST /api/students/{id}/courses, which is a Teacher's: this
+		// one is a Coordinator's, only resolves a student who actually holds an
+		// entry, and names a lesson structure rather than a course — the
+		// instrument course under that structure is resolved here, and a
+		// structure carrying a different occurrence type from the one the student
+		// waited under is refused.
+		maintain
+			.MapPost("/students/{studentId:guid}/enrollment", async (
+				Guid studentId,
+				EnrolWaitingListStudentRequest request,
+				EnrolWaitingListStudentHandler handler,
+				CancellationToken ct) =>
+			{
+				var command = new EnrolWaitingListStudentCommand(studentId, request);
+				var result = await handler.HandleAsync(command, ct);
+				return Results.Created($"/api/students/{studentId}/courses/{result.StudentCourseId}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<EnrolWaitingListStudentRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("EnrolWaitingListStudent")
+			.Produces<StudentCourseResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

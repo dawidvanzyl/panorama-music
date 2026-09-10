@@ -110,6 +110,22 @@ public class GetWaitingListHandlerTests : IClassFixture<StudentsTestFixture>
 		// the type itself is the proof that nothing here can leak one.
 	}
 
+	[Fact]
+	[Trait("AC", "295UC7")]
+	public async Task HandleAsync_TheEntryAheadOfAnotherIsGone_TheOneBehindAdvancesToPositionOne()
+	{
+		var lessonStructure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		var behind = WaitingListEntryFactory.Create(lessonStructure: lessonStructure, addedAt: AddedAt(2));
+		// The entry added first has been consumed by an enrollment, so it is no
+		// longer returned. Position is derived from added-at order on every read
+		// and nothing stored was rewritten, so the one behind simply advances.
+		SetupEntries(behind);
+
+		var results = await _handler.HandleAsync(TestContext.Current.CancellationToken);
+
+		results.Single().Entries.Single().Position.ShouldBe(1);
+	}
+
 	private static DateTime AddedAt(int day) => new(2026, 1, day, 0, 0, 0, DateTimeKind.Utc);
 
 	private void SetupEntries(params WaitingListEntry[] entries) =>

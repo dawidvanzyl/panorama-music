@@ -20,6 +20,17 @@ export interface SeededEnrollmentTarget {
  * step, so a caller that only needs *a* course to enroll into has the least to
  * fill in. Both records are unique per call, so parallel workers never contend
  * for the same row.
+ *
+ * <p>
+ * **Before seeding a course anywhere in this suite, read
+ * `COURSE_FREE_LESSON_STRUCTURE` in `waitingList.ts`.** One lesson structure —
+ * After School · Group · Hour — is kept free of *instrument* courses by
+ * convention, because enrolling off the waiting list resolves the instrument
+ * course for a structure and refuses when there is none, and that refusal is
+ * only provable while some structure has none. Any other course type there, and
+ * any course type anywhere else, is fine. This fixture seeds Grade 2 Recorder
+ * on During School · Group · Half Hour and touches neither.
+ * </p>
  */
 export async function seedEnrollmentTarget(page: Page): Promise<SeededEnrollmentTarget> {
   const surname = `Enroll-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
