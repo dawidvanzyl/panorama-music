@@ -44,7 +44,7 @@ public class CourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	}
 
 	[Fact]
-	[Trait("AC", "295UC4")]
+	[Trait("AC", "295UC20")]
 	public async Task GetCourseByTypeAndStructure_NoCourseOfThatTypeUnderTheStructure_ResolvesNothing()
 	{
 		await GivenCourseAsync("G2Recorder", _otherLessonStructureId);

@@ -6,6 +6,7 @@ using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
@@ -114,7 +115,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 	}
 
 	[Fact]
-	[Trait("AC", "295UC4")]
+	[Trait("AC", "295UC20")]
 	public async Task HandleAsync_AStructureWithNoInstrumentCourse_IsRefusedAndTheEntryRemains()
 	{
 		// The dead end this path must never present: the school offers nothing to
@@ -129,11 +130,14 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 			.ReturnsAsync((Course?)null);
 		var teacher = GivenTeacher();
 
-		await Should.ThrowAsync<DomainException>(() =>
+		var exception = await Should.ThrowAsync<DomainException>(() =>
 			_handler.HandleAsync(
 				EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
 				TestContext.Current.CancellationToken));
 
+		// Two refusals on this path throw the same type, so the message is what
+		// tells the Coordinator which dead end they hit.
+		exception.Message.ShouldBe(WaitingListMessages.NoInstrumentCourseForStructure);
 		VerifyNeitherHalfLanded();
 	}
 
