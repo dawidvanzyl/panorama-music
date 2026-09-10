@@ -9,7 +9,12 @@ import {
   type DurationType,
   type InstrumentType,
 } from '../../../services/lesson-structure';
-import { offeredOccurrenceTypes, offeredLessonTypes, offeredDurationTypes } from './offered-structures';
+import {
+  offeredOccurrenceTypes,
+  offeredLessonTypes,
+  offeredDurationTypes,
+  fillOfferedOptions,
+} from './offered-structures';
 import { formatAddedAt } from './waiting-list-display';
 import type { WaitingListEntryInput, LessonStructure } from '../services/waiting-list';
 
@@ -300,7 +305,7 @@ export class PmWaitingListStep extends HTMLElement {
     this.noOfferedStructuresNotice!.hidden = !nothingOffered;
     this.form!.hidden = nothingOffered;
 
-    this.fillOptions(
+    fillOfferedOptions(
       this.occurrenceTypeSelect,
       offeredOccurrenceTypes(this._lessonStructures),
       OCCURRENCE_TYPE_LABELS,
@@ -310,7 +315,7 @@ export class PmWaitingListStep extends HTMLElement {
   }
 
   private renderLessonTypeOptions(): void {
-    this.fillOptions(
+    fillOfferedOptions(
       this.lessonTypeSelect!,
       offeredLessonTypes(this._lessonStructures, this.occurrenceTypeSelect!.value),
       LESSON_TYPE_LABELS,
@@ -320,26 +325,12 @@ export class PmWaitingListStep extends HTMLElement {
   }
 
   private renderDurationTypeOptions(): void {
-    this.fillOptions(
+    fillOfferedOptions(
       this.durationTypeSelect!,
       offeredDurationTypes(this._lessonStructures, this.occurrenceTypeSelect!.value, this.lessonTypeSelect!.value),
       DURATION_TYPE_LABELS,
       'Duration Type',
     );
-  }
-
-  /** Keeps the current choice only where it survives the narrowing. */
-  private fillOptions<T extends string>(
-    select: HTMLSelectElement,
-    values: T[],
-    labels: Record<T, string>,
-    placeholder: string,
-  ): void {
-    const previous = select.value;
-    select.innerHTML = '';
-    addPlaceholderOption(select, placeholder);
-    populateSelectOptions(select, values, (value) => labels[value]);
-    select.value = (values as string[]).includes(previous) ? previous : '';
   }
 
   private handleOccurrenceTypeChange = (): void => {

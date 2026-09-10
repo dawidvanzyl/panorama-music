@@ -6,7 +6,27 @@ import {
   type LessonType,
   type DurationType,
 } from '../../../services/lesson-structure';
+import { populateSelectOptions, addPlaceholderOption } from './student-options';
 import type { LessonStructure } from '../services/waiting-list';
+
+/**
+ * Rebuilds one of the dependent selects, keeping the current choice only where
+ * it survives the narrowing. A choice the outer selects have just made
+ * unreachable falls back to the placeholder rather than lingering as a value
+ * the control no longer offers.
+ */
+export function fillOfferedOptions<T extends string>(
+  select: HTMLSelectElement,
+  values: T[],
+  labels: Record<T, string>,
+  placeholder: string,
+): void {
+  const previous = select.value;
+  select.innerHTML = '';
+  addPlaceholderOption(select, placeholder);
+  populateSelectOptions<T>(select, values, (value) => labels[value]);
+  select.value = (values as string[]).includes(previous) ? previous : '';
+}
 
 /**
  * The waiting-list surfaces present a lesson structure as three dependent

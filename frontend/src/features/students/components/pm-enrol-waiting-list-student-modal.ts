@@ -22,7 +22,7 @@ import type {
   WaitingListEntryResult,
 } from '../services/waiting-list';
 
-import { offeredLessonTypes, offeredDurationTypes } from './offered-structures';
+import { offeredLessonTypes, offeredDurationTypes, fillOfferedOptions } from './offered-structures';
 
 /**
  * Shown in place of the form when the school runs no instrument course the
@@ -267,6 +267,10 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
    */
   set lessonStructures(value: LessonStructure[]) {
     this._lessonStructures = value;
+    // Only once an entry is on show is there an occurrence type to narrow by;
+    // before that, `show` does the first render. Re-rendering here keeps a set
+    // assigned after opening from leaving stale options on the controls.
+    if (this._occurrenceType) this.renderStructureOptions();
   }
 
   set teachers(value: AssignableTeacher[]) {
@@ -347,31 +351,17 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.form!.hidden = nothingOffered;
     this.confirmButton!.hidden = nothingOffered;
 
-    this.fillOptions<LessonType>(this.lessonTypeSelect!, offered, LESSON_TYPE_LABELS, 'Select lesson type');
+    fillOfferedOptions<LessonType>(this.lessonTypeSelect!, offered, LESSON_TYPE_LABELS, 'Select lesson type');
     this.renderDurationTypeOptions();
   }
 
   private renderDurationTypeOptions(): void {
-    this.fillOptions<DurationType>(
+    fillOfferedOptions<DurationType>(
       this.durationTypeSelect!,
       offeredDurationTypes(this._lessonStructures, this._occurrenceType, this.lessonTypeSelect!.value),
       DURATION_TYPE_LABELS,
       'Select duration type',
     );
-  }
-
-  /** Keeps the current choice only where it survives the narrowing. */
-  private fillOptions<T extends string>(
-    select: HTMLSelectElement,
-    values: T[],
-    labels: Record<T, string>,
-    placeholder: string,
-  ): void {
-    const previous = select.value;
-    select.innerHTML = '';
-    addPlaceholderOption(select, placeholder);
-    populateSelectOptions<T>(select, values, (value) => labels[value]);
-    select.value = (values as string[]).includes(previous) ? previous : '';
   }
 
   private handleLessonTypeChange = (): void => {
