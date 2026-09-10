@@ -274,6 +274,7 @@ export default defineConfig({
       { name: '295UC17', description: 'Cancelling the enrol modal submits no enrolment and leaves the row on the list' },
       { name: '295UC18', description: 'A successful enrolment closes the modal, removes the row and shows a success message naming the student' },
       { name: '295UC19', description: 'An occurrence type whose last row was enrolled off it renders no list at all' },
+      { name: '295UC21', description: 'A refused enrolment shows its reason in the modal and leaves the modal open so the Coordinator can change a choice and retry' },
     ],
   },
 })
