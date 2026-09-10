@@ -104,6 +104,7 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var client = fixture.CreateIsolatedClient("10.0.73.10");
 		await client.LoginAsync(email, _password);
 		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		await EnsureInstrumentCourseAsync(client, structure.LessonStructureId);
 
 		var request = ValidRequest(structure.LessonStructureId, "Amara", "Pillay");
 		var response = await client.Client.SendAsync(
@@ -183,6 +184,7 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var client = fixture.CreateIsolatedClient("10.0.73.20");
 		await client.LoginAsync(email, _password);
 		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		await EnsureInstrumentCourseAsync(client, structure.LessonStructureId);
 		var captured = await CaptureAsync(client, structure.LessonStructureId, "Maintain", $"Coordinator-{Guid.NewGuid():N}");
 
 		var entryUpdate = await client.Client.SendAsync(
@@ -215,6 +217,7 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var coordinatorClient = fixture.CreateIsolatedClient("10.0.73.21");
 		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		await EnsureInstrumentCourseAsync(coordinatorClient, structure.LessonStructureId);
 		var uniqueName = $"Teacher-Refused-{Guid.NewGuid():N}";
 		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Untouched", uniqueName);
 
@@ -268,8 +271,8 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
 
 		var uniqueName = $"Enrolled-{Guid.NewGuid():N}";
+		var course = await EnsureInstrumentCourseAsync(coordinatorClient, structure.LessonStructureId);
 		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Stale", uniqueName);
-		var course = await CreateCourseAsync(coordinatorClient, CourseType.Instrument, 450.00m, structure.LessonStructureId);
 		var teacher = await CreateTeacherAsync(coordinatorClient, "Lindiwe", $"Mabaso-{Guid.NewGuid():N}");
 
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrolled-teacher", Role.Teacher);
@@ -350,8 +353,10 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		// other test builds an instrument course under.
 		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.AfterSchool);
 		var uniqueName = $"Enrolled-Off-{Guid.NewGuid():N}";
+		// The course comes first: a student can only be captured waiting for a
+		// structure the school already runs an instrument course under.
+		await EnsureInstrumentCourseAsync(client, structure.LessonStructureId);
 		var captured = await CaptureAsync(client, structure.LessonStructureId, "Enrol", uniqueName);
-		await CreateCourseAsync(client, CourseType.Instrument, 375.00m, structure.LessonStructureId);
 		var teacher = await CreateTeacherAsync(client, "Naledi", $"Khumalo-{Guid.NewGuid():N}");
 
 		var response = await client.Client.SendAsync(
@@ -382,6 +387,7 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var coordinatorClient = fixture.CreateIsolatedClient("10.0.73.31");
 		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		await EnsureInstrumentCourseAsync(coordinatorClient, structure.LessonStructureId);
 		var uniqueName = $"Enrol-Refused-{Guid.NewGuid():N}";
 		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Still", uniqueName);
 		var teacher = await CreateTeacherAsync(coordinatorClient, "Sipho", $"Ndlovu-{Guid.NewGuid():N}");
@@ -464,6 +470,26 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 		return JsonSerializer.Deserialize<WaitingListEntryResult>(payload, _jsonOptions).ShouldNotBeNull();
+	}
+
+	/// <summary>
+	/// A student may only be captured waiting for a structure the school runs an
+	/// instrument course under, so every capture here needs one in place first.
+	/// It reads the catalogue before creating, because a course type and a lesson
+	/// structure identify at most one course and several of these tests share a
+	/// structure.
+	/// </summary>
+	private static async Task<CourseResult> EnsureInstrumentCourseAsync(IsolatedHttpClient client, Guid lessonStructureId)
+	{
+		var response = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/courses"), TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		var courses = JsonSerializer.Deserialize<List<CourseResult>>(payload, _jsonOptions).ShouldNotBeNull();
+
+		var existing = courses.SingleOrDefault(course =>
+			course.CourseType == CourseType.Instrument && course.LessonStructureId == lessonStructureId);
+
+		return existing ?? await CreateCourseAsync(client, CourseType.Instrument, 450.00m, lessonStructureId);
 	}
 
 	private static async Task<CourseResult> CreateCourseAsync(

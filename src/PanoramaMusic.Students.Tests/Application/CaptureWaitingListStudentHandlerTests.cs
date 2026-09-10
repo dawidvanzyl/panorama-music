@@ -7,6 +7,7 @@ using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Students;
 using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -101,6 +102,32 @@ public class CaptureWaitingListStudentHandlerTests : IClassFixture<StudentsTestF
 	}
 
 	[Fact]
+	[Trait("AC", "309UC10")]
+	public async Task HandleAsync_ALessonStructureTheSchoolRunsNoInstrumentCourseFor_IsRefusedAndNothingIsCreated()
+	{
+		// A seeded structure, reachable by id, that simply nothing is offered
+		// under — the browser never presents it, and this is the request that
+		// arrives without the browser.
+		var unoffered = LessonStructureFactory.Create();
+		SetupSeededLessonStructure(unoffered);
+		SetupOfferedLessonStructures(LessonStructureFactory.Create());
+
+		var exception = await Should.ThrowAsync<DomainException>(() =>
+			_handler.HandleAsync(
+				new CaptureWaitingListStudentCommand(ValidRequest(unoffered.LessonStructureId)),
+				TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			// Told apart from a structure that does not exist at all, which is a
+			// different failure and names itself differently.
+			() => exception.Message.ShouldBe(WaitingListMessages.LessonStructureIsNotOffered),
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.WaitingListRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<WaitingListEntry>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
 	[Trait("AC", "293UC5")]
 	public async Task HandleAsync_NoNotesSupplied_TheEntryIsCreatedWithNotesAbsent()
 	{
@@ -146,10 +173,22 @@ public class CaptureWaitingListStudentHandlerTests : IClassFixture<StudentsTestF
 		// the type itself is the proof that nothing here can leak one.
 	}
 
-	private void SetupLessonStructure(LessonStructure lessonStructure) =>
+	/// <summary>Seeds the structure and puts it on offer — the handler requires both.</summary>
+	private void SetupLessonStructure(LessonStructure lessonStructure)
+	{
+		SetupSeededLessonStructure(lessonStructure);
+		SetupOfferedLessonStructures(lessonStructure);
+	}
+
+	private void SetupSeededLessonStructure(LessonStructure lessonStructure) =>
 		_context.Repositories.LessonStructureRepositoryMock
 			.Setup(r => r.GetByIdAsync(lessonStructure.LessonStructureId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(lessonStructure);
+
+	private void SetupOfferedLessonStructures(params LessonStructure[] lessonStructures) =>
+		_context.Repositories.LessonStructureRepositoryMock
+			.Setup(r => r.GetOfferedAsync(It.IsAny<CancellationToken>()))
+			.ReturnsAsync(lessonStructures);
 
 	/// <summary>The position derivation reads the whole list back, so an empty one always resolves position 1.</summary>
 	private void SetupNoOtherEntries() =>

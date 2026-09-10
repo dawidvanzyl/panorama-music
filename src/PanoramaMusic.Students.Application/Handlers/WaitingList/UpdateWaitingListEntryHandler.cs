@@ -12,7 +12,9 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// parameter for it, so a request cannot move a row up the queue however it is
 /// shaped. Changing the lesson structure may move the entry to the other
 /// occurrence type, where its position is re-derived from that same original
-/// added date-time rather than sending it to the back.
+/// added date-time rather than sending it to the back. The structure it moves
+/// to must be one the school offers, on the same reasoning capture applies: an
+/// entry may not be parked on a combination nothing can enrol it into.
 /// </summary>
 public sealed class UpdateWaitingListEntryHandler(
 	ILessonStructureRepository lessonStructureRepository,
@@ -28,8 +30,7 @@ public sealed class UpdateWaitingListEntryHandler(
 		var request = command.Request;
 		var lessonStructureId = request.LessonStructureId!.Value;
 
-		var lessonStructure = await lessonStructureRepository.GetByIdAsync(lessonStructureId, cancellationToken)
-			?? throw new DomainException($"Lesson structure '{lessonStructureId}' does not exist.");
+		var lessonStructure = await lessonStructureRepository.GetOfferedByIdAsync(lessonStructureId, cancellationToken);
 
 		entry.Update(lessonStructure, request.InstrumentType!.Value, request.Notes);
 
