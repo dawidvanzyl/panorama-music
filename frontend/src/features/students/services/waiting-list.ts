@@ -1,6 +1,7 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
+import { registerCourseCatalogueCache } from '../../../services/course-catalogue-cache';
 import type {
   OccurrenceType,
   LessonType,
@@ -137,6 +138,10 @@ export function clearOfferedLessonStructuresCache(): void {
 }
 
 registerSessionCache(clearOfferedLessonStructuresCache);
+// What is offered is decided by the course catalogue, so a course created or
+// removed anywhere in the app makes this copy wrong immediately — not at the
+// end of the session.
+registerCourseCatalogueCache(clearOfferedLessonStructuresCache);
 
 /**
  * The combinations the school runs an instrument course under — the ones a
