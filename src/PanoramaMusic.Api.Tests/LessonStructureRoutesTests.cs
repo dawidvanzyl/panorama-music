@@ -102,4 +102,18 @@ public sealed class LessonStructureRoutesTests(ApiTestFixture fixture)
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 	}
+
+	[Fact]
+	[Trait("AC", "309UC5")]
+	public async Task GetOfferedLessonStructures_Admin_IsRejectedWithForbidden()
+	{
+		var (adminEmail, _) = await fixture.SeedActiveUserAsync(_password, "offered-structures-admin", Role.Admin);
+		var client = fixture.CreateIsolatedClient("10.0.60.4");
+		await client.LoginAsync(adminEmail, _password);
+
+		var response = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/lesson-structures/offered"), TestContext.Current.CancellationToken);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+	}
 }
