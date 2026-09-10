@@ -111,14 +111,17 @@ test.describe('Enrolling the last row under an occurrence type takes its list wi
       durationType: 'Hour',
       instrumentType: 'Piano',
     });
-    const courseId = await seedCourseOfType(page, entry.lessonStructureId, 'G2Recorder');
+    // An instrument course on the entry's own structure: the enrolment
+    // resolves that type and no other, so any other course type here would
+    // leave the enrolment refused rather than accepted.
+    await seedCourseOfType(page, entry.lessonStructureId, 'Instrument');
     await page.reload();
 
     await expect(waitingListPage.group('After School')).toBeVisible();
 
     await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));
-    await waitingListPage.enrolCourse().selectOption(courseId);
     await waitingListPage.chooseEnrolTeacher(target.teacherName);
+    await waitingListPage.enrolStep().selectOption('Step2A');
     await waitingListPage.confirmEnrol();
 
     await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');

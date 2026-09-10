@@ -332,10 +332,43 @@ export async function fetchWaitingListEntry(
 }
 
 /**
+ * The one lesson structure this suite keeps free of instrument courses, by
+ * convention, so that "the school offers no instrument course for this
+ * structure" is a state a scenario can actually reach.
+ *
+ * <p>
+ * **Never seed an instrument course against this triple**, from any spec or
+ * fixture. Enrolling off the waiting list resolves the instrument course for
+ * the structure the Coordinator settles on, and refuses when there is none;
+ * the refusal is only provable while some structure has none. Every other
+ * combination is free to carry whatever a spec needs. A non-instrument course
+ * here (Theory, Grade 2 Recorder, an Enrichment) is harmless — it is the
+ * instrument one that destroys the state.
+ * </p>
+ */
+export const COURSE_FREE_LESSON_STRUCTURE = {
+  occurrenceType: 'AfterSchool',
+  lessonType: 'Group',
+  durationType: 'Hour',
+} as const satisfies { occurrenceType: OccurrenceType; lessonType: LessonType; durationType: DurationType };
+
+/**
  * Creates a course of the given type on the given lesson structure, through
- * the real `/api/courses` POST — used only to prove a course-type leak would
- * be observable (272IT40, S14), never to enrol the seeded waiting-list
- * student in it.
+ * the real `/api/courses` POST.
+ *
+ * <p>
+ * A caller that wants an enrolment off the waiting list to resolve must pass
+ * the `Instrument` course type — that is the only type the enrolment path
+ * looks for. A course of any other type on the entry's structure leaves the
+ * enrolment refused for want of an instrument course, which is a different
+ * scenario's subject.
+ * </p>
+ *
+ * <p>
+ * **Reserved structure:** never call this with `'Instrument'` against
+ * `COURSE_FREE_LESSON_STRUCTURE` (After School · Group · Hour). See that
+ * constant for why.
+ * </p>
  */
 export async function seedCourseOfType(page: Page, lessonStructureId: string, courseType: string): Promise<string> {
   const cost = `${Date.now() % 100_000_000}.00`;
@@ -393,35 +426,109 @@ export async function fetchLessonStructureId(
   return lessonStructureId!;
 }
 
+export interface CourseFreeStructure {
+  lessonStructureId: string;
+  occurrenceType: OccurrenceType;
+  lessonType: LessonType;
+  durationType: DurationType;
+}
+
 /**
- * A real course and teacher this caller can reach, without creating either.
- * For the role-refusal scenario, whose session cannot write to `/api/courses`
- * or `/api/teachers` at all: the refusal must be on the caller's role, so the
- * submission has to name values that would otherwise have resolved.
+ * The lesson structure the school offers no instrument course for — the state
+ * an enrolment off the waiting list is refused under, and one no fixture can
+ * manufacture: creating an absence would mean deleting a course some other
+ * suite seeded.
+ *
+ * <p>
+ * It is `COURSE_FREE_LESSON_STRUCTURE`, reserved by convention and verified
+ * here against the catalogue as it actually stands. If an instrument course
+ * has appeared on it, this throws and names the convention rather than picking
+ * some other structure: a scenario whose whole subject is the absence must
+ * never quietly run against a structure that has a course.
+ * </p>
  */
-export async function fetchAnyEnrolmentTarget(page: Page): Promise<{ courseId: string; teacherId: string }> {
+export async function fetchStructureWithoutInstrumentCourse(page: Page): Promise<CourseFreeStructure> {
+  const reserved = COURSE_FREE_LESSON_STRUCTURE;
+
+  const found = await page.evaluate(async (reserved) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+
+    const structures = (await (await fetch('/api/lesson-structures', { headers })).json()) as {
+      lessonStructureId: string;
+      lessonType: string;
+      durationType: string;
+      occurrenceType: string;
+    }[];
+    const structure = structures.find(
+      (s) =>
+        s.occurrenceType === reserved.occurrenceType &&
+        s.lessonType === reserved.lessonType &&
+        s.durationType === reserved.durationType,
+    );
+    if (structure === undefined) return { lessonStructureId: null, instrumentCourseCount: 0 };
+
+    const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+      courseType: string;
+      lessonStructureId: string;
+    }[];
+    const instrumentCourses = courses.filter(
+      (c) => c.courseType === 'Instrument' && c.lessonStructureId === structure.lessonStructureId,
+    );
+
+    return { lessonStructureId: structure.lessonStructureId, instrumentCourseCount: instrumentCourses.length };
+  }, reserved);
+
+  const triple = `${reserved.occurrenceType} · ${reserved.lessonType} · ${reserved.durationType}`;
+  expect(found.lessonStructureId, `the reserved lesson structure ${triple} must exist`).not.toBeNull();
+  expect(
+    found.instrumentCourseCount,
+    `${triple} is reserved as the one structure with no instrument course, and something has seeded ` +
+      `${found.instrumentCourseCount} against it. See COURSE_FREE_LESSON_STRUCTURE in e2e/fixtures/waitingList.ts: ` +
+      'the no-instrument-course refusal cannot be proved while every structure carries one, and this fixture will ' +
+      'not substitute another structure. Find what seeded it and move that course elsewhere.',
+  ).toBe(0);
+
+  return {
+    lessonStructureId: found.lessonStructureId!,
+    occurrenceType: reserved.occurrenceType,
+    lessonType: reserved.lessonType,
+    durationType: reserved.durationType,
+  };
+}
+
+/**
+ * A real lesson structure and teacher this caller can reach, without creating
+ * either. For the role-refusal scenario, whose session cannot write to
+ * `/api/courses` or `/api/teachers` at all: the refusal must be on the
+ * caller's role, so the submission has to name values that would otherwise
+ * have resolved.
+ */
+export async function fetchAnyEnrolmentTarget(
+  page: Page,
+): Promise<{ lessonStructureId: string; teacherId: string }> {
   const target = await page.evaluate(async () => {
     const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
-    const coursesResponse = await fetch('/api/courses', { headers });
-    const courses = (await coursesResponse.json()) as { courseId: string }[];
+    const structuresResponse = await fetch('/api/lesson-structures', { headers });
+    const structures = (await structuresResponse.json()) as { lessonStructureId: string }[];
     const teachersResponse = await fetch('/api/teachers/roster', { headers });
     const teachers = (await teachersResponse.json()) as { teacherId: string; isActive: boolean }[];
     return {
-      courseId: courses[0]?.courseId ?? null,
+      lessonStructureId: structures[0]?.lessonStructureId ?? null,
       teacherId: teachers.find((t) => t.isActive)?.teacherId ?? null,
     };
   });
 
-  expect(target.courseId, 'at least one course must exist for this caller to name').not.toBeNull();
+  expect(target.lessonStructureId, 'at least one lesson structure must exist for this caller to name').not.toBeNull();
   expect(target.teacherId, 'at least one active teacher must exist for this caller to name').not.toBeNull();
-  return { courseId: target.courseId!, teacherId: target.teacherId! };
+  return { lessonStructureId: target.lessonStructureId!, teacherId: target.teacherId! };
 }
 
 export interface EnrolAttemptInput {
-  courseId: string;
+  /** The structure the enrolment names; the server resolves its instrument course. */
+  lessonStructureId: string;
   teacherId: string;
-  instrumentType?: InstrumentType | null;
-  stepType?: string | null;
+  instrumentType?: InstrumentType;
+  stepType?: string;
   enrolledDate?: string;
 }
 
@@ -429,8 +536,9 @@ export interface EnrolAttemptInput {
  * The enrolment-off-the-waiting-list path, reached directly from the signed-in
  * session. Two boundaries have no control to press for them: a Teacher is
  * offered no Enrol action at all, and the modal presents the occurrence type as
- * a value rather than a control, so no course it offers can name a different
- * one. Both can only be attempted by naming the request outright.
+ * a value rather than a control, deriving the structure from it — so no
+ * structure the modal can name carries a different occurrence type. Both can
+ * only be attempted by naming the request outright.
  */
 export async function attemptEnrolFromWaitingList(
   page: Page,
@@ -446,10 +554,10 @@ export async function attemptEnrolFromWaitingList(
           Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
         },
         body: JSON.stringify({
-          courseId: input.courseId,
+          lessonStructureId: input.lessonStructureId,
           teacherId: input.teacherId,
-          instrumentType: input.instrumentType ?? null,
-          stepType: input.stepType ?? null,
+          instrumentType: input.instrumentType ?? 'Piano',
+          stepType: input.stepType ?? 'Step1A',
           enrolledDate: input.enrolledDate ?? new Date().toISOString().slice(0, 10),
         }),
       });

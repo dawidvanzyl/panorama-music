@@ -414,19 +414,39 @@ export class WaitingListPage extends BasePage {
     return this.enrolModal.locator('#durationType');
   }
 
-  enrolCourse(): Locator {
-    return this.enrolModal.locator('#course');
-  }
-
   enrolTeacher(): Locator {
     return this.enrolModal.locator('#teacher');
+  }
+
+  /**
+   * Anything on the modal naming a course — a control, a fixed value or a
+   * hidden field. There is no course on this modal: the entry records an
+   * intended instrument, only an instrument course records one, and the server
+   * resolves it from the structure. This is what catches a re-introduction of
+   * the picker that could present nothing to choose.
+   */
+  enrolCourseControls(): Locator {
+    return this.enrolModal.locator('[id*="course" i], [name*="course" i], [for*="course" i]');
+  }
+
+  /**
+   * The modal's card. Assert rendered text against this rather than the host:
+   * the host's own `textContent` stops at the shadow boundary, so a check made
+   * on it would pass whatever the modal says.
+   */
+  enrolCard(): Locator {
+    return this.enrolModal.locator('.modal__card');
   }
 
   enrolInstrumentType(): Locator {
     return this.enrolModal.locator('#instrumentType');
   }
 
-  /** The Step field's wrapper, offered only for a course type that records one. */
+  /**
+   * The Step field's wrapper. Always on the modal — the resolved course is
+   * always an instrument course, and one records a step — and never pre-filled,
+   * since the entry records none.
+   */
   enrolStepField(): Locator {
     return this.enrolModal.locator('#stepField');
   }
