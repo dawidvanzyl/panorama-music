@@ -9,6 +9,7 @@ import {
   type DurationType,
   type InstrumentType,
 } from '../../../services/lesson-structure';
+import { offeredOccurrenceTypes, offeredLessonTypes, offeredDurationTypes } from './offered-structures';
 import { formatAddedAt } from './waiting-list-display';
 import type { WaitingListEntryInput, LessonStructure } from '../services/waiting-list';
 
@@ -22,12 +23,18 @@ export interface WaitingListStepValues {
   addedAt: string;
 }
 
-const OCCURRENCE_TYPES = Object.keys(OCCURRENCE_TYPE_LABELS) as OccurrenceType[];
-const LESSON_TYPES = Object.keys(LESSON_TYPE_LABELS) as LessonType[];
-const DURATION_TYPES = Object.keys(DURATION_TYPE_LABELS) as DurationType[];
-
 /** Notes' documented maximum — matches the design mockup's own textarea and the server's own rule. */
 export const NOTES_MAX_LENGTH = 500;
+
+/**
+ * Shown in place of the whole form when the catalogue holds no instrument
+ * course at all. A student cannot be made to wait for something the school does
+ * not run, and an empty picker says that only by leaving the Coordinator to
+ * work it out.
+ */
+export const NO_OFFERED_STRUCTURES_NOTICE =
+  'The school runs no instrument courses yet, so there is nothing a student can be waiting for. ' +
+  'Create an instrument course under Course Management first.';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -92,6 +99,14 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       margin: 12px 0 0;
     }
+    .waiting-list-step__notice {
+      padding: 12px 16px;
+      border-radius: var(--pm-radius);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text-muted);
+      font-size: 13px;
+    }
     .waiting-list-step__message {
       margin-top: 16px;
       padding: 12px 16px;
@@ -110,6 +125,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
+  <p class="waiting-list-step__notice" id="noOfferedStructures" hidden></p>
   <form id="form">
     <div class="waiting-list-step__grid">
       <div class="waiting-list-step__field">
@@ -153,6 +169,7 @@ export class PmWaitingListStep extends HTMLElement {
   private addedAtField: HTMLElement | null = null;
   private addedAtValue: HTMLElement | null = null;
   private captureHint: HTMLElement | null = null;
+  private noOfferedStructuresNotice: HTMLElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
 
@@ -174,17 +191,30 @@ export class PmWaitingListStep extends HTMLElement {
     this.addedAtField = this.shadowRoot!.getElementById('addedAtField') as HTMLElement;
     this.addedAtValue = this.shadowRoot!.getElementById('addedAt') as HTMLElement;
     this.captureHint = this.shadowRoot!.getElementById('captureHint') as HTMLElement;
+    this.noOfferedStructuresNotice = this.shadowRoot!.getElementById('noOfferedStructures') as HTMLElement;
+    this.noOfferedStructuresNotice.textContent = NO_OFFERED_STRUCTURES_NOTICE;
 
-    populateSelectOptions(this.occurrenceTypeSelect, OCCURRENCE_TYPES, (v) => OCCURRENCE_TYPE_LABELS[v]);
-    populateSelectOptions(this.lessonTypeSelect, LESSON_TYPES, (v) => LESSON_TYPE_LABELS[v]);
-    populateSelectOptions(this.durationTypeSelect, DURATION_TYPES, (v) => DURATION_TYPE_LABELS[v]);
     populateSelectOptions(this.instrumentTypeSelect, INSTRUMENT_TYPES, (v) => INSTRUMENT_TYPE_LABELS[v]);
+    this.occurrenceTypeSelect.addEventListener('change', this.handleOccurrenceTypeChange);
+    this.lessonTypeSelect.addEventListener('change', this.handleLessonTypeChange);
+    this.renderStructureOptions();
     this.reset();
   }
 
-  /** The seeded combinations the occurrence/lesson/duration choice is resolved against on save. */
+  disconnectedCallback(): void {
+    this.occurrenceTypeSelect?.removeEventListener('change', this.handleOccurrenceTypeChange);
+    this.lessonTypeSelect?.removeEventListener('change', this.handleLessonTypeChange);
+  }
+
+  /**
+   * The combinations the school runs an instrument course under. These are what
+   * the three selects are built from — not the enum vocabulary — so a
+   * combination the school does not run is not reachable through this tab at
+   * all, rather than being offered and refused on save.
+   */
   set lessonStructures(value: LessonStructure[]) {
     this._lessonStructures = value;
+    this.renderStructureOptions();
   }
 
   reset(): void {
@@ -194,6 +224,7 @@ export class PmWaitingListStep extends HTMLElement {
       addPlaceholderOption(select.element, select.label);
       select.element.value = '';
     }
+    this.renderStructureOptions();
     // Capture has no date added to show yet — the server assigns one when the
     // entry is created — so the field is absent and the hint says so instead.
     this.addedAtField!.hidden = true;
@@ -212,8 +243,14 @@ export class PmWaitingListStep extends HTMLElement {
     for (const select of this.selects()) {
       addPlaceholderOption(select.element, select.label);
     }
+    // An entry may sit on a combination the school has since stopped running —
+    // a course can be deleted after a student is captured. Each assignment
+    // lands only if the value is still offered; where it is not, the select
+    // stays on its placeholder and the Coordinator picks again from what is.
     this.occurrenceTypeSelect!.value = values.occurrenceType;
+    this.renderLessonTypeOptions();
     this.lessonTypeSelect!.value = values.lessonType;
+    this.renderDurationTypeOptions();
     this.durationTypeSelect!.value = values.durationType;
     this.instrumentTypeSelect!.value = values.instrumentType;
     this.notesTextarea!.value = values.notes ?? '';
@@ -230,11 +267,10 @@ export class PmWaitingListStep extends HTMLElement {
         s.lessonType === this.lessonTypeSelect!.value &&
         s.durationType === this.durationTypeSelect!.value,
     );
-    // The four selects are populated from the same seeded vocabulary the
-    // structures themselves are drawn from, so a chosen triple with no match
-    // would mean the lookup never loaded — a programming error, not a state a
-    // user can reach through the form.
-    if (!structure) throw new Error('No seeded lesson structure matches the chosen combination.');
+    // The three selects are built from these very structures, so a chosen
+    // triple with no match would mean the lookup never loaded — a programming
+    // error, not a state a user can reach through the form.
+    if (!structure) throw new Error('No offered lesson structure matches the chosen combination.');
 
     return {
       lessonStructureId: structure.lessonStructureId,
@@ -244,8 +280,79 @@ export class PmWaitingListStep extends HTMLElement {
   }
 
   reportValidity(): boolean {
+    // With nothing offered there is no form to validate — the notice stands in
+    // its place, and there is nothing here a save could carry.
+    if (this._lessonStructures.length === 0) return false;
+
     return this.form!.reportValidity();
   }
+
+  /**
+   * Rebuilds the three structure selects from what is offered, narrowing each
+   * to what the choices before it leave reachable. Where nothing is offered at
+   * all the form gives way to the notice entirely, so no control is left
+   * standing empty.
+   */
+  private renderStructureOptions(): void {
+    if (!this.occurrenceTypeSelect) return;
+
+    const nothingOffered = this._lessonStructures.length === 0;
+    this.noOfferedStructuresNotice!.hidden = !nothingOffered;
+    this.form!.hidden = nothingOffered;
+
+    this.fillOptions(
+      this.occurrenceTypeSelect,
+      offeredOccurrenceTypes(this._lessonStructures),
+      OCCURRENCE_TYPE_LABELS,
+      'Occurrence Type',
+    );
+    this.renderLessonTypeOptions();
+  }
+
+  private renderLessonTypeOptions(): void {
+    this.fillOptions(
+      this.lessonTypeSelect!,
+      offeredLessonTypes(this._lessonStructures, this.occurrenceTypeSelect!.value),
+      LESSON_TYPE_LABELS,
+      'Lesson Type',
+    );
+    this.renderDurationTypeOptions();
+  }
+
+  private renderDurationTypeOptions(): void {
+    this.fillOptions(
+      this.durationTypeSelect!,
+      offeredDurationTypes(
+        this._lessonStructures,
+        this.occurrenceTypeSelect!.value,
+        this.lessonTypeSelect!.value,
+      ),
+      DURATION_TYPE_LABELS,
+      'Duration Type',
+    );
+  }
+
+  /** Keeps the current choice only where it survives the narrowing. */
+  private fillOptions<T extends string>(
+    select: HTMLSelectElement,
+    values: T[],
+    labels: Record<T, string>,
+    placeholder: string,
+  ): void {
+    const previous = select.value;
+    select.innerHTML = '';
+    addPlaceholderOption(select, placeholder);
+    populateSelectOptions(select, values, (value) => labels[value]);
+    select.value = (values as string[]).includes(previous) ? previous : '';
+  }
+
+  private handleOccurrenceTypeChange = (): void => {
+    this.renderLessonTypeOptions();
+  };
+
+  private handleLessonTypeChange = (): void => {
+    this.renderDurationTypeOptions();
+  };
 
   showError(message: string): void {
     this.message!.textContent = message;

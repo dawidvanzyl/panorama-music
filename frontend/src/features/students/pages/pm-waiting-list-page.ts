@@ -6,7 +6,7 @@ import '../components/pm-enrol-waiting-list-student-modal';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   getWaitingList,
-  getLessonStructures,
+  getOfferedLessonStructures,
   captureWaitingListStudent,
   updateWaitingListEntry,
   updateWaitingListStudent,
@@ -234,8 +234,8 @@ export class PmWaitingListPage extends HTMLElement {
 
   /**
    * The Siblings/Guardians tabs' candidate list and relationship options, and
-   * the seeded lesson-structure grid — everything the capture wizard needs
-   * before it opens, and the grid the Enrol modal resolves against too.
+   * the offered lesson structures — everything the capture wizard needs before
+   * it opens, and what the Enrol modal offers too.
    *
    * Settled independently rather than as one `Promise.all`: a failure on any
    * one of these three must never sink the other two, so each lookup is
@@ -247,7 +247,7 @@ export class PmWaitingListPage extends HTMLElement {
     const [studentsResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
       getStudents(),
       getGuardianRelationships(),
-      getLessonStructures(),
+      getOfferedLessonStructures(),
     ]);
 
     if (studentsResult.status === 'fulfilled') {
@@ -264,8 +264,8 @@ export class PmWaitingListPage extends HTMLElement {
 
     if (lessonStructuresResult.status === 'fulfilled') {
       this.wizardModal!.lessonStructures = lessonStructuresResult.value;
-      // The same seeded grid the Enrol modal resolves its structure against —
-      // read once and given to both, rather than fetched twice.
+      // The same offered set the Enrol modal narrows its own choices to — read
+      // once and given to both, rather than fetched twice.
       this.enrolModal!.lessonStructures = lessonStructuresResult.value;
     } else {
       this.showError(lessonStructuresResult.reason);

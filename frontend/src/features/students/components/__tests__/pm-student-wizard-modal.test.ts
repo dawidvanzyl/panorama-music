@@ -381,13 +381,22 @@ const individualHourDuringSchool = {
   occurrenceType: 'DuringSchool' as const,
 };
 
-/** Fills the Waiting List tab's selects with a known, seeded combination. */
+/**
+ * Fills the Waiting List tab's selects with a known offered combination. The
+ * three structure selects narrow one another, so each choice is made the way a
+ * Coordinator makes it — change and all.
+ */
 function fillWaitingListStep(): void {
   const stepShadow = byId('waitingListStep').shadowRoot!;
-  (stepShadow.getElementById('occurrenceType') as HTMLSelectElement).value = individualHourDuringSchool.occurrenceType;
-  (stepShadow.getElementById('lessonType') as HTMLSelectElement).value = individualHourDuringSchool.lessonType;
-  (stepShadow.getElementById('durationType') as HTMLSelectElement).value = individualHourDuringSchool.durationType;
-  (stepShadow.getElementById('instrumentType') as HTMLSelectElement).value = 'Piano';
+  choose(stepShadow.getElementById('occurrenceType') as HTMLSelectElement, individualHourDuringSchool.occurrenceType);
+  choose(stepShadow.getElementById('lessonType') as HTMLSelectElement, individualHourDuringSchool.lessonType);
+  choose(stepShadow.getElementById('durationType') as HTMLSelectElement, individualHourDuringSchool.durationType);
+  choose(stepShadow.getElementById('instrumentType') as HTMLSelectElement, 'Piano');
+}
+
+function choose(select: HTMLSelectElement, value: string): void {
+  select.value = value;
+  select.dispatchEvent(new Event('change'));
 }
 
 describe('pm-student-wizard-modal — waiting-list mode tabs', { tags: ['293UC12', '293UC13'] }, () => {
@@ -579,14 +588,13 @@ describe('pm-student-wizard-modal — saving a waiting-list capture', { tags: ['
   });
 });
 
-// Regression for #299: getValues() throws synchronously when the chosen
-// triple resolves against no lesson structure (reachable in practice only
-// when the page's lookup fetch never assigned modal.lessonStructures — see
-// pm-waiting-list-page's own fix). Save must surface that as a real error
-// rather than letting the throw escape the click handler uncaught, which
-// left Save disabled with nothing dispatched and nothing shown.
+// Regression for #299: a Save reaching the tab with no lesson structures must
+// dispatch nothing, must not let anything escape the click handler uncaught,
+// and must leave Save usable — it once left the button disabled with nothing
+// dispatched and nothing shown. The tab now states the reason up front rather
+// than only on the click, so the Coordinator is not left guessing either way.
 describe('pm-student-wizard-modal — a lesson-structure lookup that never loaded (#299)', () => {
-  it('shows an error and re-enables Save instead of throwing uncaught', () => {
+  it('states why nothing can be captured and re-enables Save instead of throwing uncaught', () => {
     mountModal();
     // lessonStructures deliberately left unset — the #299 scenario.
     modal.openForCreate([], 'waitingList');
@@ -594,7 +602,6 @@ describe('pm-student-wizard-modal — a lesson-structure lookup that never loade
     byId<HTMLButtonElement>('nextBtn').click();
     byId<HTMLButtonElement>('nextBtn').click();
     byId<HTMLButtonElement>('nextBtn').click();
-    fillWaitingListStep();
 
     let dispatched = false;
     modal.addEventListener('waiting-list-capture-requested', () => {
@@ -605,7 +612,7 @@ describe('pm-student-wizard-modal — a lesson-structure lookup that never loade
 
     expect(dispatched).toBe(false);
     const waitingListStepShadow = byId('waitingListStep').shadowRoot!;
-    expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('No seeded lesson structure');
+    expect(waitingListStepShadow.getElementById('noOfferedStructures')!.hidden).toBe(false);
     expect(byId<HTMLButtonElement>('saveBtn').disabled).toBe(false);
   });
 });
