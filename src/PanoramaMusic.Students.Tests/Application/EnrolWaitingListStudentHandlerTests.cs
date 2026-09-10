@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
-using PanoramaMusic.Students.Application.Requests.StudentCourses;
+using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
@@ -17,6 +17,11 @@ namespace PanoramaMusic.Students.Tests.Application;
 /// Enrolling a student off the waiting list. The pair that matters is the
 /// enrollment and the entry's deletion: they happen together or not at all, so
 /// every refusal below asserts that neither half landed.
+/// <para>
+/// The enrolment names a lesson structure, never a course — the instrument
+/// course under that structure is what the student was waiting for, and it is
+/// resolved here.
+/// </para>
 /// </summary>
 public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFixture>
 {
@@ -36,13 +41,12 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 	public async Task HandleAsync_AStudentHoldingAnEntry_CreatesTheEnrollmentAndDeletesTheEntry()
 	{
 		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
-		var course = CourseFactory.Create(
-			courseType: CourseType.G2Recorder,
-			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(course);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		var course = GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
 
 		var result = await _handler.HandleAsync(
-			EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId),
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
@@ -61,17 +65,16 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 	[Fact]
 	[Trait("AC", "295UC2")]
-	public async Task HandleAsync_ACourseUnderADifferentOccurrenceType_IsRefusedAndTheEntryRemains()
+	public async Task HandleAsync_AStructureUnderADifferentOccurrenceType_IsRefusedAndTheEntryRemains()
 	{
 		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
-		var course = CourseFactory.Create(
-			courseType: CourseType.G2Recorder,
-			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.AfterSchool));
-		var teacher = GivenCourseAndTeacher(course);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.AfterSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
 
 		await Should.ThrowAsync<DomainException>(() =>
 			_handler.HandleAsync(
-				EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId),
+				EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
 				TestContext.Current.CancellationToken));
 
 		VerifyNeitherHalfLanded();
@@ -79,11 +82,11 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 	[Fact]
 	[Trait("AC", "295UC3")]
-	public async Task HandleAsync_ACourseUnderTheSameOccurrenceTypeButADifferentStructure_IsAccepted()
+	public async Task HandleAsync_AStructureUnderTheSameOccurrenceTypeButADifferentLessonAndDuration_IsAccepted()
 	{
 		// Only the occurrence type is fixed at the waiting list. The lesson type
 		// and duration type the student waited for are a starting point the
-		// Coordinator may move away from, so a course that differs on those two
+		// Coordinator may move away from, so a structure that differs on those two
 		// alone must still be enrollable.
 		var entry = GivenWaitingListEntry(
 			OccurrenceType.DuringSchool,
@@ -91,16 +94,15 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 				lessonType: LessonType.Individual,
 				durationType: DurationType.Hour,
 				occurrenceType: OccurrenceType.DuringSchool));
-		var course = CourseFactory.Create(
-			courseType: CourseType.G2Recorder,
-			lessonStructure: LessonStructureFactory.Create(
-				lessonType: LessonType.Group,
-				durationType: DurationType.HalfHour,
-				occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(course);
+		var structure = LessonStructureFactory.Create(
+			lessonType: LessonType.Group,
+			durationType: DurationType.HalfHour,
+			occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
 
 		var result = await _handler.HandleAsync(
-			EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId),
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
@@ -113,20 +115,43 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 	[Fact]
 	[Trait("AC", "295UC4")]
-	public async Task HandleAsync_AShapeTheChosenCourseTypeRefuses_CreatesNothingAndLeavesTheEntry()
+	public async Task HandleAsync_AStructureWithNoInstrumentCourse_IsRefusedAndTheEntryRemains()
+	{
+		// The dead end this path must never present: the school offers nothing to
+		// enrol into under the structure chosen, and the Coordinator is told so
+		// rather than left with a submission that cannot land.
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = GivenLessonStructure(
+			LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool));
+		_context.Repositories.CourseRepositoryMock
+			.Setup(r => r.GetByTypeAndStructureAsync(
+				CourseType.Instrument, structure.LessonStructureId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync((Course?)null);
+		var teacher = GivenTeacher();
+
+		await Should.ThrowAsync<DomainException>(() =>
+			_handler.HandleAsync(
+				EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+				TestContext.Current.CancellationToken));
+
+		VerifyNeitherHalfLanded();
+	}
+
+	[Fact]
+	[Trait("AC", "295UC4")]
+	public async Task HandleAsync_AShapeTheCourseTypeRefuses_CreatesNothingAndLeavesTheEntry()
 	{
 		// An instrument course records a step, and this request carries none —
 		// the refusal comes from the domain rather than from the waiting list,
 		// which is exactly the case that must not delete the entry on its way out.
 		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
-		var course = CourseFactory.Create(
-			courseType: CourseType.Instrument,
-			lessonStructure: LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool));
-		var teacher = GivenCourseAndTeacher(course);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
 
 		await Should.ThrowAsync<DomainException>(() =>
 			_handler.HandleAsync(
-				EnrolCommand(entry.Student.StudentId, course.CourseId, teacher.TeacherId, InstrumentType.Piano),
+				EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId, stepType: null),
 				TestContext.Current.CancellationToken));
 
 		VerifyNeitherHalfLanded();
@@ -161,13 +186,36 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		return entry;
 	}
 
-	private DirectoryTeacher GivenCourseAndTeacher(Course course)
+	private LessonStructure GivenLessonStructure(LessonStructure lessonStructure)
+	{
+		_context.Repositories.LessonStructureRepositoryMock
+			.Setup(r => r.GetByIdAsync(lessonStructure.LessonStructureId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(lessonStructure);
+
+		return lessonStructure;
+	}
+
+	/// <summary>
+	/// The structure the request names, and the one instrument course the school
+	/// offers under it — the pair the handler resolves an enrolment from.
+	/// </summary>
+	private Course GivenInstrumentCourse(LessonStructure lessonStructure)
+	{
+		GivenLessonStructure(lessonStructure);
+
+		var course = CourseFactory.Create(courseType: CourseType.Instrument, lessonStructure: lessonStructure);
+		_context.Repositories.CourseRepositoryMock
+			.Setup(r => r.GetByTypeAndStructureAsync(
+				CourseType.Instrument, lessonStructure.LessonStructureId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(course);
+
+		return course;
+	}
+
+	private DirectoryTeacher GivenTeacher()
 	{
 		var teacher = DirectoryTeacherFactory.Create();
 
-		_context.Repositories.CourseRepositoryMock
-			.Setup(r => r.GetByIdAsync(course.CourseId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(course);
 		_context.Repositories.TeacherDirectoryMock
 			.Setup(d => d.GetTeacherAsync(teacher.TeacherId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(teacher);
@@ -184,9 +232,9 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 	private static EnrolWaitingListStudentCommand EnrolCommand(
 		Guid studentId,
-		Guid courseId,
+		Guid lessonStructureId,
 		Guid teacherId,
-		InstrumentType? instrumentType = null,
-		StepType? stepType = null) =>
-		new(studentId, new EnrollStudentRequest(courseId, teacherId, instrumentType, stepType, _enrolledDate));
+		InstrumentType? instrumentType = InstrumentType.Piano,
+		StepType? stepType = StepType.Step2A) =>
+		new(studentId, new EnrolWaitingListStudentRequest(lessonStructureId, teacherId, instrumentType, stepType, _enrolledDate));
 }

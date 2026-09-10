@@ -3,7 +3,6 @@ using PanoramaMusic.Api.Filters;
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Models;
-using PanoramaMusic.Students.Application.Requests.StudentCourses;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 
@@ -116,13 +115,14 @@ public static class WaitingListRoutes
 		// Enrolling off the list, which consumes the entry. Separate from the
 		// roster's POST /api/students/{id}/courses, which is a Teacher's: this
 		// one is a Coordinator's, only resolves a student who actually holds an
-		// entry, and refuses a course offered under a different occurrence type
-		// from the one the student waited under. It carries the same request as
-		// the roster's, because an enrollment needs the same fields either way.
+		// entry, and names a lesson structure rather than a course — the
+		// instrument course under that structure is resolved here, and a
+		// structure carrying a different occurrence type from the one the student
+		// waited under is refused.
 		maintain
 			.MapPost("/students/{studentId:guid}/enrollment", async (
 				Guid studentId,
-				EnrollStudentRequest request,
+				EnrolWaitingListStudentRequest request,
 				EnrolWaitingListStudentHandler handler,
 				CancellationToken ct) =>
 			{
@@ -130,7 +130,7 @@ public static class WaitingListRoutes
 				var result = await handler.HandleAsync(command, ct);
 				return Results.Created($"/api/students/{studentId}/courses/{result.StudentCourseId}", result);
 			})
-			.AddEndpointFilter<ValidationFilter<EnrollStudentRequest>>()
+			.AddEndpointFilter<ValidationFilter<EnrolWaitingListStudentRequest>>()
 			.MarkSensitiveResponse()
 			.WithName("EnrolWaitingListStudent")
 			.Produces<StudentCourseResult>(StatusCodes.Status201Created)

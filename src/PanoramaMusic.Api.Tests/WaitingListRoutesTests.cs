@@ -345,16 +345,24 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var (email, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrol-coordinator", Role.Coordinator);
 		var client = fixture.CreateIsolatedClient("10.0.73.30");
 		await client.LoginAsync(email, _password);
-		var structure = await GetStructureAsync(client, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		// Group · HalfHour · AfterSchool: the enrolment resolves the one instrument
+		// course under the structure it names, so this test needs a structure no
+		// other test builds an instrument course under.
+		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.AfterSchool);
 		var uniqueName = $"Enrolled-Off-{Guid.NewGuid():N}";
 		var captured = await CaptureAsync(client, structure.LessonStructureId, "Enrol", uniqueName);
-		var course = await CreateCourseAsync(client, CourseType.G2Recorder, 375.00m, structure.LessonStructureId);
+		await CreateCourseAsync(client, CourseType.Instrument, 375.00m, structure.LessonStructureId);
 		var teacher = await CreateTeacherAsync(client, "Naledi", $"Khumalo-{Guid.NewGuid():N}");
 
 		var response = await client.Client.SendAsync(
 			client.AuthorizedPostRequest(
 				$"/api/waiting-list/students/{captured.StudentId}/enrollment",
-				new EnrollStudentRequest(course.CourseId, teacher.TeacherId, null, null, new DateOnly(2026, 9, 9))),
+				new EnrolWaitingListStudentRequest(
+					structure.LessonStructureId,
+					teacher.TeacherId,
+					InstrumentType.Piano,
+					StepType.Step2A,
+					new DateOnly(2026, 9, 9))),
 			TestContext.Current.CancellationToken);
 
 		var afterList = await client.Client.SendAsync(
@@ -376,7 +384,6 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
 		var uniqueName = $"Enrol-Refused-{Guid.NewGuid():N}";
 		var captured = await CaptureAsync(coordinatorClient, structure.LessonStructureId, "Still", uniqueName);
-		var course = await CreateCourseAsync(coordinatorClient, CourseType.G2Recorder, 376.00m, structure.LessonStructureId);
 		var teacher = await CreateTeacherAsync(coordinatorClient, "Sipho", $"Ndlovu-{Guid.NewGuid():N}");
 
 		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "waiting-list-enrol-teacher", Role.Teacher);
@@ -386,7 +393,12 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 		var response = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedPostRequest(
 				$"/api/waiting-list/students/{captured.StudentId}/enrollment",
-				new EnrollStudentRequest(course.CourseId, teacher.TeacherId, null, null, new DateOnly(2026, 9, 9))),
+				new EnrolWaitingListStudentRequest(
+					structure.LessonStructureId,
+					teacher.TeacherId,
+					InstrumentType.Piano,
+					StepType.Step2A,
+					new DateOnly(2026, 9, 9))),
 			TestContext.Current.CancellationToken);
 
 		var afterList = await coordinatorClient.Client.SendAsync(
@@ -408,7 +420,12 @@ public sealed class WaitingListRoutesTests(ApiTestFixture fixture)
 
 		var response = await client.PostAsJsonAsync(
 			$"/api/waiting-list/students/{Guid.NewGuid()}/enrollment",
-			new EnrollStudentRequest(Guid.NewGuid(), Guid.NewGuid(), null, null, new DateOnly(2026, 9, 9)),
+			new EnrolWaitingListStudentRequest(
+				Guid.NewGuid(),
+				Guid.NewGuid(),
+				InstrumentType.Piano,
+				StepType.Step2A,
+				new DateOnly(2026, 9, 9)),
 			TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);

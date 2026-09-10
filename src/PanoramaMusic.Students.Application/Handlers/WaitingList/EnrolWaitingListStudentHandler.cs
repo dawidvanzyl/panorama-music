@@ -2,6 +2,7 @@ using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Domain.Messages;
@@ -13,13 +14,16 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// the waiting-list entry is deleted together, on the request's ambient
 /// transaction, so the student is never left in both states or in neither.
 /// <para>
-/// The course is named by the caller rather than derived from the entry. An
-/// entry records a lesson structure and no course type, and several courses can
-/// be delivered under one structure, so a structure does not identify a course —
-/// deriving one would be the system choosing a course type on the Coordinator's
-/// behalf. The occurrence type is the single thing that stays fixed, and it is
-/// enforced here against the chosen course rather than trusted to the interface,
-/// which only offers courses that already satisfy it.
+/// The course is resolved rather than named. An entry records an intended
+/// instrument, and only an instrument course records one, so a waiting-list
+/// entry is a wait for an instrument course — the lesson structure the
+/// Coordinator settles on identifies it outright. Where the school offers no
+/// instrument course under that structure the enrolment is refused and said so,
+/// rather than left with nothing to submit.
+/// </para>
+/// <para>
+/// The occurrence type is the single thing that stays fixed, and it is enforced
+/// here against the named structure before anything is written.
 /// </para>
 /// <para>
 /// Only a waiting-list student can be enrolled this way, and an enrolled student
@@ -29,6 +33,7 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// </summary>
 public sealed class EnrolWaitingListStudentHandler(
 	IWaitingListRepository waitingListRepository,
+	ILessonStructureRepository lessonStructureRepository,
 	ICourseRepository courseRepository,
 	IStudentCourseRepository studentCourseRepository,
 	ITeacherDirectory teacherDirectory)
@@ -38,21 +43,23 @@ public sealed class EnrolWaitingListStudentHandler(
 		CancellationToken cancellationToken)
 	{
 		// The validator has already rejected an absent value, so the request's
-		// nullable members are populated by the time the use case runs — bar the
-		// instrument type and step, which the chosen course's type settles inside
-		// StudentCourse.Enroll.
+		// nullable members are populated by the time the use case runs.
 		var request = command.Request;
-		var courseId = request.CourseId!.Value;
+		var lessonStructureId = request.LessonStructureId!.Value;
 		var teacherId = request.TeacherId!.Value;
 
 		var entry = await waitingListRepository.GetByStudentIdAsync(command.StudentId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {command.StudentId} is not on the waiting list.");
 
-		var course = await courseRepository.GetByIdAsync(courseId, cancellationToken)
-			?? throw new EntityNotFoundException($"Course {courseId} was not found.");
+		var lessonStructure = await lessonStructureRepository.GetByIdAsync(lessonStructureId, cancellationToken)
+			?? throw new EntityNotFoundException($"Lesson structure {lessonStructureId} was not found.");
 
-		if (course.LessonStructure.OccurrenceType != entry.LessonStructure.OccurrenceType)
+		if (lessonStructure.OccurrenceType != entry.LessonStructure.OccurrenceType)
 			throw new DomainException(WaitingListMessages.OccurrenceTypeIsFixed);
+
+		var course = await courseRepository.GetByTypeAndStructureAsync(
+				CourseType.Instrument, lessonStructureId, cancellationToken)
+			?? throw new DomainException(WaitingListMessages.NoInstrumentCourseForStructure);
 
 		var teacher = await teacherDirectory.GetTeacherAsync(teacherId, cancellationToken)
 			?? throw new EntityNotFoundException($"Teacher {teacherId} was not found.");

@@ -1,12 +1,11 @@
-using PanoramaMusic.Students.Application.Requests.StudentCourses;
+using PanoramaMusic.Students.Application.Requests.WaitingList;
 
 namespace PanoramaMusic.Students.Application.Commands.WaitingList;
 
 /// <summary>
-/// Carries the roster's own <see cref="EnrollStudentRequest"/> rather than a
-/// waiting-list copy of it: the fields an enrollment needs are the same
-/// whichever screen it was started from, and the one thing that differs — the
-/// occurrence type being fixed at the entry — is a rule the handler enforces
-/// against the chosen course, not an extra field on the request.
+/// An enrolment reached from the waiting list. It carries the waiting list's own
+/// request rather than the roster's: the two differ in the one place that
+/// matters, which is that this one names a lesson structure and lets the course
+/// be resolved from it.
 /// </summary>
-public sealed record EnrolWaitingListStudentCommand(Guid StudentId, EnrollStudentRequest Request);
+public sealed record EnrolWaitingListStudentCommand(Guid StudentId, EnrolWaitingListStudentRequest Request);

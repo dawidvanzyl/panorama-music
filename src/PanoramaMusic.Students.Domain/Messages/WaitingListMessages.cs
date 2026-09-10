@@ -6,5 +6,8 @@ namespace PanoramaMusic.Students.Domain.Messages;
 public static class WaitingListMessages
 {
 	public const string OccurrenceTypeIsFixed =
-		"A student enrolled off the waiting list keeps the occurrence type they waited under, so the chosen course must be offered under it.";
+		"A student enrolled off the waiting list keeps the occurrence type they waited under, so the chosen lesson structure must carry it.";
+
+	public const string NoInstrumentCourseForStructure =
+		"No instrument course is offered for that lesson type and duration, so this student cannot be enrolled under it.";
 }
