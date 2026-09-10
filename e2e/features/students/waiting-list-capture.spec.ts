@@ -1,7 +1,13 @@
 import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
-import { attemptCaptureWaitingListStudent, fetchAnyLessonStructureId } from '../../fixtures/waitingList';
+import {
+  attemptCaptureWaitingListStudent,
+  fetchAnyLessonStructureId,
+  offerLessonStructure,
+} from '../../fixtures/waitingList';
 import { StudentsPage } from '../../pages/students/StudentsPage';
+import type { Page } from '@playwright/test';
+import type { WaitingListStepInput } from '../../pages/students/WaitingListPage';
 
 /**
  * A student has no natural key, so a run is told apart by the surname it gives
@@ -24,6 +30,22 @@ const studentDefaults = {
 // login — MAINTAINER_ROLES on the Waiting List page only checks for
 // Coordinator, and Teacher is Student Management's own landing role.
 const CAPTURE_AND_VIEW_ROLES = ['Teacher', 'Coordinator'] as const;
+
+/**
+ * A student may only be made to wait for a combination the school runs an
+ * instrument course for, so a capture scenario establishes that its chosen
+ * combination is one of them before the wizard will offer it. The reload is
+ * what makes the new course visible — the offered set is read once, when the
+ * page loads.
+ */
+async function offerCapturedCombination(page: Page, choice: WaitingListStepInput): Promise<void> {
+  await offerLessonStructure(page, {
+    occurrenceType: choice.occurrenceLabel === 'After School' ? 'AfterSchool' : 'DuringSchool',
+    lessonType: choice.lessonLabel,
+    durationType: choice.durationLabel === 'Half Hour' ? 'HalfHour' : 'Hour',
+  });
+  await page.reload();
+}
 
 test.describe('Capturing through the full wizard creates the student with no course enrollment', { tag: '@272IT1' }, () => {
   test('the captured student appears on the waiting list and holds no course enrollment', async ({ page }) => {

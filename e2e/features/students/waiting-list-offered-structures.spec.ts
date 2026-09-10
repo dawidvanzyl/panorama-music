@@ -2,8 +2,8 @@ import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
 import {
   seedWaitingListEntry,
-  seedCourseOfType,
   ensureInstrumentCourse,
+  ensureNonInstrumentCourse,
   fetchLessonStructureId,
   fetchStructureWithoutInstrumentCourse,
 } from '../../fixtures/waitingList';
@@ -118,11 +118,11 @@ test.describe(
     test('a course that is not an instrument course does not make a combination offered', async ({ page }) => {
       const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_READ_ROLES]);
       const courseFree = await fetchStructureWithoutInstrumentCourse(page);
-      // A course on the reserved structure, of a type that is not Instrument —
-      // which the convention permits, and which is this scenario's whole
-      // point. This is what separates "an instrument course exists" from "any
-      // course exists".
-      await seedCourseOfType(page, courseFree.lessonStructureId, 'G2Recorder');
+      // The reserved structure carries a course, and none of them is an
+      // instrument course — which the convention permits, and which is this
+      // scenario's whole point. This is what separates "an instrument course
+      // exists" from "any course exists".
+      await ensureNonInstrumentCourse(page, courseFree.lessonStructureId);
       await offerTheAnchor(page);
       await page.reload();
 

@@ -420,6 +420,47 @@ export async function ensureInstrumentCourse(page: Page, lessonStructureId: stri
 }
 
 /**
+ * Makes one occurrence/lesson/duration combination one the waiting-list
+ * surfaces offer, by making sure the school runs an instrument course for it.
+ * The three surfaces build their choices from the offered set, so a scenario
+ * that drives them towards a combination has to establish this first — it is
+ * the precondition of such a scenario, never part of its subject.
+ */
+export async function offerLessonStructure(
+  page: Page,
+  filter: { occurrenceType: OccurrenceType; lessonType: LessonType; durationType: DurationType },
+): Promise<string> {
+  const lessonStructureId = await fetchLessonStructureId(page, filter);
+  await ensureInstrumentCourse(page, lessonStructureId);
+  return lessonStructureId;
+}
+
+/**
+ * Makes sure a structure carries at least one course that is not an instrument
+ * course, creating one only if it carries none at all. For the scenario whose
+ * subject is that a course of some other type does not make a combination
+ * offered: it wants the state, and creating a course on every run would grow
+ * the catalogue every other suite reads without ever proving anything more.
+ *
+ * <p>
+ * Safe against `COURSE_FREE_LESSON_STRUCTURE` — and only useful there — since
+ * the convention forbids only instrument courses on it.
+ * </p>
+ */
+export async function ensureNonInstrumentCourse(page: Page, lessonStructureId: string): Promise<void> {
+  const alreadyCarriesOne = await page.evaluate(async (lessonStructureId) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+      courseType: string;
+      lessonStructureId: string;
+    }[];
+    return courses.some((c) => c.courseType !== 'Instrument' && c.lessonStructureId === lessonStructureId);
+  }, lessonStructureId);
+
+  if (!alreadyCarriesOne) await seedCourseOfType(page, lessonStructureId, 'G2Recorder');
+}
+
+/**
  * The lesson-structure id for one exact occurrence/lesson/duration triple —
  * for a scenario that needs a course on a structure other than the entry's:
  * the combination the Coordinator changes to under the same occurrence type,
