@@ -99,6 +99,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// Lesson structures are fixed seeded reference data; the payload names no person.
 		["GetLessonStructures"] = CacheExpectation.Cacheable,
 
+		// The offered subset is the seeded reference data narrowed by the school's
+		// own course catalogue; like the catalogue itself, it names no person.
+		["GetOfferedLessonStructures"] = CacheExpectation.Cacheable,
+
 		// Courses are the school's own catalogue — a course type, a price and a lesson
 		// structure. The payload names no person.
 		["GetCourses"] = CacheExpectation.Cacheable,
