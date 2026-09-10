@@ -91,6 +91,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteGuardianRelationshipHandler>();
 		services.AddTransient<CountGuardianRelationshipHandler>();
 		services.AddTransient<GetLessonStructuresHandler>();
+		services.AddTransient<GetOfferedLessonStructuresHandler>();
 		services.AddTransient<CreateCourseHandler>();
 		services.AddTransient<GetCoursesHandler>();
 		services.AddTransient<UpdateCourseCostHandler>();
