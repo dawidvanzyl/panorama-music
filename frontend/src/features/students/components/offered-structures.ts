@@ -28,9 +28,7 @@ export function offeredOccurrenceTypes(structures: LessonStructure[]): Occurrenc
 
 export function offeredLessonTypes(structures: LessonStructure[], occurrenceType: string): LessonType[] {
   return (Object.keys(LESSON_TYPE_LABELS) as LessonType[]).filter((lessonType) =>
-    structures.some(
-      (structure) => structure.occurrenceType === occurrenceType && structure.lessonType === lessonType,
-    ),
+    structures.some((structure) => structure.occurrenceType === occurrenceType && structure.lessonType === lessonType),
   );
 }
 

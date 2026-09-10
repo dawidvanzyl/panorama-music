@@ -322,11 +322,7 @@ export class PmWaitingListStep extends HTMLElement {
   private renderDurationTypeOptions(): void {
     this.fillOptions(
       this.durationTypeSelect!,
-      offeredDurationTypes(
-        this._lessonStructures,
-        this.occurrenceTypeSelect!.value,
-        this.lessonTypeSelect!.value,
-      ),
+      offeredDurationTypes(this._lessonStructures, this.occurrenceTypeSelect!.value, this.lessonTypeSelect!.value),
       DURATION_TYPE_LABELS,
       'Duration Type',
     );

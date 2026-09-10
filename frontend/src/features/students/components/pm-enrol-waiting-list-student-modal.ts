@@ -342,9 +342,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     const nothingOffered = offered.length === 0;
 
     this.noOfferedStructuresNotice!.textContent =
-      this._lessonStructures.length === 0
-        ? NO_OFFERED_STRUCTURES_NOTICE
-        : NO_OFFERED_STRUCTURES_FOR_OCCURRENCE_NOTICE;
+      this._lessonStructures.length === 0 ? NO_OFFERED_STRUCTURES_NOTICE : NO_OFFERED_STRUCTURES_FOR_OCCURRENCE_NOTICE;
     this.noOfferedStructuresNotice!.hidden = !nothingOffered;
     this.form!.hidden = nothingOffered;
     this.confirmButton!.hidden = nothingOffered;
