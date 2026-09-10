@@ -240,7 +240,7 @@ public class GuardianReconciliationFunctionTests : IClassFixture<StudentsDatabas
 	{
 		await using var select = _fixture.Connection.CreateCommand();
 		select.CommandText =
-			"SELECT student_id, guardian_id FROM students.get_missing_enrolled_sibling_guardian_links(@p_student_id);";
+			"SELECT sibling_id, guardian_id FROM students.get_missing_enrolled_sibling_guardian_links(@p_student_id);";
 		select.Parameters.Add(new NpgsqlParameter("p_student_id", studentId));
 
 		await using var reader = await select.ExecuteReaderAsync(TestContext.Current.CancellationToken);

@@ -15,8 +15,11 @@
 CREATE OR REPLACE FUNCTION students.get_missing_enrolled_sibling_guardian_links(
     p_student_id UUID
 )
+-- The sibling is the one named in each row: they are the student who should
+-- hold the guardian and does not. p_student_id already holds every guardian
+-- returned here.
 RETURNS TABLE(
-    student_id  UUID,
+    sibling_id  UUID,
     guardian_id UUID
 )
 LANGUAGE plpgsql

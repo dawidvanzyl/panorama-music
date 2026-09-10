@@ -93,7 +93,9 @@ public class StudentGuardianRepository(IUnitOfWork unitOfWork, IDomainEventColle
 			cancellationToken);
 		var dtos = await Connection.QueryAsync<MissingGuardianLinkDto>(command);
 
-		return [.. dtos.Select(dto => new MissingGuardianLink(dto.Student_Id, dto.Guardian_Id))];
+		// The sibling is the student the link belongs to — they are the one missing
+		// it.
+		return [.. dtos.Select(dto => new MissingGuardianLink(dto.Sibling_Id, dto.Guardian_Id))];
 	}
 
 	public async Task CreateAsync(StudentGuardian link, CancellationToken cancellationToken)
