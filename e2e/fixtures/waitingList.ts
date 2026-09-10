@@ -360,3 +360,177 @@ export async function seedCourseOfType(page: Page, lessonStructureId: string, co
   expect(created.status).toBe(201);
   return created.courseId;
 }
+
+/**
+ * The lesson-structure id for one exact occurrence/lesson/duration triple —
+ * for a scenario that needs a course on a structure other than the entry's:
+ * the combination the Coordinator changes to under the same occurrence type,
+ * or a structure under the other occurrence type entirely.
+ */
+export async function fetchLessonStructureId(
+  page: Page,
+  filter: { occurrenceType: OccurrenceType; lessonType: LessonType; durationType: DurationType },
+): Promise<string> {
+  const lessonStructureId = await page.evaluate(async (filter) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const response = await fetch('/api/lesson-structures', { headers });
+    const structures = (await response.json()) as {
+      lessonStructureId: string;
+      lessonType: string;
+      durationType: string;
+      occurrenceType: string;
+    }[];
+    const structure = structures.find(
+      (s) =>
+        s.occurrenceType === filter.occurrenceType &&
+        s.lessonType === filter.lessonType &&
+        s.durationType === filter.durationType,
+    );
+    return structure?.lessonStructureId ?? null;
+  }, filter);
+
+  expect(lessonStructureId, 'a lesson structure matching the requested triple must exist').not.toBeNull();
+  return lessonStructureId!;
+}
+
+/**
+ * A real course and teacher this caller can reach, without creating either.
+ * For the role-refusal scenario, whose session cannot write to `/api/courses`
+ * or `/api/teachers` at all: the refusal must be on the caller's role, so the
+ * submission has to name values that would otherwise have resolved.
+ */
+export async function fetchAnyEnrolmentTarget(page: Page): Promise<{ courseId: string; teacherId: string }> {
+  const target = await page.evaluate(async () => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const coursesResponse = await fetch('/api/courses', { headers });
+    const courses = (await coursesResponse.json()) as { courseId: string }[];
+    const teachersResponse = await fetch('/api/teachers/roster', { headers });
+    const teachers = (await teachersResponse.json()) as { teacherId: string; isActive: boolean }[];
+    return {
+      courseId: courses[0]?.courseId ?? null,
+      teacherId: teachers.find((t) => t.isActive)?.teacherId ?? null,
+    };
+  });
+
+  expect(target.courseId, 'at least one course must exist for this caller to name').not.toBeNull();
+  expect(target.teacherId, 'at least one active teacher must exist for this caller to name').not.toBeNull();
+  return { courseId: target.courseId!, teacherId: target.teacherId! };
+}
+
+export interface EnrolAttemptInput {
+  courseId: string;
+  teacherId: string;
+  instrumentType?: InstrumentType | null;
+  stepType?: string | null;
+  enrolledDate?: string;
+}
+
+/**
+ * The enrolment-off-the-waiting-list path, reached directly from the signed-in
+ * session. Two boundaries have no control to press for them: a Teacher is
+ * offered no Enrol action at all, and the modal presents the occurrence type as
+ * a value rather than a control, so no course it offers can name a different
+ * one. Both can only be attempted by naming the request outright.
+ */
+export async function attemptEnrolFromWaitingList(
+  page: Page,
+  studentId: string,
+  input: EnrolAttemptInput,
+): Promise<number> {
+  return page.evaluate(
+    async ({ studentId, input }) => {
+      const response = await fetch(`/api/waiting-list/students/${studentId}/enrollment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify({
+          courseId: input.courseId,
+          teacherId: input.teacherId,
+          instrumentType: input.instrumentType ?? null,
+          stepType: input.stepType ?? null,
+          enrolledDate: input.enrolledDate ?? new Date().toISOString().slice(0, 10),
+        }),
+      });
+      return response.status;
+    },
+    { studentId, input },
+  );
+}
+
+/**
+ * Enrols a student who is already on the waiting list through the ordinary
+ * roster path, which knows nothing of the entry and so leaves it in place.
+ * This is the accepted both-states record — an entry the listing hides behind
+ * an enrolment — and it is the control the consumption assertions are read
+ * against.
+ */
+export async function enrollExistingStudent(
+  page: Page,
+  studentId: string,
+  target: { courseId: string; teacherId: string },
+): Promise<void> {
+  const status = await page.evaluate(
+    async ({ studentId, courseId, teacherId }) => {
+      const response = await fetch(`/api/students/${studentId}/courses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify({
+          courseId,
+          teacherId,
+          instrumentType: null,
+          stepType: null,
+          enrolledDate: new Date().toISOString().slice(0, 10),
+        }),
+      });
+      return response.status;
+    },
+    { studentId, courseId: target.courseId, teacherId: target.teacherId },
+  );
+
+  expect(status).toBe(201);
+}
+
+export interface StudentEnrollmentRead {
+  studentCourseId: string;
+  courseId: string;
+  lessonType: LessonType;
+  durationType: DurationType;
+  occurrenceType: OccurrenceType;
+  teacherFirstName: string;
+  teacherSurname: string;
+  instrumentType: string | null;
+  stepType: string | null;
+  enrolledDate: string;
+}
+
+/**
+ * A student's course enrolments, read back by id. A refusal has to be shown to
+ * have created nothing, and an acceptance has to be shown to carry the chosen
+ * teacher, instrument and date — and the occurrence type the student waited
+ * under, which is the one value an enrolment off the list may not change.
+ */
+export async function fetchStudentEnrollments(page: Page, studentId: string): Promise<StudentEnrollmentRead[]> {
+  return page.evaluate(async (studentId) => {
+    const response = await fetch(`/api/students/${studentId}/courses`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    if (!response.ok) return [];
+    return (await response.json()) as {
+      studentCourseId: string;
+      courseId: string;
+      lessonType: string;
+      durationType: string;
+      occurrenceType: string;
+      teacherFirstName: string;
+      teacherSurname: string;
+      instrumentType: string | null;
+      stepType: string | null;
+      enrolledDate: string;
+    }[];
+  }, studentId) as Promise<StudentEnrollmentRead[]>;
+}

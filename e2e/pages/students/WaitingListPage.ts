@@ -26,6 +26,7 @@ export class WaitingListPage extends BasePage {
   readonly emptyState: Locator;
   readonly wizardModal: Locator;
   readonly deleteModal: Locator;
+  readonly enrolModal: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -38,6 +39,7 @@ export class WaitingListPage extends BasePage {
     // carries the same id, and both shadow roots are pierced by a bare
     // `#deleteModal`.
     this.deleteModal = page.locator('pm-waiting-list-page #deleteModal');
+    this.enrolModal = page.locator('pm-waiting-list-page #enrolModal');
   }
 
   async gotoWaitingList(): Promise<void> {
@@ -364,6 +366,99 @@ export class WaitingListPage extends BasePage {
 
   async confirmGuardianDelete(): Promise<void> {
     await this.deleteGuardianModal().locator('#deleteBtn').click();
+  }
+
+  // --- Enrol modal (opened from a row's Enrol action) ---
+
+  /**
+   * Opens the enrol modal on a row and waits for it to be shown. The modal's
+   * host is display:none until it is opened, so the click alone is not proof
+   * it is there.
+   */
+  async openEnrolModal(row: Locator): Promise<void> {
+    await this.enrolButton(row).click();
+    await this.enrolModal.waitFor({ state: 'visible' });
+  }
+
+  /** The notice above the fields, naming the student and the consequence. */
+  enrolNotice(): Locator {
+    return this.enrolModal.locator('#notice');
+  }
+
+  /** The occurrence-type field's wrapper — a value, not a control. */
+  enrolOccurrenceTypeField(): Locator {
+    return this.enrolModal.locator('#occurrenceType');
+  }
+
+  enrolOccurrenceType(): Locator {
+    return this.enrolModal.locator('#occurrenceTypeValue');
+  }
+
+  /** The annotation saying the occurrence type was settled at the waiting list. */
+  enrolOccurrenceTypeAnnotation(): Locator {
+    return this.enrolOccurrenceTypeField().locator('.enrol__locked');
+  }
+
+  /** Anything within the occurrence-type field a user could type in, pick from or press. */
+  enrolOccurrenceTypeControls(): Locator {
+    return this.enrolOccurrenceTypeField().locator('input, select, textarea, button, [contenteditable]');
+  }
+
+  enrolLessonType(): Locator {
+    return this.enrolModal.locator('#lessonType');
+  }
+
+  enrolDurationType(): Locator {
+    return this.enrolModal.locator('#durationType');
+  }
+
+  enrolCourse(): Locator {
+    return this.enrolModal.locator('#course');
+  }
+
+  enrolTeacher(): Locator {
+    return this.enrolModal.locator('#teacher');
+  }
+
+  enrolInstrumentType(): Locator {
+    return this.enrolModal.locator('#instrumentType');
+  }
+
+  /** The Step field's wrapper, offered only for a course type that records one. */
+  enrolStepField(): Locator {
+    return this.enrolModal.locator('#stepField');
+  }
+
+  enrolStep(): Locator {
+    return this.enrolModal.locator('#step');
+  }
+
+  enrolDate(): Locator {
+    return this.enrolModal.locator('#enrolledDate');
+  }
+
+  enrolError(): Locator {
+    return this.enrolModal.locator('#error');
+  }
+
+  enrolCancelButton(): Locator {
+    return this.enrolModal.locator('#cancelBtn');
+  }
+
+  enrolConfirmButton(): Locator {
+    return this.enrolModal.locator('#confirmBtn');
+  }
+
+  async chooseEnrolTeacher(teacherName: string): Promise<void> {
+    await this.enrolTeacher().selectOption({ label: teacherName });
+  }
+
+  async cancelEnrol(): Promise<void> {
+    await this.enrolCancelButton().click();
+  }
+
+  async confirmEnrol(): Promise<void> {
+    await this.enrolConfirmButton().click();
   }
 
   // --- Removal confirmation ---
