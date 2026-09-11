@@ -29,7 +29,7 @@ public sealed class RemoveWaitingListStudentHandler(
 		var student = entry.Student;
 
 		entry.MarkRemoved();
-		student.MarkDeleted(StudentWriteSource.WaitingList);
+		student.MarkDeleted(StudentPopulation.WaitingList);
 
 		// The entry is deleted explicitly rather than left to the table's
 		// ON DELETE CASCADE, so the removal reads as the pair it is and both

@@ -90,7 +90,7 @@ public class UpdateWaitingListStudentHandlerTests : IClassFixture<StudentsTestFi
 		// The handler states the surface; nothing downstream works it out. The
 		// roster's own update handler states the roster on the same terms.
 		var updated = student.DrainEvents().OfType<StudentUpdated>().Single();
-		updated.Source.ShouldBe(StudentWriteSource.WaitingList);
+		updated.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	private void SetupEntry(WaitingListEntry entry) =>

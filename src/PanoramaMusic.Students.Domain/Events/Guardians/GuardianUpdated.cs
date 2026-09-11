@@ -4,4 +4,4 @@ using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Students.Domain.Events.Guardians;
 
-public sealed record GuardianUpdated(Guardian Before, Guardian After, StudentWriteSource Source) : IDomainEvent;
+public sealed record GuardianUpdated(Guardian Before, Guardian After, StudentPopulation Source) : IDomainEvent;

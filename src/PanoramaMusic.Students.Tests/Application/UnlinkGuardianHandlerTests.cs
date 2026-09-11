@@ -234,10 +234,10 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		var (unlinked, deleted) = await UnlinkTheLastGuardianOf(onTheWaitingList: true);
 
 		ShouldlyHelpers.Satisfy(
-			() => unlinked.Source.ShouldBe(StudentWriteSource.WaitingList),
+			() => unlinked.Source.ShouldBe(StudentPopulation.WaitingList),
 			// A guardian never exists standalone, so losing its last link deletes
 			// the row — a consequence of this student's unlink, and named as such.
-			() => deleted.Source.ShouldBe(StudentWriteSource.WaitingList));
+			() => deleted.Source.ShouldBe(StudentPopulation.WaitingList));
 	}
 
 	[Fact]
@@ -247,8 +247,8 @@ public class UnlinkGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		var (unlinked, deleted) = await UnlinkTheLastGuardianOf(onTheWaitingList: false);
 
 		ShouldlyHelpers.Satisfy(
-			() => unlinked.Source.ShouldBe(StudentWriteSource.Roster),
-			() => deleted.Source.ShouldBe(StudentWriteSource.Roster));
+			() => unlinked.Source.ShouldBe(StudentPopulation.Enrolled),
+			() => deleted.Source.ShouldBe(StudentPopulation.Enrolled));
 	}
 
 	private async Task<(GuardianUnlinked Unlinked, GuardianDeleted Deleted)> UnlinkTheLastGuardianOf(bool onTheWaitingList)

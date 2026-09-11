@@ -10,12 +10,14 @@ import {
   updateStudent,
   deleteStudent,
   getSiblings,
+  getSiblingCandidates,
   addSibling,
   removeSibling,
   clearStudentsCache,
   StudentsError,
   type StudentInput,
   type StudentResult,
+  type SiblingStudentResult,
 } from '../services/students';
 import {
   getGuardians,
@@ -137,6 +139,13 @@ export class PmStudentsPage extends HTMLElement {
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
   private _allStudents: StudentResult[] = [];
+  /**
+   * The Siblings tab's own list, read separately from the roster this screen
+   * shows: a sibling may be a waiting-list student, who is not on the roster at
+   * all. Kept current alongside the roster so a newly-created student is
+   * offerable in the next wizard opened.
+   */
+  private _siblingCandidates: SiblingStudentResult[] = [];
   private _currentFilters: StudentFilters = {};
 
   constructor() {
@@ -233,7 +242,7 @@ export class PmStudentsPage extends HTMLElement {
   }
 
   private handleCreateClick = (): void => {
-    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForCreate(this._allStudents));
+    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForCreate(this._siblingCandidates));
   };
 
   /**
@@ -374,6 +383,7 @@ export class PmStudentsPage extends HTMLElement {
     try {
       await deleteStudent(studentId);
       this._allStudents = this._allStudents.filter((s) => s.studentId !== studentId);
+      this._siblingCandidates = this._siblingCandidates.filter((s) => s.studentId !== studentId);
       this.applyFilters();
     } catch (err) {
       this.showError(err);
@@ -432,12 +442,14 @@ export class PmStudentsPage extends HTMLElement {
 
   private refreshWizardSiblings = async (studentId: string): Promise<void> => {
     try {
-      const siblings = await getSiblings(studentId);
+      // Read together, and the candidates read afresh: a student captured onto
+      // the waiting list elsewhere is offerable here, and both listings feed
+      // this list.
+      const [siblings, candidates] = await Promise.all([getSiblings(studentId), getSiblingCandidates()]);
+      this._siblingCandidates = candidates;
       this.wizardModal!.siblings = siblings;
       const linkedIds = new Set(siblings.map((s) => s.studentId));
-      this.wizardModal!.candidates = this._allStudents.filter(
-        (s) => s.studentId !== studentId && !linkedIds.has(s.studentId),
-      );
+      this.wizardModal!.candidates = candidates.filter((s) => s.studentId !== studentId && !linkedIds.has(s.studentId));
     } catch (err) {
       this.wizardModal!.showSiblingsError(err instanceof StudentsError ? err.message : 'An unexpected error occurred');
     }
@@ -749,6 +761,15 @@ export class PmStudentsPage extends HTMLElement {
     try {
       this._allStudents = await getStudents();
       this.applyFilters();
+    } catch (err) {
+      this.showError(err);
+    }
+    await this.loadSiblingCandidates();
+  };
+
+  private loadSiblingCandidates = async (): Promise<void> => {
+    try {
+      this._siblingCandidates = await getSiblingCandidates();
     } catch (err) {
       this.showError(err);
     }

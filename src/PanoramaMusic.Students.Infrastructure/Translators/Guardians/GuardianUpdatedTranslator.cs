@@ -25,7 +25,7 @@ public sealed class GuardianUpdatedTranslator(IAuditContext auditContext, IUserC
 			["targetDisplay"] = $"{after.FirstName} {after.Surname}",
 			["changes"] = Diff(updated.Before, after),
 		};
-		StudentWriteSourceDetail.Apply(detail, updated.Source);
+		StudentPopulationDetail.Apply(detail, updated.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

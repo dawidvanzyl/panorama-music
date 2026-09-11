@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -32,12 +34,19 @@ public class GetSiblingsHandlerTests : IClassFixture<StudentsTestFixture>
 			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(student);
 		_context.Repositories.SiblingRepositoryMock
-			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync([siblingOne, siblingTwo]);
+			.Setup(r => r.GetSiblingStudentsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([
+				new SiblingStudent(siblingOne, StudentPopulation.WaitingList),
+				new SiblingStudent(siblingTwo, StudentPopulation.Enrolled),
+			]);
 
 		var result = await _handler.HandleAsync(student.StudentId, TestContext.Current.CancellationToken);
 
-		result.Select(s => s.StudentId).ShouldBe([siblingOne.StudentId, siblingTwo.StudentId], ignoreOrder: true);
+		ShouldlyHelpers.Satisfy(
+			() => result.Select(s => s.StudentId).ShouldBe([siblingOne.StudentId, siblingTwo.StudentId], ignoreOrder: true),
+			// Each row's state is the linked student's own, not the subject's.
+			() => result.Single(s => s.StudentId == siblingOne.StudentId).Population.ShouldBe(StudentPopulation.WaitingList),
+			() => result.Single(s => s.StudentId == siblingTwo.StudentId).Population.ShouldBe(StudentPopulation.Enrolled));
 	}
 
 	[Fact]

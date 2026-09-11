@@ -26,14 +26,14 @@ public sealed class Sibling : AggregateRoot
 	/// on the event for the audit record. The caller states it; nothing
 	/// downstream infers it.
 	/// </summary>
-	public static Sibling Create(Student student, Student siblingStudent, StudentWriteSource source)
+	public static Sibling Create(Student student, Student siblingStudent, StudentPopulation source)
 	{
 		var sibling = new Sibling(student.StudentId, siblingStudent.StudentId);
 		sibling.Raise(new SiblingAdded(student, siblingStudent, source));
 		return sibling;
 	}
 
-	public void MarkRemoved(Student student, Student siblingStudent, StudentWriteSource source)
+	public void MarkRemoved(Student student, Student siblingStudent, StudentPopulation source)
 	{
 		Raise(new SiblingRemoved(student, siblingStudent, source));
 	}

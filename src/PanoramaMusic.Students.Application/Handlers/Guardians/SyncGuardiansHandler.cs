@@ -17,7 +17,7 @@ public sealed class SyncGuardiansHandler(
 	IStudentRepository studentRepository,
 	IStudentGuardianRepository studentGuardianRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task<IList<GuardianResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
 	{
@@ -28,7 +28,7 @@ public sealed class SyncGuardiansHandler(
 
 		// Every link written here is written to this student, so the surface that
 		// reaches them is the surface the whole sync came through.
-		var source = await studentWriteSourceResolver.ForStudentAsync(studentId, cancellationToken);
+		var source = await studentPopulationResolver.ForStudentAsync(studentId, cancellationToken);
 
 		foreach (var guardian in missingGuardians)
 		{

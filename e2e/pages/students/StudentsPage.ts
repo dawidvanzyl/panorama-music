@@ -283,6 +283,44 @@ export class StudentsPage extends BasePage {
     return this.wizardModal.locator('#siblingsStep').locator('#searchSelect');
   }
 
+  /**
+   * Types into the Siblings tab's candidate search. The search lists results
+   * for the typed query and nothing before it, so a candidate is only ever
+   * reached by searching for them.
+   */
+  async searchSiblingCandidates(query: string): Promise<void> {
+    await this.siblingsSearchSelect().locator('#query').fill(query);
+  }
+
+  /** One candidate the search currently offers, matched on the student's name. */
+  siblingCandidateResult(name: string): Locator {
+    return this.siblingsSearchSelect().locator('#results').getByRole('button', { name });
+  }
+
+  /**
+   * The affordance stating which of the two listings a candidate belongs to.
+   * Its meaning travels on the affordance itself — its accessible name and its
+   * hover title — following `guardianRestrictionIcon`, so it is read there
+   * rather than off neighbouring text.
+   */
+  siblingCandidatePopulationIcon(name: string): Locator {
+    return this.siblingCandidateResult(name).locator('.pm-population-icon');
+  }
+
+  /** The same affordance on a sibling already in the linked-siblings table. */
+  siblingPopulationIcon(siblingName: string): Locator {
+    return this.siblingListRow(siblingName).locator('.pm-population-icon');
+  }
+
+  /**
+   * Every listed student's own name cell. Each roster row is followed by its
+   * own summary row, which stays in the DOM while collapsed and can name other
+   * students, so counting rows by text would count more than the roster shows.
+   */
+  listedStudentNames(): Locator {
+    return this.page.locator('pm-students-table .students-table__name');
+  }
+
   /** The internal scroll container for the sibling list, several shadow roots deep. */
   siblingListScrollElement(): Locator {
     return this.wizardModal

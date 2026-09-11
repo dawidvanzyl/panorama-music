@@ -203,7 +203,7 @@ public class UpdateGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var updated = await UpdateAGuardian(waitingListOnly: true);
 
-		updated.Source.ShouldBe(StudentWriteSource.WaitingList);
+		updated.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -212,7 +212,7 @@ public class UpdateGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var updated = await UpdateAGuardian(waitingListOnly: false);
 
-		updated.Source.ShouldBe(StudentWriteSource.Roster);
+		updated.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	/// <summary>

@@ -43,7 +43,7 @@ public sealed class UpdateWaitingListStudentHandler(
 			request.Class,
 			request.Phase,
 			request.Language,
-			StudentWriteSource.WaitingList);
+			StudentPopulation.WaitingList);
 
 		await studentRepository.UpdateAsync(student, cancellationToken);
 

@@ -4,4 +4,4 @@ using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Students.Domain.Events.Siblings;
 
-public sealed record SiblingRemoved(Student Student, Student Sibling, StudentWriteSource Source) : IDomainEvent;
+public sealed record SiblingRemoved(Student Student, Student Sibling, StudentPopulation Source) : IDomainEvent;

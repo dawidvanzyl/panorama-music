@@ -18,7 +18,7 @@ public static class StudentFactory
 		Language language = Language.English,
 		// The roster is where a student record lives, so a test that is not
 		// about the audit trail's surface does not have to name one.
-		StudentWriteSource source = StudentWriteSource.Roster) =>
+		StudentPopulation source = StudentPopulation.Enrolled) =>
 		Student.Create(
 			studentId ?? Guid.NewGuid(),
 			firstName,

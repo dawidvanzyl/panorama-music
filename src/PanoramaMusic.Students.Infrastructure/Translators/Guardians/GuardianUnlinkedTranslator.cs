@@ -23,7 +23,7 @@ public sealed class GuardianUnlinkedTranslator(IAuditContext auditContext, IUser
 			["guardianId"] = unlinked.Guardian.GuardianId,
 			["targetDisplay"] = $"{unlinked.Student.FirstName} {unlinked.Student.LastName} ⊘ {unlinked.Guardian.FirstName} {unlinked.Guardian.Surname}",
 		};
-		StudentWriteSourceDetail.Apply(detail, unlinked.Source);
+		StudentPopulationDetail.Apply(detail, unlinked.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

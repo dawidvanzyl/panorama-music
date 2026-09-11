@@ -98,7 +98,7 @@ public sealed class EnrolWaitingListStudentHandler(
 		// created here are the Coordinator's enrolment, not a guardian they linked
 		// by hand, and the audit trail says so.
 		await ReconcileEnrolledSiblingsAsync(
-			entry.Student, StudentWriteSource.WaitingList, cancellationToken);
+			entry.Student, StudentPopulation.WaitingList, cancellationToken);
 
 		return enrollment.ToResult(teacher);
 	}
@@ -116,7 +116,7 @@ public sealed class EnrolWaitingListStudentHandler(
 	/// </summary>
 	private async Task ReconcileEnrolledSiblingsAsync(
 		Student student,
-		StudentWriteSource source,
+		StudentPopulation source,
 		CancellationToken cancellationToken)
 	{
 		var missingLinks = await studentGuardianRepository.GetMissingEnrolledSiblingLinksAsync(

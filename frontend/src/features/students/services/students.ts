@@ -20,6 +20,23 @@ export interface StudentResult {
   language: StudentLanguage;
 }
 
+/**
+ * Which of the two listings a student belongs to. The two are complementary:
+ * `WaitingList` is exactly the set the waiting list shows and `Enrolled` is
+ * exactly the set the Students screen shows, so a student is never both and
+ * never neither.
+ */
+export type StudentPopulation = 'Enrolled' | 'WaitingList';
+
+/**
+ * A student in the Siblings tab — a candidate on offer, or a sibling already
+ * linked — carrying the listing they belong to. A sibling group can span both,
+ * and the two differ in consequence, so each row states its own.
+ */
+export interface SiblingStudentResult extends StudentResult {
+  population: StudentPopulation;
+}
+
 export interface StudentInput {
   firstName: string;
   lastName: string;
@@ -130,9 +147,23 @@ export async function deleteStudent(studentId: string): Promise<void> {
  * this is a plain, uncached fetch — caching would just risk staleness for
  * little benefit here.
  */
-export async function getSiblings(studentId: string): Promise<StudentResult[]> {
+export async function getSiblings(studentId: string): Promise<SiblingStudentResult[]> {
   const response = await fetch(`${API_BASE}/${studentId}/siblings`, { headers: authHeaders() });
-  return handleResponse<StudentResult[]>(response);
+  return handleResponse<SiblingStudentResult[]>(response);
+}
+
+/**
+ * The students the Siblings tab may offer. Unlike `getStudents` this spans both
+ * listings — a sibling relationship is a family fact and does not depend on
+ * either child's enrolment — and it is uncached, because a student captured onto
+ * the waiting list in one wizard is a candidate in the next.
+ *
+ * Excluding the student in hand and the siblings they already hold is the
+ * caller's concern: no student is named here.
+ */
+export async function getSiblingCandidates(): Promise<SiblingStudentResult[]> {
+  const response = await fetch(`${API_BASE}/sibling-candidates`, { headers: authHeaders() });
+  return handleResponse<SiblingStudentResult[]>(response);
 }
 
 export async function addSibling(studentId: string, siblingId: string): Promise<StudentResult> {

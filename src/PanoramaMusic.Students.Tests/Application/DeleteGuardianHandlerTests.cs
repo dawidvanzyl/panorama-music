@@ -106,7 +106,7 @@ public class DeleteGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var deleted = await DeleteAGuardian(waitingListOnly: true);
 
-		deleted.Source.ShouldBe(StudentWriteSource.WaitingList);
+		deleted.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -115,7 +115,7 @@ public class DeleteGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var deleted = await DeleteAGuardian(waitingListOnly: false);
 
-		deleted.Source.ShouldBe(StudentWriteSource.Roster);
+		deleted.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	/// <summary>

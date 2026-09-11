@@ -108,9 +108,21 @@ export async function seedEnrollmentTarget(page: Page): Promise<SeededEnrollment
  * could enroll the student in a different course of the same shape — or in this
  * very one, making the enrollment below a duplicate.
  * </p>
+ * <p>
+ * `lastName` creates the student under a caller-supplied family surname, for a
+ * scenario that needs an enrolled student and a waiting-list student in one
+ * family so a listing can be read scoped to it. Omit it and the seeder mints
+ * its own unique surname as before. The first name stays `Amara`, which is
+ * what tells this student apart from a waiting-list sibling sharing the
+ * surname.
+ * </p>
  */
-export async function seedEnrolledStudent(page: Page, target: SeededEnrollmentTarget): Promise<string> {
-  const surname = `Enrolled-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+export async function seedEnrolledStudent(
+  page: Page,
+  target: SeededEnrollmentTarget,
+  lastName?: string,
+): Promise<string> {
+  const surname = lastName ?? `Enrolled-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
   const seeded = await page.evaluate(
     async ({ surname, courseId, teacherId }) => {

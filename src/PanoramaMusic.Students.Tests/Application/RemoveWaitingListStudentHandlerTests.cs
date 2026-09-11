@@ -82,6 +82,6 @@ public class RemoveWaitingListStudentHandlerTests : IClassFixture<StudentsTestFi
 		// This is the irreversible half, and the one whose audit record would
 		// otherwise be indistinguishable from a Teacher deleting from the roster.
 		var deleted = student.DrainEvents().OfType<StudentDeleted>().Single();
-		deleted.Source.ShouldBe(StudentWriteSource.WaitingList);
+		deleted.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 }

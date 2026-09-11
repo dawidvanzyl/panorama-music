@@ -23,7 +23,7 @@ public sealed class GuardianDeletedTranslator(IAuditContext auditContext, IUserC
 		{
 			["targetDisplay"] = $"{guardian.FirstName} {guardian.Surname}",
 		};
-		StudentWriteSourceDetail.Apply(detail, deleted.Source);
+		StudentPopulationDetail.Apply(detail, deleted.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),
