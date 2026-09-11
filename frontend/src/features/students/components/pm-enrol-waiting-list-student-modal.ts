@@ -38,6 +38,19 @@ export const NO_OFFERED_STRUCTURES_FOR_OCCURRENCE_NOTICE =
   'The school runs no instrument courses under this occurrence type, so there is nothing to enrol ' +
   'this student into.';
 
+/**
+ * Shown above a form that still has choices in it, when the combination the
+ * student was actually waiting for is not among them. The pre-fill silently
+ * finds no matching option and the picker is left on its placeholder, so
+ * without this the Coordinator meets the browser's own validation bubble with
+ * no idea why what they expected is missing. They are not stuck — any offered
+ * combination enrols the student — which is why this states the reason and
+ * blocks nothing.
+ */
+export const ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE =
+  'The lesson type and duration this student waited for are no longer offered, so they are not ' +
+  'pre-filled. Choose a combination the school offers to enrol this student.';
+
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__card {
@@ -112,6 +125,9 @@ styles.replaceSync(`
       font-size: 13px;
       margin: 0;
     }
+    .enrol__notice-empty--above-form {
+      margin-bottom: 20px;
+    }
     [hidden] {
       display: none !important;
     }
@@ -142,6 +158,7 @@ template.innerHTML = `
       <h2 class="enrol__title">Enrol Student</h2>
       <p class="enrol__notice" id="notice"></p>
       <p class="enrol__notice-empty" id="noOfferedStructures" hidden></p>
+      <p class="enrol__notice-empty enrol__notice-empty--above-form" id="entryStructureNotOffered" hidden></p>
       <form id="form">
         <div class="enrol__grid">
           <div class="enrol__field enrol__field--wide">
@@ -213,6 +230,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private enrolledDateInput: HTMLInputElement | null = null;
   private errorMessage: HTMLElement | null = null;
   private noOfferedStructuresNotice: HTMLElement | null = null;
+  private entryStructureNotOfferedNotice: HTMLElement | null = null;
   private confirmButton: HTMLButtonElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
@@ -220,6 +238,10 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private _studentId = '';
   private _studentName = '';
   private _occurrenceType: OccurrenceType = 'DuringSchool';
+  // What the entry itself waited for, kept so the notice can be re-decided
+  // whenever the offered set is rebuilt — not only on the way in.
+  private _entryLessonType: LessonType | '' = '';
+  private _entryDurationType: DurationType | '' = '';
 
   constructor() {
     super();
@@ -240,6 +262,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.enrolledDateInput = this.shadowRoot!.getElementById('enrolledDate') as HTMLInputElement;
     this.errorMessage = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.noOfferedStructuresNotice = this.shadowRoot!.getElementById('noOfferedStructures') as HTMLElement;
+    this.entryStructureNotOfferedNotice = this.shadowRoot!.getElementById('entryStructureNotOffered') as HTMLElement;
 
     populateSelectOptions<InstrumentType>(
       this.instrumentTypeSelect,
@@ -288,6 +311,8 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this._studentId = entry.studentId;
     this._studentName = `${entry.firstName} ${entry.lastName}`;
     this._occurrenceType = occurrenceType;
+    this._entryLessonType = entry.lessonType;
+    this._entryDurationType = entry.durationType;
 
     this.clearError();
     this.notice!.textContent = `${this._studentName} will be removed from the waiting list once enrolled.`;
@@ -353,6 +378,26 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
 
     fillOfferedOptions<LessonType>(this.lessonTypeSelect!, offered, LESSON_TYPE_LABELS, 'Select lesson type');
     this.renderDurationTypeOptions();
+    this.renderEntryStructureNotice(nothingOffered);
+  }
+
+  /**
+   * States that what the student waited for is gone, where the form still has
+   * something to offer in its place. Suppressed where nothing is offered under
+   * the occurrence type at all: the notice standing in for the form already
+   * says there is nothing to pick, and saying both would be two ways of
+   * reporting one dead end.
+   */
+  private renderEntryStructureNotice(nothingOffered: boolean): void {
+    const entryIsOffered = this._lessonStructures.some(
+      (structure) =>
+        structure.occurrenceType === this._occurrenceType &&
+        structure.lessonType === this._entryLessonType &&
+        structure.durationType === this._entryDurationType,
+    );
+
+    this.entryStructureNotOfferedNotice!.textContent = ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE;
+    this.entryStructureNotOfferedNotice!.hidden = this._entryLessonType === '' || nothingOffered || entryIsOffered;
   }
 
   private renderDurationTypeOptions(): void {

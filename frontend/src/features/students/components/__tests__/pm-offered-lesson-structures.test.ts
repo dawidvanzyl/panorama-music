@@ -29,6 +29,19 @@ const duringSchoolGroupHalfHour: LessonStructure = {
 /** After School · Group · Hour is deliberately absent from the offered set. */
 const offered: LessonStructure[] = [afterSchoolIndividualHour, duringSchoolGroupHalfHour];
 
+const entryOnAnUnofferedStructure: WaitingListEntryResult = {
+  waitingListEntryId: 'w2',
+  studentId: 's2',
+  firstName: 'Thandi',
+  lastName: 'Khumalo',
+  position: 2,
+  lessonType: 'Group',
+  durationType: 'Hour',
+  instrumentType: 'Piano',
+  notes: null,
+  addedAt: '2026-07-11T09:00:00Z',
+};
+
 const entryOnAnOfferedStructure: WaitingListEntryResult = {
   waitingListEntryId: 'w1',
   studentId: 's1',
@@ -202,5 +215,62 @@ describe('a school running no instrument course under the entry own occurrence t
     expect(notice.textContent).toContain('under this occurrence type');
     expect((root.getElementById('form') as HTMLElement).hidden).toBe(true);
     expect((root.getElementById('confirmBtn') as HTMLButtonElement).hidden).toBe(true);
+  });
+});
+
+/**
+ * Between the two dead ends and a clean pre-fill sits the case the Coordinator
+ * actually meets most: the school still offers something under this occurrence
+ * type, but not the combination this student was waiting for. The pre-fill has
+ * nothing to land on, so the picker keeps its placeholder — and without a word
+ * of explanation the only feedback is the browser's own validation bubble.
+ */
+describe('an entry waiting on a combination that is no longer offered', () => {
+  it('says so, and still lets the Coordinator enrol on an offered combination', () => {
+    const modal = mountEnrolModal(offered);
+    modal.show(entryOnAnUnofferedStructure, 'AfterSchool');
+
+    const root = modal.shadowRoot!;
+    const notice = root.getElementById('entryStructureNotOffered') as HTMLElement;
+    expect(notice.hidden).toBe(false);
+    expect(notice.textContent).toContain('no longer offered');
+
+    // Stated, not enforced: the form and Enrol stay exactly as they were, and
+    // the picker is on its placeholder because the entry's value is gone.
+    expect((root.getElementById('form') as HTMLElement).hidden).toBe(false);
+    expect((root.getElementById('confirmBtn') as HTMLButtonElement).hidden).toBe(false);
+    expect(selectIn(root, 'lessonType').value).toBe('');
+    expect(choices(selectIn(root, 'lessonType'))).toEqual(['Individual']);
+
+    const enrolments: unknown[] = [];
+    modal.addEventListener('waiting-list-enrol-confirmed', (event) => {
+      enrolments.push((event as CustomEvent).detail);
+    });
+
+    choose(selectIn(root, 'lessonType'), 'Individual');
+    choose(selectIn(root, 'durationType'), 'Hour');
+    selectIn(root, 'teacher').value = 't1';
+    selectIn(root, 'step').value = 'Step1A';
+    (root.getElementById('confirmBtn') as HTMLButtonElement).click();
+
+    expect(enrolments).toHaveLength(1);
+  });
+
+  it('says nothing when the entry own combination is still offered', () => {
+    const modal = mountEnrolModal(offered);
+    modal.show(entryOnAnOfferedStructure, 'AfterSchool');
+
+    const root = modal.shadowRoot!;
+    expect((root.getElementById('entryStructureNotOffered') as HTMLElement).hidden).toBe(true);
+    expect(selectIn(root, 'lessonType').value).toBe('Individual');
+  });
+
+  it('leaves the dead-end notice to speak for itself when nothing is offered at all', () => {
+    const modal = mountEnrolModal([duringSchoolGroupHalfHour]);
+    modal.show(entryOnAnUnofferedStructure, 'AfterSchool');
+
+    const root = modal.shadowRoot!;
+    expect((root.getElementById('noOfferedStructures') as HTMLElement).hidden).toBe(false);
+    expect((root.getElementById('entryStructureNotOffered') as HTMLElement).hidden).toBe(true);
   });
 });
