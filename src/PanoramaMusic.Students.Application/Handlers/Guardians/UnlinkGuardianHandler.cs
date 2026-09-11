@@ -21,7 +21,7 @@ public sealed class UnlinkGuardianHandler(
 	IGuardianRepository guardianRepository,
 	IStudentGuardianRepository studentGuardianRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentPopulationResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task HandleAsync(UnlinkGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -49,7 +49,7 @@ public sealed class UnlinkGuardianHandler(
 
 		// The unlink is made against this student, and so is the deletion that
 		// follows when it was the guardian's last link.
-		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+		var source = await studentPopulationResolver.ForStudentAsync(student.StudentId, cancellationToken);
 
 		var link = new StudentGuardian(student.StudentId, guardian.GuardianId);
 		link.MarkUnlinked(student, guardian, source);

@@ -11,7 +11,7 @@ public sealed class UpdateGuardianHandler(
 	IGuardianRepository guardianRepository,
 	IGuardianRelationshipRepository guardianRelationshipRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentPopulationResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task<GuardianResult> HandleAsync(UpdateGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -26,7 +26,7 @@ public sealed class UpdateGuardianHandler(
 
 		// The route names a guardian and no student, so the guardian's own links
 		// are what say which surface could have reached it.
-		var source = await studentWriteSourceResolver.ForGuardianAsync(guardian.GuardianId, cancellationToken);
+		var source = await studentPopulationResolver.ForGuardianAsync(guardian.GuardianId, cancellationToken);
 
 		guardian.Update(
 			request.GuardianRelationshipId,

@@ -25,7 +25,7 @@ public sealed class AddGuardianHandler(
 	IStudentGuardianRepository studentGuardianRepository,
 	IGuardianRelationshipRepository guardianRelationshipRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentPopulationResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task<GuardianResult> HandleAsync(AddGuardianCommand command, CancellationToken cancellationToken)
 	{
@@ -38,7 +38,7 @@ public sealed class AddGuardianHandler(
 
 		// The Guardians tab is the same screen in both modes, so the student the
 		// guardian is being added to is what says which one the request came from.
-		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+		var source = await studentPopulationResolver.ForStudentAsync(student.StudentId, cancellationToken);
 
 		var guardian = Guardian.Create(
 			Guid.NewGuid(),

@@ -265,10 +265,10 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 	[Fact]
 	[Trait("AC", "306UC6")]
-	public async Task HandleAsync_ALinkCreatedByTheReconciliation_CarriesTheWaitingListWriteSource()
+	public async Task HandleAsync_ALinkCreatedByTheReconciliation_CarriesTheWaitingListPopulation()
 	{
 		// What separates a reconciliation from a guardian someone linked by hand on
-		// an enrolled student's own record, which is a roster write.
+		// an enrolled student's own record, which is an enrolled write.
 		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
 		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
 		GivenInstrumentCourse(structure);
