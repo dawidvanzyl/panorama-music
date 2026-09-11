@@ -27,6 +27,9 @@ export function buildPopulationIcon(population: StudentPopulation): HTMLElement 
 
   const element = document.createElement('span');
   element.classList.add('pm-population-icon');
+  // The glyph name is the icon's own text and would otherwise be announced in
+  // place of its meaning, so the element names itself.
+  element.setAttribute('role', 'img');
   element.textContent = icon;
   element.title = description;
   element.setAttribute('aria-label', description);

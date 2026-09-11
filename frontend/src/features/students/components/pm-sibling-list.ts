@@ -132,7 +132,10 @@ export class PmSiblingList extends HTMLElement {
     // Each row's icon is that sibling's own state. A group can hold an enrolled
     // child and a waiting one at once, so the wizard's mode says nothing about
     // which this is.
-    name.append(buildPopulationIcon(sibling.population), document.createTextNode(`${sibling.firstName} ${sibling.lastName}`));
+    name.append(
+      buildPopulationIcon(sibling.population),
+      document.createTextNode(`${sibling.firstName} ${sibling.lastName}`),
+    );
     nameCell.appendChild(name);
 
     const gradeCell = document.createElement('td');

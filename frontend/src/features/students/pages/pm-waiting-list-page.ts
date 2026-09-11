@@ -473,9 +473,7 @@ export class PmWaitingListPage extends HTMLElement {
       this._siblingCandidates = candidates;
       this.wizardModal!.siblings = siblings;
       const linkedIds = new Set(siblings.map((s) => s.studentId));
-      this.wizardModal!.candidates = candidates.filter(
-        (s) => s.studentId !== studentId && !linkedIds.has(s.studentId),
-      );
+      this.wizardModal!.candidates = candidates.filter((s) => s.studentId !== studentId && !linkedIds.has(s.studentId));
     } catch (err) {
       this.wizardModal!.showSiblingsError(err instanceof StudentsError ? err.message : 'An unexpected error occurred');
     }

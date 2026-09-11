@@ -275,6 +275,12 @@ export default defineConfig({
       { name: '295UC18', description: 'A successful enrolment closes the modal, removes the row and shows a success message naming the student' },
       { name: '295UC19', description: 'An occurrence type whose last row was enrolled off it renders no list at all' },
       { name: '295UC21', description: 'A refused enrolment shows its reason in the modal and leaves the modal open so the Coordinator can change a choice and retry' },
+      { name: '304UC7', description: "The Siblings tab's candidate list in waiting-list mode contains both waiting-list and enrolled students" },
+      { name: '304UC8', description: "The Siblings tab's candidate list in enrolled mode contains both waiting-list and enrolled students" },
+      { name: '304UC9', description: 'The student being edited is not offered as their own sibling candidate' },
+      { name: '304UC10', description: 'A waiting-list candidate row carries the waiting-list icon and its tooltip says so' },
+      { name: '304UC11', description: 'An enrolled candidate row carries the enrolled icon and its tooltip says so' },
+      { name: '304UC12', description: "A linked sibling row carries the icon for that sibling's own state, in both wizard modes" },
     ],
   },
 })

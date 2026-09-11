@@ -5,8 +5,10 @@ import {
   deleteStudent,
   addSibling,
   getSiblings,
+  getSiblingCandidates,
   StudentsError,
   type StudentResult,
+  type SiblingStudentResult,
 } from '../../services/students';
 import {
   getGuardians,
@@ -32,6 +34,7 @@ vi.mock('../../services/students', async () => {
     deleteStudent: vi.fn(),
     addSibling: vi.fn(),
     getSiblings: vi.fn(),
+    getSiblingCandidates: vi.fn(),
   };
 });
 
@@ -103,6 +106,7 @@ import {
 } from '../../services/student-extra-curriculars';
 
 import '../pm-students-page';
+import { populationDescription } from '../../components/student-population';
 import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../../components/pm-delete-student-modal';
@@ -133,6 +137,21 @@ const julian: StudentResult = {
   class: 'E1',
   phase: 'Senior',
   language: 'Afrikaans',
+};
+
+/** The roster's two students as the Siblings tab sees them, and a third who is on neither roster. */
+const aliceCandidate: SiblingStudentResult = { ...alice, population: 'Enrolled' };
+const julianCandidate: SiblingStudentResult = { ...julian, population: 'Enrolled' };
+const thandiCandidate: SiblingStudentResult = {
+  studentId: 's-waiting',
+  firstName: 'Thandi',
+  lastName: 'Mokoena',
+  dateOfBirth: '2016-04-02',
+  grade: 'Grade3',
+  class: 'A1',
+  phase: 'Junior',
+  language: 'English',
+  population: 'WaitingList',
 };
 
 const motherRelationship = { guardianRelationshipId: 'gr1', name: 'Mother' };
@@ -291,6 +310,8 @@ beforeEach(() => {
   vi.mocked(addSibling).mockReset();
   vi.mocked(getSiblings).mockReset();
   vi.mocked(getSiblings).mockResolvedValue([]);
+  vi.mocked(getSiblingCandidates).mockReset();
+  vi.mocked(getSiblingCandidates).mockResolvedValue([aliceCandidate, julianCandidate, thandiCandidate]);
   mockGetGuardianRelationships.mockReset();
   mockGetGuardianRelationships.mockResolvedValue([motherRelationship, fatherRelationship]);
   vi.mocked(getGuardians).mockReset();
@@ -854,7 +875,7 @@ describe('pm-students-page — scoped guardian delete from the Guardians tab', {
     // Regression guard: the student having siblings at all used to be treated as
     // "maybe shared", showing the scoped choice regardless of whether this specific
     // guardian was actually linked to any of them. The check must now be definitive.
-    vi.mocked(getSiblings).mockResolvedValue([julian]);
+    vi.mocked(getSiblings).mockResolvedValue([julianCandidate]);
     vi.mocked(isGuardianShared).mockResolvedValue(false);
     vi.mocked(getGuardians).mockResolvedValue([nomvula]);
 
@@ -892,7 +913,7 @@ describe(
     });
 
     it('shows Sync Guardians when a sibling holds a missing guardian, and clicking it links the missing guardian', async () => {
-      vi.mocked(getSiblings).mockResolvedValue([julian]);
+      vi.mocked(getSiblings).mockResolvedValue([julianCandidate]);
       vi.mocked(getGuardians).mockReset();
       vi.mocked(getGuardians)
         .mockResolvedValueOnce([]) // own guardians, tab activation
@@ -1752,3 +1773,97 @@ describe('pm-students-page — create mode stages until the student is saved', {
     ]);
   });
 });
+
+describe(
+  'pm-students-page — the Siblings tab spans both populations',
+  { tags: ['304UC8', '304UC9', '304UC12'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    function searchSelectShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+      return wizard.shadowRoot!.getElementById('siblingsStep')!.shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+    }
+
+    function search(shadow: ShadowRoot, query: string): void {
+      const input = shadow.getElementById('query') as HTMLInputElement;
+      input.value = query;
+      input.dispatchEvent(new Event('input'));
+    }
+
+    function resultIds(shadow: ShadowRoot): string[] {
+      return [...shadow.querySelectorAll<HTMLElement>('.search-select__result')].map(
+        (result) => result.dataset.studentId!,
+      );
+    }
+
+    it(
+      'offers a waiting-list student alongside an enrolled one in the create wizard',
+      { tags: ['304UC8'] },
+      async () => {
+        const wizard = wizardModalOf(el);
+        wizard.openForCreate([aliceCandidate, thandiCandidate]);
+
+        const shadow = searchSelectShadowOf(wizard);
+        search(shadow, 'a');
+
+        // The roster read would have answered with Alice alone: a student whose only
+        // state is a waiting-list entry is not on it.
+        expect(resultIds(shadow)).toContain(thandiCandidate.studentId);
+        expect(resultIds(shadow)).toContain(aliceCandidate.studentId);
+      },
+    );
+
+    it('reads candidates from the candidate list, not the roster it renders', { tags: ['304UC8'] }, async () => {
+      (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+
+      const shadow = searchSelectShadowOf(wizardModalOf(el));
+      search(shadow, 'Thandi');
+
+      expect(vi.mocked(getSiblingCandidates)).toHaveBeenCalled();
+      expect(resultIds(shadow)).toEqual([thandiCandidate.studentId]);
+    });
+
+    it('does not offer the student being edited as their own sibling', { tags: ['304UC9'] }, async () => {
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      (wizard.shadowRoot!.getElementById('tabSiblings') as HTMLButtonElement).click();
+      await flush();
+
+      const shadow = searchSelectShadowOf(wizard);
+      search(shadow, alice.lastName);
+
+      expect(resultIds(shadow)).not.toContain(alice.studentId);
+    });
+
+    it(
+      'omits an already-linked sibling from the candidates while marking their row',
+      { tags: ['304UC9', '304UC12'] },
+      async () => {
+        vi.mocked(getSiblings).mockResolvedValue([thandiCandidate]);
+
+        const wizard = wizardModalOf(el);
+        wizard.openForEdit(alice);
+        (wizard.shadowRoot!.getElementById('tabSiblings') as HTMLButtonElement).click();
+        await flush();
+
+        const shadow = searchSelectShadowOf(wizard);
+        search(shadow, 'Thandi');
+        expect(resultIds(shadow)).toEqual([]);
+
+        const listShadow = wizard
+          .shadowRoot!.getElementById('siblingsStep')!
+          .shadowRoot!.getElementById('siblingList')!.shadowRoot!;
+        const icon = listShadow.querySelector<HTMLElement>('tbody .pm-population-icon')!;
+        expect(icon.title).toBe(populationDescription('WaitingList'));
+      },
+    );
+  },
+);
