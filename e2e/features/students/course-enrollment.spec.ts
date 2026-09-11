@@ -58,6 +58,13 @@ async function seedTheoryCourse(page: Page): Promise<string> {
  * bearer token. A course of the same type and structure may already exist from
  * an earlier run — that is fine, since the enroll form offers whichever one it
  * finds under that label.
+ *
+ * <p>
+ * One structure is off limits for `Instrument` courses: After School · Group ·
+ * Hour, kept course-free by convention so the waiting-list enrolment's
+ * no-instrument-course refusal stays provable. See
+ * `COURSE_FREE_LESSON_STRUCTURE` in `e2e/fixtures/waitingList.ts`.
+ * </p>
  */
 async function seedCourse(
   page: Page,

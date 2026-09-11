@@ -36,8 +36,16 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 	{
 		// Student payloads carry names, dates of birth and grade/class/phase.
 		["GetStudents"] = CacheExpectation.NoStore,
+
+		// Each waiting-list row names a student and may carry their notes.
+		["GetWaitingList"] = CacheExpectation.NoStore,
+		["CaptureWaitingListStudent"] = CacheExpectation.NoStore,
+		["UpdateWaitingListEntry"] = CacheExpectation.NoStore,
+		["UpdateWaitingListStudent"] = CacheExpectation.NoStore,
+		["EnrolWaitingListStudent"] = CacheExpectation.NoStore,
 		["GetStudentById"] = CacheExpectation.NoStore,
 		["GetSiblings"] = CacheExpectation.NoStore,
+		["GetSiblingCandidates"] = CacheExpectation.NoStore,
 		["CreateStudent"] = CacheExpectation.NoStore,
 		["UpdateStudent"] = CacheExpectation.NoStore,
 		["AddSibling"] = CacheExpectation.NoStore,
@@ -91,6 +99,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 
 		// Lesson structures are fixed seeded reference data; the payload names no person.
 		["GetLessonStructures"] = CacheExpectation.Cacheable,
+
+		// The offered subset is the seeded reference data narrowed by the school's
+		// own course catalogue; like the catalogue itself, it names no person.
+		["GetOfferedLessonStructures"] = CacheExpectation.Cacheable,
 
 		// Courses are the school's own catalogue — a course type, a price and a lesson
 		// structure. The payload names no person.

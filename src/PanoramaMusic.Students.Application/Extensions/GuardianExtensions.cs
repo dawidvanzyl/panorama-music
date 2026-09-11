@@ -5,7 +5,7 @@ namespace PanoramaMusic.Students.Application.Extensions;
 
 public static class GuardianExtensions
 {
-	public static GuardianResult ToResult(this Guardian guardian) =>
+	public static GuardianResult ToResult(this Guardian guardian, bool restricted = false) =>
 		new(
 			guardian.GuardianId,
 			guardian.GuardianRelationshipId,
@@ -15,7 +15,8 @@ public static class GuardianExtensions
 			guardian.Email,
 			guardian.ReceivesCorrespondence,
 			guardian.ResponsibleForPayment,
-			guardian.Married);
+			guardian.Married,
+			restricted);
 
 	public static GuardianRelationshipResult ToResult(this GuardianRelationship relationship) =>
 		new(relationship.GuardianRelationshipId, relationship.Name);

@@ -14,10 +14,22 @@ public static class StudentRoutes
 {
 	public static void MapStudentRoutes(this WebApplication app)
 	{
+		// Reads are open to Teacher and Coordinator — a Coordinator capturing a
+		// waiting-list student needs GetStudents for the wizard's Siblings-tab
+		// candidate list — a Coordinator who cannot read students cannot link
+		// siblings during the one flow they own. Most writes stay Teacher-gated
+		// below via an explicit override — minimal-API route authorization is
+		// additive, so re-declaring TeacherPolicy on each write is what actually
+		// narrows it back down.
+		// The sibling links are the exception: the shared student wizard's
+		// Siblings tab both links and unlinks them, and a Coordinator drives that
+		// wizard from the Waiting List screen — capturing a student onto the list
+		// and maintaining one already on it. A student's own record stays a
+		// Teacher's to create, rewrite or delete.
 		var group = app
 			.MapGroup("/api/students")
 			.WithTags("Students")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		group
 			.MapGet("/", async (GetStudentsHandler handler, CancellationToken ct) =>
@@ -28,6 +40,23 @@ public static class StudentRoutes
 			.MarkSensitiveResponse()
 			.WithName("GetStudents")
 			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		// The Siblings tab's own read. It spans the roster and the waiting list,
+		// which GetStudents above deliberately does not — a sibling relationship
+		// is a family fact and does not depend on either child's enrolment, while
+		// the roster listing's exclusion is what keeps the two screens mutually
+		// exclusive. Same permissions as the wizard that calls it.
+		group
+			.MapGet("/sibling-candidates", async (GetSiblingCandidatesHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("GetSiblingCandidates")
+			.Produces<IList<SiblingStudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
@@ -52,6 +81,7 @@ public static class StudentRoutes
 				return Results.Created($"/api/students/{result.StudentId}", result);
 			})
 			.AddEndpointFilter<ValidationFilter<CreateStudentRequest>>()
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("CreateStudent")
 			.Produces<StudentResult>(StatusCodes.Status201Created)
@@ -67,6 +97,7 @@ public static class StudentRoutes
 				return Results.Ok(result);
 			})
 			.AddEndpointFilter<ValidationFilter<UpdateStudentRequest>>()
+			.RequireAuthorization("TeacherPolicy")
 			.MarkSensitiveResponse()
 			.WithName("UpdateStudent")
 			.Produces<StudentResult>(StatusCodes.Status200OK)
@@ -82,6 +113,7 @@ public static class StudentRoutes
 				await handler.HandleAsync(command, ct);
 				return Results.Ok();
 			})
+			.RequireAuthorization("TeacherPolicy")
 			.WithName("DeleteStudent")
 			.Produces(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
@@ -112,7 +144,7 @@ public static class StudentRoutes
 			})
 			.MarkSensitiveResponse()
 			.WithName("GetSiblings")
-			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
+			.Produces<IList<SiblingStudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);

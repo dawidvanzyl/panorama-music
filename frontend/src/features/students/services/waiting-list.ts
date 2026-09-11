@@ -1,0 +1,251 @@
+import { getAccessToken } from '../../../services/token-storage';
+import { handleUnauthorized } from '../../../services/auth';
+import { registerSessionCache } from '../../../services/session-cache';
+import { registerCourseCatalogueCache } from '../../../services/course-catalogue-cache';
+import type {
+  OccurrenceType,
+  LessonType,
+  DurationType,
+  InstrumentType,
+  StepType,
+  EnrollmentResult,
+} from './enrollments';
+import type { StudentInput } from './students';
+
+const API_BASE = '/api/waiting-list';
+const LESSON_STRUCTURES_BASE = '/api/lesson-structures';
+
+// Milestone-wide vocabulary, not waiting-list vocabulary — owned by
+// enrollments.ts, which itself re-exports it from services/lesson-structure.ts
+// Re-exported so this module stays the one import site for a
+// waiting-list consumer, without minting a fourth declaration of the same
+// unions.
+export type { OccurrenceType, LessonType, DurationType, InstrumentType, StepType };
+
+export interface WaitingListEntryResult {
+  waitingListEntryId: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  /** One-based position within this entry's occurrence-type group, derived server-side. */
+  position: number;
+  lessonType: LessonType;
+  durationType: DurationType;
+  instrumentType: InstrumentType;
+  notes: string | null;
+  addedAt: string;
+}
+
+export interface WaitingListGroupResult {
+  occurrenceType: OccurrenceType;
+  count: number;
+  /** In queue order — position 1 first. An occurrence type with no entries is omitted entirely. */
+  entries: WaitingListEntryResult[];
+}
+
+/** The seeded occurrence/lesson/duration combination a waiting-list entry is captured against. */
+export interface LessonStructure {
+  lessonStructureId: string;
+  lessonType: LessonType;
+  durationType: DurationType;
+  occurrenceType: OccurrenceType;
+}
+
+/**
+ * The Waiting List tab's own fields — no course, since an entry names none,
+ * and no date added: the server assigns it at capture and nothing may change
+ * it afterwards, so there is no field here to send either way.
+ */
+export interface WaitingListEntryInput {
+  lessonStructureId: string;
+  instrumentType: InstrumentType;
+  notes: string | null;
+}
+
+/**
+ * What an enrolment off the waiting list sends. It names the lesson structure
+ * the Coordinator settled on rather than a course: an entry is a wait for an
+ * instrument course, and the server takes the one offered under that structure.
+ * The occurrence type is not sent — it is fixed at the entry, and the structure
+ * named here is checked against it.
+ */
+export interface WaitingListEnrolmentInput {
+  lessonStructureId: string;
+  teacherId: string;
+  instrumentType: InstrumentType;
+  stepType: StepType;
+  enrolledDate: string;
+}
+
+export class WaitingListError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = 'WaitingListError';
+  }
+}
+
+function authHeaders(): HeadersInit {
+  const token = getAccessToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function assertOk(response: Response): Promise<void> {
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new WaitingListError(body.error ?? `HTTP ${response.status}`, response.status);
+  }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  await assertOk(response);
+  return response.json() as Promise<T>;
+}
+
+let _waitingListCache: WaitingListGroupResult[] | null = null;
+
+export function clearWaitingListCache(): void {
+  _waitingListCache = null;
+}
+
+registerSessionCache(clearWaitingListCache);
+
+/**
+ * The waiting list grouped by occurrence type, During School before After
+ * School, each entry carrying its derived queue position. An occurrence type
+ * with nothing waiting under it is not returned at all.
+ */
+export async function getWaitingList(): Promise<WaitingListGroupResult[]> {
+  if (_waitingListCache) return _waitingListCache;
+
+  const response = await fetch(API_BASE, { headers: authHeaders() });
+  _waitingListCache = await handleResponse<WaitingListGroupResult[]>(response);
+  return _waitingListCache;
+}
+
+let _offeredLessonStructuresCache: LessonStructure[] | null = null;
+
+export function clearOfferedLessonStructuresCache(): void {
+  _offeredLessonStructuresCache = null;
+}
+
+registerSessionCache(clearOfferedLessonStructuresCache);
+// What is offered is decided by the course catalogue, so a course created or
+// removed anywhere in the app makes this copy wrong immediately — not at the
+// end of the session.
+registerCourseCatalogueCache(clearOfferedLessonStructuresCache);
+
+/**
+ * The combinations the school runs an instrument course under — the ones a
+ * student may actually be made to wait for. Deliberately narrower than the
+ * seeded grid the course catalogue reads (`features/courses/services/courses.ts`):
+ * creating a course is how a structure comes to be offered, so that screen
+ * needs the combinations no course exists for yet and this one must not have
+ * them. Cached the same way, and fetched here rather than imported across
+ * features for the same reason `getWaitingList` lives in this feature at all.
+ */
+export async function getOfferedLessonStructures(): Promise<LessonStructure[]> {
+  if (_offeredLessonStructuresCache) return _offeredLessonStructuresCache;
+
+  const response = await fetch(`${LESSON_STRUCTURES_BASE}/offered`, { headers: authHeaders() });
+  _offeredLessonStructuresCache = await handleResponse<LessonStructure[]>(response);
+  return _offeredLessonStructuresCache;
+}
+
+/**
+ * Captures a student and their single waiting-list entry together. The
+ * server assigns the added date-time — this input carries no such field, and
+ * none exists to omit.
+ */
+export async function captureWaitingListStudent(
+  student: StudentInput,
+  waitingList: WaitingListEntryInput,
+): Promise<WaitingListEntryResult> {
+  const response = await fetch(API_BASE, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ ...student, ...waitingList }),
+  });
+  const created = await handleResponse<WaitingListEntryResult>(response);
+  clearWaitingListCache();
+  return created;
+}
+
+/**
+ * Corrects an existing entry's own fields. The added date-time is not part of
+ * the payload — it is the queue's ordering key, and the endpoint has nowhere
+ * to put one — so an entry moved to the other occurrence type keeps its
+ * standing there rather than joining the back.
+ */
+export async function updateWaitingListEntry(
+  waitingListEntryId: string,
+  input: WaitingListEntryInput,
+): Promise<WaitingListEntryResult> {
+  const response = await fetch(`${API_BASE}/${waitingListEntryId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const updated = await handleResponse<WaitingListEntryResult>(response);
+  clearWaitingListCache();
+  return updated;
+}
+
+/**
+ * Corrects a waiting-list student's own details. Reached through the waiting
+ * list rather than through `updateStudent`, which is a Teacher's: this route
+ * is a Coordinator's, and only resolves a student who holds an entry.
+ */
+export async function updateWaitingListStudent(studentId: string, input: StudentInput): Promise<void> {
+  const response = await fetch(`${API_BASE}/students/${studentId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  await assertOk(response);
+  clearWaitingListCache();
+}
+
+/**
+ * Discards a waiting-list student: their entry and their student record go
+ * together. They were never enrolled, so nothing of theirs is kept — this is
+ * not a withdrawal.
+ */
+export async function removeWaitingListStudent(studentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/students/${studentId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  await assertOk(response);
+  clearWaitingListCache();
+}
+
+/**
+ * Enrols a waiting-list student, consuming their entry. Reached through the
+ * waiting list rather than through `enrollStudent`, which is a Teacher's: this
+ * route is a Coordinator's, resolves only a student who holds an entry, and
+ * refuses a lesson structure carrying a different occurrence type from the one
+ * the student waited under. The entry and the enrollment are settled together
+ * on the server, so a refusal leaves the student on the list.
+ */
+export async function enrolWaitingListStudent(
+  studentId: string,
+  input: WaitingListEnrolmentInput,
+): Promise<EnrollmentResult> {
+  const response = await fetch(`${API_BASE}/students/${studentId}/enrollment`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  const enrolled = await handleResponse<EnrollmentResult>(response);
+  clearWaitingListCache();
+  return enrolled;
+}

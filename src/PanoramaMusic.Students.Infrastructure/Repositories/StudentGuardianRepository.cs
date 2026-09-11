@@ -3,6 +3,7 @@ using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
@@ -35,6 +36,40 @@ public class StudentGuardianRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		return await Connection.QuerySingleAsync<int>(command);
 	}
 
+	public async Task<bool> HasEnrolledLinkAsync(Guid guardianId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.guardian_has_enrolled_link",
+			new { p_guardian_id = guardianId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.QuerySingleAsync<bool>(command);
+	}
+
+	public async Task<bool> BelongsToWaitingListOnlyAsync(Guid guardianId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.guardian_belongs_to_waiting_list_only",
+			new { p_guardian_id = guardianId },
+			Transaction,
+			cancellationToken);
+
+		return await Connection.QuerySingleAsync<bool>(command);
+	}
+
+	public async Task<IList<Guid>> GetEnrolledLinkedGuardianIdsAsync(Guid studentId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_enrolled_linked_guardian_ids",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var guardianIds = await Connection.QueryAsync<Guid>(command);
+
+		return [.. guardianIds];
+	}
+
 	public async Task<IList<Guardian>> GetMissingSiblingGuardiansAsync(Guid studentId, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
@@ -45,6 +80,22 @@ public class StudentGuardianRepository(IUnitOfWork unitOfWork, IDomainEventColle
 		var dtos = await Connection.QueryAsync<GuardianDto>(command);
 
 		return [.. dtos.Select(dto => dto.MapToGuardian())];
+	}
+
+	public async Task<IList<MissingGuardianLink>> GetMissingEnrolledSiblingLinksAsync(
+		Guid studentId,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_missing_enrolled_sibling_guardian_links",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<MissingGuardianLinkDto>(command);
+
+		// The sibling is the student the link belongs to — they are the one missing
+		// it.
+		return [.. dtos.Select(dto => new MissingGuardianLink(dto.Sibling_Id, dto.Guardian_Id))];
 	}
 
 	public async Task CreateAsync(StudentGuardian link, CancellationToken cancellationToken)

@@ -27,6 +27,21 @@ export default [
       ...playwright.configs['flat/recommended'].rules,
 
       '@typescript-eslint/no-explicit-any': 'error',
+
+      // Some assertions belong in a named helper rather than inline: where a
+      // negative must always be read alongside a positive on the same surface,
+      // keeping the pair in one function is what stops a scenario drifting
+      // into asserting only the absence. Name those helpers here so the rule
+      // still catches a test that genuinely asserts nothing.
+      'playwright/expect-expect': [
+        'warn',
+        {
+          assertFunctionNames: [
+            'expectWaitingListTabOffersOnlyTheAnchor',
+            'expectEnrolModalOffersOnlyTheAnchor',
+          ],
+        },
+      ],
     },
   },
 

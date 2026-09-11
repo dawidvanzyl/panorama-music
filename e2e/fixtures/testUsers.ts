@@ -9,6 +9,7 @@ import { GuardianRelationshipsPage } from '../pages/students/GuardianRelationshi
 import { TeachersPage } from '../pages/teachers/TeachersPage';
 import { CourseManagementPage } from '../pages/courses/CourseManagementPage';
 import { ExtraCurricularsPage } from '../pages/extra-curriculars/ExtraCurricularsPage';
+import { WaitingListPage } from '../pages/students/WaitingListPage';
 import { landingUrl } from './navigation';
 import { seedEnrollmentTarget } from './enrollment';
 
@@ -116,6 +117,15 @@ export async function goToExtraCurricularsPageAsCoordinator(page: Page): Promise
   const extraCurricularsPage = new ExtraCurricularsPage(page);
   await extraCurricularsPage.gotoExtraCurriculars();
   return extraCurricularsPage;
+}
+
+/** Signs in holding exactly these roles and opens Waiting List — Teacher and Coordinator both read it. */
+export async function goToWaitingListPage(page: Page, roles: UserRole[]): Promise<WaitingListPage> {
+  await loginAsRoles(page, roles);
+
+  const waitingListPage = new WaitingListPage(page);
+  await waitingListPage.gotoWaitingList();
+  return waitingListPage;
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {

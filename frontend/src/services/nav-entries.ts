@@ -63,6 +63,15 @@ export const NAV_ENTRIES: NavEntry[] = [
     startsGroup: true,
   },
   {
+    id: 'waitingListLink',
+    path: '/waiting-list',
+    icon: 'pending_actions',
+    label: 'Waiting List',
+    // Teacher and Coordinator read it; capture and maintenance, arriving in
+    // later M9 stories, stay Coordinator-only within the page itself.
+    roles: ['Teacher', 'Coordinator'],
+  },
+  {
     id: 'teachersLink',
     path: '/teachers',
     icon: 'school',

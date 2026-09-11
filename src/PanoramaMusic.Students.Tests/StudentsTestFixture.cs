@@ -7,6 +7,8 @@ using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
 using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
+using PanoramaMusic.Students.Application.Handlers.WaitingList;
+using PanoramaMusic.Students.Application.Services;
 
 namespace PanoramaMusic.Students.Tests;
 
@@ -37,7 +39,11 @@ public sealed class StudentsTestFixture
 		services.AddTransient(sp => context.Repositories.StudentCourseRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.ExtraCurricularRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.StudentExtraCurricularRepositoryMock.Object);
+		services.AddTransient(sp => context.Repositories.WaitingListRepositoryMock.Object);
 		services.AddTransient(sp => context.Repositories.TeacherDirectoryMock.Object);
+		services.AddTransient(sp => context.UserContextMock.Object);
+		services.AddTransient<GuardianMaintenanceScope>();
+		services.AddTransient<StudentPopulationResolver>();
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)
@@ -84,5 +90,11 @@ public sealed class StudentsTestFixture
 		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
+		services.AddTransient<GetWaitingListHandler>();
+		services.AddTransient<CaptureWaitingListStudentHandler>();
+		services.AddTransient<UpdateWaitingListEntryHandler>();
+		services.AddTransient<UpdateWaitingListStudentHandler>();
+		services.AddTransient<RemoveWaitingListStudentHandler>();
+		services.AddTransient<EnrolWaitingListStudentHandler>();
 	}
 }

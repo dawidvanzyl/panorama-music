@@ -48,6 +48,9 @@ template.innerHTML = `
       <p class="modal__body" id="plainBody">
         This action <strong>cannot be undone</strong>. The record for <span class="modal__name" id="modalNamePlain"></span> will be permanently removed.
       </p>
+      <p class="modal__body" id="restrictedBody" hidden>
+        <span class="modal__name" id="modalNameRestricted"></span> is shared with an enrolled student, so the record itself cannot be removed here. They will be unlinked from this student only.
+      </p>
       <div class="modal__scope-choice" id="scopeChoice" hidden>
         <p class="modal__body">
           <span class="modal__name" id="modalNameScoped"></span> is shared with siblings. Choose what to remove:
@@ -75,7 +78,9 @@ export class PmDeleteGuardianModal extends HTMLElement {
   private _studentId = '';
   private _guardianId = '';
   private _shared = false;
+  private _restricted = false;
   private plainBody: HTMLElement | null = null;
+  private restrictedBody: HTMLElement | null = null;
   private scopeChoice: HTMLElement | null = null;
   private scopeOneRadio: HTMLInputElement | null = null;
   private scopeAllRadio: HTMLInputElement | null = null;
@@ -89,6 +94,7 @@ export class PmDeleteGuardianModal extends HTMLElement {
 
   connectedCallback(): void {
     this.plainBody = this.shadowRoot!.getElementById('plainBody') as HTMLElement;
+    this.restrictedBody = this.shadowRoot!.getElementById('restrictedBody') as HTMLElement;
     this.scopeChoice = this.shadowRoot!.getElementById('scopeChoice') as HTMLElement;
     this.scopeOneRadio = this.shadowRoot!.getElementById('scopeOne') as HTMLInputElement;
     this.scopeAllRadio = this.shadowRoot!.getElementById('scopeAll') as HTMLInputElement;
@@ -101,17 +107,26 @@ export class PmDeleteGuardianModal extends HTMLElement {
    * `sharedWithSiblings` must be the definitive answer for this specific
    * guardian (linked to more than one student), not an approximation like
    * "the student has siblings" — the copy states it as fact, not a maybe.
+   * <p>
+   * `restricted` says the signed-in user may not remove the record itself,
+   * which the API refuses. There is then no choice of scope left to offer, so
+   * the modal states what will happen instead of presenting an option that
+   * would come back rejected.
+   * </p>
    */
-  show(studentId: string, guardianId: string, name: string, sharedWithSiblings: boolean): void {
+  show(studentId: string, guardianId: string, name: string, sharedWithSiblings: boolean, restricted = false): void {
     this._studentId = studentId;
     this._guardianId = guardianId;
     this._shared = sharedWithSiblings;
+    this._restricted = restricted;
     this.scopeOneRadio!.checked = true;
 
-    this.plainBody!.hidden = sharedWithSiblings;
-    this.scopeChoice!.hidden = !sharedWithSiblings;
+    this.plainBody!.hidden = sharedWithSiblings || restricted;
+    this.restrictedBody!.hidden = !restricted;
+    this.scopeChoice!.hidden = !sharedWithSiblings || restricted;
     this.shadowRoot!.getElementById('modalNamePlain')!.textContent = name;
     this.shadowRoot!.getElementById('modalNameScoped')!.textContent = name;
+    this.shadowRoot!.getElementById('modalNameRestricted')!.textContent = name;
 
     this.setAttribute('open', '');
   }
@@ -121,7 +136,7 @@ export class PmDeleteGuardianModal extends HTMLElement {
   }
 
   private handleDelete(): void {
-    const scope: GuardianDeleteScope = this._shared && this.scopeAllRadio!.checked ? 'all' : 'one';
+    const scope: GuardianDeleteScope = !this._restricted && this._shared && this.scopeAllRadio!.checked ? 'all' : 'one';
 
     this.dispatchEvent(
       new CustomEvent('guardian-delete-confirmed', {

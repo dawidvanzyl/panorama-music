@@ -3,7 +3,7 @@
 -- the phase it is offered to (#10).
 -- phase mirrors the PhaseType enum in PanoramaMusic.Students.Domain.Enums
 -- — keep in sync.
--- A description is unique within its phase (#278, ruling R14). A Junior "Choir"
+-- A description is unique within its phase (#278). A Junior "Choir"
 -- and a Senior "Choir" are legitimately different activities and both stay
 -- allowed; a second Junior "Choir" is a typo far more often than a real pair,
 -- and is refused. The constraint rather than the application read is the

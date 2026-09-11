@@ -11,10 +11,16 @@ public static class GuardianRoutes
 {
 	public static void MapGuardianRoutes(this WebApplication app)
 	{
+		// Teacher or Coordinator throughout. The shared student wizard reaches
+		// every guardian endpoint below, and a Coordinator drives that wizard in
+		// both its modes from the Waiting List screen — capturing a student onto
+		// the list, and maintaining one already on it. A Coordinator who cannot
+		// link, correct, unlink or sync a guardian cannot finish either flow, and
+		// a capture that fails part-way leaves a student half-recorded.
 		var studentGroup = app
 			.MapGroup("/api/students")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		studentGroup
 			.MapPost("/{studentId:guid}/guardians", async (Guid studentId, AddGuardianRequest request, AddGuardianHandler handler, CancellationToken ct) =>
@@ -84,10 +90,14 @@ public static class GuardianRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
+		// A guardian addressed by their own id rather than through a student.
+		// The wizard's Guardians step reaches all three while editing: the
+		// delete affordance asks whether the guardian is shared before it
+		// offers a choice, then either unlinks or deletes outright.
 		var guardianGroup = app
 			.MapGroup("/api/guardians")
 			.WithTags("Guardians")
-			.RequireAuthorization("TeacherPolicy");
+			.RequireAuthorization("TeacherOrCoordinatorPolicy");
 
 		guardianGroup
 			.MapPut("/{guardianId:guid}", async (Guid guardianId, UpdateGuardianRequest request, UpdateGuardianHandler handler, CancellationToken ct) =>

@@ -1,0 +1,64 @@
+using PanoramaMusic.Students.Application.Commands.WaitingList;
+using PanoramaMusic.Students.Application.Extensions;
+using PanoramaMusic.Students.Application.Models;
+using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Interfaces;
+
+namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
+
+/// <summary>
+/// The only way a student gets onto the waiting list. Creates the student and
+/// their single waiting-list entry as one unit of work — both share the ambient
+/// per-request transaction <see cref="Middleware.UnitOfWorkMiddleware"/> owns,
+/// so a failure on either side leaves neither persisted. A student who already
+/// holds an entry is refused by the table's own unique constraint, the same
+/// reasoning <c>EnrollStudentHandler</c> leaves a duplicate enrollment to.
+/// <para>
+/// The lesson structure must be one the school offers, not merely one that is
+/// seeded: a wait for a combination no instrument course runs under could never
+/// be enrolled off the list.
+/// </para>
+/// </summary>
+public sealed class CaptureWaitingListStudentHandler(
+	IStudentRepository studentRepository,
+	ILessonStructureRepository lessonStructureRepository,
+	IWaitingListRepository waitingListRepository)
+{
+	public async Task<WaitingListEntryResult> HandleAsync(CaptureWaitingListStudentCommand command, CancellationToken cancellationToken)
+	{
+		// The validator has already rejected an absent value, so the request's
+		// nullable members are populated by the time the use case runs.
+		var request = command.Request;
+		var lessonStructureId = request.LessonStructureId!.Value;
+
+		var lessonStructure = await lessonStructureRepository.GetOfferedByIdAsync(lessonStructureId, cancellationToken);
+
+		var student = Student.Create(
+			Guid.NewGuid(),
+			request.FirstName,
+			request.LastName,
+			request.DateOfBirth,
+			request.Grade,
+			request.Class,
+			request.Phase,
+			request.Language,
+			StudentPopulation.WaitingList);
+
+		await studentRepository.CreateAsync(student, cancellationToken);
+
+		// Assigned here, from the server clock — never taken from the request.
+		var entry = WaitingListEntry.Create(
+			Guid.NewGuid(),
+			student,
+			lessonStructure,
+			request.InstrumentType!.Value,
+			request.Notes,
+			DateTime.UtcNow);
+
+		await waitingListRepository.CreateAsync(entry, cancellationToken);
+
+		var entries = await waitingListRepository.GetAllAsync(cancellationToken);
+		return entry.ToResult(entry.DerivePosition(entries));
+	}
+}

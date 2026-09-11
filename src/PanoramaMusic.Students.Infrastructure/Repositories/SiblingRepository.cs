@@ -3,6 +3,7 @@ using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
@@ -22,16 +23,22 @@ namespace PanoramaMusic.Students.Infrastructure.Repositories;
 public class SiblingRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
 	: RepositoryBase(unitOfWork), ISiblingRepository
 {
-	public async Task<IList<Student>> GetSiblingsAsync(Guid studentId, CancellationToken cancellationToken)
+	public async Task<IList<Student>> GetSiblingsAsync(Guid studentId, CancellationToken cancellationToken) =>
+		[.. (await QuerySiblingsAsync(studentId, cancellationToken)).Select(sibling => sibling.Student)];
+
+	public async Task<IList<SiblingStudent>> GetSiblingStudentsAsync(Guid studentId, CancellationToken cancellationToken) =>
+		await QuerySiblingsAsync(studentId, cancellationToken);
+
+	public async Task<IList<Guid>> GetEnrolledSiblingIdsAsync(Guid studentId, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
-			"students.get_siblings",
+			"students.get_enrolled_sibling_ids",
 			new { p_student_id = studentId },
 			Transaction,
 			cancellationToken);
-		var dtos = await Connection.QueryAsync<StudentDto>(command);
+		var siblingIds = await Connection.QueryAsync<Guid>(command);
 
-		return [.. dtos.Select(dto => dto.MapToStudent())];
+		return [.. siblingIds];
 	}
 
 	public async Task AddAsync(Sibling sibling, CancellationToken cancellationToken)
@@ -48,6 +55,23 @@ public class SiblingRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		await DeleteDirectionAsync(sibling.SiblingId, sibling.StudentId, cancellationToken);
 
 		domainEventCollector.Collect(sibling);
+	}
+
+	/// <summary>
+	/// One query behind both reads: the sibling group and each member's listing
+	/// arrive together, and a caller with no use for the listing simply drops it
+	/// rather than asking a second, near-identical question of the database.
+	/// </summary>
+	private async Task<IList<SiblingStudent>> QuerySiblingsAsync(Guid studentId, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_siblings",
+			new { p_student_id = studentId },
+			Transaction,
+			cancellationToken);
+		var dtos = await Connection.QueryAsync<SiblingStudentDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToSiblingStudent())];
 	}
 
 	private async Task CreateDirectionAsync(Guid studentId, Guid siblingId, CancellationToken cancellationToken)

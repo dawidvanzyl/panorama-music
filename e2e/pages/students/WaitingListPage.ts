@@ -1,0 +1,708 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+import { BasePage } from '../BasePage';
+import type { StudentInput } from './StudentsPage';
+
+export type OccurrenceLabel = 'During School' | 'After School';
+export type LessonLabel = 'Individual' | 'Group';
+export type DurationLabel = 'Hour' | 'Half Hour';
+export type InstrumentLabel = 'Piano' | 'Guitar' | 'Recorder' | 'Keyboard' | 'Voice' | 'Other';
+
+/** The Waiting List tab's own fields, addressed by their picker option labels. */
+export interface WaitingListStepInput {
+  occurrenceLabel: OccurrenceLabel;
+  lessonLabel: LessonLabel;
+  durationLabel: DurationLabel;
+  instrumentLabel: InstrumentLabel;
+  notes?: string;
+}
+
+/** The wizard's tabs, named as a caller reads them off the tab strip. */
+export type WizardTabName = 'Student' | 'Siblings' | 'Guardians' | 'Waiting List';
+
+/** One occurrence/lesson/duration combination, named by the labels a user reads. */
+export interface StructureCombination {
+  occurrenceLabel: OccurrenceLabel;
+  lessonLabel: LessonLabel;
+  durationLabel: DurationLabel;
+}
+
+/** The same, minus the occurrence type, for a surface that fixes it. */
+export type StructureCombinationUnderOccurrence = Omit<StructureCombination, 'occurrenceLabel'>;
+
+export class WaitingListPage extends BasePage {
+  readonly captureButton: Locator;
+  readonly errorBanner: Locator;
+  readonly successBanner: Locator;
+  readonly emptyState: Locator;
+  readonly wizardModal: Locator;
+  readonly deleteModal: Locator;
+  readonly enrolModal: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.captureButton = page.locator('pm-waiting-list-page #captureBtn');
+    this.errorBanner = page.locator('pm-waiting-list-page #error');
+    this.successBanner = page.locator('pm-waiting-list-page #success');
+    this.emptyState = page.locator('pm-waiting-list-table #empty');
+    this.wizardModal = page.locator('pm-waiting-list-page #wizardModal');
+    // Scoped to this page's own host: the Students screen's delete modal
+    // carries the same id, and both shadow roots are pierced by a bare
+    // `#deleteModal`.
+    this.deleteModal = page.locator('pm-waiting-list-page #deleteModal');
+    this.enrolModal = page.locator('pm-waiting-list-page #enrolModal');
+  }
+
+  async gotoWaitingList(): Promise<void> {
+    await this.goto('/#/waiting-list');
+  }
+
+  // --- Capture wizard (shared pm-student-wizard-modal, waiting-list mode) ---
+
+  async openCaptureWizard(): Promise<void> {
+    await this.captureButton.click();
+  }
+
+  /** The wizard's own tab strip, restricted to the tabs currently offered (not `hidden`). */
+  visibleTabs(): Locator {
+    return this.wizardModal.locator('.wizard__tab:not([hidden])');
+  }
+
+  studentTab(): Locator {
+    return this.wizardModal.locator('#tabStudent');
+  }
+
+  siblingsTab(): Locator {
+    return this.wizardModal.locator('#tabSiblings');
+  }
+
+  guardiansTab(): Locator {
+    return this.wizardModal.locator('#tabGuardians');
+  }
+
+  waitingListTab(): Locator {
+    return this.wizardModal.locator('#tabWaitingList');
+  }
+
+  coursesTab(): Locator {
+    return this.wizardModal.locator('#tabCourses');
+  }
+
+  extraCurricularsTab(): Locator {
+    return this.wizardModal.locator('#tabExtraCurriculars');
+  }
+
+  nextButton(): Locator {
+    return this.wizardModal.locator('#nextBtn');
+  }
+
+  saveButton(): Locator {
+    return this.wizardModal.locator('#saveBtn');
+  }
+
+  async goToNextStep(): Promise<void> {
+    await this.nextButton().click();
+  }
+
+  async fillStudentFields(input: Partial<StudentInput>): Promise<void> {
+    const step = this.wizardModal.locator('#studentStep');
+    if (input.firstName) await step.locator('#firstName').fill(input.firstName);
+    if (input.lastName) await step.locator('#lastName').fill(input.lastName);
+    if (input.dateOfBirth) await step.locator('#dateOfBirth').fill(input.dateOfBirth);
+    if (input.grade) await step.locator('#grade').selectOption(input.grade);
+    if (input.class) await step.locator('#class').selectOption(input.class);
+    if (input.phase) await step.locator('#phase').selectOption(input.phase);
+    if (input.language) await step.locator('#language').selectOption(input.language);
+  }
+
+  waitingListStepMessage(): Locator {
+    return this.wizardModal.locator('#waitingListStep').locator('#message');
+  }
+
+  async fillWaitingListFields(choice: WaitingListStepInput): Promise<void> {
+    const step = this.wizardModal.locator('#waitingListStep');
+    await step.locator('#occurrenceType').selectOption({ label: choice.occurrenceLabel });
+    await step.locator('#lessonType').selectOption({ label: choice.lessonLabel });
+    await step.locator('#durationType').selectOption({ label: choice.durationLabel });
+    await step.locator('#instrumentType').selectOption({ label: choice.instrumentLabel });
+    if (choice.notes !== undefined) await step.locator('#notes').fill(choice.notes);
+  }
+
+  async saveCapture(): Promise<void> {
+    await this.saveButton().click();
+  }
+
+  /**
+   * Drives the capture wizard end to end: Student tab, three Next clicks
+   * (Siblings, Guardians, Waiting List — the wizard's waiting-list mode has no
+   * Courses/Extra-Curriculars step to pass through), the Waiting List tab's
+   * own fields, then Save. Leaves Siblings and Guardians untouched, matching
+   * the design's own capture paths (S1, S4, S6), which stage neither.
+   */
+  async captureStudent(student: StudentInput, waitingList: WaitingListStepInput): Promise<void> {
+    await this.openCaptureWizard();
+    await this.fillStudentFields(student);
+    await this.goToNextStep(); // Student -> Siblings
+    await this.goToNextStep(); // Siblings -> Guardians
+    await this.goToNextStep(); // Guardians -> Waiting List
+    await this.fillWaitingListFields(waitingList);
+    await this.saveCapture();
+  }
+
+  /**
+   * Opens the capture wizard and steps to the Waiting List tab, which is the
+   * only way to reach it in create mode — the later tabs are disabled until
+   * the Student tab is complete, so a scenario that only wants to read what
+   * the tab offers still has to give the student a name.
+   */
+  async openCaptureWizardAtWaitingListTab(student: StudentInput): Promise<void> {
+    await this.openCaptureWizard();
+    await this.fillStudentFields(student);
+    await this.goToNextStep(); // Student -> Siblings
+    await this.goToNextStep(); // Siblings -> Guardians
+    await this.goToNextStep(); // Guardians -> Waiting List
+    await expect(this.waitingListTab()).toHaveClass(/wizard__tab--active/);
+  }
+
+  // --- What a surface offers ---
+
+  private waitingListStep(): Locator {
+    return this.wizardModal.locator('#waitingListStep');
+  }
+
+  /** The notice shown in place of the whole form when nothing is offered at all. */
+  waitingListNoOfferedStructures(): Locator {
+    return this.waitingListStep().locator('#noOfferedStructures');
+  }
+
+  private async offersOption(select: Locator, label: string): Promise<boolean> {
+    const labels = await select.locator('option').allTextContents();
+    return labels.some((text) => text.trim() === label);
+  }
+
+  /**
+   * Whether any sequence of choices through the Waiting List tab's own
+   * controls arrives at this combination.
+   *
+   * <p>
+   * The three choices narrow one another, so this walks them the way a
+   * Coordinator does — pick the occurrence type, then read what lesson types
+   * are left, pick one, then read what durations are left. Asking a single
+   * control what options it holds would answer a different question entirely:
+   * a lesson type can be offered under one duration and not another, so an
+   * option's presence says nothing about whether the combination is reachable.
+   * </p>
+   */
+  async waitingListTabOffers(combination: StructureCombination): Promise<boolean> {
+    const step = this.waitingListStep();
+    // Nothing offered at all: the form gives way to the notice, and there is
+    // no control to make a choice through.
+    if (await step.locator('#form').isHidden()) return false;
+
+    const occurrence = step.locator('#occurrenceType');
+    if (!(await this.offersOption(occurrence, combination.occurrenceLabel))) return false;
+    await occurrence.selectOption({ label: combination.occurrenceLabel });
+
+    const lesson = step.locator('#lessonType');
+    if (!(await this.offersOption(lesson, combination.lessonLabel))) return false;
+    await lesson.selectOption({ label: combination.lessonLabel });
+
+    return this.offersOption(step.locator('#durationType'), combination.durationLabel);
+  }
+
+  /** The enrol modal's stand-in for the form when nothing is offered under its occurrence type. */
+  enrolNoOfferedStructures(): Locator {
+    return this.enrolModal.locator('#noOfferedStructures');
+  }
+
+  /**
+   * Whether any sequence of choices through the enrol modal's own controls
+   * arrives at this lesson type and duration. The occurrence type is a fixed
+   * value here rather than a choice, so the combination is read under whatever
+   * the entry settled on — read `enrolOccurrenceType()` alongside this to say
+   * which one that was.
+   */
+  async enrolModalOffers(combination: StructureCombinationUnderOccurrence): Promise<boolean> {
+    if (await this.enrolModal.locator('#form').isHidden()) return false;
+
+    const lesson = this.enrolLessonType();
+    if (!(await this.offersOption(lesson, combination.lessonLabel))) return false;
+    await lesson.selectOption({ label: combination.lessonLabel });
+
+    return this.offersOption(this.enrolDurationType(), combination.durationLabel);
+  }
+
+  /** The occurrence-type group card, matched on its heading text. */
+  group(occurrenceLabel: OccurrenceLabel): Locator {
+    return this.page
+      .locator('pm-waiting-list-table .wl-table__group')
+      .filter({ has: this.page.getByRole('heading', { name: occurrenceLabel, exact: true }) });
+  }
+
+  groupHeader(occurrenceLabel: OccurrenceLabel): Locator {
+    return this.group(occurrenceLabel).locator('.wl-table__group-header');
+  }
+
+  groupCount(occurrenceLabel: OccurrenceLabel): Locator {
+    return this.group(occurrenceLabel).locator('.wl-table__group-count');
+  }
+
+  async toggleGroup(occurrenceLabel: OccurrenceLabel): Promise<void> {
+    await this.groupHeader(occurrenceLabel).click();
+  }
+
+  rows(occurrenceLabel: OccurrenceLabel): Locator {
+    return this.group(occurrenceLabel).locator('tbody tr');
+  }
+
+  /**
+   * Every row the page lists, across all occurrence-type groups — for a check
+   * that a student is listed nowhere at all, which a single group's rows could
+   * not settle.
+   */
+  allRows(): Locator {
+    return this.page.locator('pm-waiting-list-table tbody tr');
+  }
+
+  /** The seeded student's own row, matched on their surname. */
+  rowFor(occurrenceLabel: OccurrenceLabel, lastName: string): Locator {
+    return this.rows(occurrenceLabel).filter({ hasText: lastName });
+  }
+
+  position(row: Locator): Locator {
+    return row.locator('.wl-table__position');
+  }
+
+  studentName(row: Locator): Locator {
+    return row.locator('.wl-table__student-name');
+  }
+
+  /** The secondary line: lesson type, duration type, instrument type, then date added. */
+  meta(row: Locator): Locator {
+    return row.locator('.wl-table__student-meta');
+  }
+
+  notesCell(row: Locator): Locator {
+    return row.locator('.wl-table__notes');
+  }
+
+  actionsCell(row: Locator): Locator {
+    return row.locator('.wl-table__actions');
+  }
+
+  readOnlyMarker(row: Locator): Locator {
+    return row.locator('.wl-table__read-only');
+  }
+
+  enrolButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Enrol' });
+  }
+
+  editButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Edit' });
+  }
+
+  deleteButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Delete' });
+  }
+
+  // --- Edit wizard (the same shared modal, opened on an existing entry) ---
+
+  /**
+   * Opens the wizard on a row's student. Unlike `openCaptureWizard` this waits
+   * for the modal to be populated — the student's own details are read back
+   * over the network before it opens, so the click alone does not mean it is
+   * there yet.
+   */
+  async openEditWizard(row: Locator): Promise<void> {
+    await this.editButton(row).click();
+    await this.wizardModal.locator('.modal__card').waitFor({ state: 'visible' });
+  }
+
+  wizardTitle(): Locator {
+    return this.wizardModal.locator('#title');
+  }
+
+  tab(name: WizardTabName): Locator {
+    const ids: Record<WizardTabName, string> = {
+      Student: '#tabStudent',
+      Siblings: '#tabSiblings',
+      Guardians: '#tabGuardians',
+      'Waiting List': '#tabWaitingList',
+    };
+    return this.wizardModal.locator(ids[name]);
+  }
+
+  /** Selects a tab by clicking it, with no stepping through the ones before it. */
+  async selectTab(name: WizardTabName): Promise<void> {
+    await this.tab(name).click();
+  }
+
+  activeTab(): Locator {
+    return this.wizardModal.locator('.wizard__tab--active');
+  }
+
+  previousButton(): Locator {
+    return this.wizardModal.locator('#previousBtn');
+  }
+
+  /** The Student tab's own inline save, scoped to the student's details. */
+  studentSaveButton(): Locator {
+    return this.wizardModal.locator('#studentSaveBtn');
+  }
+
+  async saveStudentDetails(): Promise<void> {
+    await this.studentSaveButton().click();
+  }
+
+  /** The Waiting List tab's own inline save, scoped to the entry's fields. */
+  waitingListSaveButton(): Locator {
+    return this.wizardModal.locator('#waitingListSaveBtn');
+  }
+
+  async saveWaitingListEntry(): Promise<void> {
+    await this.waitingListSaveButton().click();
+  }
+
+  /** The Date Added field's wrapper — present only when an existing entry is open. */
+  dateAddedField(): Locator {
+    return this.wizardModal.locator('#waitingListStep').locator('#addedAtField');
+  }
+
+  /** The rendered Date Added value. */
+  dateAdded(): Locator {
+    return this.wizardModal.locator('#waitingListStep').locator('#addedAt');
+  }
+
+  /** Anything within the Date Added field a user could type in, pick from or press. */
+  dateAddedControls(): Locator {
+    return this.dateAddedField().locator('input, select, textarea, button, [contenteditable]');
+  }
+
+  // --- Siblings tab (shared pm-siblings-step, inside this page's wizard) ---
+  //
+  // Mirrors StudentsPage's own Siblings helpers rather than inventing a second
+  // shape. Every locator here hangs off `this.wizardModal`, which is scoped to
+  // `pm-waiting-list-page`: the Students screen's wizard carries the same
+  // element ids, and a bare `#siblingsStep` pierces both shadow roots.
+
+  private siblingsStep(): Locator {
+    return this.wizardModal.locator('#siblingsStep');
+  }
+
+  /** Opens a row's student in the wizard and selects the Siblings tab. */
+  async openSiblingsTab(row: Locator): Promise<void> {
+    await this.openEditWizard(row);
+    await this.selectTab('Siblings');
+  }
+
+  siblingsSearchSelect(): Locator {
+    return this.siblingsStep().locator('#searchSelect');
+  }
+
+  /**
+   * Types into the Siblings tab's candidate search. The search lists results
+   * for the typed query and nothing before it, so a candidate is only ever
+   * reached by searching for them.
+   */
+  async searchSiblingCandidates(query: string): Promise<void> {
+    await this.siblingsSearchSelect().locator('#query').fill(query);
+  }
+
+  /** One candidate the search currently offers, matched on the student's name. */
+  siblingCandidateResult(name: string): Locator {
+    return this.siblingsSearchSelect().locator('#results').getByRole('button', { name });
+  }
+
+  /**
+   * The affordance stating which of the two listings a candidate belongs to.
+   * Its meaning travels on the affordance itself — its accessible name and its
+   * hover title — following `guardianRestrictionIcon`, so it is read there
+   * rather than off neighbouring text.
+   */
+  siblingCandidatePopulationIcon(name: string): Locator {
+    return this.siblingCandidateResult(name).locator('.pm-population-icon');
+  }
+
+  siblingListRow(siblingName: string): Locator {
+    return this.siblingsStep().locator('#siblingList').locator('tr').filter({ hasText: siblingName });
+  }
+
+  /** The same affordance on a sibling already in the linked-siblings table. */
+  siblingPopulationIcon(siblingName: string): Locator {
+    return this.siblingListRow(siblingName).locator('.pm-population-icon');
+  }
+
+  /** Every sibling row currently in the linked-siblings table. */
+  siblingListRows(): Locator {
+    return this.siblingsStep().locator('#siblingList').locator('tbody tr');
+  }
+
+  /**
+   * Picks the named candidate and presses Add. In the capture wizard this
+   * stages the link, which is written on Save; on an existing entry it is
+   * written immediately. Either way the sibling lands in the linked-siblings
+   * table, which is what this waits for — the same reason StudentsPage's own
+   * `addSibling` does.
+   */
+  async addSibling(siblingName: string): Promise<void> {
+    await this.searchSiblingCandidates(siblingName);
+    await this.siblingCandidateResult(siblingName).click();
+    await this.siblingsSearchSelect().locator('#addBtn').click();
+    await expect(this.siblingListRow(siblingName)).toBeVisible();
+  }
+
+  /** The step's stand-in, shown in place of the search when no candidate exists at all. */
+  siblingsPlaceholder(): Locator {
+    return this.siblingsStep().locator('#placeholder');
+  }
+
+  /**
+   * Dismisses the wizard however the current mode offers it: capture mode and
+   * the tabs that write their own changes (Siblings, Guardians) carry a Cancel
+   * or Close in the shared footer, while the Waiting List tab in edit mode
+   * replaces the footer with its own Close. Same shape as
+   * StudentsPage.closeWizard.
+   */
+  async closeWizard(): Promise<void> {
+    const footerCancel = this.wizardModal.locator('.wizard__actions #cancelBtn');
+    if (await footerCancel.isVisible()) {
+      await footerCancel.click();
+      return;
+    }
+    await this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn').click();
+  }
+
+  // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---
+
+  /** Opens a row's student in the wizard and selects the Guardians tab. */
+  async openGuardiansTab(row: Locator): Promise<void> {
+    await this.openEditWizard(row);
+    await this.selectTab('Guardians');
+  }
+
+  private guardiansStep(): Locator {
+    return this.wizardModal.locator('#guardiansStep');
+  }
+
+  /** One guardian's row in the list, matched on their name. */
+  guardianRow(name: string): Locator {
+    return this.guardiansStep().locator('#guardianList').locator('tr').filter({ hasText: name });
+  }
+
+  guardianEditButton(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__btn--edit');
+  }
+
+  guardianDeleteButton(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__btn--delete');
+  }
+
+  /**
+   * The affordance shown in place of the edit action on a guardian this caller
+   * may not change. The reason travels on the affordance itself, as its
+   * accessible name and its hover title.
+   */
+  guardianRestrictionIcon(name: string): Locator {
+    return this.guardianRow(name).locator('.guardian-list__info');
+  }
+
+  async openAddGuardianForm(): Promise<void> {
+    await this.guardiansStep().locator('#addBtn').click();
+  }
+
+  /**
+   * Adds a guardian through the tab's own form, the way a user does. The
+   * relationship is picked by option label, since the seeded lookup is what
+   * populates it.
+   */
+  async addGuardian(input: {
+    firstName: string;
+    surname: string;
+    relationshipLabel: string;
+    cell?: string;
+    email?: string;
+  }): Promise<void> {
+    await this.openAddGuardianForm();
+
+    const form = this.guardiansStep().locator('#guardianForm');
+    await form.locator('#firstName').fill(input.firstName);
+    await form.locator('#surname').fill(input.surname);
+    await form.locator('#relationship').selectOption({ label: input.relationshipLabel });
+    if (input.cell !== undefined) await form.locator('#cell').fill(input.cell);
+    if (input.email !== undefined) await form.locator('#email').fill(input.email);
+    await form.locator('#confirmBtn').click();
+  }
+
+  syncGuardiansButton(): Locator {
+    return this.guardiansStep().locator('#syncBtn');
+  }
+
+  async syncGuardians(): Promise<void> {
+    await this.syncGuardiansButton().click();
+  }
+
+  /**
+   * Scoped to this page's own host: the Students screen carries a guardian
+   * delete modal under the same id, and a bare `#deleteGuardianModal` pierces
+   * both shadow roots.
+   */
+  private deleteGuardianModal(): Locator {
+    return this.page.locator('pm-waiting-list-page #deleteGuardianModal');
+  }
+
+  /** The wording shown when only the link to this student can be removed. */
+  guardianDeleteRestrictedMessage(): Locator {
+    return this.deleteGuardianModal().locator('#restrictedBody');
+  }
+
+  /** The remove-from-this-student-or-delete-the-record choice, offered only when there is one. */
+  guardianDeleteScopeChoice(): Locator {
+    return this.deleteGuardianModal().locator('#scopeChoice');
+  }
+
+  async confirmGuardianDelete(): Promise<void> {
+    await this.deleteGuardianModal().locator('#deleteBtn').click();
+  }
+
+  // --- Enrol modal (opened from a row's Enrol action) ---
+
+  /**
+   * Opens the enrol modal on a row and waits for it to be shown. Openness is
+   * read off the host's `open` attribute, the way the other modals on this
+   * page are: everything the host renders is a fixed-position backdrop, so the
+   * host's own box is empty and a visibility wait would never settle.
+   */
+  async openEnrolModal(row: Locator): Promise<void> {
+    await this.enrolButton(row).click();
+    await this.enrolModal.waitFor({ state: 'attached' });
+    await expect(this.enrolModal).toHaveAttribute('open', '');
+  }
+
+  /** The notice above the fields, naming the student and the consequence. */
+  enrolNotice(): Locator {
+    return this.enrolModal.locator('#notice');
+  }
+
+  /** The occurrence-type field's wrapper — a value, not a control. */
+  enrolOccurrenceTypeField(): Locator {
+    return this.enrolModal.locator('#occurrenceType');
+  }
+
+  enrolOccurrenceType(): Locator {
+    return this.enrolModal.locator('#occurrenceTypeValue');
+  }
+
+  /** The annotation saying the occurrence type was settled at the waiting list. */
+  enrolOccurrenceTypeAnnotation(): Locator {
+    return this.enrolOccurrenceTypeField().locator('.enrol__locked');
+  }
+
+  /** Anything within the occurrence-type field a user could type in, pick from or press. */
+  enrolOccurrenceTypeControls(): Locator {
+    return this.enrolOccurrenceTypeField().locator('input, select, textarea, button, [contenteditable]');
+  }
+
+  enrolLessonType(): Locator {
+    return this.enrolModal.locator('#lessonType');
+  }
+
+  enrolDurationType(): Locator {
+    return this.enrolModal.locator('#durationType');
+  }
+
+  enrolTeacher(): Locator {
+    return this.enrolModal.locator('#teacher');
+  }
+
+  /**
+   * Anything on the modal naming a course — a control, a fixed value or a
+   * hidden field. There is no course on this modal: the entry records an
+   * intended instrument, only an instrument course records one, and the server
+   * resolves it from the structure. This is what catches a re-introduction of
+   * the picker that could present nothing to choose.
+   */
+  enrolCourseControls(): Locator {
+    return this.enrolModal.locator('[id*="course" i], [name*="course" i], [for*="course" i]');
+  }
+
+  /**
+   * The modal's card. Assert rendered text against this rather than the host:
+   * the host's own `textContent` stops at the shadow boundary, so a check made
+   * on it would pass whatever the modal says.
+   */
+  enrolCard(): Locator {
+    return this.enrolModal.locator('.modal__card');
+  }
+
+  enrolInstrumentType(): Locator {
+    return this.enrolModal.locator('#instrumentType');
+  }
+
+  /**
+   * The Step field's wrapper. Always on the modal — the resolved course is
+   * always an instrument course, and one records a step — and never pre-filled,
+   * since the entry records none.
+   */
+  enrolStepField(): Locator {
+    return this.enrolModal.locator('#stepField');
+  }
+
+  enrolStep(): Locator {
+    return this.enrolModal.locator('#step');
+  }
+
+  enrolDate(): Locator {
+    return this.enrolModal.locator('#enrolledDate');
+  }
+
+  enrolError(): Locator {
+    return this.enrolModal.locator('#error');
+  }
+
+  enrolCancelButton(): Locator {
+    return this.enrolModal.locator('#cancelBtn');
+  }
+
+  enrolConfirmButton(): Locator {
+    return this.enrolModal.locator('#confirmBtn');
+  }
+
+  async chooseEnrolTeacher(teacherName: string): Promise<void> {
+    await this.enrolTeacher().selectOption({ label: teacherName });
+  }
+
+  async cancelEnrol(): Promise<void> {
+    await this.enrolCancelButton().click();
+  }
+
+  async confirmEnrol(): Promise<void> {
+    await this.enrolConfirmButton().click();
+  }
+
+  // --- Removal confirmation ---
+
+  async openDeleteConfirmation(row: Locator): Promise<void> {
+    await this.deleteButton(row).click();
+    await this.deleteConfirmationMessage().waitFor({ state: 'visible' });
+  }
+
+  deleteConfirmationMessage(): Locator {
+    return this.deleteModal.locator('.modal__body');
+  }
+
+  deleteConfirmationCancelButton(): Locator {
+    return this.deleteModal.locator('#cancelBtn');
+  }
+
+  deleteConfirmationDeleteButton(): Locator {
+    return this.deleteModal.locator('#deleteBtn');
+  }
+
+  async cancelDelete(): Promise<void> {
+    await this.deleteConfirmationCancelButton().click();
+  }
+
+  async confirmDelete(): Promise<void> {
+    await this.deleteConfirmationDeleteButton().click();
+  }
+}

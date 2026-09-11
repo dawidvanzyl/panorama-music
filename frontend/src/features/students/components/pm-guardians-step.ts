@@ -385,14 +385,16 @@ export class PmGuardiansStep extends HTMLElement {
 
   private addPendingGuardian(input: GuardianInput): void {
     this._pendingCounter += 1;
-    this._pendingGuardians.push({ guardianId: `pending-${this._pendingCounter}`, ...input });
+    // Staged in memory against a student who does not exist yet, so nothing
+    // enrolled can depend on it.
+    this._pendingGuardians.push({ guardianId: `pending-${this._pendingCounter}`, restricted: false, ...input });
   }
 
   private updatePendingGuardian(guardianId: string, input: GuardianInput): void {
     const index = this._pendingGuardians.findIndex((g) => g.guardianId === guardianId);
     if (index === -1) return;
 
-    this._pendingGuardians[index] = { guardianId, ...input };
+    this._pendingGuardians[index] = { guardianId, restricted: false, ...input };
   }
 
   private toInput(guardian: GuardianResult): GuardianInput {

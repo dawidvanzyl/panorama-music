@@ -12,7 +12,9 @@ using PanoramaMusic.Students.Application.Handlers.Siblings;
 using PanoramaMusic.Students.Application.Handlers.StudentCourses;
 using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.Students;
+using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Interfaces;
+using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Application.Validators.Students;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Contexts;
@@ -26,6 +28,7 @@ using PanoramaMusic.Students.Infrastructure.Translators.Siblings;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentCourses;
 using PanoramaMusic.Students.Infrastructure.Translators.StudentExtraCurriculars;
 using PanoramaMusic.Students.Infrastructure.Translators.Students;
+using PanoramaMusic.Students.Infrastructure.Translators.WaitingList;
 using PanoramaMusic.Students.Infrastructure.TypeHandlers;
 
 namespace PanoramaMusic.Students.Infrastructure.Extensions;
@@ -61,6 +64,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
 		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
 		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
+		services.AddTransient<IWaitingListRepository, WaitingListRepository>();
 		services.AddScoped<IUserContext, UserContext>();
 
 		services.AddTransient<CreateStudentHandler>();
@@ -70,7 +74,10 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteStudentHandler>();
 		services.AddTransient<AddSiblingHandler>();
 		services.AddTransient<GetSiblingsHandler>();
+		services.AddTransient<GetSiblingCandidatesHandler>();
 		services.AddTransient<RemoveSiblingHandler>();
+		services.AddTransient<GuardianMaintenanceScope>();
+		services.AddTransient<StudentPopulationResolver>();
 		services.AddTransient<AddGuardianHandler>();
 		services.AddTransient<UpdateGuardianHandler>();
 		services.AddTransient<GetGuardiansHandler>();
@@ -85,6 +92,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteGuardianRelationshipHandler>();
 		services.AddTransient<CountGuardianRelationshipHandler>();
 		services.AddTransient<GetLessonStructuresHandler>();
+		services.AddTransient<GetOfferedLessonStructuresHandler>();
 		services.AddTransient<CreateCourseHandler>();
 		services.AddTransient<GetCoursesHandler>();
 		services.AddTransient<UpdateCourseCostHandler>();
@@ -106,6 +114,12 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
 		services.AddTransient<AssignExtraCurricularHandler>();
 		services.AddTransient<RemoveExtraCurricularHandler>();
+		services.AddTransient<GetWaitingListHandler>();
+		services.AddTransient<CaptureWaitingListStudentHandler>();
+		services.AddTransient<UpdateWaitingListEntryHandler>();
+		services.AddTransient<UpdateWaitingListStudentHandler>();
+		services.AddTransient<RemoveWaitingListStudentHandler>();
+		services.AddTransient<EnrolWaitingListStudentHandler>();
 
 		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
 
@@ -135,6 +149,10 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryRemovedTranslator>();
+		services.AddTransient<IAuditEventTranslator, WaitingListEntryEnrolledTranslator>();
 
 		return services;
 	}

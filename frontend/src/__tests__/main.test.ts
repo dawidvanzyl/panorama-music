@@ -164,7 +164,7 @@ describe('main router — `/` resolves to the topmost permitted entry', { tags: 
   it.each([
     { roles: ['Admin'], landing: '#/admin/users' },
     { roles: ['Teacher'], landing: '#/students' },
-    { roles: ['Coordinator'], landing: '#/teachers' },
+    { roles: ['Coordinator'], landing: '#/waiting-list' },
   ])('takes a $roles user arriving at / to $landing', async ({ roles, landing }) => {
     grantRoles(...roles);
     window.location.hash = '#/';
@@ -201,7 +201,7 @@ describe('main router — a refused route lands on the topmost permitted entry',
       roles: ['Coordinator'],
       refused: '#/students',
       page: '<pm-students-page>',
-      landing: '#/teachers',
+      landing: '#/waiting-list',
     },
     {
       roles: ['Teacher'],

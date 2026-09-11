@@ -22,6 +22,7 @@ export const SIDEBAR_ENTRIES: SidebarEntry[] = [
   { id: 'adminSessionsLink', path: '/admin/sessions', label: 'User Sessions', roles: ['Admin'] },
   { id: 'activityLogLink', path: '/admin/activity-log', label: 'Activity Log', roles: ['Admin'] },
   { id: 'studentManagementLink', path: '/students', label: 'Students', roles: ['Teacher'] },
+  { id: 'waitingListLink', path: '/waiting-list', label: 'Waiting List', roles: ['Teacher', 'Coordinator'] },
   { id: 'teachersLink', path: '/teachers', label: 'Teachers', roles: ['Coordinator', 'BankingCoordinator'] },
   { id: 'courseManagementLink', path: '/courses', label: 'Courses', roles: ['Teacher', 'Coordinator'] },
   // Admin owns none of the four entries above — each area belongs to Teacher,

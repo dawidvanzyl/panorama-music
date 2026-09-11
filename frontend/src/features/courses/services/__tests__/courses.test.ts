@@ -8,6 +8,11 @@ import {
   CoursesError,
   type Course,
 } from '../courses';
+import {
+  getOfferedLessonStructures,
+  clearOfferedLessonStructuresCache,
+  type LessonStructure,
+} from '../../../students/services/waiting-list';
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -22,10 +27,19 @@ const theory: Course = {
   occurrenceType: 'DuringSchool',
 };
 
+/** The structure `theory`'s own combination — offered once an instrument course exists for it. */
+const duringSchoolGroupHour: LessonStructure = {
+  lessonStructureId: 'ls1',
+  lessonType: 'Group',
+  durationType: 'Hour',
+  occurrenceType: 'DuringSchool',
+};
+
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
   clearCoursesCache();
+  clearOfferedLessonStructuresCache();
 });
 
 describe('getCourses', { tags: ['257UC16'] }, () => {
@@ -79,6 +93,24 @@ describe('createCourse', { tags: ['257UC13'] }, () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.cost).toBe('120.50');
   });
+
+  /**
+   * Which courses exist decides which lesson structures the waiting list may
+   * offer, and that derived set is cached in another feature. Creating the
+   * first instrument course for a combination has to make it selectable there
+   * straight away, without a reload or a fresh sign-in.
+   */
+  it('invalidates the caches other features derive from the catalogue', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => theory })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [duringSchoolGroupHour] });
+
+    expect(await getOfferedLessonStructures()).toEqual([]);
+    await createCourse({ courseType: 'Instrument', cost: '120.00', lessonStructureId: 'ls1' });
+
+    expect(await getOfferedLessonStructures()).toEqual([duringSchoolGroupHour]);
+  });
 });
 
 describe('updateCourseCost', { tags: ['258UC10'] }, () => {
@@ -123,6 +155,19 @@ describe('deleteCourse', { tags: ['258UC14'] }, () => {
     expect(url).toBe('/api/courses/c1');
     expect(init.method).toBe('DELETE');
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  /** The other direction of the same rule: losing the last course withdraws the combination. */
+  it('invalidates the caches other features derive from the catalogue', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [duringSchoolGroupHour] })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] });
+
+    expect(await getOfferedLessonStructures()).toEqual([duringSchoolGroupHour]);
+    await deleteCourse('c1');
+
+    expect(await getOfferedLessonStructures()).toEqual([]);
   });
 
   it('throws CoursesError on failure', async () => {

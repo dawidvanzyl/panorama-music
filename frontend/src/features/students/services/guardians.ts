@@ -16,6 +16,13 @@ export interface GuardianResult {
   receivesCorrespondence: boolean;
   responsibleForPayment: boolean;
   married: boolean;
+  /**
+   * The signed-in user may not change this guardian's own details, because it
+   * is shared with an enrolled student. Decided by the API — the client shows
+   * what it is told rather than re-deriving the rule from enrolment data it
+   * would otherwise have to fetch.
+   */
+  restricted: boolean;
 }
 
 export interface GuardianInput {

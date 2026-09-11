@@ -2,6 +2,7 @@ using Dapper;
 using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
@@ -30,6 +31,25 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 			Transaction,
 			cancellationToken);
 		var dto = await Connection.QuerySingleOrDefaultAsync<CourseDto>(command);
+
+		return dto?.MapToCourse();
+	}
+
+	public async Task<Course?> GetByTypeAndStructureAsync(
+		CourseType courseType,
+		Guid lessonStructureId,
+		CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_course_by_type_and_structure",
+			new
+			{
+				p_course_type = courseType.ToString(),
+				p_lesson_structure_id = lessonStructureId,
+			},
+			Transaction,
+			cancellationToken);
+		var dto = await Connection.QueryFirstOrDefaultAsync<CourseDto>(command);
 
 		return dto?.MapToCourse();
 	}

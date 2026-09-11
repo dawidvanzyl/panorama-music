@@ -29,7 +29,7 @@ describe('pm-siblings-step internal scroll layout', { tags: ['207UC3'] }, () => 
 
   it('gives pm-sibling-list its own internal scroll container instead of growing unbounded', () => {
     const list = new PmSiblingList();
-    const [localSheet] = list.shadowRoot!.adoptedStyleSheets;
+    const [, localSheet] = list.shadowRoot!.adoptedStyleSheets;
 
     const scrollRule = ruleFor(localSheet, '.sibling-list__scroll');
     expect(scrollRule.style.getPropertyValue('overflow-y')).toBe('auto');
