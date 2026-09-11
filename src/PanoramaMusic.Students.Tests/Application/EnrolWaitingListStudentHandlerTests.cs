@@ -5,6 +5,7 @@ using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Events.Guardians;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Domain.ValueObjects;
@@ -45,6 +46,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
 		var course = GivenInstrumentCourse(structure);
 		var teacher = GivenTeacher();
+		GivenMissingLinks(entry.Student, []);
 
 		var result = await _handler.HandleAsync(
 			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
@@ -101,6 +103,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 			occurrenceType: OccurrenceType.DuringSchool);
 		GivenInstrumentCourse(structure);
 		var teacher = GivenTeacher();
+		GivenMissingLinks(entry.Student, []);
 
 		var result = await _handler.HandleAsync(
 			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
@@ -178,6 +181,171 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 		VerifyNeitherHalfLanded();
 	}
 
+	[Fact]
+	[Trait("AC", "306UC1")]
+	public async Task HandleAsync_AnEnrolledSiblingMissingTheStudentsGuardian_CreatesThatLink()
+	{
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
+		var sibling = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+		GivenMissingLinks(entry.Student, [(sibling, guardian)]);
+
+		await _handler.HandleAsync(
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+			TestContext.Current.CancellationToken);
+
+		_context.Repositories.StudentGuardianRepositoryMock.Verify(
+			r => r.CreateAsync(
+				It.Is<StudentGuardian>(link =>
+					link.StudentId == sibling.StudentId && link.GuardianId == guardian.GuardianId),
+				It.IsAny<CancellationToken>()),
+			Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "306UC4")]
+	public async Task HandleAsync_AStudentWhoseFamilyIsMissingNothing_EnrolsAndCreatesNoLink()
+	{
+		// A student with no siblings, and equally one whose siblings are all still
+		// waiting: the family is missing nothing either way, and enrolling must
+		// succeed without writing a guardian link.
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
+		GivenMissingLinks(entry.Student, []);
+
+		var result = await _handler.HandleAsync(
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.StudentId.ShouldBe(entry.Student.StudentId),
+			() => VerifyNoLinkWasCreated());
+	}
+
+	[Fact]
+	[Trait("AC", "306UC5")]
+	public async Task HandleAsync_AReconciliationThatFailsPartWayThrough_FailsTheWholeEnrolment()
+	{
+		// The links are computed, the first one lands, and the second throws. Every
+		// write on this path shares the request's transaction, so the enrolment must
+		// be allowed to fail with it rather than being reported as a success that
+		// left the family half-reconciled.
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
+		var first = StudentFactory.Create();
+		var second = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+		GivenMissingLinks(entry.Student, [(first, guardian), (second, guardian)]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.CreateAsync(
+				It.Is<StudentGuardian>(link => link.StudentId == second.StudentId),
+				It.IsAny<CancellationToken>()))
+			.ThrowsAsync(new InvalidOperationException("The link could not be written."));
+
+		await Should.ThrowAsync<InvalidOperationException>(() =>
+			_handler.HandleAsync(
+				EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+				TestContext.Current.CancellationToken));
+
+		// The first link was written before the failure, so it is inside the same
+		// doomed transaction as the enrollment and the entry's deletion.
+		_context.Repositories.StudentGuardianRepositoryMock.Verify(
+			r => r.CreateAsync(
+				It.Is<StudentGuardian>(link => link.StudentId == first.StudentId),
+				It.IsAny<CancellationToken>()),
+			Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "306UC6")]
+	public async Task HandleAsync_ALinkCreatedByTheReconciliation_CarriesTheWaitingListWriteSource()
+	{
+		// What separates a reconciliation from a guardian someone linked by hand on
+		// an enrolled student's own record, which is a roster write.
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
+		var sibling = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+		GivenMissingLinks(entry.Student, [(sibling, guardian)]);
+		var links = CaptureCreatedLinks();
+
+		await _handler.HandleAsync(
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+			TestContext.Current.CancellationToken);
+
+		var linked = links.ShouldHaveSingleItem().DrainEvents().ShouldHaveSingleItem().ShouldBeOfType<GuardianLinked>();
+		ShouldlyHelpers.Satisfy(
+			() => linked.Source.ShouldBe(StudentWriteSource.WaitingList),
+			() => linked.Student.StudentId.ShouldBe(sibling.StudentId),
+			() => linked.Guardian.GuardianId.ShouldBe(guardian.GuardianId));
+	}
+
+	[Fact]
+	[Trait("AC", "306UC7")]
+	public async Task HandleAsync_AReconciliationThatCreatesLinks_ChangesNoGuardiansOwnDetails()
+	{
+		// A guardian is one row shared across the family, so rewriting one here
+		// would reach every student holding it. Only the links are this story's.
+		var entry = GivenWaitingListEntry(OccurrenceType.DuringSchool);
+		var structure = LessonStructureFactory.Create(occurrenceType: OccurrenceType.DuringSchool);
+		GivenInstrumentCourse(structure);
+		var teacher = GivenTeacher();
+		var sibling = StudentFactory.Create();
+		var guardian = GuardianFactory.Create();
+		GivenMissingLinks(entry.Student, [(sibling, guardian)]);
+
+		await _handler.HandleAsync(
+			EnrolCommand(entry.Student.StudentId, structure.LessonStructureId, teacher.TeacherId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.GuardianRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<Guardian>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentGuardianRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	/// <summary>
+	/// The family state the database resolves: which of this student's enrolled
+	/// siblings lack which of their guardians, and the records those ids name.
+	/// </summary>
+	private void GivenMissingLinks(Student student, (Student Sibling, Guardian Guardian)[] missing)
+	{
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetMissingEnrolledSiblingLinksAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([.. missing.Select(link => new MissingGuardianLink(link.Sibling.StudentId, link.Guardian.GuardianId))]);
+		_context.Repositories.SiblingRepositoryMock
+			.Setup(r => r.GetSiblingsAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([.. missing.Select(link => link.Sibling).Distinct()]);
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.GetGuardiansByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([.. missing.Select(link => link.Guardian).Distinct()]);
+	}
+
+	private List<StudentGuardian> CaptureCreatedLinks()
+	{
+		var links = new List<StudentGuardian>();
+
+		_context.Repositories.StudentGuardianRepositoryMock
+			.Setup(r => r.CreateAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()))
+			.Callback<StudentGuardian, CancellationToken>((link, _) => links.Add(link));
+
+		return links;
+	}
+
 	private WaitingListEntry GivenWaitingListEntry(OccurrenceType occurrenceType, LessonStructure? lessonStructure = null)
 	{
 		var entry = WaitingListEntryFactory.Create(
@@ -232,7 +400,15 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
 				r => r.CreateAsync(It.IsAny<StudentCourse>(), It.IsAny<CancellationToken>()), Times.Never),
 			() => _context.Repositories.WaitingListRepositoryMock.Verify(
-				r => r.DeleteAsync(It.IsAny<WaitingListEntry>(), It.IsAny<CancellationToken>()), Times.Never));
+				r => r.DeleteAsync(It.IsAny<WaitingListEntry>(), It.IsAny<CancellationToken>()), Times.Never),
+			// A student who does not end up enrolled leaves their siblings' guardians
+			// exactly as they were — the family is reconciled by an enrolment, and a
+			// refused one is not an enrolment.
+			VerifyNoLinkWasCreated);
+
+	private void VerifyNoLinkWasCreated() =>
+		_context.Repositories.StudentGuardianRepositoryMock.Verify(
+			r => r.CreateAsync(It.IsAny<StudentGuardian>(), It.IsAny<CancellationToken>()), Times.Never);
 
 	private static EnrolWaitingListStudentCommand EnrolCommand(
 		Guid studentId,
