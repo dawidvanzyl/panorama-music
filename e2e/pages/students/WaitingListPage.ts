@@ -163,20 +163,6 @@ export class WaitingListPage extends BasePage {
     await expect(this.waitingListTab()).toHaveClass(/wizard__tab--active/);
   }
 
-  /**
-   * Dismisses the wizard however this mode offers it: create mode carries a
-   * Cancel in the footer, while edit mode replaces it with the Waiting List
-   * tab's own Close. Same shape as StudentsPage.closeWizard.
-   */
-  async closeWizard(): Promise<void> {
-    const footerCancel = this.wizardModal.locator('.wizard__actions #cancelBtn');
-    if (await footerCancel.isVisible()) {
-      await footerCancel.click();
-      return;
-    }
-    await this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn').click();
-  }
-
   // --- What a surface offers ---
 
   private waitingListStep(): Locator {

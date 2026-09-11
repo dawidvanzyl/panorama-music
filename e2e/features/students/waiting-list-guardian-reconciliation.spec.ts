@@ -431,7 +431,17 @@ test.describe(
   'A refused enrolment off the waiting list leaves the sibling guardians unchanged',
   { tag: '@272IT59' },
   () => {
-    test('a refusal on the modal writes nothing, and the corrected enrolment does', async ({
+    /**
+     * A direct-to-API scenario, like its sibling below and for the same kind of
+     * reason. The enrol modal's selects now offer only combinations the school
+     * runs an instrument course under, so a Coordinator cannot name one that
+     * has none and the browser's own required-field validation returns before
+     * any request is sent. The refusal underneath is still enforced — it is the
+     * safety net for a course deleted after capture — and what this scenario is
+     * about is what it leaves the sibling's guardians looking like, which does
+     * not depend on which surface raised it.
+     */
+    test('a refusal raised while resolving the course writes nothing, and the corrected enrolment does', async ({
       page,
       browser,
     }) => {
@@ -452,8 +462,7 @@ test.describe(
       });
 
       // The recovery leg: another combination under the entry's own occurrence
-      // type, reached by changing the lesson type in the modal, which does have
-      // an instrument course.
+      // type, which does have an instrument course.
       const resolvableStructureId = await fetchLessonStructureId(page, {
         occurrenceType: structure.occurrenceType,
         lessonType: 'Individual',
@@ -463,19 +472,25 @@ test.describe(
 
       await coordinator.page.reload();
       const { waitingList } = coordinator;
-      await waitingList.openEnrolModal(
-        waitingList.rowFor('After School', family.entry.lastName)
-      );
-      // The teacher exists and is chosen, so the refusal cannot be a
-      // missing-teacher one wearing this scenario's name.
-      await waitingList.chooseEnrolTeacher(target.teacherName);
-      await waitingList.enrolStep().selectOption('Step2A');
-      await waitingList.confirmEnrol();
 
-      await expect(waitingList.enrolModal).toHaveAttribute('open', '');
-      await expect(waitingList.enrolError()).toBeVisible();
-      await expect(waitingList.enrolError()).toContainText(/no instrument course/i);
-      await expect(waitingList.successBanner).toBeHidden();
+      // The entry's own structure is named, so the refusal cannot be the
+      // wrong-occurrence-type one wearing this scenario's name; the teacher
+      // exists, so it cannot be a missing-teacher one either.
+      const refusal = await attemptEnrolFromWaitingList(
+        coordinator.page,
+        family.entry.studentId,
+        {
+          lessonStructureId: family.entry.lessonStructureId,
+          teacherId: target.teacherId,
+          instrumentType: 'Piano',
+          stepType: 'Step2A',
+        }
+      );
+
+      // Refused, and the refusal says why — so a reconciliation skipped
+      // because the request never ran at all cannot pass as this scenario.
+      expect(refusal.status).toBe(400);
+      expect(refusal.error).toMatch(/no instrument course/i);
       expect(await fetchStudentEnrollments(page, family.entry.studentId)).toHaveLength(0);
       expect(await waitingListEntryExists(family.entry.waitingListEntryId)).toBe(true);
 
@@ -492,14 +507,23 @@ test.describe(
 
       // Without this leg the refusal above would pass against an
       // implementation that never reconciles at all.
-      await waitingList.enrolLessonType().selectOption('Individual');
-      await waitingList.confirmEnrol();
-
-      await expect(waitingList.enrolModal).not.toHaveAttribute('open');
-      await expect(waitingList.successBanner).toContainText(
-        `${family.entry.firstName} ${family.entry.lastName}`
+      const accepted = await attemptEnrolFromWaitingList(
+        coordinator.page,
+        family.entry.studentId,
+        {
+          lessonStructureId: resolvableStructureId,
+          teacherId: target.teacherId,
+          instrumentType: 'Piano',
+          stepType: 'Step2A',
+        }
       );
+      expect(accepted.status).toBe(201);
       expect(await waitingListEntryExists(family.entry.waitingListEntryId)).toBe(false);
+
+      await coordinator.page.reload();
+      await expect(
+        waitingList.rowFor('After School', family.entry.lastName)
+      ).toHaveCount(0);
 
       // Exactly once, not twice: the refused confirmation left no residue.
       const enrolledAfterSuccess = await fetchGuardians(page, family.enrolled.studentId);
@@ -536,7 +560,7 @@ test.describe(
       });
       await seedCourseOfType(page, otherStructureId, 'Instrument');
 
-      const status = await attemptEnrolFromWaitingList(coordinator.page, family.entry.studentId, {
+      const { status } = await attemptEnrolFromWaitingList(coordinator.page, family.entry.studentId, {
         lessonStructureId: otherStructureId,
         teacherId: target.teacherId,
         instrumentType: 'Piano',

@@ -606,19 +606,31 @@ export interface EnrolAttemptInput {
   enrolledDate?: string;
 }
 
+export interface EnrolAttemptResult {
+  status: number;
+  /** The refusal's own message, off the error body the API writes; null on a success. */
+  error: string | null;
+}
+
 /**
  * The enrolment-off-the-waiting-list path, reached directly from the signed-in
- * session. Two boundaries have no control to press for them: a Teacher is
- * offered no Enrol action at all, and the modal presents the occurrence type as
- * a value rather than a control, deriving the structure from it — so no
- * structure the modal can name carries a different occurrence type. Both can
- * only be attempted by naming the request outright.
+ * session. Three boundaries have no control to press for them: a Teacher is
+ * offered no Enrol action at all; the modal presents the occurrence type as a
+ * value rather than a control, deriving the structure from it — so no structure
+ * the modal can name carries a different occurrence type; and the modal's
+ * selects now offer only combinations the school runs an instrument course
+ * under, so no combination it can name reaches the no-instrument-course
+ * refusal. All three can only be attempted by naming the request outright.
+ *
+ * The refusal message travels back with the status because a scenario reached
+ * this way still has to prove the refusal says why — the reason is read off the
+ * response body here rather than off a line in the modal.
  */
 export async function attemptEnrolFromWaitingList(
   page: Page,
   studentId: string,
   input: EnrolAttemptInput,
-): Promise<number> {
+): Promise<EnrolAttemptResult> {
   return page.evaluate(
     async ({ studentId, input }) => {
       const response = await fetch(`/api/waiting-list/students/${studentId}/enrollment`, {
@@ -635,7 +647,19 @@ export async function attemptEnrolFromWaitingList(
           enrolledDate: input.enrolledDate ?? new Date().toISOString().slice(0, 10),
         }),
       });
-      return response.status;
+
+      if (response.ok) return { status: response.status, error: null };
+
+      // Every refusal the API writes carries its message on `error`; a body
+      // that is not JSON at all is surfaced as its own text rather than
+      // swallowed, so a scenario asserting the reason fails loudly.
+      const body = await response.text();
+      try {
+        const parsed = JSON.parse(body) as { error?: string };
+        return { status: response.status, error: parsed.error ?? body };
+      } catch {
+        return { status: response.status, error: body };
+      }
     },
     { studentId, input },
   );
