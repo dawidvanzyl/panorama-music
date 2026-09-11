@@ -6,6 +6,7 @@ import { waitingListEntryExists } from '../../fixtures/db';
 import {
   seedWaitingListEntry,
   seedCourseOfType,
+  ensureInstrumentCourse,
   fetchLessonStructureId,
   fetchStructureWithoutInstrumentCourse,
   fetchAnyEnrolmentTarget,
@@ -41,6 +42,9 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
       durationType: 'Hour',
       instrumentType: 'Piano',
     });
+    // As above: a pre-fill assertion needs the entry's own combination to be
+    // one the modal still offers.
+    await ensureInstrumentCourse(page, entry.lessonStructureId);
     await page.reload();
 
     await waitingListPage.openEnrolModal(waitingListPage.rowFor('During School', entry.lastName));
@@ -66,7 +70,11 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
     // The assertion that catches a re-introduced course picker, which is what
     // could present a Coordinator with nothing to choose and no way forward.
     await expect(waitingListPage.enrolCourseControls()).toHaveCount(0);
-    await expect(waitingListPage.enrolCard()).not.toContainText(/course/i);
+    // Read as the Coordinator reads it. The modal also carries a notice for
+    // the case where the school runs no instrument course under this
+    // occurrence type, and that wording names courses on purpose — it is not
+    // shown here, and a check against raw text content would find it anyway.
+    await expect(waitingListPage.enrolCard()).not.toContainText(/course/i, { useInnerText: true });
   });
 
   test('the pre-fill follows the entry rather than a fixed default', async ({ page }) => {
@@ -79,6 +87,10 @@ test.describe('The Enrol action opens the enrolment form pre-filled from the ent
       durationType: 'HalfHour',
       instrumentType: 'Guitar',
     });
+    // The pre-fill can only carry the entry's own combination while the school
+    // runs an instrument course for it — the modal offers nothing else. That
+    // is the precondition of a pre-fill assertion, not part of its subject.
+    await ensureInstrumentCourse(page, entry.lessonStructureId);
     await page.reload();
 
     await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));
@@ -316,7 +328,7 @@ test.describe('A Teacher cannot enrol a student off the waiting list', { tag: '@
     // No course is seeded here on purpose — the refusal is stronger for
     // holding whether or not the enrolment could otherwise have resolved.
     const named = await fetchAnyEnrolmentTarget(page);
-    expect(await attemptEnrolFromWaitingList(page, entry.studentId, named)).toBe(403);
+    expect((await attemptEnrolFromWaitingList(page, entry.studentId, named)).status).toBe(403);
 
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(true);
     expect(await fetchStudentEnrollments(page, entry.studentId)).toHaveLength(0);
@@ -444,7 +456,7 @@ test.describe('An enrolment naming a different occurrence type is refused', { ta
     await seedCourseOfType(page, otherStructureId, 'Instrument');
     await page.reload();
 
-    const status = await attemptEnrolFromWaitingList(page, entry.studentId, {
+    const { status } = await attemptEnrolFromWaitingList(page, entry.studentId, {
       lessonStructureId: otherStructureId,
       teacherId: target.teacherId,
     });
@@ -473,7 +485,7 @@ test.describe('An enrolment naming a different occurrence type is refused', { ta
     await seedCourseOfType(page, entry.lessonStructureId, 'Instrument');
     await page.reload();
 
-    const status = await attemptEnrolFromWaitingList(page, entry.studentId, {
+    const { status } = await attemptEnrolFromWaitingList(page, entry.studentId, {
       lessonStructureId: entry.lessonStructureId,
       teacherId: target.teacherId,
     });
@@ -489,10 +501,21 @@ test.describe('An enrolment naming a different occurrence type is refused', { ta
   });
 });
 
+/**
+ * A direct-to-API scenario, like `272IT38` above and for the same kind of
+ * reason. The modal's lesson-type and duration selects now offer only
+ * combinations the school runs an instrument course under, so a Coordinator
+ * cannot name one that has none — the browser's own required-field validation
+ * returns before any request is sent. That is the prevention working, and it is
+ * proved separately by the notice shown in place of the vanished pre-fill.
+ *
+ * The refusal underneath it is still wanted and still enforced: it is the
+ * safety net for a course deleted after the entry was captured, and for
+ * anything reaching the endpoint without the browser. Unreachable from the UI
+ * is not the same as untested, so it is named outright here.
+ */
 test.describe('A structure the school offers no instrument course for is refused', { tag: '@272IT60' }, () => {
-  test('the refusal is stated on the modal, nothing is consumed, and the Coordinator is not stranded', async ({
-    page,
-  }) => {
+  test('the refusal states why, and nothing is consumed', async ({ page }) => {
     const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_ENROL_ROLES]);
 
     // The structure kept free of instrument courses by convention. The fixture
@@ -509,43 +532,31 @@ test.describe('A structure the school offers no instrument course for is refused
     });
     await page.reload();
 
-    await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));
-    // The lesson and duration types are left as pre-filled; the teacher exists
-    // and is chosen, so the refusal cannot be a missing-teacher one.
-    await waitingListPage.chooseEnrolTeacher(target.teacherName);
-    await waitingListPage.enrolStep().selectOption('Step2A');
-    await waitingListPage.confirmEnrol();
+    // The entry's own structure is named, so the refusal cannot be the
+    // wrong-occurrence-type one wearing this scenario's name; the teacher
+    // exists, so it cannot be a missing-teacher one either.
+    const refusal = await attemptEnrolFromWaitingList(page, entry.studentId, {
+      lessonStructureId: entry.lessonStructureId,
+      teacherId: target.teacherId,
+      stepType: 'Step2A',
+    });
 
-    // Refused, and the refusal is one the Coordinator can read — not a silent
-    // failure, not a closed modal, not an empty control with nothing to submit.
-    await expect(waitingListPage.enrolModal).toHaveAttribute('open', '');
-    await expect(waitingListPage.enrolError()).toBeVisible();
-    await expect(waitingListPage.enrolError()).toContainText(/no instrument course/i);
-    await expect(waitingListPage.enrolError()).toContainText(/lesson type and duration/i);
-    await expect(waitingListPage.successBanner).toBeHidden();
+    // Refused, and the refusal says why — not a bare status, not a silent
+    // failure, not a success that quietly resolved some other course.
+    expect(refusal.status).toBe(400);
+    expect(refusal.error).toMatch(/no instrument course/i);
+    expect(refusal.error).toMatch(/lesson type and duration/i);
 
     expect(await fetchStudentEnrollments(page, entry.studentId)).toHaveLength(0);
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(true);
-
-    // Never an empty control in place of the refusal, and never a course
-    // control at all.
-    await expect(waitingListPage.enrolCourseControls()).toHaveCount(0);
-
-    // Not stranded: the fields are still changeable and Cancel still closes it.
-    await expect(waitingListPage.enrolLessonType()).toBeEnabled();
-    await expect(waitingListPage.enrolDurationType()).toBeEnabled();
-    await expect(waitingListPage.enrolTeacher()).toBeEnabled();
-    await waitingListPage.cancelEnrol();
-    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
 
     await page.reload();
     await expect(waitingListPage.rowFor('After School', entry.lastName)).toBeVisible();
   });
 
-  test('changing to a combination that does have one is accepted in the same modal session', async ({ page }) => {
-    // Without this, the refusal above would pass against a modal that refuses
-    // everything, and against one a Coordinator cannot recover from — and the
-    // recovery is the point.
+  test('the same submission naming a combination that does have one is accepted', async ({ page }) => {
+    // Without this, the refusal above would pass against an endpoint that
+    // refuses every submission.
     const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_ENROL_ROLES]);
 
     const structure = await fetchStructureWithoutInstrumentCourse(page);
@@ -557,8 +568,10 @@ test.describe('A structure the school offers no instrument course for is refused
       instrumentType: 'Piano',
     });
 
-    // Another combination under the entry's own occurrence type, reached by
-    // changing the lesson type in the modal, which does have one.
+    // Another combination under the entry's own occurrence type, which does
+    // have an instrument course — so the only thing that differs between the
+    // refusal above and the acceptance here is the course the structure
+    // resolves.
     const resolvableStructureId = await fetchLessonStructureId(page, {
       occurrenceType: structure.occurrenceType,
       lessonType: 'Individual',
@@ -567,28 +580,30 @@ test.describe('A structure the school offers no instrument course for is refused
     await seedCourseOfType(page, resolvableStructureId, 'Instrument');
     await page.reload();
 
-    await waitingListPage.openEnrolModal(waitingListPage.rowFor('After School', entry.lastName));
-    await waitingListPage.chooseEnrolTeacher(target.teacherName);
-    await waitingListPage.enrolStep().selectOption('Step2A');
-    await waitingListPage.confirmEnrol();
-    await expect(waitingListPage.enrolError()).toBeVisible();
+    const refusal = await attemptEnrolFromWaitingList(page, entry.studentId, {
+      lessonStructureId: entry.lessonStructureId,
+      teacherId: target.teacherId,
+      stepType: 'Step2A',
+    });
+    expect(refusal.status).toBe(400);
+    expect(refusal.error).toMatch(/no instrument course/i);
 
-    await waitingListPage.enrolLessonType().selectOption('Individual');
-    await waitingListPage.confirmEnrol();
-
-    await expect(waitingListPage.enrolModal).not.toHaveAttribute('open');
-    await expect(waitingListPage.successBanner).toContainText(`${entry.firstName} ${entry.lastName}`);
-    await expect(waitingListPage.rowFor('After School', entry.lastName)).toHaveCount(0);
+    const accepted = await attemptEnrolFromWaitingList(page, entry.studentId, {
+      lessonStructureId: resolvableStructureId,
+      teacherId: target.teacherId,
+      stepType: 'Step2A',
+    });
+    expect(accepted.status).toBe(201);
     expect(await waitingListEntryExists(entry.waitingListEntryId)).toBe(false);
 
-    // Exactly one enrolment, not two — the refused confirmation left no
-    // residue behind it.
+    // Exactly one enrolment, not two — the refused submission left no residue
+    // behind it.
     const enrollments = await fetchStudentEnrollments(page, entry.studentId);
     expect(enrollments).toHaveLength(1);
     expect(enrollments[0].occurrenceType).toBe(structure.occurrenceType);
     expect(enrollments[0].lessonType).toBe('Individual');
 
-    // The refusal line does not survive the success it was corrected by.
-    await expect(waitingListPage.enrolError()).toBeHidden();
+    await page.reload();
+    await expect(waitingListPage.rowFor('After School', entry.lastName)).toHaveCount(0);
   });
 });

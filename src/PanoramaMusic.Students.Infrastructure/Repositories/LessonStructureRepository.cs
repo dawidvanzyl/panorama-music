@@ -19,6 +19,15 @@ public class LessonStructureRepository(IUnitOfWork unitOfWork)
 		return [.. dtos.Select(dto => dto.MapToLessonStructure())];
 	}
 
+	public async Task<IList<LessonStructure>> GetOfferedAsync(CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"students.get_offered_lesson_structures", null, Transaction, cancellationToken);
+		var dtos = await Connection.QueryAsync<LessonStructureDto>(command);
+
+		return [.. dtos.Select(dto => dto.MapToLessonStructure())];
+	}
+
 	public async Task<LessonStructure?> GetByIdAsync(Guid lessonStructureId, CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(

@@ -1,6 +1,7 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
+import { registerCourseCatalogueCache } from '../../../services/course-catalogue-cache';
 import type {
   OccurrenceType,
   LessonType,
@@ -130,26 +131,33 @@ export async function getWaitingList(): Promise<WaitingListGroupResult[]> {
   return _waitingListCache;
 }
 
-let _lessonStructuresCache: LessonStructure[] | null = null;
+let _offeredLessonStructuresCache: LessonStructure[] | null = null;
 
-export function clearLessonStructuresCache(): void {
-  _lessonStructuresCache = null;
+export function clearOfferedLessonStructuresCache(): void {
+  _offeredLessonStructuresCache = null;
 }
 
-registerSessionCache(clearLessonStructuresCache);
+registerSessionCache(clearOfferedLessonStructuresCache);
+// What is offered is decided by the course catalogue, so a course created or
+// removed anywhere in the app makes this copy wrong immediately — not at the
+// end of the session.
+registerCourseCatalogueCache(clearOfferedLessonStructuresCache);
 
 /**
- * The seeded lesson-structure lookup, cached the same way the catalogue
- * screen's own copy is (`features/courses/services/courses.ts`). Fetched
- * again here, rather than imported across features, for the same reason
- * `getWaitingList` lives in this feature at all — both are self-contained.
+ * The combinations the school runs an instrument course under — the ones a
+ * student may actually be made to wait for. Deliberately narrower than the
+ * seeded grid the course catalogue reads (`features/courses/services/courses.ts`):
+ * creating a course is how a structure comes to be offered, so that screen
+ * needs the combinations no course exists for yet and this one must not have
+ * them. Cached the same way, and fetched here rather than imported across
+ * features for the same reason `getWaitingList` lives in this feature at all.
  */
-export async function getLessonStructures(): Promise<LessonStructure[]> {
-  if (_lessonStructuresCache) return _lessonStructuresCache;
+export async function getOfferedLessonStructures(): Promise<LessonStructure[]> {
+  if (_offeredLessonStructuresCache) return _offeredLessonStructuresCache;
 
-  const response = await fetch(LESSON_STRUCTURES_BASE, { headers: authHeaders() });
-  _lessonStructuresCache = await handleResponse<LessonStructure[]>(response);
-  return _lessonStructuresCache;
+  const response = await fetch(`${LESSON_STRUCTURES_BASE}/offered`, { headers: authHeaders() });
+  _offeredLessonStructuresCache = await handleResponse<LessonStructure[]>(response);
+  return _offeredLessonStructuresCache;
 }
 
 /**

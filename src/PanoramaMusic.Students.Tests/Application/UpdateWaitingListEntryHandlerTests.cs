@@ -6,6 +6,7 @@ using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -116,6 +117,48 @@ public class UpdateWaitingListEntryHandlerTests : IClassFixture<StudentsTestFixt
 	}
 
 	[Fact]
+	[Trait("AC", "309UC11")]
+	public async Task HandleAsync_AMoveOntoALessonStructureWithNoInstrumentCourse_IsRefusedAndTheEntryIsUnchanged()
+	{
+		var entry = WaitingListEntryFactory.Create(
+			lessonStructure: LessonStructureFactory.Create(
+				lessonType: LessonType.Individual,
+				durationType: DurationType.Hour,
+				occurrenceType: OccurrenceType.DuringSchool),
+			instrumentType: InstrumentType.Piano,
+			notes: "Prefers mornings");
+		SetupEntry(entry);
+
+		// A seeded structure, reachable by id, that simply nothing is offered
+		// under — the wizard never presents it, and this is the request that
+		// arrives without the wizard.
+		var unoffered = LessonStructureFactory.Create(
+			lessonType: LessonType.Group,
+			durationType: DurationType.HalfHour,
+			occurrenceType: OccurrenceType.AfterSchool);
+		SetupSeededLessonStructure(unoffered);
+		SetupOfferedLessonStructures(entry.LessonStructure);
+
+		var exception = await Should.ThrowAsync<DomainException>(() =>
+			_handler.HandleAsync(
+				new UpdateWaitingListEntryCommand(
+					entry.WaitingListEntryId,
+					new UpdateWaitingListEntryRequest(unoffered.LessonStructureId, InstrumentType.Guitar, "Afternoons only")),
+				TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			// Told apart from a structure that does not exist at all, which is a
+			// different failure and names itself differently.
+			() => exception.Message.ShouldBe(WaitingListMessages.LessonStructureIsNotOffered),
+			() => _context.Repositories.WaitingListRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<WaitingListEntry>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => entry.LessonStructure.LessonType.ShouldBe(LessonType.Individual),
+			() => entry.LessonStructure.DurationType.ShouldBe(DurationType.Hour),
+			() => entry.InstrumentType.ShouldBe(InstrumentType.Piano),
+			() => entry.Notes.ShouldBe("Prefers mornings"));
+	}
+
+	[Fact]
 	[Trait("AC", "294UC5")]
 	public async Task HandleAsync_AnEntryMovedToTheOtherOccurrenceType_TakesItsPositionThereFromItsOriginalAddedAt()
 	{
@@ -158,10 +201,22 @@ public class UpdateWaitingListEntryHandlerTests : IClassFixture<StudentsTestFixt
 			.ReturnsAsync([entry]);
 	}
 
-	private void SetupLessonStructure(LessonStructure lessonStructure) =>
+	/// <summary>Seeds the structure and puts it on offer — the handler requires both.</summary>
+	private void SetupLessonStructure(LessonStructure lessonStructure)
+	{
+		SetupSeededLessonStructure(lessonStructure);
+		SetupOfferedLessonStructures(lessonStructure);
+	}
+
+	private void SetupSeededLessonStructure(LessonStructure lessonStructure) =>
 		_context.Repositories.LessonStructureRepositoryMock
 			.Setup(r => r.GetByIdAsync(lessonStructure.LessonStructureId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(lessonStructure);
+
+	private void SetupOfferedLessonStructures(params LessonStructure[] lessonStructures) =>
+		_context.Repositories.LessonStructureRepositoryMock
+			.Setup(r => r.GetOfferedAsync(It.IsAny<CancellationToken>()))
+			.ReturnsAsync(lessonStructures);
 
 	/// <summary>Hands back the entry as it was actually given to the repository to write.</summary>
 	private void CaptureUpdate(Action<WaitingListEntry> onWrite) =>

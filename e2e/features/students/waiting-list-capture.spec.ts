@@ -1,7 +1,13 @@
 import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
-import { attemptCaptureWaitingListStudent, fetchAnyLessonStructureId } from '../../fixtures/waitingList';
+import {
+  attemptCaptureWaitingListStudent,
+  fetchAnyLessonStructureId,
+  offerLessonStructure,
+} from '../../fixtures/waitingList';
 import { StudentsPage } from '../../pages/students/StudentsPage';
+import type { Page } from '@playwright/test';
+import type { WaitingListStepInput } from '../../pages/students/WaitingListPage';
 
 /**
  * A student has no natural key, so a run is told apart by the surname it gives
@@ -25,15 +31,35 @@ const studentDefaults = {
 // Coordinator, and Teacher is Student Management's own landing role.
 const CAPTURE_AND_VIEW_ROLES = ['Teacher', 'Coordinator'] as const;
 
+/**
+ * A student may only be made to wait for a combination the school runs an
+ * instrument course for, so a capture scenario establishes that its chosen
+ * combination is one of them before the wizard will offer it. The reload is
+ * what makes the new course visible — the offered set is read once, when the
+ * page loads.
+ */
+async function offerCapturedCombination(page: Page, choice: WaitingListStepInput): Promise<void> {
+  await offerLessonStructure(page, {
+    occurrenceType: choice.occurrenceLabel === 'After School' ? 'AfterSchool' : 'DuringSchool',
+    lessonType: choice.lessonLabel,
+    durationType: choice.durationLabel === 'Half Hour' ? 'HalfHour' : 'Hour',
+  });
+  await page.reload();
+}
+
 test.describe('Capturing through the full wizard creates the student with no course enrollment', { tag: '@272IT1' }, () => {
   test('the captured student appears on the waiting list and holds no course enrollment', async ({ page }) => {
     const waitingListPage = await goToWaitingListPage(page, [...CAPTURE_AND_VIEW_ROLES]);
     const surname = uniqueSurname('Capture');
+    const choice = {
+      occurrenceLabel: 'During School',
+      lessonLabel: 'Individual',
+      durationLabel: 'Hour',
+      instrumentLabel: 'Guitar',
+    } as const;
+    await offerCapturedCombination(page, choice);
 
-    await waitingListPage.captureStudent(
-      { firstName: 'Amara', lastName: surname, ...studentDefaults },
-      { occurrenceLabel: 'During School', lessonLabel: 'Individual', durationLabel: 'Hour', instrumentLabel: 'Guitar' },
-    );
+    await waitingListPage.captureStudent({ firstName: 'Amara', lastName: surname, ...studentDefaults }, choice);
 
     await expect(waitingListPage.successBanner).toContainText(`Amara ${surname}`);
     await expect(waitingListPage.wizardModal).toBeHidden();
@@ -56,11 +82,15 @@ test.describe(
     }) => {
       const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
       const surname = uniqueSurname('Meta');
+      const choice = {
+        occurrenceLabel: 'After School',
+        lessonLabel: 'Individual',
+        durationLabel: 'Hour',
+        instrumentLabel: 'Guitar',
+      } as const;
+      await offerCapturedCombination(page, choice);
 
-      await waitingListPage.captureStudent(
-        { firstName: 'Kagiso', lastName: surname, ...studentDefaults },
-        { occurrenceLabel: 'After School', lessonLabel: 'Individual', durationLabel: 'Hour', instrumentLabel: 'Guitar' },
-      );
+      await waitingListPage.captureStudent({ firstName: 'Kagiso', lastName: surname, ...studentDefaults }, choice);
 
       const row = waitingListPage.rowFor('After School', surname);
       await expect(row).toBeVisible();
@@ -114,11 +144,15 @@ test.describe('Capturing with notes left blank succeeds and shows the no-notes p
   }) => {
     const waitingListPage = await goToWaitingListPage(page, ['Coordinator']);
     const surname = uniqueSurname('NoNotes');
+    const choice = {
+      occurrenceLabel: 'During School',
+      lessonLabel: 'Group',
+      durationLabel: 'Half Hour',
+      instrumentLabel: 'Piano',
+    } as const;
+    await offerCapturedCombination(page, choice);
 
-    await waitingListPage.captureStudent(
-      { firstName: 'Priya', lastName: surname, ...studentDefaults },
-      { occurrenceLabel: 'During School', lessonLabel: 'Group', durationLabel: 'Half Hour', instrumentLabel: 'Piano' },
-    );
+    await waitingListPage.captureStudent({ firstName: 'Priya', lastName: surname, ...studentDefaults }, choice);
 
     await expect(waitingListPage.successBanner).toContainText(surname);
     const row = waitingListPage.rowFor('During School', surname);
@@ -130,11 +164,15 @@ test.describe('A captured waiting-list student is absent from the Students scree
   test('the student does not appear when the Students screen is filtered by their name', async ({ page }) => {
     const waitingListPage = await goToWaitingListPage(page, [...CAPTURE_AND_VIEW_ROLES]);
     const surname = uniqueSurname('Absent');
+    const choice = {
+      occurrenceLabel: 'During School',
+      lessonLabel: 'Individual',
+      durationLabel: 'Hour',
+      instrumentLabel: 'Piano',
+    } as const;
+    await offerCapturedCombination(page, choice);
 
-    await waitingListPage.captureStudent(
-      { firstName: 'Thabo', lastName: surname, ...studentDefaults },
-      { occurrenceLabel: 'During School', lessonLabel: 'Individual', durationLabel: 'Hour', instrumentLabel: 'Piano' },
-    );
+    await waitingListPage.captureStudent({ firstName: 'Thabo', lastName: surname, ...studentDefaults }, choice);
     await expect(waitingListPage.rowFor('During School', surname)).toBeVisible();
 
     const studentsPage = new StudentsPage(page);

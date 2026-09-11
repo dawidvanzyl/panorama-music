@@ -22,10 +22,34 @@ import type {
   WaitingListEntryResult,
 } from '../services/waiting-list';
 
-// Derived from the shared label maps rather than listed again here, the same
-// way the capture wizard's own Waiting List tab derives them.
-const LESSON_TYPES = Object.keys(LESSON_TYPE_LABELS) as LessonType[];
-const DURATION_TYPES = Object.keys(DURATION_TYPE_LABELS) as DurationType[];
+import { offeredLessonTypes, offeredDurationTypes, fillOfferedOptions } from './offered-structures';
+
+/**
+ * Shown in place of the form when the school runs no instrument course the
+ * student could be moved onto. The occurrence type is fixed at the waiting
+ * list, so the set that matters is the one offered under it — and where that is
+ * empty there is nothing to pick, which is worth saying rather than leaving two
+ * empty pickers and an Enrol button that cannot succeed.
+ */
+export const NO_OFFERED_STRUCTURES_NOTICE =
+  'The school runs no instrument courses yet, so there is nothing to enrol this student into.';
+
+export const NO_OFFERED_STRUCTURES_FOR_OCCURRENCE_NOTICE =
+  'The school runs no instrument courses under this occurrence type, so there is nothing to enrol ' +
+  'this student into.';
+
+/**
+ * Shown above a form that still has choices in it, when the combination the
+ * student was actually waiting for is not among them. The pre-fill silently
+ * finds no matching option and the picker is left on its placeholder, so
+ * without this the Coordinator meets the browser's own validation bubble with
+ * no idea why what they expected is missing. They are not stuck — any offered
+ * combination enrols the student — which is why this states the reason and
+ * blocks nothing.
+ */
+export const ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE =
+  'The lesson type and duration this student waited for are no longer offered, so they are not ' +
+  'pre-filled. Choose a combination the school offers to enrol this student.';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -92,6 +116,21 @@ styles.replaceSync(`
     .enrol__locked {
       font-size: 11px;
     }
+    .enrol__notice-empty {
+      padding: 12px 16px;
+      border-radius: var(--pm-radius, 10px);
+      background: var(--pm-surface-2, #22263a);
+      border: 1px solid var(--pm-border, #2e3250);
+      color: var(--pm-text-muted, #9194a6);
+      font-size: 13px;
+      margin: 0;
+    }
+    .enrol__notice-empty--above-form {
+      margin-bottom: 20px;
+    }
+    [hidden] {
+      display: none !important;
+    }
     .enrol__error {
       margin: 16px 0 0;
       font-size: 13px;
@@ -118,6 +157,8 @@ template.innerHTML = `
     <div class="modal__card">
       <h2 class="enrol__title">Enrol Student</h2>
       <p class="enrol__notice" id="notice"></p>
+      <p class="enrol__notice-empty" id="noOfferedStructures" hidden></p>
+      <p class="enrol__notice-empty enrol__notice-empty--above-form" id="entryStructureNotOffered" hidden></p>
       <form id="form">
         <div class="enrol__grid">
           <div class="enrol__field enrol__field--wide">
@@ -188,12 +229,19 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private stepSelect: HTMLSelectElement | null = null;
   private enrolledDateInput: HTMLInputElement | null = null;
   private errorMessage: HTMLElement | null = null;
+  private noOfferedStructuresNotice: HTMLElement | null = null;
+  private entryStructureNotOfferedNotice: HTMLElement | null = null;
+  private confirmButton: HTMLButtonElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
   private _teachers: AssignableTeacher[] = [];
   private _studentId = '';
   private _studentName = '';
   private _occurrenceType: OccurrenceType = 'DuringSchool';
+  // What the entry itself waited for, kept so the notice can be re-decided
+  // whenever the offered set is rebuilt — not only on the way in.
+  private _entryLessonType: LessonType | '' = '';
+  private _entryDurationType: DurationType | '' = '';
 
   constructor() {
     super();
@@ -213,13 +261,9 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.stepSelect = this.shadowRoot!.getElementById('step') as HTMLSelectElement;
     this.enrolledDateInput = this.shadowRoot!.getElementById('enrolledDate') as HTMLInputElement;
     this.errorMessage = this.shadowRoot!.getElementById('error') as HTMLElement;
+    this.noOfferedStructuresNotice = this.shadowRoot!.getElementById('noOfferedStructures') as HTMLElement;
+    this.entryStructureNotOfferedNotice = this.shadowRoot!.getElementById('entryStructureNotOffered') as HTMLElement;
 
-    populateSelectOptions<LessonType>(this.lessonTypeSelect, LESSON_TYPES, (value) => LESSON_TYPE_LABELS[value]);
-    populateSelectOptions<DurationType>(
-      this.durationTypeSelect,
-      DURATION_TYPES,
-      (value) => DURATION_TYPE_LABELS[value],
-    );
     populateSelectOptions<InstrumentType>(
       this.instrumentTypeSelect,
       INSTRUMENT_TYPES,
@@ -228,17 +272,28 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     populateSelectOptions<StepType>(this.stepSelect, STEP_TYPES, (value) => STEP_TYPE_LABELS[value]);
     addPlaceholderOption(this.stepSelect, 'Select step');
 
+    this.confirmButton = this.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
-    this.shadowRoot!.getElementById('confirmBtn')!.addEventListener('click', this.handleConfirm);
+    this.confirmButton.addEventListener('click', this.handleConfirm);
+    this.lessonTypeSelect.addEventListener('change', this.handleLessonTypeChange);
+  }
+
+  disconnectedCallback(): void {
+    this.lessonTypeSelect?.removeEventListener('change', this.handleLessonTypeChange);
   }
 
   /**
-   * The seeded lesson-structure grid, which the occurrence type and the chosen
-   * lesson and duration types resolve against. The grid is a full cross
-   * product, so every combination the two selects can produce names one.
+   * The combinations the school runs an instrument course under. The two
+   * selects are built from these — narrowed to the occurrence type the student
+   * waited under — so the Coordinator cannot arrive at a combination the server
+   * would then have to refuse for want of a course.
    */
   set lessonStructures(value: LessonStructure[]) {
     this._lessonStructures = value;
+    // Re-rendering here keeps a set assigned after opening from leaving stale
+    // options on the controls; before the element is connected there is nothing
+    // to render into, which `renderStructureOptions` decides for itself.
+    this.renderStructureOptions();
   }
 
   set teachers(value: AssignableTeacher[]) {
@@ -256,11 +311,18 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this._studentId = entry.studentId;
     this._studentName = `${entry.firstName} ${entry.lastName}`;
     this._occurrenceType = occurrenceType;
+    this._entryLessonType = entry.lessonType;
+    this._entryDurationType = entry.durationType;
 
     this.clearError();
     this.notice!.textContent = `${this._studentName} will be removed from the waiting list once enrolled.`;
     this.occurrenceTypeValue!.textContent = OCCURRENCE_TYPE_LABELS[occurrenceType];
+    this.renderStructureOptions();
+    // The entry's own combination may no longer be offered — a course can be
+    // deleted after a student is captured — so each assignment lands only if
+    // the value survived the narrowing, leaving the placeholder if it did not.
     this.lessonTypeSelect!.value = entry.lessonType;
+    this.renderDurationTypeOptions();
     this.durationTypeSelect!.value = entry.durationType;
     this.instrumentTypeSelect!.value = entry.instrumentType;
     this.enrolledDateInput!.value = todayIsoDate();
@@ -297,6 +359,61 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
         structure.durationType === this.durationTypeSelect!.value,
     );
   }
+
+  /**
+   * Rebuilds the lesson and duration selects from what is offered under the
+   * fixed occurrence type. Where nothing is offered under it the form gives way
+   * to a notice and Enrol is withdrawn: a dead end stated plainly beats two
+   * empty pickers and a button that cannot succeed.
+   */
+  private renderStructureOptions(): void {
+    if (!this.form) return;
+
+    const offered = offeredLessonTypes(this._lessonStructures, this._occurrenceType);
+    const nothingOffered = offered.length === 0;
+
+    this.noOfferedStructuresNotice!.textContent =
+      this._lessonStructures.length === 0 ? NO_OFFERED_STRUCTURES_NOTICE : NO_OFFERED_STRUCTURES_FOR_OCCURRENCE_NOTICE;
+    this.noOfferedStructuresNotice!.hidden = !nothingOffered;
+    this.form!.hidden = nothingOffered;
+    this.confirmButton!.hidden = nothingOffered;
+
+    fillOfferedOptions<LessonType>(this.lessonTypeSelect!, offered, LESSON_TYPE_LABELS, 'Select lesson type');
+    this.renderDurationTypeOptions();
+    this.renderEntryStructureNotice(nothingOffered);
+  }
+
+  /**
+   * States that what the student waited for is gone, where the form still has
+   * something to offer in its place. Suppressed where nothing is offered under
+   * the occurrence type at all: the notice standing in for the form already
+   * says there is nothing to pick, and saying both would be two ways of
+   * reporting one dead end.
+   */
+  private renderEntryStructureNotice(nothingOffered: boolean): void {
+    const entryIsOffered = this._lessonStructures.some(
+      (structure) =>
+        structure.occurrenceType === this._occurrenceType &&
+        structure.lessonType === this._entryLessonType &&
+        structure.durationType === this._entryDurationType,
+    );
+
+    this.entryStructureNotOfferedNotice!.textContent = ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE;
+    this.entryStructureNotOfferedNotice!.hidden = this._entryLessonType === '' || nothingOffered || entryIsOffered;
+  }
+
+  private renderDurationTypeOptions(): void {
+    fillOfferedOptions<DurationType>(
+      this.durationTypeSelect!,
+      offeredDurationTypes(this._lessonStructures, this._occurrenceType, this.lessonTypeSelect!.value),
+      DURATION_TYPE_LABELS,
+      'Select duration type',
+    );
+  }
+
+  private handleLessonTypeChange = (): void => {
+    this.renderDurationTypeOptions();
+  };
 
   private renderTeacherOptions(): void {
     if (!this.teacherSelect) return;

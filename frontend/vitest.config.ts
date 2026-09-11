@@ -283,6 +283,11 @@ export default defineConfig({
       { name: '304UC12', description: "A linked sibling row carries the icon for that sibling's own state, in both wizard modes" },
       { name: '304UC13', description: 'A student captured or changed on the Waiting List page is offered by the candidate list the next time the wizard is opened' },
       { name: '304UC14', description: 'A role that cannot open a wizard makes no candidate read when the Waiting List page loads' },
+      { name: '309UC6', description: 'The capture wizard Waiting List tab offers only combinations the school runs an instrument course for' },
+      { name: '309UC7', description: 'The edit wizard Waiting List tab offers only combinations the school runs an instrument course for' },
+      { name: '309UC8', description: 'The enrol modal offers only combinations the school runs an instrument course for' },
+      { name: '309UC9', description: 'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control' },
+      { name: '309UC12', description: "The enrol modal states that the entry's own combination is no longer offered, and suppresses that where nothing is offered under the occurrence type at all" },
     ],
   },
 })

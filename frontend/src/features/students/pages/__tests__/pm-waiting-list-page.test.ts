@@ -4,7 +4,7 @@ import type { AssignableTeacher } from '../../services/enrollments';
 import { todayIsoDate } from '../../components/enrollment-options';
 
 const mockGetWaitingList = vi.fn();
-const mockGetLessonStructures = vi.fn();
+const mockGetOfferedLessonStructures = vi.fn();
 const mockCaptureWaitingListStudent = vi.fn();
 const mockGetSiblingCandidates = vi.fn();
 const mockAddSibling = vi.fn();
@@ -25,7 +25,7 @@ vi.mock('../../services/waiting-list', async () => {
   return {
     ...actual,
     getWaitingList: () => mockGetWaitingList(),
-    getLessonStructures: () => mockGetLessonStructures(),
+    getOfferedLessonStructures: () => mockGetOfferedLessonStructures(),
     captureWaitingListStudent: (...args: unknown[]) => mockCaptureWaitingListStudent(...args),
     updateWaitingListEntry: (...args: unknown[]) => mockUpdateWaitingListEntry(...args),
     updateWaitingListStudent: (...args: unknown[]) => mockUpdateWaitingListStudent(...args),
@@ -171,7 +171,7 @@ function rowFor(el: HTMLElement, name: string): HTMLElement {
 }
 
 /**
- * The seeded grid, as far as these rows need it: the During School row's own
+ * The offered structures, as far as these rows need them: the During School row's own
  * combination, the After School rows' one, and the same lesson and duration
  * under the other occurrence type — so an enrolment resolving the wrong
  * structure would be visible rather than indistinguishable.
@@ -235,7 +235,7 @@ function actionButton(el: HTMLElement, name: string, label: string): HTMLButtonE
 
 beforeEach(() => {
   mockGetWaitingList.mockReset();
-  mockGetLessonStructures.mockReset().mockResolvedValue(lessonStructures);
+  mockGetOfferedLessonStructures.mockReset().mockResolvedValue(lessonStructures);
   mockCaptureWaitingListStudent.mockReset();
   mockGetSiblingCandidates.mockReset().mockResolvedValue([]);
   mockGetSiblings.mockReset().mockResolvedValue([]);
@@ -403,7 +403,7 @@ describe('pm-waiting-list-page — wizard lookups settle independently', () => {
       { lessonStructureId: 'ls1', lessonType: 'Individual', durationType: 'Hour', occurrenceType: 'DuringSchool' },
     ];
     mockGetGuardianRelationships.mockResolvedValueOnce(relationships);
-    mockGetLessonStructures.mockResolvedValueOnce(structures);
+    mockGetOfferedLessonStructures.mockResolvedValueOnce(structures);
 
     const el = await mountPage();
     const wizard = wizardOf(el);
@@ -428,7 +428,7 @@ describe('pm-waiting-list-page — wizard lookups settle independently', () => {
     mockGetSiblingCandidates.mockResolvedValueOnce([]);
     const { GuardiansError } = await import('../../services/guardians');
     mockGetGuardianRelationships.mockRejectedValueOnce(new GuardiansError('Request failed', 500));
-    mockGetLessonStructures.mockResolvedValueOnce([]);
+    mockGetOfferedLessonStructures.mockResolvedValueOnce([]);
 
     const el = await mountPage();
 

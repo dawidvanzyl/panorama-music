@@ -403,6 +403,72 @@ export async function seedCourseOfType(page: Page, lessonStructureId: string, co
 }
 
 /**
+ * Makes sure the school runs an instrument course for a structure, creating
+ * one only if it does not already. A scenario whose precondition is "this
+ * combination is offered" wants the state, not a new row: several specs share
+ * the same anchor structure, and a course type and a lesson structure identify
+ * at most one course once that uniqueness is enforced.
+ *
+ * <p>
+ * **Reserved structure:** never call this against
+ * `COURSE_FREE_LESSON_STRUCTURE`. See that constant for why.
+ * </p>
+ */
+export async function ensureInstrumentCourse(page: Page, lessonStructureId: string): Promise<void> {
+  const alreadyOffered = await page.evaluate(async (lessonStructureId) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+      courseType: string;
+      lessonStructureId: string;
+    }[];
+    return courses.some((c) => c.courseType === 'Instrument' && c.lessonStructureId === lessonStructureId);
+  }, lessonStructureId);
+
+  if (!alreadyOffered) await seedCourseOfType(page, lessonStructureId, 'Instrument');
+}
+
+/**
+ * Makes one occurrence/lesson/duration combination one the waiting-list
+ * surfaces offer, by making sure the school runs an instrument course for it.
+ * The three surfaces build their choices from the offered set, so a scenario
+ * that drives them towards a combination has to establish this first — it is
+ * the precondition of such a scenario, never part of its subject.
+ */
+export async function offerLessonStructure(
+  page: Page,
+  filter: { occurrenceType: OccurrenceType; lessonType: LessonType; durationType: DurationType },
+): Promise<string> {
+  const lessonStructureId = await fetchLessonStructureId(page, filter);
+  await ensureInstrumentCourse(page, lessonStructureId);
+  return lessonStructureId;
+}
+
+/**
+ * Makes sure a structure carries at least one course that is not an instrument
+ * course, creating one only if it carries none at all. For the scenario whose
+ * subject is that a course of some other type does not make a combination
+ * offered: it wants the state, and creating a course on every run would grow
+ * the catalogue every other suite reads without ever proving anything more.
+ *
+ * <p>
+ * Safe against `COURSE_FREE_LESSON_STRUCTURE` — and only useful there — since
+ * the convention forbids only instrument courses on it.
+ * </p>
+ */
+export async function ensureNonInstrumentCourse(page: Page, lessonStructureId: string): Promise<void> {
+  const alreadyCarriesOne = await page.evaluate(async (lessonStructureId) => {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+    const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+      courseType: string;
+      lessonStructureId: string;
+    }[];
+    return courses.some((c) => c.courseType !== 'Instrument' && c.lessonStructureId === lessonStructureId);
+  }, lessonStructureId);
+
+  if (!alreadyCarriesOne) await seedCourseOfType(page, lessonStructureId, 'G2Recorder');
+}
+
+/**
  * The lesson-structure id for one exact occurrence/lesson/duration triple —
  * for a scenario that needs a course on a structure other than the entry's:
  * the combination the Coordinator changes to under the same occurrence type,
@@ -540,19 +606,31 @@ export interface EnrolAttemptInput {
   enrolledDate?: string;
 }
 
+export interface EnrolAttemptResult {
+  status: number;
+  /** The refusal's own message, off the error body the API writes; null on a success. */
+  error: string | null;
+}
+
 /**
  * The enrolment-off-the-waiting-list path, reached directly from the signed-in
- * session. Two boundaries have no control to press for them: a Teacher is
- * offered no Enrol action at all, and the modal presents the occurrence type as
- * a value rather than a control, deriving the structure from it — so no
- * structure the modal can name carries a different occurrence type. Both can
- * only be attempted by naming the request outright.
+ * session. Three boundaries have no control to press for them: a Teacher is
+ * offered no Enrol action at all; the modal presents the occurrence type as a
+ * value rather than a control, deriving the structure from it — so no structure
+ * the modal can name carries a different occurrence type; and the modal's
+ * selects now offer only combinations the school runs an instrument course
+ * under, so no combination it can name reaches the no-instrument-course
+ * refusal. All three can only be attempted by naming the request outright.
+ *
+ * The refusal message travels back with the status because a scenario reached
+ * this way still has to prove the refusal says why — the reason is read off the
+ * response body here rather than off a line in the modal.
  */
 export async function attemptEnrolFromWaitingList(
   page: Page,
   studentId: string,
   input: EnrolAttemptInput,
-): Promise<number> {
+): Promise<EnrolAttemptResult> {
   return page.evaluate(
     async ({ studentId, input }) => {
       const response = await fetch(`/api/waiting-list/students/${studentId}/enrollment`, {
@@ -569,7 +647,19 @@ export async function attemptEnrolFromWaitingList(
           enrolledDate: input.enrolledDate ?? new Date().toISOString().slice(0, 10),
         }),
       });
-      return response.status;
+
+      if (response.ok) return { status: response.status, error: null };
+
+      // Every refusal the API writes carries its message on `error`; a body
+      // that is not JSON at all is surfaced as its own text rather than
+      // swallowed, so a scenario asserting the reason fails loudly.
+      const body = await response.text();
+      try {
+        const parsed = JSON.parse(body) as { error?: string };
+        return { status: response.status, error: parsed.error ?? body };
+      } catch {
+        return { status: response.status, error: body };
+      }
     },
     { studentId, input },
   );

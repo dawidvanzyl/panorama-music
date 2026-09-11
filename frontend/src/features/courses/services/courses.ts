@@ -1,6 +1,7 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
+import { clearCourseCatalogueCaches } from '../../../services/course-catalogue-cache';
 import type { CourseType, LessonType, DurationType, OccurrenceType } from '../../../services/lesson-structure';
 
 const COURSES_BASE = '/api/courses';
@@ -79,6 +80,18 @@ export function clearCoursesCache(): void {
 registerSessionCache(clearCoursesCache);
 
 /**
+ * Which courses exist has just changed. Other features cache things the
+ * catalogue decides — the lesson structures the waiting list may offer, for one
+ * — and none of them can see this write, so the catalogue tells them. A cost
+ * change does not come through here: it alters a course's price, not the set of
+ * courses, and nothing is derived from the price.
+ */
+function onCatalogueChanged(): void {
+  clearCoursesCache();
+  clearCourseCatalogueCaches();
+}
+
+/**
  * The whole catalogue in one read, held for the session. Narrowing it is a
  * client-side concern applied over this cached list, the same as it is for
  * students — see `filter-courses.ts`.
@@ -104,7 +117,7 @@ export async function createCourse(input: CourseInput): Promise<Course> {
     }),
   });
   const result = await handleResponse<Course>(response);
-  clearCoursesCache();
+  onCatalogueChanged();
   return result;
 }
 
@@ -145,7 +158,7 @@ export async function deleteCourse(courseId: string): Promise<void> {
     headers: authHeaders(),
   });
   await assertOk(response);
-  clearCoursesCache();
+  onCatalogueChanged();
 }
 
 let _lessonStructuresCache: LessonStructure[] | null = null;

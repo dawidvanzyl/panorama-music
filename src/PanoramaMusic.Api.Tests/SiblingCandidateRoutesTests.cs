@@ -226,6 +226,8 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 		string lastName)
 	{
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
+		await EnsureInstrumentCourseAsync(coordinatorClient, structure.LessonStructureId);
+
 		var request = new CaptureWaitingListStudentRequest(
 			firstName,
 			lastName,
@@ -281,7 +283,7 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 		Guid studentId)
 	{
 		var structure = await GetStructureAsync(coordinatorClient, LessonType.Individual, DurationType.Hour, OccurrenceType.DuringSchool);
-		var course = await CreateCourseAsync(coordinatorClient, CourseType.Instrument, 450.00m, structure.LessonStructureId);
+		var course = await EnsureInstrumentCourseAsync(coordinatorClient, structure.LessonStructureId);
 		var teacher = await CreateTeacherAsync(coordinatorClient, "Lindiwe", $"Mabaso-{Guid.NewGuid():N}");
 
 		var enrollmentResponse = await teacherClient.Client.SendAsync(
@@ -305,6 +307,25 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 
 		return structures.Single(s =>
 			s.LessonType == lessonType && s.DurationType == durationType && s.OccurrenceType == occurrenceType);
+	}
+
+	/// <summary>
+	/// A student may only be captured waiting for a structure the school runs an
+	/// instrument course under, and these tests capture and enrol against the same
+	/// structure. It reads the catalogue before creating, because a course type and
+	/// a lesson structure identify at most one course.
+	/// </summary>
+	private static async Task<CourseResult> EnsureInstrumentCourseAsync(IsolatedHttpClient client, Guid lessonStructureId)
+	{
+		var response = await client.Client.SendAsync(
+			client.AuthorizedGetRequest("/api/courses"), TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		var courses = JsonSerializer.Deserialize<List<CourseResult>>(payload, _jsonOptions).ShouldNotBeNull();
+
+		var existing = courses.SingleOrDefault(course =>
+			course.CourseType == CourseType.Instrument && course.LessonStructureId == lessonStructureId);
+
+		return existing ?? await CreateCourseAsync(client, CourseType.Instrument, 450.00m, lessonStructureId);
 	}
 
 	private static async Task<CourseResult> CreateCourseAsync(

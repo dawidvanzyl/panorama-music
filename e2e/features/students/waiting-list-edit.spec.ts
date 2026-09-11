@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/base';
 import { goToWaitingListPage } from '../../fixtures/testUsers';
-import { seedWaitingListEntry } from '../../fixtures/waitingList';
+import { seedWaitingListEntry, ensureInstrumentCourse, fetchLessonStructureId } from '../../fixtures/waitingList';
 import type { Page } from '@playwright/test';
 
 /** Same convention as waiting-list-capture.spec.ts — a run is told apart by the value it writes. */
@@ -65,6 +65,17 @@ test.describe(
         instrumentType: 'Piano',
         notes: 'Prefers mornings',
       });
+      // The combination this edit moves to has to be one the school runs an
+      // instrument course for, or the tab does not offer it — the waiting list
+      // presents only combinations a student can actually be waiting for.
+      await ensureInstrumentCourse(
+        page,
+        await fetchLessonStructureId(page, {
+          occurrenceType: 'AfterSchool',
+          lessonType: 'Group',
+          durationType: 'HalfHour',
+        }),
+      );
       await page.reload();
 
       const originalRow = waitingListPage.rowFor('During School', entry.lastName);

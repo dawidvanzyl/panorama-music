@@ -19,6 +19,16 @@ export interface WaitingListStepInput {
 /** The wizard's tabs, named as a caller reads them off the tab strip. */
 export type WizardTabName = 'Student' | 'Siblings' | 'Guardians' | 'Waiting List';
 
+/** One occurrence/lesson/duration combination, named by the labels a user reads. */
+export interface StructureCombination {
+  occurrenceLabel: OccurrenceLabel;
+  lessonLabel: LessonLabel;
+  durationLabel: DurationLabel;
+}
+
+/** The same, minus the occurrence type, for a surface that fixes it. */
+export type StructureCombinationUnderOccurrence = Omit<StructureCombination, 'occurrenceLabel'>;
+
 export class WaitingListPage extends BasePage {
   readonly captureButton: Locator;
   readonly errorBanner: Locator;
@@ -136,6 +146,89 @@ export class WaitingListPage extends BasePage {
     await this.goToNextStep(); // Guardians -> Waiting List
     await this.fillWaitingListFields(waitingList);
     await this.saveCapture();
+  }
+
+  /**
+   * Opens the capture wizard and steps to the Waiting List tab, which is the
+   * only way to reach it in create mode — the later tabs are disabled until
+   * the Student tab is complete, so a scenario that only wants to read what
+   * the tab offers still has to give the student a name.
+   */
+  async openCaptureWizardAtWaitingListTab(student: StudentInput): Promise<void> {
+    await this.openCaptureWizard();
+    await this.fillStudentFields(student);
+    await this.goToNextStep(); // Student -> Siblings
+    await this.goToNextStep(); // Siblings -> Guardians
+    await this.goToNextStep(); // Guardians -> Waiting List
+    await expect(this.waitingListTab()).toHaveClass(/wizard__tab--active/);
+  }
+
+  // --- What a surface offers ---
+
+  private waitingListStep(): Locator {
+    return this.wizardModal.locator('#waitingListStep');
+  }
+
+  /** The notice shown in place of the whole form when nothing is offered at all. */
+  waitingListNoOfferedStructures(): Locator {
+    return this.waitingListStep().locator('#noOfferedStructures');
+  }
+
+  private async offersOption(select: Locator, label: string): Promise<boolean> {
+    const labels = await select.locator('option').allTextContents();
+    return labels.some((text) => text.trim() === label);
+  }
+
+  /**
+   * Whether any sequence of choices through the Waiting List tab's own
+   * controls arrives at this combination.
+   *
+   * <p>
+   * The three choices narrow one another, so this walks them the way a
+   * Coordinator does — pick the occurrence type, then read what lesson types
+   * are left, pick one, then read what durations are left. Asking a single
+   * control what options it holds would answer a different question entirely:
+   * a lesson type can be offered under one duration and not another, so an
+   * option's presence says nothing about whether the combination is reachable.
+   * </p>
+   */
+  async waitingListTabOffers(combination: StructureCombination): Promise<boolean> {
+    const step = this.waitingListStep();
+    // Nothing offered at all: the form gives way to the notice, and there is
+    // no control to make a choice through.
+    if (await step.locator('#form').isHidden()) return false;
+
+    const occurrence = step.locator('#occurrenceType');
+    if (!(await this.offersOption(occurrence, combination.occurrenceLabel))) return false;
+    await occurrence.selectOption({ label: combination.occurrenceLabel });
+
+    const lesson = step.locator('#lessonType');
+    if (!(await this.offersOption(lesson, combination.lessonLabel))) return false;
+    await lesson.selectOption({ label: combination.lessonLabel });
+
+    return this.offersOption(step.locator('#durationType'), combination.durationLabel);
+  }
+
+  /** The enrol modal's stand-in for the form when nothing is offered under its occurrence type. */
+  enrolNoOfferedStructures(): Locator {
+    return this.enrolModal.locator('#noOfferedStructures');
+  }
+
+  /**
+   * Whether any sequence of choices through the enrol modal's own controls
+   * arrives at this lesson type and duration. The occurrence type is a fixed
+   * value here rather than a choice, so the combination is read under whatever
+   * the entry settled on — read `enrolOccurrenceType()` alongside this to say
+   * which one that was.
+   */
+  async enrolModalOffers(combination: StructureCombinationUnderOccurrence): Promise<boolean> {
+    if (await this.enrolModal.locator('#form').isHidden()) return false;
+
+    const lesson = this.enrolLessonType();
+    if (!(await this.offersOption(lesson, combination.lessonLabel))) return false;
+    await lesson.selectOption({ label: combination.lessonLabel });
+
+    return this.offersOption(this.enrolDurationType(), combination.durationLabel);
   }
 
   /** The occurrence-type group card, matched on its heading text. */
@@ -364,12 +457,19 @@ export class WaitingListPage extends BasePage {
   }
 
   /**
-   * Dismisses the wizard through the shared footer's Cancel (capture) or Close
-   * (an existing entry's Siblings/Guardians tabs, which write their own changes
-   * and have nothing left to cancel).
+   * Dismisses the wizard however the current mode offers it: capture mode and
+   * the tabs that write their own changes (Siblings, Guardians) carry a Cancel
+   * or Close in the shared footer, while the Waiting List tab in edit mode
+   * replaces the footer with its own Close. Same shape as
+   * StudentsPage.closeWizard.
    */
   async closeWizard(): Promise<void> {
-    await this.wizardModal.locator('.wizard__actions #cancelBtn').click();
+    const footerCancel = this.wizardModal.locator('.wizard__actions #cancelBtn');
+    if (await footerCancel.isVisible()) {
+      await footerCancel.click();
+      return;
+    }
+    await this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn').click();
   }
 
   // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---
