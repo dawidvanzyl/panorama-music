@@ -74,6 +74,7 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<DeleteStudentHandler>();
 		services.AddTransient<AddSiblingHandler>();
 		services.AddTransient<GetSiblingsHandler>();
+		services.AddTransient<GetSiblingCandidatesHandler>();
 		services.AddTransient<RemoveSiblingHandler>();
 		services.AddTransient<GuardianMaintenanceScope>();
 		services.AddTransient<StudentWriteSourceResolver>();

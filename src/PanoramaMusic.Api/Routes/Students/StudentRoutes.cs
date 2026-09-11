@@ -43,6 +43,23 @@ public static class StudentRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
+		// The Siblings tab's own read. It spans the roster and the waiting list,
+		// which GetStudents above deliberately does not — a sibling relationship
+		// is a family fact and does not depend on either child's enrolment, while
+		// the roster listing's exclusion is what keeps the two screens mutually
+		// exclusive. Same permissions as the wizard that calls it.
+		group
+			.MapGet("/sibling-candidates", async (GetSiblingCandidatesHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(ct);
+				return Results.Ok(result);
+			})
+			.MarkSensitiveResponse()
+			.WithName("GetSiblingCandidates")
+			.Produces<IList<SiblingCandidateResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
 		group
 			.MapGet("/{studentId:guid}", async (Guid studentId, GetStudentByIdHandler handler, CancellationToken ct) =>
 			{
