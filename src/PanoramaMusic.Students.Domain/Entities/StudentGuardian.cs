@@ -27,14 +27,14 @@ public sealed class StudentGuardian : AggregateRoot
 	/// on the event for the audit record. The caller states it; nothing
 	/// downstream infers it.
 	/// </summary>
-	public static StudentGuardian Create(Student student, Guardian guardian, StudentWriteSource source)
+	public static StudentGuardian Create(Student student, Guardian guardian, StudentPopulation source)
 	{
 		var link = new StudentGuardian(student.StudentId, guardian.GuardianId);
 		link.Raise(new GuardianLinked(student, guardian, source));
 		return link;
 	}
 
-	public void MarkUnlinked(Student student, Guardian guardian, StudentWriteSource source)
+	public void MarkUnlinked(Student student, Guardian guardian, StudentPopulation source)
 	{
 		Raise(new GuardianUnlinked(student, guardian, source));
 	}

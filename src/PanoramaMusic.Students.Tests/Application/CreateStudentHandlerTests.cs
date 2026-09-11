@@ -73,6 +73,6 @@ public class CreateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 
 		await _handler.HandleAsync(new CreateStudentCommand(request), TestContext.Current.CancellationToken);
 
-		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentWriteSource.Roster);
+		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 }

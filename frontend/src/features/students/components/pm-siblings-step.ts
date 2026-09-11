@@ -1,6 +1,6 @@
 import './pm-sibling-list';
 import './pm-student-search-select';
-import type { StudentResult } from '../services/students';
+import type { SiblingStudentResult } from '../services/students';
 import type { PmSiblingList } from './pm-sibling-list';
 import type { PmStudentSearchSelect } from './pm-student-search-select';
 
@@ -70,8 +70,8 @@ export class PmSiblingsStep extends HTMLElement {
   private siblingList: PmSiblingList | null = null;
   private _mode: Mode = 'inactive';
   private _studentId: string | null = null;
-  private _createCandidates: StudentResult[] = [];
-  private _pendingSiblings: StudentResult[] = [];
+  private _createCandidates: SiblingStudentResult[] = [];
+  private _pendingSiblings: SiblingStudentResult[] = [];
 
   constructor() {
     super();
@@ -99,10 +99,12 @@ export class PmSiblingsStep extends HTMLElement {
   /**
    * Create mode: the student doesn't have an id yet, so siblings picked here are
    * staged locally (see `pendingSiblingIds`) rather than sent to the API immediately.
-   * `candidates` is the full student roster, since a brand-new student can't have
-   * any siblings linked yet to filter out.
+   * `candidates` is the whole candidate list, since a brand-new student can't
+   * have any siblings linked yet to filter out. A picked candidate moves into
+   * the staged table as it stands, carrying the listing it was offered with, so
+   * a staged row states the same thing a saved one will.
    */
-  activateForCreate(candidates: StudentResult[]): void {
+  activateForCreate(candidates: SiblingStudentResult[]): void {
     this._mode = 'create';
     this._studentId = null;
     this._createCandidates = [...candidates];
@@ -143,11 +145,11 @@ export class PmSiblingsStep extends HTMLElement {
     return this._pendingSiblings.map((s) => s.studentId);
   }
 
-  set siblings(value: StudentResult[]) {
+  set siblings(value: SiblingStudentResult[]) {
     this.siblingList!.siblings = value;
   }
 
-  set candidates(value: StudentResult[]) {
+  set candidates(value: SiblingStudentResult[]) {
     this.searchSelect!.candidates = value;
   }
 

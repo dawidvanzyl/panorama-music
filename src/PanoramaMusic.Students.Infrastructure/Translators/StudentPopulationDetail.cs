@@ -9,7 +9,7 @@ namespace PanoramaMusic.Students.Infrastructure.Translators;
 /// is carried by the domain event, set by the handler that raised it — nothing
 /// here works out where the write came from.
 /// </summary>
-internal static class StudentWriteSourceDetail
+internal static class StudentPopulationDetail
 {
 	private const string _sourceKey = "source";
 	private const string _waitingListSource = "waitingList";
@@ -19,9 +19,9 @@ internal static class StudentWriteSourceDetail
 	/// so a roster write records no source at all and only the other surfaces
 	/// name themselves.
 	/// </summary>
-	public static void Apply(Dictionary<string, object?> detail, StudentWriteSource source)
+	public static void Apply(Dictionary<string, object?> detail, StudentPopulation source)
 	{
-		if (source != StudentWriteSource.WaitingList)
+		if (source != StudentPopulation.WaitingList)
 			return;
 
 		detail[_sourceKey] = _waitingListSource;

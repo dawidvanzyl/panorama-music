@@ -23,7 +23,7 @@ public sealed class SiblingAddedTranslator(IAuditContext auditContext, IUserCont
 			["siblingId"] = siblingAdded.Sibling.StudentId,
 			["targetDisplay"] = $"{siblingAdded.Student.FirstName} {siblingAdded.Student.LastName} ↔ {siblingAdded.Sibling.FirstName} {siblingAdded.Sibling.LastName}",
 		};
-		StudentWriteSourceDetail.Apply(detail, siblingAdded.Source);
+		StudentPopulationDetail.Apply(detail, siblingAdded.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

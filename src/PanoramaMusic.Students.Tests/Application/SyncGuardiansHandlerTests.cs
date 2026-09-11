@@ -122,7 +122,7 @@ public class SyncGuardiansHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var linked = await SyncAGuardianOnto(onTheWaitingList: true);
 
-		linked.Source.ShouldBe(StudentWriteSource.WaitingList);
+		linked.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -131,7 +131,7 @@ public class SyncGuardiansHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var linked = await SyncAGuardianOnto(onTheWaitingList: false);
 
-		linked.Source.ShouldBe(StudentWriteSource.Roster);
+		linked.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	private async Task<GuardianLinked> SyncAGuardianOnto(bool onTheWaitingList)

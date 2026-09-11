@@ -25,7 +25,7 @@ public sealed class StudentUpdatedTranslator(IAuditContext auditContext, IUserCo
 			["targetDisplay"] = $"{after.FirstName} {after.LastName}",
 			["changes"] = Diff(updated.Before, after),
 		};
-		StudentWriteSourceDetail.Apply(detail, updated.Source);
+		StudentPopulationDetail.Apply(detail, updated.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

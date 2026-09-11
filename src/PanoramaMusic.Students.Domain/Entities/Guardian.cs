@@ -62,7 +62,7 @@ public sealed class Guardian : AggregateRoot
 		bool receivesCorrespondence,
 		bool responsibleForPayment,
 		bool married,
-		StudentWriteSource source)
+		StudentPopulation source)
 	{
 		var guardian = new Guardian(
 			guardianId,
@@ -95,7 +95,7 @@ public sealed class Guardian : AggregateRoot
 		bool receivesCorrespondence,
 		bool responsibleForPayment,
 		bool married,
-		StudentWriteSource source)
+		StudentPopulation source)
 	{
 		var before = new Guardian(
 			GuardianId,
@@ -120,7 +120,7 @@ public sealed class Guardian : AggregateRoot
 		Raise(new GuardianUpdated(before, this, source));
 	}
 
-	public void MarkDeleted(StudentWriteSource source)
+	public void MarkDeleted(StudentPopulation source)
 	{
 		Raise(new GuardianDeleted(this, source));
 	}

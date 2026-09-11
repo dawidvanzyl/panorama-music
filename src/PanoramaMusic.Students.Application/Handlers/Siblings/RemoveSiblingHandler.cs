@@ -9,7 +9,7 @@ namespace PanoramaMusic.Students.Application.Handlers.Siblings;
 public sealed class RemoveSiblingHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task HandleAsync(RemoveSiblingCommand command, CancellationToken cancellationToken)
 	{
@@ -20,7 +20,7 @@ public sealed class RemoveSiblingHandler(
 		var siblingStudent = siblings.FirstOrDefault(s => s.StudentId == command.SiblingId)
 			?? throw new EntityNotFoundException($"Sibling link between {command.StudentId} and {command.SiblingId} was not found.");
 
-		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+		var source = await studentPopulationResolver.ForStudentAsync(student.StudentId, cancellationToken);
 
 		var sibling = new Sibling(student.StudentId, siblingStudent.StudentId);
 		sibling.MarkRemoved(student, siblingStudent, source);

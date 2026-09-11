@@ -1,4 +1,5 @@
 using PanoramaMusic.Students.Domain.Entities;
+using PanoramaMusic.Students.Domain.ValueObjects;
 
 namespace PanoramaMusic.Students.Domain.Interfaces;
 
@@ -36,6 +37,15 @@ public interface IStudentGuardianRepository
 	/// student itself — the set a "Sync Guardians" action would add.
 	/// </summary>
 	Task<IList<Guardian>> GetMissingSiblingGuardiansAsync(Guid studentId, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// The links that would give each of this student's enrolled siblings every
+	/// guardian the student holds — one row per link that does not exist yet.
+	/// Siblings still on the waiting list are not included; a guardian reaches
+	/// them when it is added, and only an enrolled sibling is ever held back
+	/// from.
+	/// </summary>
+	Task<IList<MissingGuardianLink>> GetMissingEnrolledSiblingLinksAsync(Guid studentId, CancellationToken cancellationToken);
 
 	Task CreateAsync(StudentGuardian link, CancellationToken cancellationToken);
 

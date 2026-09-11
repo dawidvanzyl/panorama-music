@@ -56,7 +56,7 @@ public sealed class Student : AggregateRoot
 		ClassType? @class,
 		PhaseType? phase,
 		Language language,
-		StudentWriteSource source)
+		StudentPopulation source)
 	{
 		var student = new Student(
 			studentId,
@@ -90,7 +90,7 @@ public sealed class Student : AggregateRoot
 		ClassType? @class,
 		PhaseType? phase,
 		Language language,
-		StudentWriteSource source)
+		StudentPopulation source)
 	{
 		var before = new Student(
 			StudentId,
@@ -117,7 +117,7 @@ public sealed class Student : AggregateRoot
 	/// Raises <see cref="StudentDeleted"/> carrying the surface the deletion
 	/// came through, on the same terms as <see cref="Update"/>.
 	/// </summary>
-	public void MarkDeleted(StudentWriteSource source)
+	public void MarkDeleted(StudentPopulation source)
 	{
 		Raise(new StudentDeleted(this, source));
 	}

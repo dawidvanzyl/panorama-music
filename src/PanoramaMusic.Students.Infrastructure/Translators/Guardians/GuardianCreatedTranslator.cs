@@ -23,7 +23,7 @@ public sealed class GuardianCreatedTranslator(IAuditContext auditContext, IUserC
 		{
 			["targetDisplay"] = $"{guardian.FirstName} {guardian.Surname}",
 		};
-		StudentWriteSourceDetail.Apply(detail, created.Source);
+		StudentPopulationDetail.Apply(detail, created.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

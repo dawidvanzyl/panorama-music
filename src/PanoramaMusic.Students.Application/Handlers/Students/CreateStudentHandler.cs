@@ -21,7 +21,7 @@ public sealed class CreateStudentHandler(IStudentRepository studentRepository)
 			request.Class,
 			request.Phase,
 			request.Language,
-			StudentWriteSource.Roster);
+			StudentPopulation.Enrolled);
 
 		await studentRepository.CreateAsync(student, cancellationToken);
 

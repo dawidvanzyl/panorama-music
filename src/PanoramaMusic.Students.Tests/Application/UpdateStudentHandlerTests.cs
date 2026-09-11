@@ -86,7 +86,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 			TestContext.Current.CancellationToken);
 
 		var updated = student.DrainEvents().OfType<StudentUpdated>().Single();
-		updated.Source.ShouldBe(StudentWriteSource.Roster);
+		updated.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	[Fact]

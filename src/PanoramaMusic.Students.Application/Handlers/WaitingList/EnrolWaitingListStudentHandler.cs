@@ -30,13 +30,22 @@ namespace PanoramaMusic.Students.Application.Handlers.WaitingList;
 /// is not one whatever row this table still holds for them — the same narrower
 /// resolution the update and removal paths use.
 /// </para>
+/// <para>
+/// Enrolling also settles the family's guardians. A guardian added while the
+/// student was waiting was kept from their enrolled siblings, and enrolling is
+/// the moment that reason expires — so the missing links are created here, on the
+/// same unit of work, and a refused enrolment leaves every sibling exactly as
+/// they were.
+/// </para>
 /// </summary>
 public sealed class EnrolWaitingListStudentHandler(
 	IWaitingListRepository waitingListRepository,
 	ILessonStructureRepository lessonStructureRepository,
 	ICourseRepository courseRepository,
 	IStudentCourseRepository studentCourseRepository,
-	ITeacherDirectory teacherDirectory)
+	ITeacherDirectory teacherDirectory,
+	ISiblingRepository siblingRepository,
+	IStudentGuardianRepository studentGuardianRepository)
 {
 	public async Task<StudentCourseResult> HandleAsync(
 		EnrolWaitingListStudentCommand command,
@@ -84,6 +93,53 @@ public sealed class EnrolWaitingListStudentHandler(
 		entry.MarkEnrolled(enrollment);
 		await waitingListRepository.DeleteAsync(entry, cancellationToken);
 
+		// Last, so that every refusal above has already had its say: a student who
+		// does not end up enrolled must leave their siblings untouched. The links
+		// created here are the Coordinator's enrolment, not a guardian they linked
+		// by hand, and the audit trail says so.
+		await ReconcileEnrolledSiblingsAsync(
+			entry.Student, StudentPopulation.WaitingList, cancellationToken);
+
 		return enrollment.ToResult(teacher);
+	}
+
+	/// <summary>
+	/// Gives this student's enrolled siblings every guardian the student holds. A
+	/// guardian belongs to the family rather than to one child, so enrolling closes
+	/// the gap the wait left behind. Only links are created — no guardian's own
+	/// details are touched, and nothing is written where the family already agrees.
+	/// <para>
+	/// Only enrolled siblings are considered. A sibling still on the waiting list
+	/// received the guardian when it was added, so there is nothing to repair for
+	/// them.
+	/// </para>
+	/// </summary>
+	private async Task ReconcileEnrolledSiblingsAsync(
+		Student student,
+		StudentPopulation source,
+		CancellationToken cancellationToken)
+	{
+		var missingLinks = await studentGuardianRepository.GetMissingEnrolledSiblingLinksAsync(
+			student.StudentId, cancellationToken);
+		if (missingLinks.Count == 0)
+			return;
+
+		// A link carries the student and the guardian rather than their ids, so
+		// both are loaded once for the whole set. Each missing link names a sibling
+		// of this student and a guardian this student holds, which is exactly what
+		// these two reads return.
+		var siblings = (await siblingRepository.GetSiblingsAsync(student.StudentId, cancellationToken))
+			.ToDictionary(sibling => sibling.StudentId);
+		var guardians = (await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken))
+			.ToDictionary(guardian => guardian.GuardianId);
+
+		foreach (var missingLink in missingLinks)
+		{
+			var link = StudentGuardian.Create(
+				siblings[missingLink.StudentId],
+				guardians[missingLink.GuardianId],
+				source);
+			await studentGuardianRepository.CreateAsync(link, cancellationToken);
+		}
 	}
 }

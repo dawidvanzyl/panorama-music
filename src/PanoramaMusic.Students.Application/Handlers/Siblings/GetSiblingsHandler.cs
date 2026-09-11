@@ -7,13 +7,13 @@ namespace PanoramaMusic.Students.Application.Handlers.Siblings;
 
 public sealed class GetSiblingsHandler(IStudentRepository studentRepository, ISiblingRepository siblingRepository)
 {
-	public async Task<IList<StudentResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
+	public async Task<IList<SiblingStudentResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
 	{
 		_ = await studentRepository.GetByIdAsync(studentId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {studentId} was not found.");
 
-		var siblings = await siblingRepository.GetSiblingsAsync(studentId, cancellationToken);
+		var siblings = await siblingRepository.GetSiblingStudentsAsync(studentId, cancellationToken);
 
-		return [.. siblings.Select(student => student.ToResult())];
+		return [.. siblings.Select(sibling => sibling.ToResult())];
 	}
 }

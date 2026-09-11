@@ -6,8 +6,9 @@ import { todayIsoDate } from '../../components/enrollment-options';
 const mockGetWaitingList = vi.fn();
 const mockGetOfferedLessonStructures = vi.fn();
 const mockCaptureWaitingListStudent = vi.fn();
-const mockGetStudents = vi.fn();
+const mockGetSiblingCandidates = vi.fn();
 const mockAddSibling = vi.fn();
+const mockGetSiblings = vi.fn();
 const mockGetGuardianRelationships = vi.fn();
 const mockGetGuardians = vi.fn();
 const mockAddGuardian = vi.fn();
@@ -45,7 +46,8 @@ vi.mock('../../services/students', async () => {
   const actual = await vi.importActual<typeof import('../../services/students')>('../../services/students');
   return {
     ...actual,
-    getStudents: () => mockGetStudents(),
+    getSiblingCandidates: () => mockGetSiblingCandidates(),
+    getSiblings: (...args: unknown[]) => mockGetSiblings(...args),
     getStudentById: (...args: unknown[]) => mockGetStudentById(...args),
     addSibling: (...args: unknown[]) => mockAddSibling(...args),
   };
@@ -69,6 +71,8 @@ vi.mock('../../../../services/token-storage', async () => {
 });
 
 import '../pm-waiting-list-page';
+import { populationDescription } from '../../components/student-population';
+import type { SiblingStudentResult } from '../../services/students';
 import type { PmWaitingListTable } from '../../components/pm-waiting-list-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
 
@@ -233,7 +237,8 @@ beforeEach(() => {
   mockGetWaitingList.mockReset();
   mockGetOfferedLessonStructures.mockReset().mockResolvedValue(lessonStructures);
   mockCaptureWaitingListStudent.mockReset();
-  mockGetStudents.mockReset().mockResolvedValue([]);
+  mockGetSiblingCandidates.mockReset().mockResolvedValue([]);
+  mockGetSiblings.mockReset().mockResolvedValue([]);
   mockAddSibling.mockReset();
   mockGetGuardianRelationships.mockReset().mockResolvedValue([]);
   mockGetGuardians.mockReset();
@@ -383,16 +388,16 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
   });
 });
 
-// Regression for #299. The wizard's three lookups settle independently so
-// that one rejection can never sink the other two — these tests prove that
-// holds for whichever lookup actually fails, and that every failure is shown
-// rather than silently absorbed.
+// Regression for #299. The lookups the wizard needs before it opens settle
+// independently, so one rejection can never sink another — these tests prove
+// that holds for whichever lookup actually fails, and that every failure is
+// shown rather than silently absorbed.
 describe('pm-waiting-list-page — wizard lookups settle independently', () => {
-  it('assigns the guardian-relationship and lesson-structure lookups even when getStudents fails, and shows the error', async () => {
+  it('assigns the guardian-relationship and lesson-structure lookups even when the candidate read fails, and shows the error', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
     const { StudentsError } = await import('../../services/students');
-    mockGetStudents.mockRejectedValueOnce(new StudentsError('Request failed', 500));
+    mockGetSiblingCandidates.mockRejectedValueOnce(new StudentsError('Request failed', 500));
     const relationships = [{ guardianRelationshipId: 'r1', name: 'Mother' }];
     const structures = [
       { lessonStructureId: 'ls1', lessonType: 'Individual', durationType: 'Hour', occurrenceType: 'DuringSchool' },
@@ -417,10 +422,10 @@ describe('pm-waiting-list-page — wizard lookups settle independently', () => {
     // lookup would leave them in.
   });
 
-  it('still assigns the students and lesson-structure lookups when getGuardianRelationships fails, and shows the error', async () => {
+  it('still assigns the candidate and lesson-structure lookups when getGuardianRelationships fails, and shows the error', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
-    mockGetStudents.mockResolvedValueOnce([]);
+    mockGetSiblingCandidates.mockResolvedValueOnce([]);
     const { GuardiansError } = await import('../../services/guardians');
     mockGetGuardianRelationships.mockRejectedValueOnce(new GuardiansError('Request failed', 500));
     mockGetOfferedLessonStructures.mockResolvedValueOnce([]);
@@ -852,3 +857,253 @@ describe(
     });
   },
 );
+
+describe('pm-waiting-list-page — a refused enrolment stays recoverable', { tags: ['295UC21'] }, () => {
+  const refusal = 'The school offers no instrument course for that lesson structure.';
+
+  it('shows the refusal in the modal and leaves it open with every choice still made', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockEnrolWaitingListStudent.mockRejectedValueOnce(new WaitingListError(refusal, 400));
+
+    const el = await mountPage();
+    const modal = await openEnrolModal(el, 'Amara Pillay');
+    completeEnrolForm(el);
+    (modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement).click();
+    await flush();
+    await flush();
+
+    const error = enrolFieldOf(el, 'error');
+    expect(error.textContent).toBe(refusal);
+    expect(error.classList.contains('enrol__error--visible')).toBe(true);
+
+    // The reason is only half of it: a closed modal would make the refusal a
+    // dead end, so the modal stays up with what the Coordinator chose still on
+    // it — otherwise there is nothing to change and retry.
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect((enrolFieldOf(el, 'lessonType') as HTMLSelectElement).value).toBe('Individual');
+    expect((enrolFieldOf(el, 'durationType') as HTMLSelectElement).value).toBe('HalfHour');
+    expect((enrolFieldOf(el, 'instrumentType') as HTMLSelectElement).value).toBe('Piano');
+    expect((enrolFieldOf(el, 'teacher') as HTMLSelectElement).value).toBe('t1');
+    expect((enrolFieldOf(el, 'step') as HTMLSelectElement).value).toBe('Step2A');
+    expect((enrolFieldOf(el, 'enrolledDate') as HTMLInputElement).value).toBe(todayIsoDate());
+
+    // Nothing moved: the row is still on the list and nothing claims success.
+    expect(rowNames(el)).toContain('Amara Pillay');
+    expect(successBannerOf(el).classList.contains('waiting-list-page__success--visible')).toBe(false);
+  });
+
+  it('accepts a changed choice submitted again from the still-open modal', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList
+      .mockResolvedValueOnce(bothGroups)
+      .mockResolvedValueOnce([
+        { occurrenceType: 'AfterSchool', count: 2, entries: [afterSchoolEntryOne, afterSchoolEntryTwo] },
+      ]);
+    const { WaitingListError } = await import('../../services/waiting-list');
+    mockEnrolWaitingListStudent
+      .mockRejectedValueOnce(new WaitingListError(refusal, 400))
+      .mockResolvedValueOnce({ studentCourseId: 'sc1' });
+
+    const el = await mountPage();
+    const modal = await openEnrolModal(el, 'Amara Pillay');
+    completeEnrolForm(el);
+    const confirmBtn = modal.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
+    confirmBtn.click();
+    await flush();
+    await flush();
+
+    // The retry the refusal left room for: a different lesson structure under
+    // the same occurrence type, chosen on the modal that never closed.
+    const lessonType = enrolFieldOf(el, 'lessonType') as HTMLSelectElement;
+    lessonType.value = 'Group';
+    lessonType.dispatchEvent(new Event('change'));
+    (enrolFieldOf(el, 'durationType') as HTMLSelectElement).value = 'Hour';
+    confirmBtn.click();
+    await flush();
+    await flush();
+
+    expect(mockEnrolWaitingListStudent).toHaveBeenCalledTimes(2);
+    expect(mockEnrolWaitingListStudent).toHaveBeenLastCalledWith('s1', {
+      lessonStructureId: 'ls-group-hour-during',
+      teacherId: 't1',
+      instrumentType: 'Piano',
+      stepType: 'Step2A',
+      enrolledDate: todayIsoDate(),
+    });
+    expect(modal.hasAttribute('open')).toBe(false);
+    expect(rowNames(el)).not.toContain('Amara Pillay');
+    expect(successBannerOf(el).textContent).toBe('Amara Pillay was enrolled and removed from the waiting list.');
+  });
+});
+
+describe('pm-waiting-list-page — the Siblings tab spans both populations', { tags: ['304UC7', '304UC12'] }, () => {
+  const amara: SiblingStudentResult = {
+    studentId: 's1',
+    firstName: 'Amara',
+    lastName: 'Pillay',
+    dateOfBirth: '2016-03-01',
+    grade: 'Grade3',
+    class: 'A1',
+    phase: 'Junior',
+    language: 'English',
+    population: 'WaitingList',
+  };
+
+  const enrolledSibling: SiblingStudentResult = {
+    ...amara,
+    studentId: 's-enrolled',
+    firstName: 'Sipho',
+    population: 'Enrolled',
+  };
+
+  function searchSelectShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+    return wizard.shadowRoot!.getElementById('siblingsStep')!.shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+  }
+
+  function search(shadow: ShadowRoot, query: string): void {
+    const input = shadow.getElementById('query') as HTMLInputElement;
+    input.value = query;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  function resultIds(shadow: ShadowRoot): string[] {
+    return [...shadow.querySelectorAll<HTMLElement>('.search-select__result')].map(
+      (result) => result.dataset.studentId!,
+    );
+  }
+
+  it('offers both populations in the capture wizard', { tags: ['304UC7'] }, async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    mockGetSiblingCandidates.mockReset().mockResolvedValue([amara, enrolledSibling]);
+
+    const el = await mountPage();
+    captureBtnOf(el).click();
+
+    const shadow = searchSelectShadowOf(wizardOf(el));
+    search(shadow, 'Pillay');
+
+    // The capture wizard fed itself from the roster read, which answers with the
+    // enrolled student alone — a waiting-list sibling was unreachable from here.
+    expect(resultIds(shadow)).toEqual([amara.studentId, enrolledSibling.studentId]);
+    expect(vi.mocked(mockGetSiblingCandidates)).toHaveBeenCalled();
+  });
+
+  it("marks each linked sibling with that sibling's own state in the edit wizard", { tags: ['304UC12'] }, async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+    mockGetStudentById.mockResolvedValue(amara);
+    mockGetSiblings.mockReset().mockResolvedValue([amara, enrolledSibling]);
+
+    const el = await mountPage();
+    actionButton(el, 'Amara Pillay', 'Edit').click();
+    await flush();
+
+    const wizard = wizardOf(el);
+    (wizard.shadowRoot!.getElementById('tabSiblings') as HTMLButtonElement).click();
+    await flush();
+
+    const listShadow = wizard
+      .shadowRoot!.getElementById('siblingsStep')!
+      .shadowRoot!.getElementById('siblingList')!.shadowRoot!;
+    const titles = [...listShadow.querySelectorAll<HTMLElement>('tbody .pm-population-icon')].map((icon) => icon.title);
+
+    // One group, two states: an icon taken from the wizard mode would say
+    // "waiting list" twice here.
+    expect(titles).toEqual([populationDescription('WaitingList'), populationDescription('Enrolled')]);
+  });
+});
+
+// The capture wizard opens synchronously off the page's held candidate list,
+// so that list is only as current as the page's last read of it. Before this,
+// it was read on connect and never again: capture one child, open the wizard
+// for the next, and the first was not offered until the page was reloaded.
+describe('pm-waiting-list-page — the candidate list follows the page', { tags: ['304UC13', '304UC14'] }, () => {
+  const captured: WaitingListEntryResult = {
+    waitingListEntryId: 'w9',
+    studentId: 's9',
+    firstName: 'Amara',
+    lastName: 'Pillay',
+    position: 1,
+    lessonType: 'Individual',
+    durationType: 'Hour',
+    instrumentType: 'Piano',
+    notes: null,
+    addedAt: '2026-09-03T10:00:00Z',
+  };
+
+  const capturedCandidate: SiblingStudentResult = {
+    studentId: 's9',
+    firstName: 'Amara',
+    lastName: 'Pillay',
+    dateOfBirth: '2016-03-01',
+    grade: 'Grade3',
+    class: 'A1',
+    phase: 'Junior',
+    language: 'English',
+    population: 'WaitingList',
+  };
+
+  function searchSelectShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
+    return wizard.shadowRoot!.getElementById('siblingsStep')!.shadowRoot!.getElementById('searchSelect')!.shadowRoot!;
+  }
+
+  function resultIds(shadow: ShadowRoot): string[] {
+    const input = shadow.getElementById('query') as HTMLInputElement;
+    input.value = 'Pillay';
+    input.dispatchEvent(new Event('input'));
+    return [...shadow.querySelectorAll<HTMLElement>('.search-select__result')].map(
+      (result) => result.dataset.studentId!,
+    );
+  }
+
+  it('offers a student captured in this session in the next capture wizard', { tags: ['304UC13'] }, async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValue(bothGroups);
+    mockGetSiblingCandidates.mockReset().mockResolvedValueOnce([]).mockResolvedValue([capturedCandidate]);
+    mockCaptureWaitingListStudent.mockResolvedValueOnce(captured);
+
+    const el = await mountPage();
+    const wizard = wizardOf(el);
+    wizard.setAttribute('open', '');
+    wizard.dispatchEvent(
+      new CustomEvent('waiting-list-capture-requested', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          input: {
+            firstName: 'Amara',
+            lastName: 'Pillay',
+            dateOfBirth: '2016-02-14',
+            grade: 'Grade4',
+            class: 'A1',
+            phase: 'Junior',
+            language: 'English',
+          },
+          pendingSiblingIds: [],
+          pendingGuardians: [],
+          waitingListInput: { lessonStructureId: 'ls1', instrumentType: 'Piano', notes: null },
+        },
+      }),
+    );
+    await flush();
+    await flush();
+
+    captureBtnOf(el).click();
+
+    expect(resultIds(searchSelectShadowOf(wizard))).toEqual([capturedCandidate.studentId]);
+  });
+
+  it('does not read candidates for a role that never reaches a wizard', { tags: ['304UC14'] }, async () => {
+    mockHasAnyRole.mockReturnValue(false);
+    mockGetWaitingList.mockResolvedValue(bothGroups);
+
+    await mountPage();
+
+    // A Teacher gets the listing and no capture action, so the candidate read
+    // is one the page has no use for and never makes.
+    expect(mockGetSiblingCandidates).not.toHaveBeenCalled();
+  });
+});

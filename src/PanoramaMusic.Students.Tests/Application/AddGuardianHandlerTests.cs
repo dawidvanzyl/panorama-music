@@ -256,10 +256,10 @@ public class AddGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		var (created, linked) = await AddAGuardianTo(onTheWaitingList: true);
 
 		ShouldlyHelpers.Satisfy(
-			() => created.Source.ShouldBe(StudentWriteSource.WaitingList),
+			() => created.Source.ShouldBe(StudentPopulation.WaitingList),
 			// Creating a guardian and linking it are one action from the tab, so
 			// the two records it writes agree on where it came from.
-			() => linked.Source.ShouldBe(StudentWriteSource.WaitingList));
+			() => linked.Source.ShouldBe(StudentPopulation.WaitingList));
 	}
 
 	[Fact]
@@ -269,8 +269,8 @@ public class AddGuardianHandlerTests : IClassFixture<StudentsTestFixture>
 		var (created, linked) = await AddAGuardianTo(onTheWaitingList: false);
 
 		ShouldlyHelpers.Satisfy(
-			() => created.Source.ShouldBe(StudentWriteSource.Roster),
-			() => linked.Source.ShouldBe(StudentWriteSource.Roster));
+			() => created.Source.ShouldBe(StudentPopulation.Enrolled),
+			() => linked.Source.ShouldBe(StudentPopulation.Enrolled));
 	}
 
 	private async Task<(GuardianCreated Created, GuardianLinked Linked)> AddAGuardianTo(bool onTheWaitingList)

@@ -22,7 +22,7 @@ namespace PanoramaMusic.Students.Application.Services;
 /// worth nothing on the record that exists to hold callers to account.
 /// </para>
 /// </summary>
-public sealed class StudentWriteSourceResolver(
+public sealed class StudentPopulationResolver(
 	IWaitingListRepository waitingListRepository,
 	IStudentGuardianRepository studentGuardianRepository)
 {
@@ -30,11 +30,11 @@ public sealed class StudentWriteSourceResolver(
 	/// For a write made against one student — their siblings and their guardian
 	/// links are maintained through that student, so they carry its source too.
 	/// </summary>
-	public async Task<StudentWriteSource> ForStudentAsync(Guid studentId, CancellationToken cancellationToken)
+	public async Task<StudentPopulation> ForStudentAsync(Guid studentId, CancellationToken cancellationToken)
 	{
 		var entry = await waitingListRepository.GetByStudentIdAsync(studentId, cancellationToken);
 
-		return entry is null ? StudentWriteSource.Roster : StudentWriteSource.WaitingList;
+		return entry is null ? StudentPopulation.Enrolled : StudentPopulation.WaitingList;
 	}
 
 	/// <summary>
@@ -42,10 +42,10 @@ public sealed class StudentWriteSourceResolver(
 	/// in scope. A guardian is one row shared across a sibling group, so it is
 	/// the waiting list's only while every student holding it is.
 	/// </summary>
-	public async Task<StudentWriteSource> ForGuardianAsync(Guid guardianId, CancellationToken cancellationToken)
+	public async Task<StudentPopulation> ForGuardianAsync(Guid guardianId, CancellationToken cancellationToken)
 	{
 		var waitingListOnly = await studentGuardianRepository.BelongsToWaitingListOnlyAsync(guardianId, cancellationToken);
 
-		return waitingListOnly ? StudentWriteSource.WaitingList : StudentWriteSource.Roster;
+		return waitingListOnly ? StudentPopulation.WaitingList : StudentPopulation.Enrolled;
 	}
 }

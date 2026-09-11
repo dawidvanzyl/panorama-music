@@ -13,7 +13,7 @@ public sealed class AddSiblingHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
 	IStudentGuardianRepository studentGuardianRepository,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentPopulationResolver)
 {
 	public async Task<StudentResult> HandleAsync(AddSiblingCommand command, CancellationToken cancellationToken)
 	{
@@ -25,7 +25,7 @@ public sealed class AddSiblingHandler(
 
 		// The Siblings tab is the same screen in both modes, so the student being
 		// maintained is what says which one the request came from.
-		var source = await studentWriteSourceResolver.ForStudentAsync(student.StudentId, cancellationToken);
+		var source = await studentPopulationResolver.ForStudentAsync(student.StudentId, cancellationToken);
 		var sibling = Sibling.Create(student, siblingStudent, source);
 
 		var existingSiblings = await siblingRepository.GetSiblingsAsync(command.StudentId, cancellationToken);
@@ -46,7 +46,7 @@ public sealed class AddSiblingHandler(
 	private async Task ShareGuardiansAsync(
 		Student student,
 		Student siblingStudent,
-		StudentWriteSource source,
+		StudentPopulation source,
 		CancellationToken cancellationToken)
 	{
 		var studentGuardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken);

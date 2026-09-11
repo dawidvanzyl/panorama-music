@@ -75,7 +75,7 @@ public class RemoveSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var removed = await RemoveASiblingOf(GivenStudentAndSibling(onTheWaitingList: true));
 
-		removed.Source.ShouldBe(StudentWriteSource.WaitingList);
+		removed.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -86,7 +86,7 @@ public class RemoveSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 		// against a student the roster holds is unchanged by this story.
 		var removed = await RemoveASiblingOf(GivenStudentAndSibling(onTheWaitingList: false));
 
-		removed.Source.ShouldBe(StudentWriteSource.Roster);
+		removed.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	private (Student Student, Student Sibling) GivenStudentAndSibling(bool onTheWaitingList)
