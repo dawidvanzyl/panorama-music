@@ -143,6 +143,7 @@ export class PmWaitingListPage extends HTMLElement {
   private errorBanner: HTMLElement | null = null;
   private successBanner: HTMLElement | null = null;
   private _siblingCandidates: SiblingStudentResult[] = [];
+  private _canMaintain = false;
 
   constructor() {
     super();
@@ -167,6 +168,7 @@ export class PmWaitingListPage extends HTMLElement {
     // anyone, and the capture action is absent rather than disabled —
     // matching how the endpoint answers them.
     const canMaintain = hasAnyRole(MAINTAINER_ROLES);
+    this._canMaintain = canMaintain;
     this.captureBtn.hidden = !canMaintain;
     this.table.showActions = canMaintain;
 
@@ -230,31 +232,41 @@ export class PmWaitingListPage extends HTMLElement {
     } catch (err) {
       this.showError(err);
     }
+    if (this._canMaintain) await this.loadSiblingCandidates();
   }
 
   /**
-   * The Siblings/Guardians tabs' candidate list and relationship options, and
-   * the seeded lesson-structure grid — everything the capture wizard needs
-   * before it opens, and the grid the Enrol modal resolves against too.
+   * The capture wizard opens off this list synchronously, so it is re-read
+   * every time the page's own listing is. A student captured, removed or
+   * enrolled here changes who the next capture may be linked to — and, for an
+   * enrolment, which listing an existing candidate is shown against.
    *
-   * Settled independently rather than as one `Promise.all`: a failure on any
-   * one of these three must never sink the other two, so each lookup is
-   * assigned — or its own failure surfaced — on its own. No rejection here is
-   * an expected, silently-absorbed outcome for anyone; every one of the three
-   * is shown.
+   * A Teacher never reaches a wizard, so the read is theirs only when the page
+   * is maintainable, matching where the capture action itself is offered.
+   */
+  private loadSiblingCandidates = async (): Promise<void> => {
+    try {
+      this._siblingCandidates = await getSiblingCandidates();
+    } catch (err) {
+      this.showError(err);
+    }
+  };
+
+  /**
+   * The Guardians tab's relationship options and the seeded lesson-structure
+   * grid — what the capture wizard needs before it opens, and the grid the
+   * Enrol modal resolves against too.
+   *
+   * Settled independently rather than as one `Promise.all`: a failure on one
+   * must never sink the other, so each lookup is assigned — or its own failure
+   * surfaced — on its own. No rejection here is an expected, silently-absorbed
+   * outcome for anyone; both are shown.
    */
   private async loadWizardLookups(): Promise<void> {
-    const [candidatesResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
-      getSiblingCandidates(),
+    const [relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
       getGuardianRelationships(),
       getLessonStructures(),
     ]);
-
-    if (candidatesResult.status === 'fulfilled') {
-      this._siblingCandidates = candidatesResult.value;
-    } else {
-      this.showError(candidatesResult.reason);
-    }
 
     if (relationshipsResult.status === 'fulfilled') {
       this.wizardModal!.guardianRelationships = relationshipsResult.value;
