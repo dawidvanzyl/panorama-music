@@ -290,10 +290,10 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
    */
   set lessonStructures(value: LessonStructure[]) {
     this._lessonStructures = value;
-    // Only once an entry is on show is there an occurrence type to narrow by;
-    // before that, `show` does the first render. Re-rendering here keeps a set
-    // assigned after opening from leaving stale options on the controls.
-    if (this._occurrenceType) this.renderStructureOptions();
+    // Re-rendering here keeps a set assigned after opening from leaving stale
+    // options on the controls; before the element is connected there is nothing
+    // to render into, which `renderStructureOptions` decides for itself.
+    this.renderStructureOptions();
   }
 
   set teachers(value: AssignableTeacher[]) {
@@ -367,6 +367,8 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
    * empty pickers and a button that cannot succeed.
    */
   private renderStructureOptions(): void {
+    if (!this.form) return;
+
     const offered = offeredLessonTypes(this._lessonStructures, this._occurrenceType);
     const nothingOffered = offered.length === 0;
 
