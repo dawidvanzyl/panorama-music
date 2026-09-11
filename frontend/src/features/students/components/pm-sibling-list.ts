@@ -1,4 +1,5 @@
-import type { StudentResult } from '../services/students';
+import type { SiblingStudentResult } from '../services/students';
+import { buildPopulationIcon } from './student-population';
 import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
@@ -47,6 +48,18 @@ styles.replaceSync(`
     .sibling-list__remove-btn:hover {
       background: rgba(224, 82, 82, 0.1);
     }
+    .sibling-list__name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pm-population-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      color: var(--pm-text-muted);
+    }
     .sibling-list__empty {
       color: var(--pm-text-muted);
       font-size: 13px;
@@ -75,7 +88,7 @@ template.innerHTML = `
 export class PmSiblingList extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
-  private _siblings: StudentResult[] = [];
+  private _siblings: SiblingStudentResult[] = [];
 
   constructor() {
     super();
@@ -90,12 +103,12 @@ export class PmSiblingList extends HTMLElement {
     this.render();
   }
 
-  set siblings(value: StudentResult[]) {
+  set siblings(value: SiblingStudentResult[]) {
     this._siblings = value;
     this.render();
   }
 
-  get siblings(): StudentResult[] {
+  get siblings(): SiblingStudentResult[] {
     return this._siblings;
   }
 
@@ -110,11 +123,17 @@ export class PmSiblingList extends HTMLElement {
     }
   }
 
-  private buildRow(sibling: StudentResult): HTMLTableRowElement {
+  private buildRow(sibling: SiblingStudentResult): HTMLTableRowElement {
     const row = document.createElement('tr');
 
     const nameCell = document.createElement('td');
-    nameCell.textContent = `${sibling.firstName} ${sibling.lastName}`;
+    const name = document.createElement('span');
+    name.className = 'sibling-list__name';
+    // Each row's icon is that sibling's own state. A group can hold an enrolled
+    // child and a waiting one at once, so the wizard's mode says nothing about
+    // which this is.
+    name.append(buildPopulationIcon(sibling.population), document.createTextNode(`${sibling.firstName} ${sibling.lastName}`));
+    nameCell.appendChild(name);
 
     const gradeCell = document.createElement('td');
     gradeCell.textContent = gradeLabel(sibling.grade);
@@ -136,7 +155,7 @@ export class PmSiblingList extends HTMLElement {
     return row;
   }
 
-  private handleRemove(sibling: StudentResult): void {
+  private handleRemove(sibling: SiblingStudentResult): void {
     this.dispatchEvent(
       new CustomEvent('sibling-remove-clicked', {
         bubbles: true,

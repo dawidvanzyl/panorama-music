@@ -1,4 +1,5 @@
-import type { StudentResult } from '../services/students';
+import type { SiblingStudentResult } from '../services/students';
+import { buildPopulationIcon } from './student-population';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -75,7 +76,9 @@ styles.replaceSync(`
       overflow-y: auto;
     }
     .search-select__result {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       width: 100%;
       box-sizing: border-box;
       text-align: left;
@@ -89,6 +92,13 @@ styles.replaceSync(`
     }
     .search-select__result:hover {
       background: var(--pm-surface);
+    }
+    .pm-population-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      color: var(--pm-text-muted);
     }
     .search-select__empty {
       margin: 4px 0 0;
@@ -117,7 +127,7 @@ export class PmStudentSearchSelect extends HTMLElement {
   private clearBtn: HTMLButtonElement | null = null;
   private resultsList: HTMLElement | null = null;
   private addBtn: HTMLButtonElement | null = null;
-  private _candidates: StudentResult[] = [];
+  private _candidates: SiblingStudentResult[] = [];
   private _selectedId: string | null = null;
 
   constructor() {
@@ -144,12 +154,12 @@ export class PmStudentSearchSelect extends HTMLElement {
     this.addBtn?.removeEventListener('click', this.handleAdd);
   }
 
-  set candidates(value: StudentResult[]) {
+  set candidates(value: SiblingStudentResult[]) {
     this._candidates = value;
     this.reset();
   }
 
-  get candidates(): StudentResult[] {
+  get candidates(): SiblingStudentResult[] {
     return this._candidates;
   }
 
@@ -188,7 +198,14 @@ export class PmStudentSearchSelect extends HTMLElement {
       result.type = 'button';
       result.className = 'search-select__result';
       result.dataset.studentId = candidate.studentId;
-      result.textContent = `${candidate.firstName} ${candidate.lastName}`;
+
+      const name = document.createElement('span');
+      name.className = 'search-select__result-name';
+      name.textContent = `${candidate.firstName} ${candidate.lastName}`;
+
+      // Candidates span both listings, so a bare name gives no way to tell
+      // which kind of sibling is being linked.
+      result.append(buildPopulationIcon(candidate.population), name);
       result.addEventListener('click', () => this.selectCandidate(candidate));
       this.resultsList.appendChild(result);
     }
@@ -196,7 +213,7 @@ export class PmStudentSearchSelect extends HTMLElement {
     this.updateAddButtonState();
   };
 
-  private selectCandidate(candidate: StudentResult): void {
+  private selectCandidate(candidate: SiblingStudentResult): void {
     this._selectedId = candidate.studentId;
     this.queryInput!.value = `${candidate.firstName} ${candidate.lastName}`;
     this.clearBtn!.hidden = false;

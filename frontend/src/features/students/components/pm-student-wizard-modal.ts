@@ -6,7 +6,7 @@ import './pm-extra-curriculars-step';
 import './pm-waiting-list-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { AT_LEAST_ONE_COURSE_TO_SAVE } from './pm-courses-step';
-import type { StudentResult } from '../services/students';
+import type { SiblingStudentResult, StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
 import type { PhaseType, StudentExtraCurricular } from '../services/student-extra-curriculars';
@@ -287,7 +287,7 @@ export class PmStudentWizardModal extends HTMLElement {
    * presents Waiting List in their place — no course rule, since a
    * waiting-list student holds no course.
    */
-  openForCreate(candidates: StudentResult[], wizardMode: WizardMode = 'enrolled'): void {
+  openForCreate(candidates: SiblingStudentResult[], wizardMode: WizardMode = 'enrolled'): void {
     this._mode = 'create';
     this._wizardMode = wizardMode;
     this._studentId = null;
@@ -422,11 +422,11 @@ export class PmStudentWizardModal extends HTMLElement {
     this.coursesStep!.closeForm();
   }
 
-  set siblings(value: StudentResult[]) {
+  set siblings(value: SiblingStudentResult[]) {
     this.siblingsStep!.siblings = value;
   }
 
-  set candidates(value: StudentResult[]) {
+  set candidates(value: SiblingStudentResult[]) {
     this.siblingsStep!.candidates = value;
   }
 

@@ -20,14 +20,14 @@ import {
 } from '../services/waiting-list';
 import { getAssignableTeachers, EnrollmentsError } from '../services/enrollments';
 import {
-  getStudents,
   getStudentById,
   getSiblings,
+  getSiblingCandidates,
   addSibling,
   removeSibling,
   StudentsError,
   type StudentInput,
-  type StudentResult,
+  type SiblingStudentResult,
 } from '../services/students';
 import {
   getGuardians,
@@ -142,7 +142,7 @@ export class PmWaitingListPage extends HTMLElement {
   private enrolModal: PmEnrolWaitingListStudentModal | null = null;
   private errorBanner: HTMLElement | null = null;
   private successBanner: HTMLElement | null = null;
-  private _allStudents: StudentResult[] = [];
+  private _siblingCandidates: SiblingStudentResult[] = [];
 
   constructor() {
     super();
@@ -244,16 +244,16 @@ export class PmWaitingListPage extends HTMLElement {
    * is shown.
    */
   private async loadWizardLookups(): Promise<void> {
-    const [studentsResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
-      getStudents(),
+    const [candidatesResult, relationshipsResult, lessonStructuresResult] = await Promise.allSettled([
+      getSiblingCandidates(),
       getGuardianRelationships(),
       getLessonStructures(),
     ]);
 
-    if (studentsResult.status === 'fulfilled') {
-      this._allStudents = studentsResult.value;
+    if (candidatesResult.status === 'fulfilled') {
+      this._siblingCandidates = candidatesResult.value;
     } else {
-      this.showError(studentsResult.reason);
+      this.showError(candidatesResult.reason);
     }
 
     if (relationshipsResult.status === 'fulfilled') {
@@ -316,7 +316,7 @@ export class PmWaitingListPage extends HTMLElement {
 
   private handleCaptureClick = (): void => {
     this.clearSuccess();
-    this.wizardModal!.openForCreate(this._allStudents, 'waitingList');
+    this.wizardModal!.openForCreate(this._siblingCandidates, 'waitingList');
   };
 
   private handleCaptureRequested = async (event: Event): Promise<void> => {
@@ -467,10 +467,13 @@ export class PmWaitingListPage extends HTMLElement {
 
   private refreshWizardSiblings = async (studentId: string): Promise<void> => {
     try {
-      const siblings = await getSiblings(studentId);
+      // Read together, and the candidates read afresh: a student captured in one
+      // wizard is offerable in the next, and both listings feed this list.
+      const [siblings, candidates] = await Promise.all([getSiblings(studentId), getSiblingCandidates()]);
+      this._siblingCandidates = candidates;
       this.wizardModal!.siblings = siblings;
       const linkedIds = new Set(siblings.map((s) => s.studentId));
-      this.wizardModal!.candidates = this._allStudents.filter(
+      this.wizardModal!.candidates = candidates.filter(
         (s) => s.studentId !== studentId && !linkedIds.has(s.studentId),
       );
     } catch (err) {
