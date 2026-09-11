@@ -17,7 +17,7 @@ public static class GuardianFactory
 		bool married = false,
 		// The roster is where a guardian's students live unless a test says
 		// otherwise, so only the audit-surface tests have to name one.
-		StudentWriteSource source = StudentWriteSource.Roster) =>
+		StudentPopulation source = StudentPopulation.Enrolled) =>
 		Guardian.Create(
 			guardianId ?? Guid.NewGuid(),
 			guardianRelationshipId ?? Guid.NewGuid(),

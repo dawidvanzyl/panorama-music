@@ -284,7 +284,7 @@ public class EnrolWaitingListStudentHandlerTests : IClassFixture<StudentsTestFix
 
 		var linked = links.ShouldHaveSingleItem().DrainEvents().ShouldHaveSingleItem().ShouldBeOfType<GuardianLinked>();
 		ShouldlyHelpers.Satisfy(
-			() => linked.Source.ShouldBe(StudentWriteSource.WaitingList),
+			() => linked.Source.ShouldBe(StudentPopulation.WaitingList),
 			() => linked.Student.StudentId.ShouldBe(sibling.StudentId),
 			() => linked.Guardian.GuardianId.ShouldBe(guardian.GuardianId));
 	}

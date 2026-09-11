@@ -12,7 +12,7 @@ public sealed class DeleteStudentHandler(IStudentRepository studentRepository)
 		var student = await studentRepository.GetByIdAsync(command.StudentId, cancellationToken)
 			?? throw new EntityNotFoundException($"Student {command.StudentId} was not found.");
 
-		student.MarkDeleted(StudentWriteSource.Roster);
+		student.MarkDeleted(StudentPopulation.Enrolled);
 
 		await studentRepository.DeleteAsync(student, cancellationToken);
 	}

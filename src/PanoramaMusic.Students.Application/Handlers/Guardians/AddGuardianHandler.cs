@@ -25,7 +25,7 @@ public sealed class AddGuardianHandler(
 	IStudentGuardianRepository studentGuardianRepository,
 	IGuardianRelationshipRepository guardianRelationshipRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task<GuardianResult> HandleAsync(AddGuardianCommand command, CancellationToken cancellationToken)
 	{

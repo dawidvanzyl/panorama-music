@@ -24,7 +24,7 @@ public sealed class StudentCreatedTranslator(IAuditContext auditContext, IUserCo
 			["studentId"] = student.StudentId,
 			["targetDisplay"] = $"{student.FirstName} {student.LastName}",
 		};
-		StudentWriteSourceDetail.Apply(detail, created.Source);
+		StudentPopulationDetail.Apply(detail, created.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

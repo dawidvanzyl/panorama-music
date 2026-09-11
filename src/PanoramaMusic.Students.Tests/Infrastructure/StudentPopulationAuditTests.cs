@@ -20,7 +20,7 @@ namespace PanoramaMusic.Students.Tests.Infrastructure;
 /// and both surfaces write the same records and emit the same audit types.
 /// These cover the one thing that tells them apart once the write has landed.
 /// </summary>
-public class StudentWriteSourceAuditTests
+public class StudentPopulationAuditTests
 {
 	private const string _sourceKey = "source";
 
@@ -29,7 +29,7 @@ public class StudentWriteSourceAuditTests
 
 	private readonly IAuditEventTranslator[] _translators;
 
-	public StudentWriteSourceAuditTests()
+	public StudentPopulationAuditTests()
 	{
 		var auditContext = new Mock<IAuditContext>();
 		auditContext.SetupGet(c => c.SourceIp).Returns("203.0.113.7");
@@ -129,7 +129,7 @@ public class StudentWriteSourceAuditTests
 	[Trait("AC", "300UC14")]
 	public void Translate_ARosterWriteThroughAnySharedTab_CarriesNoSourceAtAll(string raiserName, string[] detailKeys)
 	{
-		var rosterEvent = Translate(RaiserNamed(raiserName)(StudentWriteSource.Roster));
+		var rosterEvent = Translate(RaiserNamed(raiserName)(StudentPopulation.Enrolled));
 
 		ShouldlyHelpers.Satisfy(
 			// The roster is where these records live, so its detail bag is
@@ -139,10 +139,10 @@ public class StudentWriteSourceAuditTests
 			() => rosterEvent.Detail.Keys.ShouldBe(detailKeys, ignoreOrder: true));
 	}
 
-	private void ShouldNameItsSurface(Func<StudentWriteSource, IDomainEvent> raise, params string[] rosterDetailKeys)
+	private void ShouldNameItsSurface(Func<StudentPopulation, IDomainEvent> raise, params string[] rosterDetailKeys)
 	{
-		var rosterEvent = Translate(raise(StudentWriteSource.Roster));
-		var waitingListEvent = Translate(raise(StudentWriteSource.WaitingList));
+		var rosterEvent = Translate(raise(StudentPopulation.Enrolled));
+		var waitingListEvent = Translate(raise(StudentPopulation.WaitingList));
 
 		ShouldlyHelpers.Satisfy(
 			// The distinction stands in the record itself, without joining a
@@ -165,7 +165,7 @@ public class StudentWriteSourceAuditTests
 	private AuditEvent Translate(IDomainEvent domainEvent) =>
 		_translators.Single(translator => translator.CanTranslate(domainEvent)).Translate(domainEvent);
 
-	private static Func<StudentWriteSource, IDomainEvent> RaiserNamed(string name) => name switch
+	private static Func<StudentPopulation, IDomainEvent> RaiserNamed(string name) => name switch
 	{
 		nameof(StudentCreation) => StudentCreation,
 		nameof(StudentUpdate) => StudentUpdate,
@@ -180,10 +180,10 @@ public class StudentWriteSourceAuditTests
 		_ => throw new ArgumentOutOfRangeException(nameof(name), name, "No such event raiser."),
 	};
 
-	private static IDomainEvent StudentCreation(StudentWriteSource source) =>
+	private static IDomainEvent StudentCreation(StudentPopulation source) =>
 		StudentFactory.Create(firstName: "Amara", lastName: "Pillay", source: source).DrainEvents().Single();
 
-	private static IDomainEvent StudentUpdate(StudentWriteSource source)
+	private static IDomainEvent StudentUpdate(StudentPopulation source)
 	{
 		var student = StudentFactory.Create(firstName: "Amara", lastName: "Pillay");
 		student.DrainEvents();
@@ -200,7 +200,7 @@ public class StudentWriteSourceAuditTests
 		return student.DrainEvents().Single();
 	}
 
-	private static IDomainEvent StudentDeletion(StudentWriteSource source)
+	private static IDomainEvent StudentDeletion(StudentPopulation source)
 	{
 		var student = StudentFactory.Create(firstName: "Amara", lastName: "Pillay");
 		student.DrainEvents();
@@ -209,14 +209,14 @@ public class StudentWriteSourceAuditTests
 		return student.DrainEvents().Single();
 	}
 
-	private static IDomainEvent SiblingAddition(StudentWriteSource source)
+	private static IDomainEvent SiblingAddition(StudentPopulation source)
 	{
 		var (student, siblingStudent) = SiblingGroup();
 
 		return Sibling.Create(student, siblingStudent, source).DrainEvents().Single();
 	}
 
-	private static IDomainEvent SiblingRemoval(StudentWriteSource source)
+	private static IDomainEvent SiblingRemoval(StudentPopulation source)
 	{
 		var (student, siblingStudent) = SiblingGroup();
 		var sibling = new Sibling(student.StudentId, siblingStudent.StudentId);
@@ -225,10 +225,10 @@ public class StudentWriteSourceAuditTests
 		return sibling.DrainEvents().Single();
 	}
 
-	private static IDomainEvent GuardianCreation(StudentWriteSource source) =>
+	private static IDomainEvent GuardianCreation(StudentPopulation source) =>
 		GuardianFactory.Create(source: source).DrainEvents().Single();
 
-	private static IDomainEvent GuardianUpdate(StudentWriteSource source)
+	private static IDomainEvent GuardianUpdate(StudentPopulation source)
 	{
 		var guardian = GuardianFactory.Create();
 		guardian.DrainEvents();
@@ -237,7 +237,7 @@ public class StudentWriteSourceAuditTests
 		return guardian.DrainEvents().Single();
 	}
 
-	private static IDomainEvent GuardianDeletion(StudentWriteSource source)
+	private static IDomainEvent GuardianDeletion(StudentPopulation source)
 	{
 		var guardian = GuardianFactory.Create();
 		guardian.DrainEvents();
@@ -246,10 +246,10 @@ public class StudentWriteSourceAuditTests
 		return guardian.DrainEvents().Single();
 	}
 
-	private static IDomainEvent GuardianLink(StudentWriteSource source) =>
+	private static IDomainEvent GuardianLink(StudentPopulation source) =>
 		StudentGuardian.Create(SiblingGroup().Student, GuardianFactory.Create(), source).DrainEvents().Single();
 
-	private static IDomainEvent GuardianUnlink(StudentWriteSource source)
+	private static IDomainEvent GuardianUnlink(StudentPopulation source)
 	{
 		var student = SiblingGroup().Student;
 		var guardian = GuardianFactory.Create();

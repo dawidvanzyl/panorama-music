@@ -9,7 +9,7 @@ namespace PanoramaMusic.Students.Application.Handlers.Siblings;
 public sealed class RemoveSiblingHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task HandleAsync(RemoveSiblingCommand command, CancellationToken cancellationToken)
 	{

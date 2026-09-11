@@ -69,6 +69,6 @@ public class DeleteStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		await _handler.HandleAsync(new DeleteStudentCommand(student.StudentId), TestContext.Current.CancellationToken);
 
 		var deleted = student.DrainEvents().OfType<StudentDeleted>().Single();
-		deleted.Source.ShouldBe(StudentWriteSource.Roster);
+		deleted.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 }

@@ -190,6 +190,6 @@ public class CaptureWaitingListStudentHandlerTests : IClassFixture<StudentsTestF
 
 		// The entry does not exist yet when the student is created, so this
 		// handler states the surface outright rather than resolving it.
-		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentWriteSource.WaitingList);
+		created.ShouldNotBeNull().DrainEvents().OfType<StudentCreated>().Single().Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 }

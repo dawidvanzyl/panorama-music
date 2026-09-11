@@ -23,7 +23,7 @@ public sealed class StudentDeletedTranslator(IAuditContext auditContext, IUserCo
 		{
 			["targetDisplay"] = $"{student.FirstName} {student.LastName}",
 		};
-		StudentWriteSourceDetail.Apply(detail, deleted.Source);
+		StudentPopulationDetail.Apply(detail, deleted.Source);
 
 		return new AuditEvent(
 			Guid.NewGuid(),

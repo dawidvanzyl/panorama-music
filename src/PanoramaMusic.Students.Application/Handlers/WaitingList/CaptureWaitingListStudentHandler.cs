@@ -40,7 +40,7 @@ public sealed class CaptureWaitingListStudentHandler(
 			request.Class,
 			request.Phase,
 			request.Language,
-			StudentWriteSource.WaitingList);
+			StudentPopulation.WaitingList);
 
 		await studentRepository.CreateAsync(student, cancellationToken);
 

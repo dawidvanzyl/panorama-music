@@ -13,7 +13,7 @@ public sealed class AddSiblingHandler(
 	IStudentRepository studentRepository,
 	ISiblingRepository siblingRepository,
 	IStudentGuardianRepository studentGuardianRepository,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task<StudentResult> HandleAsync(AddSiblingCommand command, CancellationToken cancellationToken)
 	{
@@ -46,7 +46,7 @@ public sealed class AddSiblingHandler(
 	private async Task ShareGuardiansAsync(
 		Student student,
 		Student siblingStudent,
-		StudentWriteSource source,
+		StudentPopulation source,
 		CancellationToken cancellationToken)
 	{
 		var studentGuardians = await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken);

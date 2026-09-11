@@ -184,7 +184,7 @@ public class AddSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var added = await LinkASiblingTo(onTheWaitingList: true);
 
-		added.Source.ShouldBe(StudentWriteSource.WaitingList);
+		added.Source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -195,7 +195,7 @@ public class AddSiblingHandlerTests : IClassFixture<StudentsTestFixture>
 		// against a student the roster holds is unchanged by this story.
 		var added = await LinkASiblingTo(onTheWaitingList: false);
 
-		added.Source.ShouldBe(StudentWriteSource.Roster);
+		added.Source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	private async Task<SiblingAdded> LinkASiblingTo(bool onTheWaitingList)

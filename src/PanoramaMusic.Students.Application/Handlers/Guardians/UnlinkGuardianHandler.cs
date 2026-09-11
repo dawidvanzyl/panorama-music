@@ -21,7 +21,7 @@ public sealed class UnlinkGuardianHandler(
 	IGuardianRepository guardianRepository,
 	IStudentGuardianRepository studentGuardianRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task HandleAsync(UnlinkGuardianCommand command, CancellationToken cancellationToken)
 	{

@@ -14,15 +14,15 @@ namespace PanoramaMusic.Students.Tests.Application;
 /// modes, so the record being written is what says which surface reached it.
 /// These pin that rule on its own, apart from any handler that asks it.
 /// </summary>
-public class StudentWriteSourceResolverTests
+public class StudentPopulationResolverTests
 {
 	private readonly Mock<IWaitingListRepository> _waitingListRepository = new();
 	private readonly Mock<IStudentGuardianRepository> _studentGuardianRepository = new();
-	private readonly StudentWriteSourceResolver _resolver;
+	private readonly StudentPopulationResolver _resolver;
 
-	public StudentWriteSourceResolverTests()
+	public StudentPopulationResolverTests()
 	{
-		_resolver = new StudentWriteSourceResolver(_waitingListRepository.Object, _studentGuardianRepository.Object);
+		_resolver = new StudentPopulationResolver(_waitingListRepository.Object, _studentGuardianRepository.Object);
 	}
 
 	[Fact]
@@ -39,7 +39,7 @@ public class StudentWriteSourceResolverTests
 
 		var source = await _resolver.ForStudentAsync(studentId, TestContext.Current.CancellationToken);
 
-		source.ShouldBe(StudentWriteSource.WaitingList);
+		source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -53,7 +53,7 @@ public class StudentWriteSourceResolverTests
 
 		var source = await _resolver.ForStudentAsync(studentId, TestContext.Current.CancellationToken);
 
-		source.ShouldBe(StudentWriteSource.Roster);
+		source.ShouldBe(StudentPopulation.Enrolled);
 	}
 
 	[Fact]
@@ -67,7 +67,7 @@ public class StudentWriteSourceResolverTests
 
 		var source = await _resolver.ForGuardianAsync(guardianId, TestContext.Current.CancellationToken);
 
-		source.ShouldBe(StudentWriteSource.WaitingList);
+		source.ShouldBe(StudentPopulation.WaitingList);
 	}
 
 	[Fact]
@@ -86,7 +86,7 @@ public class StudentWriteSourceResolverTests
 		var source = await _resolver.ForGuardianAsync(guardianId, TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
-			() => source.ShouldBe(StudentWriteSource.Roster),
+			() => source.ShouldBe(StudentPopulation.Enrolled),
 			() => _studentGuardianRepository.Verify(
 				r => r.HasEnrolledLinkAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never));
 	}

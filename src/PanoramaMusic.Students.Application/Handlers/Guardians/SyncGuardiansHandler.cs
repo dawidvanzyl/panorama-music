@@ -17,7 +17,7 @@ public sealed class SyncGuardiansHandler(
 	IStudentRepository studentRepository,
 	IStudentGuardianRepository studentGuardianRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task<IList<GuardianResult>> HandleAsync(Guid studentId, CancellationToken cancellationToken)
 	{

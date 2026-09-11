@@ -29,7 +29,7 @@ public sealed class UpdateStudentHandler(
 			request.Class,
 			request.Phase,
 			request.Language,
-			StudentWriteSource.Roster);
+			StudentPopulation.Enrolled);
 
 		await studentRepository.UpdateAsync(student, cancellationToken);
 

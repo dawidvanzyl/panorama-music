@@ -14,7 +14,7 @@ namespace PanoramaMusic.Students.Application.Handlers.Guardians;
 public sealed class DeleteGuardianHandler(
 	IGuardianRepository guardianRepository,
 	GuardianMaintenanceScope guardianMaintenanceScope,
-	StudentWriteSourceResolver studentWriteSourceResolver)
+	StudentPopulationResolver studentWriteSourceResolver)
 {
 	public async Task HandleAsync(DeleteGuardianCommand command, CancellationToken cancellationToken)
 	{

@@ -4,4 +4,4 @@ using PanoramaMusic.Students.Domain.Enums;
 
 namespace PanoramaMusic.Students.Domain.Events.Students;
 
-public sealed record StudentUpdated(Student Before, Student After, StudentWriteSource Source) : IDomainEvent;
+public sealed record StudentUpdated(Student Before, Student After, StudentPopulation Source) : IDomainEvent;
