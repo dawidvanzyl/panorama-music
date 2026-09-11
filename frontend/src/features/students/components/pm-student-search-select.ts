@@ -1,5 +1,5 @@
 import type { SiblingStudentResult } from '../services/students';
-import { buildPopulationIcon } from './student-population';
+import { buildPopulationIcon, populationIconStyles } from './student-population';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -93,13 +93,6 @@ styles.replaceSync(`
     .search-select__result:hover {
       background: var(--pm-surface);
     }
-    .pm-population-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
-      line-height: 1;
-      flex-shrink: 0;
-      color: var(--pm-text-muted);
-    }
     .search-select__empty {
       margin: 4px 0 0;
       font-size: 13px;
@@ -133,7 +126,7 @@ export class PmStudentSearchSelect extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [populationIconStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

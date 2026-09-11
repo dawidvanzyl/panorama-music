@@ -1,5 +1,5 @@
 import type { SiblingStudentResult } from '../services/students';
-import { buildPopulationIcon } from './student-population';
+import { buildPopulationIcon, populationIconStyles } from './student-population';
 import { gradeLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
@@ -53,13 +53,6 @@ styles.replaceSync(`
       align-items: center;
       gap: 8px;
     }
-    .pm-population-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
-      line-height: 1;
-      flex-shrink: 0;
-      color: var(--pm-text-muted);
-    }
     .sibling-list__empty {
       color: var(--pm-text-muted);
       font-size: 13px;
@@ -93,7 +86,7 @@ export class PmSiblingList extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [populationIconStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

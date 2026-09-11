@@ -12,6 +12,24 @@ interface PopulationDisplay {
   description: string;
 }
 
+/**
+ * The icon's own styling, shipped with the builder so a component that renders
+ * one cannot end up showing a bare glyph. Adopt it alongside the component's own
+ * sheet, as the shared modal chrome is adopted.
+ */
+const populationIconStyles = new CSSStyleSheet();
+populationIconStyles.replaceSync(`
+    .pm-population-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      color: var(--pm-text-muted);
+    }
+  `);
+
+export { populationIconStyles };
+
 const POPULATION_DISPLAY: Record<StudentPopulation, PopulationDisplay> = {
   Enrolled: { icon: 'how_to_reg', description: 'This student is enrolled.' },
   WaitingList: { icon: 'pending_actions', description: 'This student is on the waiting list.' },
