@@ -225,7 +225,7 @@ describe('a school running no instrument course under the entry own occurrence t
  * nothing to land on, so the picker keeps its placeholder — and without a word
  * of explanation the only feedback is the browser's own validation bubble.
  */
-describe('an entry waiting on a combination that is no longer offered', () => {
+describe('an entry waiting on a combination that is no longer offered', { tags: ['309UC12'] }, () => {
   it('says so, and still lets the Coordinator enrol on an offered combination', () => {
     const modal = mountEnrolModal(offered);
     modal.show(entryOnAnUnofferedStructure, 'AfterSchool');

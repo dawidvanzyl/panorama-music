@@ -287,6 +287,7 @@ export default defineConfig({
       { name: '309UC7', description: 'The edit wizard Waiting List tab offers only combinations the school runs an instrument course for' },
       { name: '309UC8', description: 'The enrol modal offers only combinations the school runs an instrument course for' },
       { name: '309UC9', description: 'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control' },
+      { name: '309UC12', description: "The enrol modal states that the entry's own combination is no longer offered, and suppresses that where nothing is offered under the occurrence type at all" },
     ],
   },
 })
