@@ -44,7 +44,6 @@ public sealed class StudentsTestFixture
 		services.AddTransient(sp => context.UserContextMock.Object);
 		services.AddTransient<GuardianMaintenanceScope>();
 		services.AddTransient<StudentWriteSourceResolver>();
-		services.AddTransient<FamilyGuardianReconciler>();
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)

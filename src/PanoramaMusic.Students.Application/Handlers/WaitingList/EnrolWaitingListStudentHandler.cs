@@ -1,7 +1,6 @@
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
-using PanoramaMusic.Students.Application.Services;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
@@ -45,7 +44,8 @@ public sealed class EnrolWaitingListStudentHandler(
 	ICourseRepository courseRepository,
 	IStudentCourseRepository studentCourseRepository,
 	ITeacherDirectory teacherDirectory,
-	FamilyGuardianReconciler familyGuardianReconciler)
+	ISiblingRepository siblingRepository,
+	IStudentGuardianRepository studentGuardianRepository)
 {
 	public async Task<StudentCourseResult> HandleAsync(
 		EnrolWaitingListStudentCommand command,
@@ -97,9 +97,49 @@ public sealed class EnrolWaitingListStudentHandler(
 		// does not end up enrolled must leave their siblings untouched. The links
 		// created here are the Coordinator's enrolment, not a guardian they linked
 		// by hand, and the audit trail says so.
-		await familyGuardianReconciler.ReconcileEnrolledSiblingsAsync(
+		await ReconcileEnrolledSiblingsAsync(
 			entry.Student, StudentWriteSource.WaitingList, cancellationToken);
 
 		return enrollment.ToResult(teacher);
+	}
+
+	/// <summary>
+	/// Gives this student's enrolled siblings every guardian the student holds. A
+	/// guardian belongs to the family rather than to one child, so enrolling closes
+	/// the gap the wait left behind. Only links are created — no guardian's own
+	/// details are touched, and nothing is written where the family already agrees.
+	/// <para>
+	/// Only enrolled siblings are considered. A sibling still on the waiting list
+	/// received the guardian when it was added, so there is nothing to repair for
+	/// them.
+	/// </para>
+	/// </summary>
+	private async Task ReconcileEnrolledSiblingsAsync(
+		Student student,
+		StudentWriteSource source,
+		CancellationToken cancellationToken)
+	{
+		var missingLinks = await studentGuardianRepository.GetMissingEnrolledSiblingLinksAsync(
+			student.StudentId, cancellationToken);
+		if (missingLinks.Count == 0)
+			return;
+
+		// A link carries the student and the guardian rather than their ids, so
+		// both are loaded once for the whole set. Each missing link names a sibling
+		// of this student and a guardian this student holds, which is exactly what
+		// these two reads return.
+		var siblings = (await siblingRepository.GetSiblingsAsync(student.StudentId, cancellationToken))
+			.ToDictionary(sibling => sibling.StudentId);
+		var guardians = (await studentGuardianRepository.GetGuardiansByStudentIdAsync(student.StudentId, cancellationToken))
+			.ToDictionary(guardian => guardian.GuardianId);
+
+		foreach (var missingLink in missingLinks)
+		{
+			var link = StudentGuardian.Create(
+				siblings[missingLink.StudentId],
+				guardians[missingLink.GuardianId],
+				source);
+			await studentGuardianRepository.CreateAsync(link, cancellationToken);
+		}
 	}
 }
