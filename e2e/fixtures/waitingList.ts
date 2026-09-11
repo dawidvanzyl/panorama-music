@@ -16,6 +16,14 @@ export interface SeedWaitingListEntryOptions {
   notes?: string | null;
   /** ISO date-time. Omit to let the row default to NOW(). */
   addedAt?: string;
+  /**
+   * A family surname to create this student under, for a scenario that needs
+   * one waiting-list student and one enrolled student in the same family so a
+   * listing can be read scoped to it. Omit and the seeder mints its own unique
+   * surname as before. The first name stays `Waiting`, which is what tells this
+   * student apart from an enrolled sibling sharing the surname.
+   */
+  lastName?: string;
 }
 
 export interface SeededWaitingListEntry {
@@ -43,7 +51,7 @@ export async function seedWaitingListEntry(
   page: Page,
   options: SeedWaitingListEntryOptions,
 ): Promise<SeededWaitingListEntry> {
-  const surname = `Waiting-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const surname = options.lastName ?? `Waiting-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const instrumentType = options.instrumentType ?? 'Piano';
 
   const seeded = await page.evaluate(

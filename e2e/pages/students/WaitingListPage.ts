@@ -161,6 +161,15 @@ export class WaitingListPage extends BasePage {
     return this.group(occurrenceLabel).locator('tbody tr');
   }
 
+  /**
+   * Every row the page lists, across all occurrence-type groups — for a check
+   * that a student is listed nowhere at all, which a single group's rows could
+   * not settle.
+   */
+  allRows(): Locator {
+    return this.page.locator('pm-waiting-list-table tbody tr');
+  }
+
   /** The seeded student's own row, matched on their surname. */
   rowFor(occurrenceLabel: OccurrenceLabel, lastName: string): Locator {
     return this.rows(occurrenceLabel).filter({ hasText: lastName });
@@ -274,6 +283,93 @@ export class WaitingListPage extends BasePage {
   /** Anything within the Date Added field a user could type in, pick from or press. */
   dateAddedControls(): Locator {
     return this.dateAddedField().locator('input, select, textarea, button, [contenteditable]');
+  }
+
+  // --- Siblings tab (shared pm-siblings-step, inside this page's wizard) ---
+  //
+  // Mirrors StudentsPage's own Siblings helpers rather than inventing a second
+  // shape. Every locator here hangs off `this.wizardModal`, which is scoped to
+  // `pm-waiting-list-page`: the Students screen's wizard carries the same
+  // element ids, and a bare `#siblingsStep` pierces both shadow roots.
+
+  private siblingsStep(): Locator {
+    return this.wizardModal.locator('#siblingsStep');
+  }
+
+  /** Opens a row's student in the wizard and selects the Siblings tab. */
+  async openSiblingsTab(row: Locator): Promise<void> {
+    await this.openEditWizard(row);
+    await this.selectTab('Siblings');
+  }
+
+  siblingsSearchSelect(): Locator {
+    return this.siblingsStep().locator('#searchSelect');
+  }
+
+  /**
+   * Types into the Siblings tab's candidate search. The search lists results
+   * for the typed query and nothing before it, so a candidate is only ever
+   * reached by searching for them.
+   */
+  async searchSiblingCandidates(query: string): Promise<void> {
+    await this.siblingsSearchSelect().locator('#query').fill(query);
+  }
+
+  /** One candidate the search currently offers, matched on the student's name. */
+  siblingCandidateResult(name: string): Locator {
+    return this.siblingsSearchSelect().locator('#results').getByRole('button', { name });
+  }
+
+  /**
+   * The affordance stating which of the two listings a candidate belongs to.
+   * Its meaning travels on the affordance itself — its accessible name and its
+   * hover title — following `guardianRestrictionIcon`, so it is read there
+   * rather than off neighbouring text.
+   */
+  siblingCandidatePopulationIcon(name: string): Locator {
+    return this.siblingCandidateResult(name).locator('.pm-population-icon');
+  }
+
+  siblingListRow(siblingName: string): Locator {
+    return this.siblingsStep().locator('#siblingList').locator('tr').filter({ hasText: siblingName });
+  }
+
+  /** The same affordance on a sibling already in the linked-siblings table. */
+  siblingPopulationIcon(siblingName: string): Locator {
+    return this.siblingListRow(siblingName).locator('.pm-population-icon');
+  }
+
+  /** Every sibling row currently in the linked-siblings table. */
+  siblingListRows(): Locator {
+    return this.siblingsStep().locator('#siblingList').locator('tbody tr');
+  }
+
+  /**
+   * Picks the named candidate and presses Add. In the capture wizard this
+   * stages the link, which is written on Save; on an existing entry it is
+   * written immediately. Either way the sibling lands in the linked-siblings
+   * table, which is what this waits for — the same reason StudentsPage's own
+   * `addSibling` does.
+   */
+  async addSibling(siblingName: string): Promise<void> {
+    await this.searchSiblingCandidates(siblingName);
+    await this.siblingCandidateResult(siblingName).click();
+    await this.siblingsSearchSelect().locator('#addBtn').click();
+    await expect(this.siblingListRow(siblingName)).toBeVisible();
+  }
+
+  /** The step's stand-in, shown in place of the search when no candidate exists at all. */
+  siblingsPlaceholder(): Locator {
+    return this.siblingsStep().locator('#placeholder');
+  }
+
+  /**
+   * Dismisses the wizard through the shared footer's Cancel (capture) or Close
+   * (an existing entry's Siblings/Guardians tabs, which write their own changes
+   * and have nothing left to cancel).
+   */
+  async closeWizard(): Promise<void> {
+    await this.wizardModal.locator('.wizard__actions #cancelBtn').click();
   }
 
   // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---
