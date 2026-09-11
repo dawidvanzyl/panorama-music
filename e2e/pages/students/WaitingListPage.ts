@@ -471,12 +471,19 @@ export class WaitingListPage extends BasePage {
   }
 
   /**
-   * Dismisses the wizard through the shared footer's Cancel (capture) or Close
-   * (an existing entry's Siblings/Guardians tabs, which write their own changes
-   * and have nothing left to cancel).
+   * Dismisses the wizard however the current mode offers it: capture mode and
+   * the tabs that write their own changes (Siblings, Guardians) carry a Cancel
+   * or Close in the shared footer, while the Waiting List tab in edit mode
+   * replaces the footer with its own Close. Same shape as
+   * StudentsPage.closeWizard.
    */
   async closeWizard(): Promise<void> {
-    await this.wizardModal.locator('.wizard__actions #cancelBtn').click();
+    const footerCancel = this.wizardModal.locator('.wizard__actions #cancelBtn');
+    if (await footerCancel.isVisible()) {
+      await footerCancel.click();
+      return;
+    }
+    await this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn').click();
   }
 
   // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---
