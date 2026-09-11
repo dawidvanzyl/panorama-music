@@ -37,16 +37,16 @@ public class StudentRepository(IUnitOfWork unitOfWork, IDomainEventCollector dom
 		return [.. dtos.Select(dto => dto.MapToStudent())];
 	}
 
-	public async Task<IList<SiblingCandidate>> GetSiblingCandidatesAsync(CancellationToken cancellationToken)
+	public async Task<IList<SiblingStudent>> GetSiblingCandidatesAsync(CancellationToken cancellationToken)
 	{
 		var command = CreateCommandDefinition(
 			"students.get_sibling_candidates",
 			null,
 			Transaction,
 			cancellationToken);
-		var dtos = await Connection.QueryAsync<SiblingCandidateDto>(command);
+		var dtos = await Connection.QueryAsync<SiblingStudentDto>(command);
 
-		return [.. dtos.Select(dto => dto.MapToSiblingCandidate())];
+		return [.. dtos.Select(dto => dto.MapToSiblingStudent())];
 	}
 
 	public async Task CreateAsync(Student student, CancellationToken cancellationToken)

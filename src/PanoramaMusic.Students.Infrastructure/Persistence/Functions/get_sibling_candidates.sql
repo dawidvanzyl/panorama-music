@@ -9,12 +9,8 @@
 -- mutually exclusive, and widening it would leak waiting-list students onto the
 -- Students screen.
 --
--- The population is the listing the student actually appears on, so the two
--- conditions here mirror the two listings exactly and between them cover every
--- student: waiting_list is the narrower set get_waiting_list returns (holds an
--- entry, holds no enrollment), and everyone else — including a student carrying
--- a stale entry alongside an enrollment — is the roster's, matching
--- get_students. No student is in both, and none is in neither.
+-- The population is the listing the student actually appears on; see
+-- student_population, which the linked-siblings read shares.
 --
 -- Excluding the student being edited is the caller's concern: no student is
 -- named here, and the wizard already filters out both the subject and the
@@ -37,12 +33,7 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT s.student_id, s.first_name, s.last_name, s.date_of_birth, s.grade, s.class, s.phase, s.language,
-           CASE
-               WHEN EXISTS (SELECT 1 FROM students.waiting_list wl WHERE wl.student_id = s.student_id)
-                AND NOT EXISTS (SELECT 1 FROM students.student_courses sc WHERE sc.student_id = s.student_id)
-               THEN 'WaitingList'
-               ELSE 'Enrolled'
-           END AS population
+           students.student_population(s.student_id) AS population
     FROM students.students s
     ORDER BY s.grade, s.class, s.last_name, s.first_name;
 END;

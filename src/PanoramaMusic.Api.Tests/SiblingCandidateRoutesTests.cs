@@ -119,6 +119,44 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 	}
 
 	/// <summary>
+	/// A sibling group can span both listings, and the linked-siblings table has
+	/// to say which each member is. The two rows sit in one group and differ only
+	/// by the linked student's own state, so an implementation taking the state
+	/// from the student the group was reached through — or from the screen it was
+	/// read on — returns two identical answers and fails here.
+	/// </summary>
+	[Fact]
+	public async Task GetSiblings_AMixedSiblingGroup_CarriesEachSiblingsOwnPopulation()
+	{
+		var (coordinatorEmail, _) = await fixture.SeedActiveUserAsync(_password, "sibling-group-mixed-coordinator", Role.Coordinator);
+		var coordinatorClient = fixture.CreateIsolatedClient("10.0.74.9");
+		await coordinatorClient.LoginAsync(coordinatorEmail, _password);
+		var (teacherEmail, _) = await fixture.SeedActiveUserAsync(_password, "sibling-group-mixed-teacher", Role.Teacher);
+		var teacherClient = fixture.CreateIsolatedClient("10.0.74.10");
+		await teacherClient.LoginAsync(teacherEmail, _password);
+
+		var familyName = $"Mixed-{Guid.NewGuid():N}";
+		var subject = await CaptureWaitingListStudentAsync(coordinatorClient, "Subject", familyName);
+		var waitingSibling = await CaptureWaitingListStudentAsync(coordinatorClient, "Waiting", familyName);
+		var enrolledSibling = await CreateEnrolledStudentAsync(teacherClient, coordinatorClient, "Amara", familyName);
+
+		await LinkSiblingAsync(coordinatorClient, subject.StudentId, waitingSibling.StudentId);
+		await LinkSiblingAsync(coordinatorClient, subject.StudentId, enrolledSibling.StudentId);
+
+		var response = await coordinatorClient.Client.SendAsync(
+			coordinatorClient.AuthorizedGetRequest($"/api/students/{subject.StudentId}/siblings"),
+			TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		var siblings = JsonSerializer.Deserialize<List<SiblingStudentResult>>(payload, _jsonOptions).ShouldNotBeNull();
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.OK),
+			() => siblings.Count.ShouldBe(2),
+			() => siblings.Single(s => s.StudentId == waitingSibling.StudentId).Population.ShouldBe(StudentPopulation.WaitingList),
+			() => siblings.Single(s => s.StudentId == enrolledSibling.StudentId).Population.ShouldBe(StudentPopulation.Enrolled));
+	}
+
+	/// <summary>
 	/// Authorization matches the wizard that calls this read: a Teacher drives it
 	/// from the Students screen and a Coordinator from the Waiting List, and
 	/// each is proven with a session holding that role alone — a session holding
@@ -163,14 +201,22 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 			() => anonymousResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized));
 	}
 
-	private static async Task<List<SiblingCandidateResult>> GetCandidatesAsync(IsolatedHttpClient client)
+	private static async Task LinkSiblingAsync(IsolatedHttpClient client, Guid studentId, Guid siblingId)
+	{
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest($"/api/students/{studentId}/siblings", new { SiblingId = siblingId }),
+			TestContext.Current.CancellationToken);
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+	}
+
+	private static async Task<List<SiblingStudentResult>> GetCandidatesAsync(IsolatedHttpClient client)
 	{
 		var response = await client.Client.SendAsync(
 			client.AuthorizedGetRequest("/api/students/sibling-candidates"), TestContext.Current.CancellationToken);
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-		return JsonSerializer.Deserialize<List<SiblingCandidateResult>>(payload, _jsonOptions).ShouldNotBeNull();
+		return JsonSerializer.Deserialize<List<SiblingStudentResult>>(payload, _jsonOptions).ShouldNotBeNull();
 	}
 
 	/// <summary>A student holding a waiting-list entry and no enrollment.</summary>

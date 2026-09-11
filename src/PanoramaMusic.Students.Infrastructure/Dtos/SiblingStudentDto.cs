@@ -1,6 +1,6 @@
 namespace PanoramaMusic.Students.Infrastructure.Dtos;
 
-internal sealed record SiblingCandidateDto(
+internal sealed record SiblingStudentDto(
 	Guid Student_Id,
 	string First_Name,
 	string Last_Name,

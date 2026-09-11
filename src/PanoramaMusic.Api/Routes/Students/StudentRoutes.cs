@@ -56,7 +56,7 @@ public static class StudentRoutes
 			})
 			.MarkSensitiveResponse()
 			.WithName("GetSiblingCandidates")
-			.Produces<IList<SiblingCandidateResult>>(StatusCodes.Status200OK)
+			.Produces<IList<SiblingStudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 
@@ -144,7 +144,7 @@ public static class StudentRoutes
 			})
 			.MarkSensitiveResponse()
 			.WithName("GetSiblings")
-			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
+			.Produces<IList<SiblingStudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);

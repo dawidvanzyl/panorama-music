@@ -5,9 +5,9 @@ using PanoramaMusic.Students.Infrastructure.Dtos;
 
 namespace PanoramaMusic.Students.Infrastructure.Extensions;
 
-internal static class SiblingCandidateDtoExtensions
+internal static class SiblingStudentDtoExtensions
 {
-	internal static SiblingCandidate MapToSiblingCandidate(this SiblingCandidateDto dto) =>
+	internal static SiblingStudent MapToSiblingStudent(this SiblingStudentDto dto) =>
 		new(
 			new Student(
 				dto.Student_Id,

@@ -21,7 +21,7 @@ public interface IStudentRepository
 	/// siblings they already hold is the caller's concern — no student is named
 	/// here.
 	/// </summary>
-	Task<IList<SiblingCandidate>> GetSiblingCandidatesAsync(CancellationToken cancellationToken);
+	Task<IList<SiblingStudent>> GetSiblingCandidatesAsync(CancellationToken cancellationToken);
 
 	Task CreateAsync(Student student, CancellationToken cancellationToken);
 

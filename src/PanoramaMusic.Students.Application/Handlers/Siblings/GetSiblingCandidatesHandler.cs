@@ -12,7 +12,7 @@ namespace PanoramaMusic.Students.Application.Handlers.Siblings;
 /// </summary>
 public sealed class GetSiblingCandidatesHandler(IStudentRepository studentRepository)
 {
-	public async Task<IList<SiblingCandidateResult>> HandleAsync(CancellationToken cancellationToken)
+	public async Task<IList<SiblingStudentResult>> HandleAsync(CancellationToken cancellationToken)
 	{
 		var candidates = await studentRepository.GetSiblingCandidatesAsync(cancellationToken);
 
