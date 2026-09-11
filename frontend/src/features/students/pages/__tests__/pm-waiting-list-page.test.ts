@@ -1020,7 +1020,7 @@ describe('pm-waiting-list-page — the Siblings tab spans both populations', { t
 // so that list is only as current as the page's last read of it. Before this,
 // it was read on connect and never again: capture one child, open the wizard
 // for the next, and the first was not offered until the page was reloaded.
-describe('pm-waiting-list-page — the candidate list follows the page', () => {
+describe('pm-waiting-list-page — the candidate list follows the page', { tags: ['304UC13', '304UC14'] }, () => {
   const captured: WaitingListEntryResult = {
     waitingListEntryId: 'w9',
     studentId: 's9',
@@ -1059,7 +1059,7 @@ describe('pm-waiting-list-page — the candidate list follows the page', () => {
     );
   }
 
-  it('offers a student captured in this session in the next capture wizard', async () => {
+  it('offers a student captured in this session in the next capture wizard', { tags: ['304UC13'] }, async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValue(bothGroups);
     mockGetSiblingCandidates.mockReset().mockResolvedValueOnce([]).mockResolvedValue([capturedCandidate]);
@@ -1096,7 +1096,7 @@ describe('pm-waiting-list-page — the candidate list follows the page', () => {
     expect(resultIds(searchSelectShadowOf(wizard))).toEqual([capturedCandidate.studentId]);
   });
 
-  it('does not read candidates for a role that never reaches a wizard', async () => {
+  it('does not read candidates for a role that never reaches a wizard', { tags: ['304UC14'] }, async () => {
     mockHasAnyRole.mockReturnValue(false);
     mockGetWaitingList.mockResolvedValue(bothGroups);
 
