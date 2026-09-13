@@ -1,27 +1,16 @@
 # Run journal
 
-The durable state of one milestone, from planning through to the merge into
-`master`. Written by `plan-milestone`, then by the tech lead and the workers it
-delegates to.
+The durable state of one milestone, from planning to the merge into `master`.
+`plan-milestone` writes it first, then the tech lead and its workers. The agent
+definitions and every skill that writes to `journal_dir` refer to this file, so edit
+it here and never inline a copy.
 
-Referenced by the agent definitions in `.claude/agents/` and by every skill that
-writes to `journal_dir`. Edit it here — never inline a copy back into a skill.
-
-## What it is for
-
-**The journal records intent. GitHub records fact.**
-
-GitHub is authoritative for anything it can represent: whether an issue is closed,
-a PR is open, a gate label is present, a bug sub-issue is still outstanding. Never
-trust the journal over GitHub on those.
-
-But GitHub cannot represent the state that actually gets lost when a session dies:
-which verify cycle is running, which findings were dispositioned and why, what the
-first attempt tried before it failed, which question you already answered. That is
-what this holds.
-
-Assume the session dies at any moment. On a Pro plan, quota exhaustion mid-story is
-the ordinary case, not an edge one — so anything held only in an agent's context is
+**The journal records intent. GitHub records fact.** GitHub is authoritative for
+anything it can represent: issue state, PRs, gate labels and open bug sub-issues. The
+journal holds what GitHub can't: which verify cycle is running, how each finding was
+dispositioned and why, what a failed attempt tried, and which questions have already
+been answered. Assume a session can die at any moment; on a Pro plan, running out of
+quota mid-story is the ordinary case. Anything held only in an agent's context is
 already lost.
 
 ## Location
@@ -30,18 +19,12 @@ already lost.
 {HOME}/.claude/runs/panorama-music/m{milestone_number}/
 ```
 
-Resolve `{HOME}` **once**, at `plan-milestone` Step 0, and record the absolute
-result in the manifest as `journal_root`. Every later step and every worker uses
-that recorded value verbatim.
-
-Two reasons this is not fussiness. `~` and `/tmp` resolve to different places
-depending on which tool asks — Write and Edit see one path, Bash another. And a git
-worktree resolves any repo-relative path to a different, empty directory. The
-journal lives outside the repository so neither applies, and resolving once removes
-the remaining ambiguity.
-
-Keyed by **milestone number**, not epic number, because every downstream consumer —
-the milestone branch, `close-milestone`, the run loop — thinks in milestones.
+Resolve `{HOME}` once, at `plan-milestone` step 0, and record the absolute path in the
+manifest as `journal_root`; everyone uses that value verbatim afterwards. `~` and
+`/tmp` resolve differently per tool (Write/Edit vs Bash), and a git worktree resolves
+repo-relative paths to an empty directory. Keeping the journal outside the repo and
+resolving the path once avoids both problems. It's keyed by milestone rather than
+epic, because every downstream consumer thinks in milestones.
 
 ## Layout
 
@@ -54,7 +37,7 @@ m8/
 └── issues/
     └── 03-enrol-student/      one directory per story
         ├── test-intents.json  UC codes + covers_acs              (planning)
-        ├── ui.md              Stitch output, frontend only       (planning)
+        ├── ui.md              .design/ refs + Page Arch, frontend (planning)
         ├── draft-v1.md        versioned snapshots                (planning)
         ├── final.md           approved issue body                (planning)
         ├── e2e-design.md      frozen scenario design             (qa-design)
@@ -66,16 +49,14 @@ m8/
         └── close-269.md       final AC verification              (close-issue)
 ```
 
-Story directories are named `{seq}-{slug}` at planning time, when no issue number
-exists yet, and are **never renamed**. The manifest maps issue number to directory.
-Workers receive `journal_dir` as an absolute path in their brief and never compute
-it, so the naming is invisible to everyone but the lead.
+Story directories are named `{seq}-{slug}` at planning time, before any issue number
+exists, and are never renamed. The manifest maps each issue number to its directory.
+Workers receive `journal_dir` as an absolute path and never compute it themselves.
 
 ## manifest.json
 
-One read gives the lead the entire routing picture. It carries no prose — the prose
-lives in the per-story files, and pulling it into the manifest would put it in the
-lead's context on every read.
+One read gives the lead the whole routing picture. It holds no prose; prose lives in
+the per-story files, so it doesn't land in the lead's context on every read.
 
 ```json
 {
@@ -103,15 +84,14 @@ lead's context on every read.
 }
 ```
 
-`stage` is one of: `pending`, `designing`, `implementing`, `testing`, `reviewing`,
-`awaiting-owner`, `merged`, `closed`.
-
-It is a record of what the lead last **did**, not a claim about the world. The
-world is checked at resume.
+`stage` is one of `pending`, `designing`, `implementing`, `testing`, `reviewing`,
+`awaiting-owner`, `merged` or `closed`. It records what the lead last **did**; it is
+not a claim about the world. `attempts` supplies each worker's `cycle` number: the
+reviewer's `cycle` is `attempts.review`.
 
 ## rulings.md
 
-Every escalation the lead or the developer answered, appended, never edited.
+Every answered escalation is appended here and never edited:
 
 ```markdown
 ## R{n} — {one-line summary}
@@ -122,66 +102,45 @@ Ruled by: {tech lead | developer (owner)}
 Applies to: {this story, or any story touching X}
 ```
 
-Milestone-wide, not per-story, because the questions recur across stories — that is
-the point of the file. Before escalating anything, the lead reads this; before
-answering anything, it checks whether it already has.
-
-This is the file that makes the lead cheaper as a milestone progresses. A ruling
-that has to be asked twice cost a round trip through you, and you answered it the
-same way both times.
+It's milestone-wide because questions recur across stories. The lead checks it before
+escalating or answering anything, which is what makes the lead cheaper as a milestone
+goes on.
 
 ## Write rules
 
-**Only the lead writes `manifest.json` and `rulings.md`.** Workers write inside
-their own `journal_dir` and nowhere else. Even with stories running one at a time,
-agent lifetimes overlap; two writers on one file is how it gets corrupted.
-
-**Write as you go.** An agent cannot tell when a turn limit or a quota exhaustion is
-about to end the session. A report composed in a final turn leaves nothing behind
-when that happens, and the work has to be redone from zero — which is the exact
-failure this whole arrangement exists to prevent.
-
-**Never delete anything.** `plan-milestone`'s restart renames the directory to
-`m{n}.superseded-{k}` rather than removing it. A discarded plan still answered
-questions the next attempt will ask.
-
-**Keep it light per story.** Planning earns its seven phases and versioned snapshots
-because it runs once. The story loop runs N times per milestone, and the same
-ceremony repeated per story is overhead the lead pays for in context. A story needs
-a manifest entry, its frozen design, one report per worker invocation, and nothing
-else. Adopt planning's discipline, not its volume.
+- **Only the lead writes `manifest.json` and `rulings.md`.** Workers write only
+  inside their own `journal_dir`. Agent lifetimes overlap, and two writers on one
+  file corrupt it.
+- **Write as you go.** No agent can see a turn or quota limit coming. A report
+  composed in the final turn leaves nothing behind, and the work is redone from zero.
+- **Never delete anything.** A restart renames the directory to
+  `m{n}.superseded-{k}`, because a discarded plan still answered questions the next
+  attempt will ask.
+- **Keep stories light.** Planning earns its ceremony because it runs once. A story
+  needs only a manifest entry, its frozen design, and one report per worker
+  invocation.
 
 ## Resume: replay, then reconcile
 
-On starting or resuming a run, the lead rebuilds its picture in that order.
+1. **Replay.** Read `manifest.json` and `rulings.md` to see what was intended.
+2. **Reconcile.** For the in-flight story, re-read GitHub and repair the manifest.
+   GitHub wins every disagreement: a PR merged or a label applied by hand is a fact
+   the journal had no way to learn.
 
-**1. Replay.** Read `manifest.json` and `rulings.md`. This is what was intended.
+   | Check | Command |
+   | --- | --- |
+   | Issue state | `gh issue view {n} --json state` |
+   | PR state, head SHA, base | `gh pr view {pr} --json state,headRefOid,baseRefName` |
+   | Gate labels | `gh pr view {pr} --json labels` |
+   | Open bug sub-issues | `gh issue view {n} --json body` → linked sub-issues |
+   | CI on the head commit | `gh pr checks {pr}` |
+3. **Resume at the last committed step.** Never re-run a stage that GitHub shows as
+   complete.
 
-**2. Reconcile.** For the story the manifest says is in flight, re-read GitHub and
-repair the manifest wherever they disagree:
+Two states call for suspicion rather than trust:
 
-| Check | Command |
-| --- | --- |
-| Issue open or closed | `gh issue view {n} --json state` |
-| PR exists, state, head SHA | `gh pr view {pr} --json state,headRefOid,baseRefName` |
-| Gate labels present | `gh pr view {pr} --json labels` |
-| Bug sub-issues still open | `gh issue view {n} --json body` → linked sub-issues |
-| CI against the head commit | `gh pr checks {pr}` |
-
-GitHub wins every disagreement. A PR you merged by hand in the browser, an issue you
-closed, a label you applied — all of them are facts the journal simply had no way to
-learn.
-
-**3. Resume at the last committed step.** Never re-run a stage GitHub shows as
-complete. A second `qa-implement` pass on a branch already carrying
-`gate: qa-complete` costs a full worker invocation to rediscover what the label
-already said.
-
-**Two states deserve suspicion rather than trust:**
-
-- **A gate label older than the head commit.** `gate: owner-approved` is not stripped
-  automatically, so an approval given before three rounds of rework no longer
-  describes the branch. Compare timestamps before treating it as current.
-- **A dirty working tree.** It may hold the previous run's uncommitted work. Read
-  the story's `implement-{n}.md` to see how far it got before deciding whether to
-  keep or discard — and if that is not conclusive, ask.
+- **`gate: owner-approved` older than the head commit.** Pushes don't strip it, so
+  compare timestamps before treating it as current.
+- **A dirty working tree.** It may hold the previous run's unfinished work. Read the
+  story's latest `implement-{n}.md` to see how far it got, and if that doesn't settle
+  it, ask before keeping or discarding anything.

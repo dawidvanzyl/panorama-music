@@ -2,7 +2,7 @@
 name: asvs-security-review
 description: >
   Load this skill when the user says "asvs security review", "asvs-security-review",
-  "/asvs-security-review", or when invoked by reference from the review-issue skill's
+  "/asvs-security-review", or when invoked by reference from the review-pull-request skill's
   standards-review step. Performs a rule-by-rule walk of docs/security-standards.md
   against a diff, scoped to the ASVS sections the diff actually touches, and reports
   findings using the project's existing severity mapping.
@@ -20,7 +20,7 @@ At the start of execution, always post a visible message to the user:
 > "Loaded skill: **asvs-security-review**. Starting ASVS-scoped security review..."
 
 Skip the announcement when invoked by reference from another skill (e.g.
-`review-issue` step 7) — in that mode, findings are returned to the calling
+`review-pull-request` step 7) — in that mode, findings are returned to the calling
 skill instead of announced separately.
 
 ## Role
@@ -39,12 +39,12 @@ real issue but doesn't map to an existing rule ID, it goes to Suggestions as
 
 ## Inputs
 
-- `issue_number` / `pr_number` (optional) — when invoked from `review-issue`,
+- `issue_number` / `pr_number` (optional) — when invoked from `review-pull-request`,
   reuse the same values that skill already resolved; don't re-fetch.
 - `target` (optional) — a branch, PR number, or "working tree" to diff
   against `master`/the milestone base. Used only in standalone mode.
 - `mode` — `standalone` (default when the user invokes this skill directly)
-  or `delegated` (when called by reference from `review-issue`).
+  or `delegated` (when called by reference from `review-pull-request`).
 
 If invoked standalone with no target and no in-session PR/diff to infer from,
 ask: "Which PR, branch, or diff should I review?"
@@ -68,7 +68,7 @@ gh pr diff {pr_number}                                          # if a PR number
 git fetch origin {base_branch} && git diff origin/{base_branch}...HEAD   # otherwise
 ```
 
-Delegated mode: reuse the diff `review-issue` already captured in its own
+Delegated mode: reuse the diff `review-pull-request` already captured in its own
 step 3 — do not re-fetch.
 
 Capture the full diff and the list of changed file paths.

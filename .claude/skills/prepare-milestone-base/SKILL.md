@@ -6,189 +6,71 @@ description: >
   pulls latest, and creates and pushes a milestone/m{number} branch derived
   from an epic issue.
 license: MIT
-compatibility: opencode
 metadata:
   audience: maintainers
   workflow: git-branch-management
 ---
 
-## Announcement
+## Goal
 
-At the start of execution, always post a visible message to the user:
+Create `milestone/m{number}` from the latest `origin/master` and push it. This is the
+integration branch for Mode A (milestone-driven development) in `coding-standards.md`.
+`prepare-base` protects `milestone/*` branches from deletion.
 
-> "Loaded skill: **prepare-milestone-base**. Creating milestone branch..."
-
----
+This skill only creates and verifies a branch. Make no file edits, no commits and no
+tags. Don't merge, rebase or rewrite history, except for the confirmed reset in step
+3. Keep communication concise, with no emojis.
 
 ## Inputs
 
-- `epic_issue_number`: GitHub issue number of the milestone epic (e.g. `3`).
-
----
-
-## Goal
-
-Create a `milestone/m{number}` branch from the latest `origin/master` and push
-it to remote, ensuring a clean, deterministic starting point for milestone work.
-This branch serves as the integration branch for Mode A (milestone-driven
-development) as defined in `coding-standards.md`.
-
----
-
-## Guardrails
-
-- **No file edits, no commits.**
-- **No tagging of any kind (lightweight or annotated).**
-- **No merge, rebase, or history rewriting operations.**
-- This skill is strictly for branch creation and verification only.
-- **Refuse to proceed if the working tree is dirty** (`git status --porcelain` not empty).
-- If milestone branch exists remotely, require explicit user confirmation before proceeding.
-- Keep all communication concise and professional. No emojis.
-- `milestone/*` branches created by this skill are protected from deletion by `prepare-base.md`.
-
----
+- `epic_issue_number`: ask "What is the epic issue number?" if it isn't given.
 
 ## Procedure
 
-### 0) Gather inputs
+### 1) Derive the milestone number
 
-- If `epic_issue_number` is missing, ask:
-  > "What is the epic issue number?"
-- Pause execution until provided.
+Run `gh issue view {epic_issue_number} --json title,milestone`.
 
----
+- If no milestone is assigned, stop and ask the user to assign one on GitHub.
+- Take the number from the milestone's own title (`.milestone.title`), never from
+  the epic's title, using `M(\d+(?:\.\d+)?)`. The branch name is lowercase:
+  `M3` becomes `milestone/m3`, and `M1.1` becomes `milestone/m1.1`.
+- If there's no match, or more than one, ask the user for the number and stop.
 
-### 1) Fetch epic issue and derive milestone number
+### 2) Clean tree
 
-- Fetch issue using GitHub CLI, including its assigned milestone:
-  ```bash
-  gh issue view {epic_issue_number} --json title,milestone
-````
+If `git status --porcelain` isn't empty, report "Working tree has uncommitted changes.
+Please commit or stash before continuing." and stop.
 
-* If the epic has no milestone assigned, stop and ask the user to assign one
-  on GitHub first. Do not proceed until confirmed, and do not fall back to
-  parsing the epic issue's own title text.
+### 3) Create or reuse the branch
 
-* Extract milestone number using regex against the assigned milestone's
-  **title** (`.milestone.title`), never the epic issue's own title:
+Run `git fetch origin`. Then check whether the branch exists remotely
+(`git ls-remote --heads origin milestone/m{number}`) and locally
+(`git branch --list milestone/m{number}`).
 
-  * Primary match: `M(\d+(?:\.\d+)?)`
-  * Normalize the extracted number to lowercase form for all branch names
-  (e.g. `M3` → use `3`, branch is `milestone/m3`; `M1.1` → use `1.1`, branch
-  is `milestone/m1.1`).
-  
-* If multiple matches exist or no match is found in the milestone title:
-
-  * Ask user to provide milestone number manually
-  * Stop execution
-
----
-
-### 2) Check working tree cleanliness
-
-* Run:
-
-  ```bash
-  git status --porcelain
-  ```
-* If output is not empty:
-
-  * Inform user:
-
-    > "Working tree has uncommitted changes. Please commit or stash before continuing."
-  * Stop execution
-
----
-
-### 3) Determine branch existence
-
-* Check remote:
-
-  ```bash
-  git ls-remote --heads origin milestone/m{number}
-  ```
-* Check local:
-
-  ```bash
-  git branch --list milestone/m{number}
-  ```
-
-### Branch decision logic
-
-#### If branch exists (remote or local)
-
-* Ask user:
-
-  > "Branch milestone/m{number} already exists. Do you want to check it out and update it from origin/master?"
-* Accept: `yes | y | confirm`
-* Anything else: stop execution
-
-If confirmed:
-
-* `git fetch origin`
-* `git switch milestone/m{number}` (not `git checkout` — `switch` refuses to
-  silently detach onto a same-named tag left behind by a prior
-  `close-milestone-watch` run; `checkout` would not)
-* If `origin/milestone/m{number}` exists:
-  * `git reset --hard origin/milestone/m{number}`
-* If branch exists locally only (no remote counterpart):
-  * Inform user: "Branch exists locally only; resetting to origin/master instead."
-  * `git reset --hard origin/master`
-* Continue to Step 5
-
----
-
-#### If branch does NOT exist
-
-Proceed to Step 4.
-
----
-
-### 4) Create milestone branch
-
-Always base from remote master (not local):
+**The branch doesn't exist:**
 
 ```bash
-git fetch origin
 git checkout -B milestone/m{number} origin/master
 git push -u origin refs/heads/milestone/m{number}:refs/heads/milestone/m{number}
 ```
 
-Use the fully-qualified refspec for the push, not the short name. A prior
-closed milestone leaves behind a tag named `milestone/m{number}` (created by
-`close-milestone-watch`), and a short-name push fails with "src refspec ...
-matches more than one" once a same-named tag exists.
+Push with the fully qualified refspec. `close-milestone-watch` leaves behind a tag
+with the same name, which makes a short-name push fail with "matches more than one".
 
----
+**The branch exists:** ask the user "Branch milestone/m{number} already exists. Check
+it out and hard-reset it to {origin/milestone/m{number} | origin/master if it exists
+locally only}?". Use the reset target that applies, and accept only `yes`, `y` or
+`confirm`; anything else stops. On confirmation:
 
-### 5) Verify state
+1. Run `git switch milestone/m{number}`. Use `switch`, not `checkout`: `switch`
+   refuses to detach onto a same-named tag, while `checkout` would do it silently.
+2. Run `git reset --hard origin/milestone/m{number}`. If the branch is local-only,
+   say so and run `git reset --hard origin/master` instead.
 
-* Confirm active branch:
+### 4) Verify
 
-  ```bash
-  git branch --show-current
-  ```
-* Confirm remote existence:
-
-  ```bash
-  git ls-remote --heads origin milestone/m{number}
-  ```
-
-If either check fails:
-
-* Inform user of failure
-* Stop execution
-
----
-
-### 6) Final confirmation
-
-> "Branch milestone/m{number} is active locally and present on origin. Ready for milestone feature branches."
-
----
-
-## Summary
-
-Post:
-
-> "Milestone branch **milestone/m{number}** created from **origin/master** and pushed to origin. Ready for sub-issue implementation."
+Confirm that `git branch --show-current` is `milestone/m{number}` and that
+`git ls-remote --heads origin milestone/m{number}` returns it. If either check fails,
+report which one and stop. Otherwise report: "Milestone branch **milestone/m{number}**
+is active locally and present on origin. Ready for sub-issue implementation."

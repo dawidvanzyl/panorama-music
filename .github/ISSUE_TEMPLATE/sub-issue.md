@@ -29,7 +29,7 @@ One paragraph. What this story delivers from a **user or system value perspectiv
 > contract: it is what scenario design decomposes and what the spec suite must prove. Every
 > issue type carries it, so QA reads one section regardless of what kind of issue it is given.
 >
-> Derived at `plan-milestone` §3.7 from the epic's acceptance criteria and this story's
+> Derived at `plan-milestone` §3.4 from the epic's acceptance criteria and this story's
 > interface contract — never authored by hand, and frozen once planning completes.
 >
 > IT codes are scoped to the issue that **owns the criterion**. For a story that is the epic

@@ -3,133 +3,81 @@ description: Wait for milestone PR to merge, then close milestone, prepare-base,
 subtask: true
 ---
 
-## Setup
+## Inputs
 
-This command takes two arguments:
-- `$1` — PR number of the milestone branch → `master` PR
-- `$2` — Milestone number (e.g. `1` for milestone `M1`)
+- `$1` is the PR number of the milestone → `master` PR. Ask "What is the milestone PR
+  number?" if it's missing.
+- `$2` is the milestone number, e.g. `1` or `1.1`. Ask "What is the milestone number?"
+  if it's missing.
 
-If `$1` is missing, ask: "What is the milestone PR number?"
-If `$2` is missing, ask: "What is the milestone number?"
+Call them `PR_NUMBER` and `MILESTONE_NUMBER`. The branch and tag are both
+`milestone/m$MILESTONE_NUMBER`.
 
-Do not proceed until both values are confirmed. Store them as `PR_NUMBER` and `MILESTONE_NUMBER` for use throughout.
+## Watch loop
 
-## Watch Loop
+Run `gh pr view $PR_NUMBER --json state --jq '.state'` every 30 seconds (`sleep 30`):
 
-Track iteration count, starting at 0.
+- **`MERGED`:** post "PR #$PR_NUMBER merged. Proceeding with milestone close, branch
+  deletion, and tagging. Interrupt now if this is unexpected." and go to **On merge**.
+- **`CLOSED`:** post "PR #$PR_NUMBER was closed without merging. Aborting milestone
+  close." and exit.
+- **Still open after 20 checks (~10 minutes):** ask "PR #$PR_NUMBER has not merged
+  after ~10 minutes. Continue waiting? (yes/no)". `yes`, `y` or `confirm` resets the
+  count. Anything else posts "Stopping watch. Run
+  `/close-milestone-watch $PR_NUMBER $MILESTONE_NUMBER` again to resume." and exits.
 
-Repeat the following steps in a continuous loop until the PR is merged or closed:
+## On merge
 
-### Step 1 — Check PR state
+### 1) Close the GitHub milestone
 
-After 20 iterations (~10 minutes) without `MERGED` or `CLOSED`, post:
-> "PR #$PR_NUMBER has not merged after ~10 minutes. Continue waiting? (yes/no)"
-
-Accept only `yes | y | confirm` to continue (reset counter and keep looping).
-Anything else: post "Stopping watch. Run `/close-milestone-watch $PR_NUMBER $MILESTONE_NUMBER` again to resume." and exit the command.
-
-Run:
-```
-gh pr view $PR_NUMBER --json state --jq '.state'
-```
-
-If the output is `MERGED`:
-- Post a message: "PR #$PR_NUMBER merged. Closing milestone, running prepare-base, and tagging..."
-- Proceed to **On Merge**.
-
-If the output is `CLOSED`:
-- Post a message: "PR #$PR_NUMBER was closed without merging. Aborting milestone close."
-- Exit the command.
-
-### Step 2 — Sleep
-
-Increment iteration count.
-
-Run:
-```
-sleep 30
-```
-
-Then go back to Step 1.
-
-## On Merge
-
-Post: "PR merged. Proceeding with milestone close, branch deletion, and tagging. Interrupt now if this is unexpected."
-
-### 1) Close GitHub milestone
-
-`MILESTONE_NUMBER` (e.g. `1` or `1.1`) is the branch/tag suffix, derived
-upstream (by `close-milestone`) from the epic's **assigned milestone title**
-— never the epic issue's own title. It is still NOT the GitHub milestone API
-number, and the two can diverge (e.g. a milestone titled `M4 — {name}` may be
-API number `7`, not `4`). Look up the real API number from the
-merged PR's milestone field rather than assuming they match:
+`MILESTONE_NUMBER` is a branch and tag suffix taken from the milestone's title. It is
+**not** the GitHub API number, and the two diverge (`M4 — …` can be API number `7`).
+Read the API number from the PR instead:
 
 ```
 gh pr view $PR_NUMBER --json milestone --jq '.milestone.number'
+gh api repos/{owner}/{repo}/milestones/{that number} -X PATCH -f state=closed
 ```
 
-If this returns empty/null, the PR has no milestone attached — post an error
-and stop execution. Do not guess or fall back to `$MILESTONE_NUMBER`.
+If the PR has no milestone, or the PATCH fails, post the error and stop. Never fall
+back to `$MILESTONE_NUMBER`. Post "Milestone M$MILESTONE_NUMBER closed on GitHub."
 
-Store the result as `GITHUB_MILESTONE_NUMBER`, then:
+### 2) Prepare master
 
-```
-gh api repos/{owner}/{repo}/milestones/$GITHUB_MILESTONE_NUMBER -X PATCH -f state=closed
-```
+Invoke `prepare-base` with `base_branch = master` and `mode = interactive`. Pass both
+rather than asking for them. Use interactive mode on purpose: every story branch has
+just finished, which makes this the one point where the stale-branch cleanup is worth
+running, and subagent mode skips it.
 
-If the command fails (non-zero exit code), post the error output and stop execution. Do not proceed to prepare-base, branch deletion, or tagging.
-
-Post: "Milestone M$MILESTONE_NUMBER closed on GitHub."
-
-### 2) Load prepare-base with master
-
-Invoke the `prepare-base` skill.
-
-Provide the following inputs — do not ask for them:
-- `base_branch` = `master`
-- `mode` = `interactive`
-
-`interactive` deliberately, not `subagent`. This is the one moment in the cycle when
-the stale-branch cleanup is worth doing: the milestone has just merged, so every
-story branch under it is finished. Subagent mode skips those steps entirely.
-
-### 3) Delete the milestone branch — local and remote
-
-Both commands are destructive and the `guard-destructive` hook intercepts them by
-design:
+### 3) Delete the milestone branch
 
 ```
 git branch -d milestone/m$MILESTONE_NUMBER
 git push origin --delete milestone/m$MILESTONE_NUMBER
 ```
 
-- **Running in your own session** — the hook asks for confirmation. Confirm and
-  continue. This is the intended path.
-- **Running under an agent** — the hook denies both outright. Do not rephrase them,
-  and do not look for an equivalent that slips past. Post the two commands for the
-  user to run, note in the summary that deletion is outstanding, and continue to
-  step 4. Tagging does not depend on the branch being gone.
+The `guard-destructive` hook intercepts both commands. In your own session it asks
+for confirmation, so confirm and continue. Under an agent it denies them. In that
+case don't rephrase or route around them; post both commands for the user to run,
+note the deletion as outstanding, and continue.
 
-If `git branch -d` fails because the branch is not fully merged, do NOT retry with `-D`. Post the error and stop execution — a branch git does not consider merged is a reason to look, not to force.
-If `git push origin --delete` fails (e.g. already deleted, permissions), note this in the final summary but continue to step 4.
+- If `-d` fails because the branch isn't fully merged, post the error and stop.
+  **Never use `-D`**: a branch git doesn't consider merged is a reason to look, not
+  to force.
+- If the remote delete fails, note it and continue.
 
-Post: "Milestone branch milestone/m$MILESTONE_NUMBER deleted (local and remote)."
+### 4) Tag
 
-### 4) Create and push tag
-
-Get the current commit SHA:
 ```
-git rev-parse HEAD
+git tag milestone/m$MILESTONE_NUMBER origin/master
+git push origin refs/tags/milestone/m$MILESTONE_NUMBER
 ```
 
-Create and push the tag:
-```
-git tag milestone/m$MILESTONE_NUMBER
-git push origin milestone/m$MILESTONE_NUMBER
-```
+Tag `origin/master` rather than `HEAD`, because `prepare-base` may have left you off
+master if another worktree holds it. Push the fully qualified tag ref, because a
+surviving branch with the same name makes the short form ambiguous.
 
-Post: "Tag milestone/m$MILESTONE_NUMBER created and pushed."
-
-Post a final summary:
-> "Milestone M$MILESTONE_NUMBER complete. PR #$PR_NUMBER merged to master, milestone closed on GitHub, milestone branch deleted (local{, remote deletion failed — see above if applicable}), tag milestone/m$MILESTONE_NUMBER created, master is current and ready for the next milestone."	
+Post: "Milestone M$MILESTONE_NUMBER complete. PR #$PR_NUMBER merged to master,
+milestone closed on GitHub, milestone branch deleted {or: deletion outstanding —
+see above}, tag milestone/m$MILESTONE_NUMBER created, master is current and ready for
+the next milestone."

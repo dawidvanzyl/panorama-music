@@ -27,14 +27,14 @@ number/tag from the **assigned milestone's own title**, never from this issue's 
 Epic-level, testable outcomes for the whole milestone — verified end-to-end, not per
 sub-issue. Write them as **prose**, one numbered criterion per observable outcome.
 
-**Do not write IT codes here.** They are derived during planning, at `plan-milestone` §3.7,
+**Do not write IT codes here.** They are derived during planning, at `plan-milestone` §3.4,
 once decomposition has produced each sub-issue's API contract and Page Architecture. Codes
 authored now would be guessing at granularity before the story seams or the interface exist,
 which is what made them coarse and awkward to map.
 
 What this section must be at authoring time is the **independent statement of scope** that
 everything downstream is checked against. Decomposition reasons about these criteria, the UI
-audit walks them, and §3.7's coverage gate requires every one of them to carry at least one
+audit walks them, and §3.4's coverage gate requires every one of them to carry at least one
 IT code. A criterion nothing covers is a decomposition gap made visible — which only works if
 these were written before, and independently of, the plan.
 
@@ -53,7 +53,7 @@ once planning has begun.
 <!-- AC_END -->
 
 <details>
-<summary>What this section looks like after planning §3.7</summary>
+<summary>What this section looks like after planning §3.4</summary>
 
 Codes are scoped to **this epic's own issue number** (`{epic_number}IT{n}`), which exists
 before any sub-issue does. Each is a checkbox nested under the criterion it proves, and is
@@ -70,7 +70,7 @@ ticked by `close-milestone` when its Playwright spec passes.
 <!-- AC_END -->
 ```
 
-A criterion with no codes beneath it is a planning error, not an acceptable state — §3.7
+A criterion with no codes beneath it is a planning error, not an acceptable state — §3.4
 stops rather than inventing one.
 
 </details>
