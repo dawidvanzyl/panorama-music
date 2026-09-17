@@ -1,7 +1,13 @@
 # Shared review conventions
 
-Used by `review-pull-request` and `verify-implementation`. Edit it here and never
-inline a copy into either skill, or the two will drift.
+Used by `review-pull-request`, `verify-implementation` and `plan-critique`. Edit it
+here and never inline a copy into any of them, or they will drift.
+
+`plan-critique` runs before any code exists, so it reuses the severity levels, the
+sourcing rule and the standards-doc list below, but **not** the code-only parts: it has
+no diff, so it anchors each finding at a **plan section, requirement or standard-doc
+rule** instead of `file:line`, and it does not delegate an `asvs-security-review` (a
+design-level security check against `docs/security-standards.md`, not a diff walk).
 
 ## Severity levels
 

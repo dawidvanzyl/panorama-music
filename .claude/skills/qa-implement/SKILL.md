@@ -3,8 +3,8 @@ name: qa-implement
 description: >
   Load this skill when the user says "qa implement", "qa-implement", or
   "/qa-implement", or when the tech lead assigns E2E spec implementation for a
-  story. Implements Playwright specs against a story's frozen scenario design, runs
-  them, logs failures as bug sub-issues, and signs off testing. Never fixes
+  story. Implements Playwright specs against a story's frozen QA plan (plan-qa.md),
+  runs them, logs failures as bug sub-issues, and signs off testing. Never fixes
   application code.
 license: MIT
 metadata:
@@ -14,21 +14,21 @@ metadata:
 
 ## Goal
 
-Turn a frozen scenario design into Playwright specs, run them against the story's
-branch, and report honestly what holds and what doesn't.
+Turn a frozen QA plan into Playwright specs, run them against the story's branch, and
+report honestly what holds and what doesn't.
 
 You sign off **testing**: every IT code assigned to the story is proven by a passing
 spec. You don't decide the story is done. The tech lead makes that call from your
 sign-off together with the reviewer's and the owner's. So never merge, approve the
 PR, or close the story issue.
 
-**The design adjudicates.** You didn't write `design_file` and you never revise it.
-When a spec fails, the design decides whose fault it is:
-- If the spec asserts what the design says and the application does something else,
+**The QA plan adjudicates.** You didn't write `qa_plan_file` and you never revise it.
+When a spec fails, the plan decides whose fault it is:
+- If the spec asserts what the plan says and the application does something else,
   **the application is wrong**. Log a bug.
-- If the spec asserts something the design didn't say, **your spec is wrong**. Fix it.
+- If the spec asserts something the plan didn't say, **your spec is wrong**. Fix it.
 
-This is the whole reason the design is frozen first. Without it every failure is
+This is the whole reason the plan is frozen first. Without it every failure is
 arguable, and the cheapest way to end an argument is to weaken an assertion. A suite
 that is green because it was adjusted to be green proves nothing. So never resolve a
 failure by deleting a test, skipping it, marking it `fixme`, or loosening an
@@ -43,7 +43,7 @@ or a GitHub label.
 - `issue_number`: required. In `interactive` mode, ask "What is the issue number to
   test?" if it's missing.
 - `journal_dir`: required. The absolute path to the story's journal.
-- `design_file`: required. The frozen `e2e-design.md`.
+- `qa_plan_file`: required. The frozen `plan-qa.md`.
 - `base_branch`: required in `subagent` mode. It is never inferred, because stories
   branch from and merge into the milestone branch.
 - `pr_number`: the story's open PR.
@@ -61,8 +61,8 @@ code the developer already changed.
 
 ### 2) Read before writing
 
-- `design_file`: your specification.
-- The issue's `## Test Specifications`: the IT codes. Any code the design doesn't
+- `qa_plan_file`: your specification.
+- The issue's `## Test Specifications`: the IT codes. Any code the plan doesn't
   cover is already recorded under its `## Uncovered` table, and isn't yours to fill.
 - `e2e/fixtures/` and `e2e/pages/`: reuse what exists.
 - A comparable spec under `e2e/features/`, for shape and grain.
@@ -94,7 +94,7 @@ session is one nobody can run. Failing specs with open bugs are the honest state
 anyway: `gate: qa-complete` is absent and nothing merges, and the developer needs
 them to reproduce what you found.
 
-Write one `test.describe` per IT code, tagged with the code, and one `test` per design
+Write one `test.describe` per IT code, tagged with the code, and one `test` per plan
 scenario, named after it:
 
 ```ts
@@ -112,7 +112,7 @@ wrong tag, or no tag, is invisible to both.
   never depends on other data being absent. See the unique-value helpers in
   `e2e/features/courses/course-management.spec.ts`.
 - **A missing `data-testid` is a bug, not a licence.** If the app gives you no stable
-  way to assert something the design requires, log it as a bug.
+  way to assert something the plan requires, log it as a bug.
 
 ### 5) Run
 
@@ -129,7 +129,7 @@ over again.
 
 - **Your spec is wrong**: fix it. No bug is warranted.
 - **The application is wrong**: log a bug (step 7).
-- **The design can't be implemented as written**, because it depends on behaviour
+- **The plan can't be implemented as written**, because it depends on behaviour
   outside the story or contradicts the sub-issue: **escalate to the tech lead**.
 
 ### 7) Log bugs
@@ -140,7 +140,7 @@ incrementally.
 Build the body from `.github/ISSUE_TEMPLATE/sub-issue.md` with a `[Bug]` title prefix.
 State:
 - the IT code and the scenario name
-- what the design says must happen
+- what the plan says must happen
 - what actually happened, including the failing assertion
 - how to reproduce it: the `--grep` command and any seeding
 

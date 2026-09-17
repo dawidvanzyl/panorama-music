@@ -129,7 +129,8 @@ by which this pipeline could ship something nobody checked. Removing them is not
 admission of failure; it is what makes rework safe, and QA and the reviewer will
 re-apply them once they have looked again.
 
-Leave `gate: owner-approved` alone. That one is the owner's to manage.
+There is no owner gate label to leave alone — the owner's judgement is spent at the
+plan gate, before the code exists, not as a label on the PR.
 
 - Push once.
 
@@ -191,7 +192,6 @@ Never paste diffs, comment bodies, or check output into the reply.
   cycle rather than saving one.
 - Never edit anything under `e2e/`, and never weaken or delete a test to satisfy a
   comment. If a comment requires it, that is an Escalate, not a fix.
-- Never strip `gate: owner-approved`.
 - Never resolve a thread you have not actually settled.
 - Never ask a question in `subagent` mode — escalate to the tech lead instead, and
   continue with everything that does not depend on the answer.

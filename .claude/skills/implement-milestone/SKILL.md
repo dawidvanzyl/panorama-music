@@ -40,8 +40,10 @@ Two rules run through every step:
 ### 1) Resume: replay, then reconcile
 
 Follow *Resume: replay, then reconcile* in `.claude/shared/run-journal.md`. For a
-story caught mid-stage, read the interrupted worker's newest report
-(`implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md`) to see how far it got.
+story caught mid-stage, read the interrupted worker's newest report (`plan-dev.md` /
+`plan-open-issues.md`, `implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md`) to see
+how far it got. A story at `awaiting-plan-approval` with `plans_approved` unset resumes
+at the plan gate, not the planner.
 
 Report where you are picking up in one line, then continue.
 
@@ -57,33 +59,72 @@ blocker — stop and report it.
 
 ### 3) Run the story
 
-| Stage | Role | Skill |
-| --- | --- | --- |
-| `designing` | `qa-design` | `qa-design` |
-| `implementing` | `developer` | `implement-issue` |
-| `testing` | `qa-implement` | `qa-implement` |
-| `reviewing` | `reviewer` | `review-pull-request` |
+Each story runs these stages in order. Set `stage` in the manifest **before** you
+spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 
-Set `stage` in the manifest, then spawn with `subagent_type` = role and
-`run_in_background: true`. **Always background:** only background subagents can
-`SendMessage` to `main`, and you couldn't read it while blocked anyway — a foreground
-worker turns every escalation into "give up and report".
+| Stage | Role | Skill | Produces |
+| --- | --- | --- | --- |
+| `planning` | `planner` | `plan-implementation` | `plan-dev.md`, `plan-qa.md` |
+| `critiquing` | `plan-critique` | `plan-critique` | `plan-open-issues.md` |
+| `awaiting-plan-approval` | — (owner) | — | `plans_approved` |
+| `implementing` | `developer` | `implement-issue` | the PR |
+| `testing` | `qa-implement` | `qa-implement` | `gate: qa-complete` |
+| `reviewing` | `reviewer` | `review-pull-request` | `gate: reviewer-approved` |
+
+**Always background:** only background subagents can `SendMessage` to `main`, and you
+couldn't read it while blocked anyway — a foreground worker turns every escalation into
+"give up and report".
+
+**One agent per role per story, kept warm.** Spawn each role once. For every rework or
+revision — a critique sending the plan back, a bug or finding sending the developer
+back — resume the *same* agent by name with `SendMessage`; it already holds the context
+a fresh spawn would burn tokens re-deriving. Start fresh agents only on the next story.
 
 **The brief** (per `.claude/shared/subagent-contract.md`) is named inputs plus one
-sentence of intent, rulings cited by number — never a narrative, which drifts
-between retellings so a respawned worker silently gets a different task. Always
-include `issue_number`, `journal_dir` (absolute), `base_branch` (the milestone
-branch), `mode: subagent` and `outcome`, plus role inputs (`design_file`,
-`prev_report`, `pr_number`, and for the reviewer `cycle` — the story's
-`attempts.review` from the manifest). `qa-design` has no shell, so first write
-`issue_body_file`, `epic_body_file` and `it_codes_file` into its `journal_dir`.
+sentence of intent, rulings cited by number — never a narrative, which drifts between
+retellings so a respawned worker silently gets a different task. Always include
+`issue_number`, `journal_dir` (absolute), `base_branch` (the milestone branch),
+`mode: subagent` and `outcome`, plus role inputs. `plan` and `plan-critique` have no
+shell, so first write `issue_body_file`, `epic_body_file`, `it_codes_file` and
+`test_intents_file` into the story's `journal_dir`; the `planner` writes both plans and
+`plan-critique` writes `plan-open-issues.md`, all in that dir; the developer gets
+`dev_plan_file` (and `plan_open_issues_file` whenever open non-blocker findings remain,
+to honour or disposition), `qa-implement` gets `qa_plan_file`, and the reviewer gets
+`cycle` (the story's `attempts.review`).
 
-End every brief with the same two lines: create your report file before starting
-work, and commit as you go. They are in the contract too, but a rule stated only in
-a shared doc is one a worker under turn pressure skips.
+End every brief with the same two lines: create your report file before starting work,
+and commit as you go. They are in the contract too, but a rule stated only in a shared
+doc is one a worker under turn pressure skips.
 
-**Read the verdict line only.** Open the report file only when the verdict doesn't
-tell you what to do next.
+**Read the verdict line only.** Open the report file only when the verdict doesn't tell
+you what to do next.
+
+### 3a) The planning loop and the plan gate
+
+Planning is one `planner` spawn, then at most **two** `plan-critique` turns, then the
+owner gate:
+
+1. Spawn `planner` → `PLANNED`, producing `plan-dev.md` and `plan-qa.md`.
+2. Set `stage: critiquing`; spawn `plan-critique` with `turn: 1`. While any finding is
+   open (`OPEN (n>0)`), resume the `planner` agent by name to revise, then resume
+   `plan-critique` by name with `turn: 2`. **Stop after turn 2 regardless** — the
+   ceiling is two turns, not convergence.
+3. **The plan gate** — the critique reports in the reviewer's severity language, and the
+   gate keys on **Blockers** (`review-severity.md`). Set `stage: awaiting-plan-approval`,
+   then:
+   - `BLOCKERS: 0` → **auto-approve**: set `plans_approved: true` and
+     `plan_auto_approved: true` in the manifest, and proceed. No owner pause. Any open
+     Warnings/Questions/Suggestions travel to the developer as `plan_open_issues_file`.
+   - `BLOCKERS (n>0)` after turn 2 → take `plan-dev.md`, `plan-qa.md` and
+     `plan-open-issues.md` to the owner and **wait**. The owner approves as-is or
+     resolves the blockers (their resolution wins — note it in `plan-open-issues.md`).
+     On their yes, set `plans_approved: true` (and `plan_auto_approved: false`) and
+     proceed.
+
+The plans freeze the moment `plans_approved` is set; nobody revises them after — not a
+worker, not you. **This owner gate replaces `gate: owner-approved` at merge**: the human
+judgement now sits before the code exists, where it is cheapest, and every
+auto-approval is logged in the manifest for post-hoc spot-check.
 
 ### 4) Rework
 
@@ -124,24 +165,25 @@ name, which resumes it with context intact.
 
 ### 6) The merge gate
 
-Merge only when the pull request carries all three labels — read them off the PR
-every time, including after a resume; a pre-interruption verdict proves nothing about
-the branch now:
+Merge only when the pull request carries both labels **and** the story's plans were
+approved — read the labels off the PR every time, including after a resume; a
+pre-interruption verdict proves nothing about the branch now:
 
 | Label | Applied by |
 | --- | --- |
 | `gate: qa-complete` | `qa-implement` |
 | `gate: reviewer-approved` | `reviewer` |
-| `gate: owner-approved` | the developer, by hand |
 
-Pushes strip the two worker labels automatically but not the owner's, so **check that
-`gate: owner-approved` postdates the last commit**. If it's stale, say so and ask
-again.
+Pushes strip both worker labels automatically, so a present label always postdates the
+last commit. The owner's judgement is not a merge label — it was spent at the plan gate
+(step 3a), recorded as `plans_approved: true`. Confirm that flag is set before merging;
+a story that reached merge without it skipped the gate and must not proceed.
 
-**All three is necessary, not sufficient.** QA speaks to test coverage, the reviewer
-to PR cleanliness, the owner to their own satisfaction. Before merging, look for what
-only you can see: a stated requirement nothing exercised, or a change contradicting
-`rulings.md`. That is why the decision sits with you rather than a label count.
+**Both labels plus approved plans is necessary, not sufficient.** QA speaks to test
+coverage, the reviewer to PR cleanliness, the plan gate to the owner's intent. Before
+merging, look for what only you can see: a stated requirement nothing exercised, or a
+change contradicting `rulings.md` or the frozen `plan-dev.md`. That is why the decision
+sits with you rather than a label count.
 
 Then:
 
@@ -157,3 +199,48 @@ story, so holding back adds latency, not a check.
 
 When every story is `closed`, hand off to `close-milestone`, which owns the pull
 request into `master`, the CodeQL remediation loop and tagging.
+
+### 8) Retrospective and process improvements
+
+Before you hand off, spend the context you still hold on the two things only you can
+write — you ran every story and no later session saw them happen.
+
+**Write `retrospective.md`** in the milestone run dir. Terse, three sections, bullets
+not prose:
+
+```markdown
+# Implementation retrospective — m{milestone_number}
+
+## Good
+- {what worked and should be kept}
+
+## Improve
+- {what was clumsy or slow, and the friction it caused}
+
+## Stop
+- {what actively cost tokens or attention and should go}
+```
+
+Ground every bullet in something that actually happened this milestone — a ceiling
+hit, a ruling that recurred, a stage that re-ran needlessly, a brief that drifted.
+Vague self-help is noise.
+
+**Write `process-improvements.md`** in the same dir: for each learning worth acting on,
+the specific MD change that would fix it. You **propose**; you do not edit any file
+under `.claude/` — a self-edit by the agent that ran the milestone ships silently and
+degrades every future run. Each proposal is one target file, the exact change, and the
+retrospective bullet it answers:
+
+```markdown
+# Process improvements — m{milestone_number}
+
+## P1 — {one-line summary}
+- **Target:** `.claude/{path}.md`
+- **Change:** {what to add / alter / remove, precisely}
+- **Because:** {the retrospective bullet or incident}
+- **Owner decision:** { }   ← approved | rejected | deferred
+```
+
+Leave `Owner decision` blank; the owner fills it. Tell the owner both files are ready
+and that `apply-process-improvements` will apply the approved ones in a fresh session —
+never apply them yourself.

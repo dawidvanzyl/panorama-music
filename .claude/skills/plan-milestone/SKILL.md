@@ -211,7 +211,7 @@ signatures or implementation steps.
 | Out of Scope | Scope boundaries from `00-skeleton.md`; deferred work by `#issue` or milestone |
 
 The Design reference appears twice because the implementer reads Context &
-Constraints and QA's scenario design reads Page Architecture.
+Constraints and the QA plan reads Page Architecture.
 
 `{IT_CODES}` exists because IT codes are derived in §3.4 *from* these drafts; Step 4
 resolves it (like `{ISSUE}`), so an approved `final.md` is never edited afterwards.

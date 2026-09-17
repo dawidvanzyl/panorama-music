@@ -16,8 +16,12 @@ metadata:
 - `issue_number` (story), `parent_issue_number` (epic) — required.
 - `mode` — `interactive` (default) or `subagent`.
 - `subagent` only, required: `base_branch` (resolved by the caller), `journal_dir`
-  (absolute path to the story's journal), `design_file` (the frozen `e2e-design.md`
-  from `qa-design`).
+  (absolute path to the story's journal), `dev_plan_file` (the frozen `plan-dev.md`,
+  your roadmap) and `qa_plan_file` (the frozen `plan-qa.md`, read-only — what QA will
+  assert).
+- Optional (`subagent`): `plan_open_issues_file` — the critique's open non-blocker
+  findings (Warnings/Questions/Suggestions the owner let through) for you to honour or
+  disposition.
 - Optional: repository owner/name if not inferable from the git remote.
 
 ## Asking vs escalating
@@ -75,10 +79,19 @@ Also read `docs/coding-standards.md`, plus for backend scope
 `docs/coding-standards-backend.md` and `src/.editorconfig`, and for frontend scope
 `docs/coding-standards-frontend.md` and `frontend/.editorconfig`.
 
-Then read `design_file`: the preconditions, actors, paths and outcomes QA will assert,
-written before the build. Build to it — satisfying a requirement differently from the
-design is a bug report waiting to be filed. It is **read-only**; if it looks wrong
-(contradicts the issue, or asserts out-of-scope behaviour), raise it.
+Then read `dev_plan_file` — your roadmap: the approach, the changes by layer, the UC
+codes to cover and the risks, written and critiqued before the build. Build to it. Then
+read `qa_plan_file`: the preconditions, actors, paths and outcomes QA will assert.
+Satisfying a requirement differently from what the QA plan expects is a bug report
+waiting to be filed, so build to both. Both are **read-only** and frozen at owner
+approval; if either looks wrong (contradicts the issue, or asserts out-of-scope
+behaviour), raise it.
+
+If `plan_open_issues_file` is present, read it too: each open row is a Warning,
+Question or Suggestion the critique raised and the owner let through the plan gate.
+Give each a disposition per `.claude/shared/review-severity.md` — actioned, deferred
+with a reason, or disputed with a cited reason — and record it in `implement-{n}.md`. A
+Question you genuinely can't resolve is a **raise**, not a guess.
 
 Raise any ambiguity or conflict between sections before coding.
 
@@ -147,13 +160,15 @@ nothing.
 
 ### 5) Verify (gauntlet loop, max 3 cycles)
 
-Commit, then run up to three cycles. `implement-issue` owns the count;
-`verify-implementation` is stateless. Each cycle, invoke `verify-implementation` in a
-sub-agent with `issue_number`, `base_branch`, `journal_dir`, `mode: subagent`,
-`cycle`, and from cycle 2: `prev_verify_sha` (previous `VERIFIED_SHA`) and
-`prev_report` — the **path** to the previous `{journal_dir}/verify-{cycle}.md`,
-annotated with your disposition on every finding. Verify returns only a verdict
-block; read the report file yourself.
+Commit, then run up to three cycles **in this session** — invoke `verify-implementation`
+inline with the Skill tool, never as a sub-agent. Running it in your own session saves
+a spawn, a context load and a full report round-trip, and you already hold everything it
+needs. `implement-issue` owns the count; `verify-implementation` is stateless. Each
+cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this skill
+is running in, `cycle`, and from cycle 2: `prev_verify_sha` (previous `VERIFIED_SHA`)
+and `prev_report` — the **path** to the previous `{journal_dir}/verify-{cycle}.md`,
+annotated with your disposition on every finding. It writes its report to the file and
+returns a verdict block.
 
 **Every finding gets a disposition** — blockers, warnings, suggestions and questions
 alike. "Advisory" means the verdict doesn't gate on it, not that it can be skipped:
@@ -179,8 +194,8 @@ If cycle 3 is not `PASS`, stop and hand the outstanding report to the developer.
 
 - `interactive` — ask "Are you ready to post a pull request?" and wait for yes.
 - `subagent` — proceed: the PR is the assigned outcome, not a commitment to merge;
-  three gate labels and the lead's judgement still stand before the milestone
-  branch.
+  the two worker gate labels, the approved plans and the lead's judgement still stand
+  before the milestone branch.
 
 **Re-entering after rework** (a PR already exists): before pushing, strip the worker
 gates:
@@ -190,8 +205,8 @@ gh pr edit {pr_number} --remove-label "gate: qa-complete" --remove-label "gate: 
 ```
 
 They describe code that stops existing when you push; leaving one would let the story
-merge on a sign-off given against different code. Leave `gate: owner-approved` — it
-is the owner's.
+merge on a sign-off given against different code. There is no owner label to preserve —
+the owner's judgement was spent at the plan gate, before the code existed.
 
 Push, then `gh pr create` per `docs/coding-standards.md`, setting everything at
 creation (don't rely on later edits):

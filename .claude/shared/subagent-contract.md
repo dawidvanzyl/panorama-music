@@ -26,8 +26,8 @@ Every brief carries:
   milestone branch itself and for standalone work. A worker that has to derive it
   uses the **story's assigned milestone**, never the branch name.
 - `outcome`: what must be true when the work is done.
-- Role inputs, always as paths: `design_file`, `prev_report`, `findings_file`,
-  `pr_number`, `cycle`.
+- Role inputs, always as paths: `dev_plan_file`, `qa_plan_file`,
+  `plan_open_issues_file`, `prev_report`, `findings_file`, `pr_number`, `cycle`.
 
 If a required input is missing, don't guess it and don't proceed. Escalate.
 
@@ -65,7 +65,8 @@ paste a diff, findings table, test log or design into the reply.
 
 | Role | Succeeded | Did not succeed | Cannot proceed |
 | --- | --- | --- | --- |
-| `qa-design` | `DESIGNED` | — | `NEEDS_RULING (n)` |
+| `planner` | `PLANNED` | — | `NEEDS_RULING (n)` |
+| `plan-critique` | `CRITIQUED` | — | `NEEDS_RULING (n)` |
 | `developer` | `PR_OPEN` / `FIXED` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
 | `verify-implementation` | `PASS` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
 | `qa-implement` | `SIGNED_OFF` | `BUGS (n)` | `NEEDS_RULING (n)` |
@@ -108,6 +109,8 @@ A hook denies each role writes outside its remit. A denial is a boundary, not a
 permission gap: don't retry the write, and don't rephrase it as a shell command. If
 the change really is required, escalate and say why.
 
+- `planner` and `plan-critique` edit no code at all — read-only but for their own files
+  in `journal_dir` — because a plan written against code it just changed proves nothing.
 - The developer can't edit `e2e/`, because a test bent to fit the implementation stops
   being evidence.
 - `qa-implement` can't edit `src/` or `frontend/`, because a fix made there bypasses
@@ -119,6 +122,6 @@ the change really is required, escalate and say why.
 A worker reports; it doesn't conclude. `qa-implement` signs off testing, and
 `reviewer` approves the PR. Neither decides the story is done. No worker merges,
 closes a story issue (except `close-issue` after the lead's merge), or moves on to
-the next story. The tech lead decides a story is done, from QA's sign-off, the
-reviewer's approval and the owner's approval together. That decision is never
-delegated.
+the next story. The tech lead decides a story is done, from QA's sign-off and the
+reviewer's approval, against the plans the owner approved at the plan gate. That
+decision is never delegated.

@@ -32,6 +32,8 @@ epic, because every downstream consumer thinks in milestones.
 m8/
 ├── manifest.json              lead-only; the whole routing picture
 ├── rulings.md                 answered escalations, milestone-wide
+├── retrospective.md           Good/Improve/Stop, milestone end     (lead)
+├── process-improvements.md    proposed MD changes, owner-gated      (lead)
 ├── 00-skeleton.md             decomposition + dependency graph  (planning)
 ├── it-codes.json              IT codes → criterion → story       (planning)
 └── issues/
@@ -40,9 +42,11 @@ m8/
         ├── ui.md              .design/ refs + Page Arch, frontend (planning)
         ├── draft-v1.md        versioned snapshots                (planning)
         ├── final.md           approved issue body                (planning)
-        ├── e2e-design.md      frozen scenario design             (qa-design)
+        ├── plan-dev.md        frozen development plan            (planner)
+        ├── plan-qa.md         frozen QA plan                     (planner)
+        ├── plan-open-issues.md critique objections, owner-gated  (plan-critique)
         ├── implement-1.md     what was built, and why            (developer)
-        ├── verify-1.md        gauntlet cycle report              (verify)
+        ├── verify-1.md        gauntlet cycle report              (developer, inline)
         ├── qa-run-1.md        spec run + triage decisions        (qa-implement)
         ├── review-1.md        review findings                    (reviewer)
         ├── resolve-1.md       comment classifications            (developer)
@@ -73,10 +77,12 @@ the per-story files, so it doesn't land in the lead's context on every read.
       "title": "[Feature] Enrol a student in a course",
       "depends_on": [268],
       "it_codes": ["280IT4", "280IT5"],
-      "stage": "review",
+      "stage": "reviewing",
+      "plans_approved": true,
+      "plan_auto_approved": false,
       "branch": "feature/269-enrol-student-in-course",
       "pr_number": 271,
-      "attempts": { "implement": 2, "verify": 3, "qa": 1, "review": 1 },
+      "attempts": { "critique": 2, "implement": 2, "verify": 3, "qa": 1, "review": 1 },
       "bugs": [272],
       "last_verdict": "FINDINGS (2)"
     }
@@ -84,10 +90,14 @@ the per-story files, so it doesn't land in the lead's context on every read.
 }
 ```
 
-`stage` is one of `pending`, `designing`, `implementing`, `testing`, `reviewing`,
-`awaiting-owner`, `merged` or `closed`. It records what the lead last **did**; it is
-not a claim about the world. `attempts` supplies each worker's `cycle` number: the
-reviewer's `cycle` is `attempts.review`.
+`stage` is one of `pending`, `planning`, `critiquing`, `awaiting-plan-approval`,
+`implementing`, `testing`, `reviewing`, `merged` or `closed`. It records what the lead
+last **did**; it is not a claim about the world. `plans_approved` gates implementing;
+`plan_auto_approved` records whether the owner was consulted (false = owner approved,
+true = auto-approved on no open Blockers in `plan-open-issues.md`) for post-hoc
+spot-check.
+`attempts` supplies each worker's `cycle` number: the reviewer's `cycle` is
+`attempts.review`, and `attempts.critique` counts the plan-critique turns (max 2).
 
 ## rulings.md
 
@@ -139,8 +149,9 @@ goes on.
 
 Two states call for suspicion rather than trust:
 
-- **`gate: owner-approved` older than the head commit.** Pushes don't strip it, so
-  compare timestamps before treating it as current.
+- **`stage` past `awaiting-plan-approval` but `plans_approved` not `true`.** The plan
+  gate was skipped — a story must not reach `implementing` without it. Re-run the gate
+  (step 3a) before trusting the stage.
 - **A dirty working tree.** It may hold the previous run's unfinished work. Read the
   story's latest `implement-{n}.md` to see how far it got, and if that doesn't settle
   it, ask before keeping or discarding anything.
