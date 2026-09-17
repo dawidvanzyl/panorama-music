@@ -141,8 +141,8 @@ parallel severity scheme:
   security-critical endpoint (auth, session, admin/role management).
 - ⚠️ **Warning** — `[L2]` rule violated on a lower-risk endpoint, or a diff
   that violates or silently reverses a documented decision (an accepted
-  limitation, a scoped exemption, or the egress allowlist). Cite the offending
-  `file:line` — never "the doc wasn't updated", which is not a finding.
+  limitation, a scoped exemption, or the egress allowlist), cited at the
+  offending `file:line` (per step 2).
 - 💡 **Suggestion** — `[L3]` rule worth adopting, or a real-but-unmapped
   observation flagged as a candidate new rule.
 - ❓ **Question** — ambiguous intent that can't be judged without
@@ -193,14 +193,5 @@ Standalone mode only:
 ## Guardrails
 
 - **Read-only.** Never modify files, branches, or GitHub state.
-- **Every finding cites a rule ID and a `file:line`.** No rule ID → it's a
-  Suggestion ("candidate new rule"), never a Blocker or Warning.
-- **Never raise a finding against an already-excluded item** — check the
-  doc's "Out of scope" and "Considered and declined" lists before flagging
-  anything in those categories.
-- **Don't run the unscoped rule set.** If step 3 matches nothing, say so and
-  stop — an empty, honest result is correct output, not a failure.
-- **In delegated mode, never print a second report.** Return findings for
-  the caller to merge; the user should see one coherent report per review.
 - **Keep communication concise and direct.** No emojis except severity
   indicators.

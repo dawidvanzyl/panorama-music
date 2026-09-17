@@ -180,9 +180,7 @@ Never paste diffs, comment bodies, or check output into the reply.
 
 ## Guardrails
 
-- Do not use force push or destructive git history commands unless explicitly
-  requested.
-- Do not amend commits unless explicitly requested.
+- No force push, history rewriting or amending unless explicitly requested.
 - Do not classify a comment as invalid solely because fixing it would be
   inconvenient. Invalid means factually wrong, out of scope, or explicitly
   deferred — not merely unwelcome. Under a time or turn limit this is the rule

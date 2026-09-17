@@ -134,13 +134,7 @@ GitHub, then ask: "Does this look correct, or do you have changes?"
 
 ## Guardrails
 
-- Step 1 (codebase verification) is never optional, even for a description
-  that sounds obviously correct.
-- Never fabricate `## Motivation & Risk` content — every line must trace back
-  to something read in Step 1 or said explicitly by the user.
-- Do not run `gh issue create` until the user has explicitly approved the
-  final draft in Step 3.
-- One issue per invocation. If the description bundles multiple unrelated
-  debts, ask the user to split it rather than merging them into one ticket.
-- Do not skip labels the repo already has an equivalent for — check
-  `gh label list` before proposing a new one.
+- Never run `gh issue create` until the user has explicitly approved the final
+  draft in Step 3 — the issue is the irreversible output.
+- One issue per invocation. If the description bundles multiple unrelated debts,
+  ask the user to split it rather than merging them into one ticket.
