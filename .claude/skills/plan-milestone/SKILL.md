@@ -3,7 +3,7 @@ name: plan-milestone
 description: >
   Load this skill when the user says "plan milestone", "plan-milestone", or
   "/plan-milestone". Derives sub-issues for a milestone epic, persists all
-  artifacts to disk, enforces UI enrichment via Stitch, and creates GitHub
+  artifacts to disk, requires a design mockup for every UI story, and creates GitHub
   issues only after full approval.
 license: MIT
 metadata:
@@ -151,12 +151,12 @@ mermaid flowchart, interaction flow as a sequence diagram). Mark it
 
 ### Resolving the UI gate
 
-No Stitch tool is wired in. Ask the user to produce the mockup in Stitch and export it
-to `.design/<screen_name>.txt` (short snake_case) at the repo root, or to name an
-existing file. `.design/` is gitignored on purpose: disposable scaffolding, kept out
-of history but cited as visual ground truth. Unpack self-unpacking bundles
-(`<script type="__bundler/template">`) and `.zip` exports (`*.dc.html`) before
-reading — packed text isn't greppable.
+Every UI-blocked story needs a mockup, but where it comes from doesn't matter. Ask the
+user for one — produced by any tool — dropped into `.design/<screen_name>.txt` (short
+snake_case) at the repo root, or the name of an existing file there. `.design/` is
+gitignored on purpose: disposable scaffolding, kept out of history but cited as visual
+ground truth. If an export is packed (a self-unpacking HTML bundle, a `.zip`), unpack
+it before reading, since packed text isn't greppable.
 
 **The mockup is authoritative.** Every control, filter, copy string, validation
 message and blocked action it shows is a requirement; where it and the epic disagree,

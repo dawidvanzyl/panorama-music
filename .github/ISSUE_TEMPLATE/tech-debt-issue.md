@@ -15,12 +15,11 @@ has never seen the offending code.
 
 ## Origin
 
-> Tech debt tickets rarely hang off a milestone epic. This section replaces "Epic Reference" —
-> it records where the debt was spotted instead of which epic it delivers.
+> Replaces "Epic Reference": tech debt rarely hangs off a milestone epic, so record where the
+> debt was spotted instead.
 
 - Milestone: N/A — tech debt (surfaced during #issue / M?.? work)
 - Work Areas:
-  - [ ] Concrete remediation step
   - [ ] Concrete remediation step
 - Discovered in: #issue or PR link — one line on how it was found (review comment, incident, audit)
 
@@ -28,30 +27,30 @@ has never seen the offending code.
 
 ## Motivation & Risk
 
-> Tech debt competes with feature work for priority — make the cost of *not* doing this explicit.
+> Tech debt competes with feature work, so make the cost of *not* doing this explicit.
 
-- **Why it exists:** e.g. shipped as a shortcut under M1 deadline pressure; pre-dates the pattern established in #issue
-- **Cost of leaving it:** e.g. blocks X follow-on work; silent correctness risk under Y condition; N+1 query pattern that will degrade at Z scale
-- **Why now:** e.g. next milestone builds directly on this code; low-risk isolated change available now
+- **Why it exists:** e.g. shipped as a shortcut under M1 deadline pressure
+- **Cost of leaving it:** e.g. blocks X follow-on work; silent correctness risk under Y; N+1 that degrades at Z scale
+- **Why now:** e.g. next milestone builds directly on this code; a low-risk isolated change is available
 
 ---
 
 ## Context & Constraints
 
-> What the agent needs to know before writing a single line — prior decisions, patterns already
-> established, things that must not change.
+> What the agent needs before writing a line: prior decisions, established patterns, things that
+> must not change.
 
 - **Current implementation:** e.g. `SmtpEmailService` builds AND sends; only consumer is `RequestPasswordResetHandler`
-- **Existing patterns to follow:** e.g. all service classes use X pattern; auth is handled via Y middleware
-- **Known constraints:** e.g. public method signatures/behaviour must not change; must remain backwards-compatible with M1 contract
+- **Existing patterns to follow:** e.g. all service classes use X pattern
+- **Known constraints:** e.g. public signatures/behaviour must not change; stay compatible with the M1 contract
 - **Related issues:** Depends on #issue / Supersedes decision from #issue
 
 ---
 
 ## Functional Requirements
 
-What must be true after this change, written as observable behaviours — not file names or
-function signatures. Behaviour visible to callers/users must be unchanged unless stated otherwise.
+What must be true after the change, as observable behaviours — not file names or signatures.
+Caller/user-visible behaviour stays unchanged unless stated otherwise.
 
 - The system must…
 - `X` must continue to behave identically from the caller's perspective…
@@ -60,20 +59,18 @@ function signatures. Behaviour visible to callers/users must be unchanged unless
 
 ## API / Interface Contract
 
-> Only include if the change touches a boundary (interface, endpoint, event contract). Omit
-> entirely for internal-only refactors.
+> Only if the change touches a boundary (interface, endpoint, event contract). Omit for
+> internal-only refactors.
 
-**Component boundaries:**
 - `IInterface.Method(...)` — unchanged signature / new signature and why
 
 ---
 
 ## Acceptance Criteria (G/W/T)
 
-> **UC codes only** — unit and service tests, scoped to this issue's own number
-> (`{issue_number}UC{n}`, e.g. issue #48 → `48UC1`). Never "NFC".
->
-> Leave a subsection explicitly "N/A" if genuinely not applicable; don't delete the heading.
+> **UC codes only**, scoped to this issue's own number (`{issue_number}UC{n}`, e.g. `48UC1`),
+> proven by unit and service tests. Never "NFC". Mark a subsection "N/A" rather than deleting
+> the heading.
 
 ### Backend
 
@@ -87,16 +84,10 @@ function signatures. Behaviour visible to callers/users must be unchanged unless
 
 ## Test Specifications
 
-> **End-to-end behaviours, proven by Playwright and nothing else.** Same section, same meaning
-> and same purpose as on a story issue: it is QA's input contract, and the reason QA reads one
-> section regardless of issue type.
->
-> IT codes are scoped to the issue that **owns the criterion**. A tech-debt issue has no epic,
-> so it owns its own — `{issue_number}IT{n}`, e.g. issue #236 → `236IT1`.
->
-> Include a specification only where the remediation changes behaviour observable end-to-end.
-> Most tech debt is internal and legitimately has none; leave the section "N/A" rather than
-> inventing coverage. If this list is long, ask whether the work is really tech debt or a
+> QA's input contract: end-to-end behaviours proven by Playwright. A tech-debt issue owns its
+> own codes (`{issue_number}IT{n}`, e.g. `236IT1`). Include a spec only where the remediation
+> changes end-to-end-observable behaviour; most tech debt is internal and has none, so leave
+> this "N/A" rather than inventing coverage. A long list here means the work is probably a
 > feature story wearing the wrong label.
 
 - [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
