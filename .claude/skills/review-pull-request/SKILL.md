@@ -93,23 +93,25 @@ then `git diff origin/{base_branch}...HEAD`.
 
 Scopes: any path under `src/` is backend, any path under `frontend/` is frontend.
 
-### 4) Automated checks: prefer CI
+### 4) Automated checks: confirm CI, run nothing
 
-`ci.yml` runs every backend, frontend and Playwright check on every push to a PR.
-Re-running them locally proves nothing new.
+`ci.yml` runs every backend, frontend and Playwright check on every push to a PR, so
+re-running them locally proves nothing new and wastes the quota. You **confirm** CI;
+you never run the checks.
 
 ```bash
 gh pr checks {pr_number}
 gh pr view {pr_number} --json commits --jq '.commits[-1].oid'
 ```
 
-- **CI completed against the head SHA:** use its results and fetch logs only for
-  failures. A green tick on a superseded commit is not evidence, so confirm the SHA
-  matches.
-- **Otherwise** (pending, absent, stale SHA, or no PR): run
-  `.claude/shared/automated-checks.md` locally for the detected scopes.
-
-Any failing check is a ❌ Blocker.
+- **CI green against the head SHA:** that is your evidence. A green tick on a superseded
+  commit is not, so confirm the SHA matches; fetch logs only for failures.
+- **A failing check** is a ❌ Blocker.
+- **CI pending, absent, or green only on a stale SHA:** the PR isn't reviewable yet —
+  don't run the checks locally to fill the gap. Raise a ❌ Blocker ("CI not green against
+  head SHA {sha}") and return the review; the developer's next push re-runs CI. With no
+  PR at all (a standalone `interactive` review), note that CI can't be confirmed and
+  review the code without a check verdict.
 
 ### 5) Branch sync
 
@@ -146,7 +148,8 @@ omit empty sections. Column rules come from `review-severity.md`.
 ## Review Report — #{issue_number} — {issue_title}
 
 ### Summary
-{Automated checks summary lines — see automated-checks.md}
+{CI status against the head SHA — the `gh pr checks` verdict and the SHA it ran on,
+or "CI not confirmable (no PR)" for a standalone review.}
 
 ### ❌ Blocker
 | # | file:line | Category | Detail |

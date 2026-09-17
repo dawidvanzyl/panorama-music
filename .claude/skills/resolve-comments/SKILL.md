@@ -109,11 +109,10 @@ Then:
 
 - Implement fixes for **all valid** comments together. Fix the **code** — never a
   spec, and never a test weakened to accommodate the change.
-- Run the checks defined in `.claude/shared/automated-checks.md` for the affected
-  scopes. Read them from that file rather than from memory: it is the single
-  definition, and a copy here would drift from it.
-- If any check fails, fix the failure before proceeding. Do not commit or
-  push with failing checks.
+- **Don't run the automated checks here.** This skill is invoked by hand, not by the
+  implementation loop, and CI re-runs the full gauntlet on the push below — running it
+  locally too just burns tokens. If you want a local check, run it yourself or ask; CI
+  is the gate, and a red CI on the pushed commit is the signal to come back.
 - Create **at most one commit** for all valid fixes (unless the user explicitly
   requests otherwise).
 

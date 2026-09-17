@@ -153,22 +153,29 @@ nothing.
   that is the boundary. If an IT code describes behaviour the story cannot deliver,
   raise it.
 - Update `README.md` if behaviour, setup or usage changed.
-- Run and fix until clean: `dotnet build src/PanoramaMusic.slnx`,
-  `dotnet format src/PanoramaMusic.slnx --verify-no-changes`,
-  `dotnet test src/PanoramaMusic.Tests`, and for frontend scope lint, typecheck and
-  vitest.
+- Run and fix until clean **the full set in `.claude/shared/automated-checks.md`** for
+  the scopes you touched — backend build, format and tests, and frontend lint,
+  format:check, typecheck, build and test. Read the commands from that file, not from
+  memory; it matches `ci.yml`, so a local pass means what a CI pass means. This is the
+  one place the gauntlet runs in the automated flow.
 
 ### 5) Verify (gauntlet loop, max 3 cycles)
 
 Commit, then run up to three cycles **in this session** — invoke `verify-implementation`
 inline with the Skill tool, never as a sub-agent. Running it in your own session saves
 a spawn, a context load and a full report round-trip, and you already hold everything it
-needs. `implement-issue` owns the count; `verify-implementation` is stateless. Each
-cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this skill
-is running in, `cycle`, and from cycle 2: `prev_verify_sha` (previous `VERIFIED_SHA`)
-and `prev_report` — the **path** to the previous `{journal_dir}/verify-{cycle}.md`,
-annotated with your disposition on every finding. It writes its report to the file and
-returns a verdict block.
+needs. `implement-issue` owns the count; `verify-implementation` is stateless.
+
+**Verify reviews code; it does not run the checks.** So the automated checks from step 4
+must be green before you call it — never invoke verify on a red build, and after fixing
+any review finding that changed code, re-run the checks green before the next cycle. A
+green gauntlet is the precondition of every verify call.
+
+Each cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this
+skill is running in, `cycle`, and from cycle 2: `prev_verify_sha` (previous
+`VERIFIED_SHA`) and `prev_report` — the **path** to the previous
+`{journal_dir}/verify-{cycle}.md`, annotated with your disposition on every finding. It
+writes its report to the file and returns a verdict block.
 
 **Every finding gets a disposition** — blockers, warnings, suggestions and questions
 alike. "Advisory" means the verdict doesn't gate on it, not that it can be skipped:

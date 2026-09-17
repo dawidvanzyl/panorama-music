@@ -1,7 +1,9 @@
 # Shared automated checks
 
-Used by `review-pull-request` and `verify-implementation`. Edit it here and never
-inline a copy into either skill, or the two will drift.
+The single definition of the build/format/test gauntlet, matching `ci.yml`. Run during
+implementation by `implement-issue` — the one place these run in the automated flow, so
+`verify-implementation` reviews code that already builds and passes, and the reviewer
+and CI aren't re-running them. Edit it here and never inline a copy, or callers drift.
 
 Run every check for the scopes in the diff: anything under `src/` is backend, anything
 under `frontend/` is frontend. Record pass or fail for each check. Don't install

@@ -3,8 +3,9 @@ name: verify-implementation
 description: >
   Load this skill when the user says "verify-implementation", "verify
   implementation", or "/verify-implementation". Reviews the implementation
-  against the issue requirements and project coding standards, runs automated
-  checks, and produces a gated report before acceptance criteria are ticked off.
+  against the issue requirements and project coding standards and produces a gated
+  report before acceptance criteria are ticked off. Reviews code only — it does not
+  run the automated checks, which pass before it is called.
 license: MIT
 metadata:
   audience: maintainers
@@ -17,6 +18,12 @@ You are a senior developer critically reviewing a peer's implementation against 
 issue and the project's standards. Don't rubber-stamp: question assumptions and look
 for edge cases. Severity, sourcing and Out of Scope rules are in
 `.claude/shared/review-severity.md` (read in step 3).
+
+**You review code; you never run the automated checks.** `implement-issue` runs the
+build/format/test gauntlet green before invoking you, so you can assume the code
+compiles and the tests pass — spend your turns on requirements, correctness and
+standards, not on re-running what already passed. A failing build isn't yours to
+report; it means you were called too early, so say so and stop.
 
 **Read-only.** Never modify source files, issues, PRs, labels or any other state, and
 never commit, push or check out. The only write is the report in `journal_dir`, which
@@ -81,7 +88,7 @@ Read `prev_report` and handle each finding, whatever its severity:
 Every severity carries forward until it is actioned, withdrawn or settled. A report
 that silently drops an earlier Suggestion is wrong.
 
-On cycles 2+, skip the full requirements sweep in step 5. Check the delta for new
+On cycles 2+, skip the full requirements sweep in step 4. Check the delta for new
 violations only.
 
 ### 3) Read the issue and standards
@@ -103,14 +110,7 @@ standards docs to read, the security delegation and the report column rules. Rea
 standards docs it lists for the scopes you detected. If a doc doesn't exist, note that
 and skip it.
 
-### 4) Automated checks
-
-Run the checks in `.claude/shared/automated-checks.md` for the detected scopes, and
-record pass/fail for each. **If any check fails, stop.** A broken build can't be
-reviewed. Report only the check results, the last ~50 lines of each failing
-command, and `VERDICT: BLOCKED (1)`.
-
-### 5) Requirements and correctness (cycle 1)
+### 4) Requirements and correctness (cycle 1)
 
 For each extracted section, ask whether the diff satisfies it, and whether anything is
 missing, wrong or inconsistent:
@@ -127,7 +127,7 @@ missing, wrong or inconsistent:
 If a section is absent or empty, say so in one line under Requirements Verification.
 That is not a finding.
 
-### 6) Standards and security (every cycle)
+### 5) Standards and security (every cycle)
 
 Apply the *Standards docs to read* rules in `review-severity.md` to every file in the
 diff. Then run its *Security review* delegation on the diff from step 1, and merge the
@@ -137,14 +137,12 @@ Run the security review on every cycle, because a fix can open a new hole. On cy
 2+ it only sees the delta, so later passes stay cheap. Findings that were already
 raised flow through step 2 rather than being re-reported.
 
-### 7) Report
+### 6) Report
 
 Populate every section with real data. Use flat headings, and omit empty sections.
 
 ````markdown
 ## Verify Report — #{issue_number} — {issue_title} — cycle {cycle}
-
-{Automated checks summary lines — see automated-checks.md}
 
 ### Requirements Verification
 | Requirement | Status | Evidence |
@@ -173,11 +171,6 @@ Populate every section with real data. Use flat headings, and omit empty section
 | # | Finding | Implementer reason | Outcome |
 |---|---------|--------------------|---------|
 
-### Automated check output
-```text
-Last ~50 lines of each FAILED check only.
-```
-
 ---
 VERDICT: {PASS | BLOCKED (n) | NEEDS_RULING (n)}
 VERIFIED_SHA: {sha}
@@ -195,7 +188,7 @@ step-2 annotations: `DISPUTED`, `NOT CONFIRMED` and `NO DISPOSITION`.
 - `PASS`: none of the above. ⚠️ Warnings and 💡 Suggestions don't gate, but each
   still needs a disposition from the implementer.
 
-### 8) Deliver
+### 7) Deliver
 
 **`interactive`:** print the report, then ask:
 
@@ -205,7 +198,7 @@ step-2 annotations: `DISPUTED`, `NOT CONFIRMED` and `NO DISPOSITION`.
 > - dismiss the entire report and proceed
 > - re-run the review after making changes"
 
-If the user fixes items, re-run steps 1–6. Close with "Verify complete for
+If the user fixes items, re-run steps 1–5. Close with "Verify complete for
 #{issue_number}. {n} blocker(s), {n} warning(s), {n} question(s), {n} suggestion(s)."
 
 **`subagent`:** write the report to `{journal_dir}/verify-{cycle}.md` as you go, not
