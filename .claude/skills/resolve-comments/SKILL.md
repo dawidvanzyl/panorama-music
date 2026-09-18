@@ -109,11 +109,10 @@ Then:
 
 - Implement fixes for **all valid** comments together. Fix the **code** — never a
   spec, and never a test weakened to accommodate the change.
-- Run the checks defined in `.claude/shared/automated-checks.md` for the affected
-  scopes. Read them from that file rather than from memory: it is the single
-  definition, and a copy here would drift from it.
-- If any check fails, fix the failure before proceeding. Do not commit or
-  push with failing checks.
+- **Don't run the automated checks here.** This skill is invoked by hand, not by the
+  implementation loop, and CI re-runs the full gauntlet on the push below — running it
+  locally too just burns tokens. If you want a local check, run it yourself or ask; CI
+  is the gate, and a red CI on the pushed commit is the signal to come back.
 - Create **at most one commit** for all valid fixes (unless the user explicitly
   requests otherwise).
 
@@ -129,7 +128,8 @@ by which this pipeline could ship something nobody checked. Removing them is not
 admission of failure; it is what makes rework safe, and QA and the reviewer will
 re-apply them once they have looked again.
 
-Leave `gate: owner-approved` alone. That one is the owner's to manage.
+There is no owner gate label to leave alone — the owner's judgement is spent at the
+plan gate, before the code exists, not as a label on the PR.
 
 - Push once.
 
@@ -180,9 +180,7 @@ Never paste diffs, comment bodies, or check output into the reply.
 
 ## Guardrails
 
-- Do not use force push or destructive git history commands unless explicitly
-  requested.
-- Do not amend commits unless explicitly requested.
+- No force push, history rewriting or amending unless explicitly requested.
 - Do not classify a comment as invalid solely because fixing it would be
   inconvenient. Invalid means factually wrong, out of scope, or explicitly
   deferred — not merely unwelcome. Under a time or turn limit this is the rule
@@ -191,7 +189,6 @@ Never paste diffs, comment bodies, or check output into the reply.
   cycle rather than saving one.
 - Never edit anything under `e2e/`, and never weaken or delete a test to satisfy a
   comment. If a comment requires it, that is an Escalate, not a fix.
-- Never strip `gate: owner-approved`.
 - Never resolve a thread you have not actually settled.
 - Never ask a question in `subagent` mode — escalate to the tech lead instead, and
   continue with everything that does not depend on the answer.

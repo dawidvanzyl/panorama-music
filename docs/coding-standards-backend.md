@@ -2,394 +2,163 @@
 
 C#, ASP.NET Core, Dapper, DbUp, PostgreSQL, and xUnit conventions for the Panorama Music project.
 
-> For workflow, branching, commit, and pull request rules see `coding-standards.md`.
->
-> For frontend conventions see `coding-standards-frontend.md`.
->
-> Code style, formatting, naming, and language preferences are governed by `.editorconfig` and must not be duplicated in this document.
+> Workflow, branching, commit and PR rules: `coding-standards.md`. Frontend conventions:
+> `coding-standards-frontend.md`. Code style, formatting, naming and language preferences are
+> governed by `.editorconfig` and must not be duplicated here.
 
 ---
 
 # 1. Architectural Principles
 
-## Domain-Driven Design
+The backend follows a pragmatic Domain-Driven Design: business rules stay isolated from
+infrastructure, domain concepts are explicit and discoverable, dependencies flow inward toward the
+domain, and bounded contexts evolve independently. Model business concepts explicitly in the domain
+rather than hiding them in repositories, route handlers, SQL, or infrastructure services.
 
-The backend follows a pragmatic Domain-Driven Design (DDD) architecture.
-
-The purpose of the architecture is to:
-
-* Keep business rules isolated from infrastructure concerns.
-* Keep domain concepts explicit and discoverable.
-* Ensure dependencies flow inward toward the domain.
-* Make bounded contexts independently evolvable.
-
-Business concepts should be modelled explicitly within the domain rather than being hidden inside repositories, route handlers, SQL, or infrastructure services.
-
----
-
-## Bounded Contexts
-
-A bounded context owns its own:
-
-* domain model
-* application logic
-* infrastructure implementation
-* persistence concerns
-* tests
-
-Each bounded context may own its own database schema and internal persistence structure.
-
-Bounded contexts should communicate through application contracts rather than directly referencing each other's infrastructure concerns.
+A **bounded context** owns its domain model, application logic, infrastructure implementation,
+persistence concerns and tests, and may own its own database schema. Contexts communicate through
+application contracts, never by referencing each other's infrastructure.
 
 ---
 
 # 2. Layer Responsibilities
 
-The solution is organised into four architectural layers.
-
-Dependencies must always flow inward.
+Four layers, with dependencies always flowing inward:
 
 ```text
-Api
- ↓
-Application
- ↓
-Domain
-
-Infrastructure
- ↓
-Domain
+Api → Application → Domain      Infrastructure → Domain
 ```
 
-The Domain layer must never depend on Application, Infrastructure, ASP.NET Core, Dapper, PostgreSQL, or other external frameworks.
+The Domain layer must never depend on Application, Infrastructure, ASP.NET Core, Dapper, PostgreSQL,
+or any other external framework.
 
----
-
-## Domain
-
-The Domain layer contains business concepts and rules.
-
-Typical contents include:
-
-* entities
-* value objects
-* domain services
-* domain exceptions
-* domain interfaces
-
-Responsibilities:
-
-* enforce business invariants
-* model business behaviour
-* define contracts required by the domain
-
-The Domain layer must not contain:
-
-* HTTP concepts
-* database access
-* SQL
-* framework-specific concerns
-* infrastructure concerns
-
----
-
-## Application
-
-The Application layer orchestrates use cases.
-
-Typical contents include:
-
-* commands
-* queries
-* handlers
-* application services
-* validation
-* request and response contracts
-
-Responsibilities:
-
-* coordinate domain behaviour
-* coordinate infrastructure contracts
-* implement use-case workflows
-
-The Application layer contains orchestration logic, not business rules.
-
----
-
-## Infrastructure
-
-The Infrastructure layer implements external concerns.
-
-Typical contents include:
-
-* repositories
-* database access
-* PostgreSQL function calls
-* DbUp migrations
-* external service integrations
-* dependency injection registration
-
-Responsibilities:
-
-* implement application and domain contracts
-* perform external I/O
-* map persistence structures to domain concepts
-
-> Business rules must not be implemented in Infrastructure.
-> Infrastructure implements contracts defined in Application and Domain but does not depend on either.
-
----
-
-## Api
-
-The Api layer hosts the application.
-
-Typical contents include:
-
-* route registration
-* middleware configuration
-* application bootstrapping
-* dependency injection configuration
-
-Responsibilities:
-
-* receive requests
-* delegate to application use cases
-* return responses
-
-Route handlers must remain thin and must not contain business logic.
+- **Domain** — business concepts and rules: entities, value objects, domain services, domain
+  exceptions, domain interfaces. Enforces invariants, models behaviour, and defines the contracts
+  the domain needs. Must not contain HTTP, database access, SQL, or any framework/infrastructure
+  concern.
+- **Application** — orchestrates use cases: commands, queries, handlers, application services,
+  validation, request/response contracts. Coordinates domain behaviour and infrastructure contracts
+  and implements use-case workflows. Holds orchestration logic, not business rules.
+- **Infrastructure** — implements external concerns: repositories, database access, PostgreSQL
+  function calls, DbUp migrations, external integrations, DI registration. Implements the contracts
+  defined in Application and Domain (depending on neither) and performs external I/O. Business rules
+  must not live here.
+- **Api** — hosts the application: route registration, middleware, bootstrapping, DI configuration.
+  Receives requests, delegates to application use cases, returns responses. Route handlers stay thin
+  and hold no business logic.
 
 ---
 
 # 3. Folder Organisation
 
-## Placement Principles
+Organise code by responsibility. Folder names are always plural, and should communicate that
+responsibility — e.g. `Entities/`, `ValueObjects/`, `Exceptions/`, `Interfaces/`, `Handlers/`,
+`Repositories/`, `Services/`, `Factories/`, `Extensions/` (not exhaustive). Where no clear
+responsibility folder applies, organise by domain concept, aggregate, feature, or use case.
 
-Code is organised according to responsibility.
+**Prohibited catch-all folders:** `Common/`, `Helpers/`, `Utilities/`, `Misc/`, `Shared/`. Every
+artefact has a clearly defined responsibility and location.
 
-Folder names are always plural.
-
-Prefer folders that clearly communicate responsibility.
-
-Examples include:
-
-* Entities/
-* ValueObjects/
-* Exceptions/
-* Interfaces/
-* Handlers/
-* Repositories/
-* Services/
-* Factories/
-* Extensions/
-
-These examples are not an exhaustive list.
-
-If a clear responsibility-based folder exists, use it.
-
-If no obvious responsibility folder applies, organise by domain concept, aggregate, feature, or use case.
-
----
-
-## Prohibited Catch-All Folders
-
-The following patterns are prohibited:
-
-* Common/
-* Helpers/
-* Utilities/
-* Misc/
-* Shared/
-
-Every artefact must have a clearly defined responsibility and location.
-
----
-
-## Interface Placement
-
-When an interface is defined in a different layer from its implementation, place the interface in an `Interfaces/` folder within the layer that defines it.
-
-When an interface and implementation belong to the same layer, place them together within the same responsibility folder.
-
-Interfaces should live where they are consumed rather than being unnecessarily centralised.
+**Interfaces** placed in a different layer from their implementation go in an `Interfaces/` folder
+within the layer that defines them; an interface and implementation in the same layer live together
+in the same responsibility folder. Interfaces live where they are consumed, not centralised
+unnecessarily.
 
 ---
 
 # 4. Domain Modelling
 
-## Entities
-
-Entities represent concepts with identity and lifecycle.
-
-Entities should:
-
-* protect their own invariants
-* expose behaviour rather than state manipulation
-* own business rules that apply to themselves
-
-Entity state changes should occur through domain behaviour rather than external mutation.
-
----
-
-## Value Objects
-
-Value objects represent concepts defined entirely by their value.
-
-Value objects should:
-
-* encapsulate validation
-* enforce invariants at creation time
-* be immutable
-
-Invalid value objects must not be constructible.
-
----
-
-## Domain Services
-
-Domain services are appropriate when behaviour belongs to the domain but does not naturally belong to a specific entity or value object.
-
-Domain services should be used sparingly.
-
----
+- **Entities** represent concepts with identity and lifecycle. They protect their own invariants,
+  expose behaviour rather than state manipulation, and own the business rules that apply to
+  themselves. State changes occur through domain behaviour, not external mutation.
+- **Value objects** are defined entirely by their value: they encapsulate validation, enforce
+  invariants at creation, and are immutable. An invalid value object must not be constructible.
+- **Domain services** are for behaviour that belongs to the domain but not to a specific entity or
+  value object. Use them sparingly.
 
 ## Domain Events and the Shared Kernel
 
-An **aggregate root** is the entity that owns a cluster of related state and the transactional boundary around it — the single entry point through which that state is read and changed. Aggregate roots record significant state transitions as **domain events** — immutable facts describing what happened, raised by the behaviour that caused them. Domain events let cross-cutting consumers (auditing today; projections or notifications later) observe the domain without the domain depending on them.
+An **aggregate root** is the entity that owns a cluster of related state and the transactional
+boundary around it — the single entry point through which that state is read and changed. Aggregate
+roots record significant state transitions as **domain events** — immutable facts describing what
+happened, raised by the behaviour that caused them. Domain events let cross-cutting consumers
+(auditing today; projections or notifications later) observe the domain without the domain depending
+on them.
 
-The event primitives live in a dedicated, dependency-free shared-kernel project, **`PanoramaMusic.Domain`**:
+The event primitives live in a dedicated, dependency-free shared-kernel project,
+**`PanoramaMusic.Domain`**:
 
 * `IDomainEvent` — marker for a domain event.
-* `AggregateRoot` — base type that holds an aggregate's pending events, raises them, and lets infrastructure drain them.
+* `AggregateRoot` — base type that holds an aggregate's pending events, raises them, and lets
+  infrastructure drain them.
 
 Rules:
 
-* `PanoramaMusic.Domain` is a pure leaf — no DI, no package references, no dependency on any bounded context. Every context's Domain layer may reference it; it references nothing.
-* Dependencies point **toward** the kernel, never toward a consumer. A producing context's Domain layer references `PanoramaMusic.Domain`; it must never reference the Audit context, or any other event consumer. This keeps Domain layers free of audit and infrastructure concerns.
-* Aggregates follow a **pull model**: an aggregate raises an event into its own pending-events list and never calls a collector, dispatcher, or logger. Infrastructure drains the pending events when the aggregate is persisted (see Auditing). The pull model is what keeps the kernel dependency-free.
-* Events are self-describing — an event carries every value a consumer needs (identifiers, before/after values, display text) captured when it is raised, so consumers never re-query to enrich them.
+* `PanoramaMusic.Domain` is a pure leaf — no DI, no package references, no dependency on any bounded
+  context. Every context's Domain layer may reference it; it references nothing.
+* Dependencies point **toward** the kernel, never toward a consumer. A producing context's Domain
+  layer references `PanoramaMusic.Domain`; it must never reference the Audit context, or any other
+  event consumer. This keeps Domain layers free of audit and infrastructure concerns.
+* Aggregates follow a **pull model**: an aggregate raises an event into its own pending-events list
+  and never calls a collector, dispatcher, or logger. Infrastructure drains the pending events when
+  the aggregate is persisted (see Auditing). The pull model is what keeps the kernel
+  dependency-free.
+* Events are self-describing — an event carries every value a consumer needs (identifiers,
+  before/after values, display text) captured when it is raised, so consumers never re-query to
+  enrich them.
 
 ---
 
 # 5. PostgreSQL Conventions
 
-PostgreSQL is the authoritative persistence technology for the project.
+PostgreSQL is the authoritative persistence technology and is treated as part of the architecture,
+not merely storage.
 
-The database should be treated as part of the architecture, not merely a storage mechanism.
+**Schemas.** Database objects must belong to explicit schemas; each bounded context may own its own
+schema structure. Avoid placing application-owned objects in the default schema.
 
----
+**Functions.** Database access is performed through PostgreSQL functions — repositories call
+functions rather than issuing inline SQL. Function names use snake_case, are verb-oriented, and
+communicate intent (`get_songs`, `create_song`, `delete_song_by_id`); parameters use snake_case with
+a `p_` prefix (`p_song_id`, `p_user_id`, `p_email`). Each function performs exactly one create,
+update, or delete. Do not combine multiple writes into one function for atomicity — when several
+writes must succeed or fail together, keep each as its own single-purpose function and run them in
+the shared ambient transaction (see Transactions).
 
-## Schemas
-
-Database objects must belong to explicit schemas.
-
-Each bounded context may own its own schema structure.
-
-Avoid placing application-owned objects directly into the default schema.
-
----
-
-## Functions
-
-Database access is performed through PostgreSQL functions.
-
-Repository implementations call functions rather than issuing inline SQL statements.
-
-Function naming should:
-
-* use snake_case
-* be verb-oriented
-* communicates intent clearly
-
-Examples:
-
-* get_songs
-* create_song
-* delete_song_by_id
-
-Function parameters should:
-
-* use snake_case
-* use a `p_` prefix
-
-Examples:
-
-* p_song_id
-* p_user_id
-* p_email
-
-Each function must perform exactly one create, update, or delete operation. Do not combine multiple write operations into a single function for the sake of atomicity — when several writes must succeed or fail together, keep each as its own single-purpose function and execute them within the shared ambient transaction (see Transactions).
-
----
-
-## SQL Style
-
-SQL should prioritise:
-
-* readability
-* explicitness
-* maintainability
-
-Avoid:
-
-* hidden side effects
-* overly complex functions
-* duplicated business rules between SQL and the domain code
-
-Business rules belong in the domain unless persistence-specific behaviour requires database enforcement.
+**SQL style** prioritises readability, explicitness and maintainability. Avoid hidden side effects,
+overly complex functions, and business rules duplicated between SQL and domain code. Business rules
+belong in the domain unless persistence-specific behaviour requires database enforcement.
 
 ---
 
 # 6. Data Access
 
-## Repository Responsibilities
+**Repositories** provide persistence access for domain concepts: they call PostgreSQL functions, map
+persistence structures, and return domain concepts. They are not responsible for business rules,
+application workflows, or request orchestration.
 
-Repositories provide persistence access for domain concepts.
+**DTOs** for persistence belong to Infrastructure. They represent persistence shapes and isolate
+database structures from domain models; repositories map DTOs to domain concepts before returning.
 
-Repositories are responsible for:
-
-* calling PostgreSQL functions
-* mapping persistence structures
-* returning domain concepts
-
-Repositories are not responsible for:
-
-* business rules
-* application workflows
-* request orchestration
-
----
-
-## DTOs
-
-Persistence DTOs belong to Infrastructure.
-
-DTOs exist to:
-
-* represent persistence shapes
-* isolates database structures from domain models
-
-Repositories should map DTOs to domain concepts before returning results.
-
----
-
-## Mapping
-
-Mapping logic should be reusable and independently testable.
-
-Prefer dedicated mapping extensions or components to embedding complex mapping logic directly in repositories.
-
----
+**Mapping** logic should be reusable and independently testable — prefer dedicated mapping extensions
+or components over complex mapping embedded in repositories.
 
 ## Transactions
 
 The canonical transaction pattern is the shared Unit of Work in `PanoramaMusic.Persistence`.
 
-`IUnitOfWork` exposes the active `IDbConnection` and `IDbTransaction` and is registered as **scoped**, so every repository resolved within one HTTP request shares the same connection and transaction — including repositories from different bounded contexts (e.g. an Identity write and its Audit record commit or roll back together).
+`IUnitOfWork` exposes the active `IDbConnection` and `IDbTransaction` and is registered as
+**scoped**, so every repository resolved within one HTTP request shares the same connection and
+transaction — including repositories from different bounded contexts (e.g. an Identity write and its
+Audit record commit or roll back together).
 
-The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back a transaction directly.
+The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it
+calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and
+`RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back
+a transaction directly.
 
-A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`) and executes its database function call as a straight command on the shared connection and transaction:
+A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`) and executes its database
+function call as a straight command on the shared connection and transaction:
 
 ```csharp
 public class ExampleRepository(IUnitOfWork unitOfWork)
@@ -407,36 +176,57 @@ public class ExampleRepository(IUnitOfWork unitOfWork)
 }
 ```
 
-When several writes must succeed or fail together, the handler calls each single-purpose repository method in sequence — the ambient transaction makes them atomic. See `UserRepository.CreateAsync` and `DeactivateUserHandler` (deactivate + revoke sessions) for existing examples of this pattern.
+When several writes must succeed or fail together, the handler calls each single-purpose repository
+method in sequence — the ambient transaction makes them atomic. See `UserRepository.CreateAsync` and
+`DeactivateUserHandler` (deactivate + revoke sessions) for existing examples.
 
-Read methods use the same shared connection and transaction — repositories resolve their database access exclusively from `IUnitOfWork`; bounded contexts do not own connection factories of their own.
+Read methods use the same shared connection and transaction — repositories resolve their database
+access exclusively from `IUnitOfWork`; bounded contexts do not own connection factories of their
+own.
 
-Code that runs outside the HTTP pipeline (hosted services, integration tests) creates its own scope and therefore owns the unit-of-work lifecycle itself: begin, perform the writes, then commit — see `AdminSeedService` for an example.
+Code that runs outside the HTTP pipeline (hosted services, integration tests) creates its own scope
+and therefore owns the unit-of-work lifecycle itself: begin, perform the writes, then commit — see
+`AdminSeedService`.
 
-**Isolated writes.** A deliberate security write that must persist even when the request fails (e.g. revoking a refresh-token family on replay detection before rejecting the request) is wrapped in `IUnitOfWork.ExecuteIsolatedAsync`. The delegate runs on a fresh connection and transaction that commits independently of the ambient request transaction; repositories participate unchanged. See `RefreshTokenHandler` for the two existing call sites. Use this sparingly — an isolated write is intentionally *not* atomic with the rest of the request.
+**Isolated writes.** A deliberate security write that must persist even when the request fails (e.g.
+revoking a refresh-token family on replay detection before rejecting the request) is wrapped in
+`IUnitOfWork.ExecuteIsolatedAsync`. The delegate runs on a fresh connection and transaction that
+commits independently of the ambient request transaction; repositories participate unchanged. See
+`RefreshTokenHandler` for the two existing call sites. Use this sparingly — an isolated write is
+intentionally *not* atomic with the rest of the request.
 
 Application handlers coordinate use cases; they never manage database transactions.
 
----
-
 ## Auditing
 
-Audit records are produced by observing domain events, not by calling an audit logger from application handlers. A handler contains no audit code; an aggregate raising a domain event (see Domain Events and the Shared Kernel) is what ultimately produces an audit record.
+Audit records are produced by observing domain events, not by calling an audit logger from
+application handlers. A handler contains no audit code; an aggregate raising a domain event (see
+Domain Events and the Shared Kernel) is what ultimately produces an audit record.
 
 The Audit context is a **transaction-scoped listener** over domain events:
 
-* A request-scoped **collector** accumulates the domain events drained from aggregates as they are persisted.
-* An audit-owned **translator** maps each domain event to an `AuditEvent`, enriching it with ambient request context (actor, source IP, correlation id). The producing context never constructs an `AuditEvent`.
-* A **flush** drains the collector and writes the records on the shared `IUnitOfWork` connection **immediately before `CommitAsync`**, so each audit record commits in the same transaction as the business write that caused it.
+* A request-scoped **collector** accumulates the domain events drained from aggregates as they are
+  persisted.
+* An audit-owned **translator** maps each domain event to an `AuditEvent`, enriching it with ambient
+  request context (actor, source IP, correlation id). The producing context never constructs an
+  `AuditEvent`.
+* A **flush** drains the collector and writes the records on the shared `IUnitOfWork` connection
+  **immediately before `CommitAsync`**, so each audit record commits in the same transaction as the
+  business write that caused it.
 
 No `IAuditLogger` or audit factory is injected into a handler.
 
 **Two lanes.**
 
-* **Transactional (default).** Flushed before commit on the ambient transaction; if the request rolls back, the audit record rolls back with it — an action that did not persist is not audited.
-* **Durable.** A security event that must be recorded even when the request is rejected (e.g. a failed login or a detected token replay) is written on an independent connection that commits regardless of the request outcome, using the `ExecuteIsolatedAsync` mechanism described under Transactions. Use it sparingly — only where a security record must survive a rollback.
+* **Transactional (default).** Flushed before commit on the ambient transaction; if the request
+  rolls back, the audit record rolls back with it — an action that did not persist is not audited.
+* **Durable.** A security event that must be recorded even when the request is rejected (e.g. a
+  failed login or a detected token replay) is written on an independent connection that commits
+  regardless of the request outcome, using the `ExecuteIsolatedAsync` mechanism described under
+  Transactions. Use it sparingly — only where a security record must survive a rollback.
 
-> The Identity context predates this pattern and still injects `IAuditLogger` directly into its handlers; it will be migrated. New contexts follow the domain-event model from the outset.
+> The Identity context predates this pattern and still injects `IAuditLogger` directly into its
+> handlers; it will be migrated. New contexts follow the domain-event model from the outset.
 
 ---
 
@@ -444,80 +234,40 @@ No `IAuditLogger` or audit factory is injected into a handler.
 
 Database changes are managed through DbUp.
 
----
+**Script categories** are separated by responsibility — schema changes, function definitions, seed
+data — each tracked by its own DbUp journal table.
 
-## Script Categories
+**Naming and versioning.** Schema/table migration scripts use a per-domain counter
+(`01__create_x_table.sql`, `02__create_y_table.sql`) scoped to the bounded context's own
+`Migrations` folder; there is no shared counter across contexts. Migration scripts are immutable once
+applied — never modify a migration already executed in another environment; new behaviour requires a
+new script. Function scripts use a descriptive, unversioned name matching the function
+(`create_user.sql`); because functions deploy with `CREATE OR REPLACE`, a behaviour change is made by
+editing the file in place. Function and seed scripts run on every deploy (`RunAlways`); only
+schema/table migrations are journal-gated to apply exactly once, so every seed script must be safely
+re-runnable — use `ON CONFLICT DO NOTHING` or a `WHERE NOT EXISTS` guard so re-applying it is a
+no-op, not a duplicate-insert error.
 
-Database scripts are separated by responsibility:
+**Execution order:** Schema → Functions → Seeds. This order must remain consistent.
 
-* schema changes
-* function definitions
-* seed data
-
-These concerns must remain separated, each tracked by its own DbUp journal table.
-
----
-
-## Naming and Versioning
-
-Schema/table migration scripts use a per-domain counter (e.g. `01__create_x_table.sql`, `02__create_y_table.sql`), scoped to the bounded context's own `Migrations` folder. There is no shared counter across bounded contexts — each context numbers its own migrations independently.
-
-Migration scripts are immutable once applied.
-
-Never modify a migration that has already been executed in another environment.
-
-New behaviour requires a new script.
-
-Function scripts use a descriptive, unversioned name matching the function (e.g. `create_user.sql`). Because functions are deployed with `CREATE OR REPLACE` semantics, a behaviour change to an existing function is made by editing its file in place rather than adding a new versioned file.
-
-Function and seed scripts run on every deploy (`RunAlways`), not just once — only schema/table migrations are journal-gated to apply exactly once. Every seed script must therefore be safely re-runnable: use `ON CONFLICT DO NOTHING` or a `WHERE NOT EXISTS` guard so re-applying it on an already-seeded database is a no-op rather than a duplicate-insert error.
+**Function evolution.** Use replacement semantics where possible; when a function signature changes
+incompatibly, explicitly remove the previous version before recreating it.
 
 ---
 
-## Execution Order
+# 8. Testing
 
-Database updates execute in the following order:
-
-```text
-Schema
- ↓
-Functions
- ↓
-Seeds
-```
-
-This order must remain consistent.
-
----
-
-## Function Evolution
-
-Function definitions should use replacement semantics where possible.
-
-When a function signature changes incompatibly, explicitly remove the previous version before recreating it.
-
----
-
-# 8. Testing Principles
-
-Testing exists to validate behaviour, not implementation details.
-
----
+Testing validates behaviour, not implementation details.
 
 ## Test Ownership
 
-Each bounded context must have its own isolated test suite covering unit and integration concerns
-appropriate to that context.
-
-Start with a single test project per bounded context (e.g. `PanoramaMusic.Audit.Tests`). Split
-further into one project per architectural layer — `{Context}.Domain.Tests`,
-`{Context}.Application.Tests`, `{Context}.Infrastructure.Tests` — once that context's test suite
-has grown large enough that a single project mixes concerns across layers in practice (see
-`PanoramaMusic.Identity.*.Tests` for the split form). A handful of files testing one or two classes
-does not warrant the split; a few dozen files spanning entities, handlers, and infrastructure
-services does.
-
----
+Each bounded context has its own isolated test suite covering the unit and integration concerns
+appropriate to it. Start with a single test project per context (e.g. `PanoramaMusic.Audit.Tests`),
+and split into one project per architectural layer — `{Context}.Domain.Tests`,
+`{Context}.Application.Tests`, `{Context}.Infrastructure.Tests` — only once that suite has grown
+large enough that a single project mixes concerns across layers in practice (see
+`PanoramaMusic.Identity.*.Tests`). A handful of files testing one or two classes does not warrant the
+split; a few dozen files spanning entities, handlers and infrastructure services does.
 
 ## Shared Test Infrastructure
 
@@ -563,8 +313,6 @@ setup inherently specific to that one class's mocked `HttpMessageHandler` (e.g. 
 mocks the same handler the same way. Anything reusable across test classes does not qualify for
 this exception and must move to a fixture.
 
----
-
 ## Entity Factories
 
 When multiple test classes need a domain entity built into a specific, reusable state (an active
@@ -575,92 +323,51 @@ inline — this keeps entity-shape changes (a new constructor parameter, a new i
 place instead of every test file that builds that entity. Factory methods are `public static` for
 the same cross-project reason as fixtures.
 
----
+## Unit and Integration Tests
 
-## Unit Tests
+Unit tests focus on domain behaviour, business rules, validation and use-case orchestration, and
+stay fast and isolated.
 
-Unit tests should focus on:
-
-* domain behaviour
-* business rules
-* validation
-* use-case orchestration
-
-Unit tests should remain fast and isolated.
-
----
-
-## Integration Tests
-
-Integration tests should focus on:
-
-* repository behaviour
-* PostgreSQL integration
-* infrastructure implementations
-* application wiring
-
-Integration tests should verify collaboration between components rather than individual business
-rules. A test class consuming a Testcontainers-backed fixture (composition-root or simple lifecycle)
-must not alter that fixture's database-lifecycle wiring — only the fixture owns starting, migrating,
-and disposing the container.
-
----
+Integration tests focus on repository behaviour, PostgreSQL integration, infrastructure
+implementations and application wiring, verifying collaboration between components rather than
+individual business rules. A test class consuming a Testcontainers-backed fixture (composition-root
+or simple lifecycle) must not alter that fixture's database-lifecycle wiring — only the fixture owns
+starting, migrating and disposing the container.
 
 ## Test Structure
 
-Tests should follow Arrange / Act / Assert structure.
-
-Use
-
-* xUnit as the test framework
-* Shouldly for assertions
-* Moq for mocking framework
-
-Name test methods `MethodUnderTest_Scenario_ExpectedOutcome` (e.g.
-`HandleAsync_UserNotFound_ThrowsEntityNotFoundException`), describing the scenario, the condition,
-and the expected outcome.
-
-Tag every test with `[Trait("AC", "<code>")]` mapping it to the acceptance criterion it verifies.
-
-When a test needs to assert more than one independent condition, group them with
-`ShouldlyHelpers.Satisfy(() => ..., () => ...)` (wraps `Shouldly.ShouldSatisfyAllConditions`)
-rather than a sequence of bare assertions — this ensures every condition is evaluated and reported
-on failure, instead of the test stopping at the first one that fails.
-
----
+Follow Arrange / Act / Assert, using xUnit as the framework, Shouldly for assertions and Moq for
+mocking. Name test methods `MethodUnderTest_Scenario_ExpectedOutcome` (e.g.
+`HandleAsync_UserNotFound_ThrowsEntityNotFoundException`). Tag every test with
+`[Trait("AC", "<code>")]` mapping it to the acceptance criterion it verifies. When a test asserts
+more than one independent condition, group them with `ShouldlyHelpers.Satisfy(() => ..., () => ...)`
+(wraps `Shouldly.ShouldSatisfyAllConditions`) rather than a sequence of bare assertions — this
+ensures every condition is evaluated and reported on failure, instead of stopping at the first one.
 
 ## Test Project Setup
 
-Test projects use `xunit.v3`, not `xunit`/`xunit.v2`. Set `TreatWarningsAsErrors` to `true` and
-`IsTestProject` to `true`, matching the project's production-code counterpart's `TargetFramework`
-and nullable/implicit-usings settings. Reference only the production projects and shared test
-project(s) the tests actually need — do not reference a bounded context's own Api or another
-bounded context's test project.
+Test projects use `xunit.v3`, not `xunit`/`xunit.v2`. Set `TreatWarningsAsErrors` and `IsTestProject`
+to `true`, matching the production-code counterpart's `TargetFramework` and nullable/implicit-usings
+settings. Reference only the production projects and shared test project(s) the tests actually need —
+do not reference a bounded context's own Api or another bounded context's test project.
 
 ---
 
 # 9. Architectural Constraints
 
-The following are prohibited unless explicitly justified:
-
-* business rules in route handlers
-* business rules in repositories
-* inline SQL in repositories
-* direct infrastructure dependencies from the Domain layer
-* catch-all folders
-* cross-layer dependency violations
-* duplication of business rules across layers
-
-When in doubt, prefer explicit domain modelling and clear separation of responsibilities.
+Prohibited unless explicitly justified: business rules in route handlers or repositories, inline SQL
+in repositories, direct infrastructure dependencies from the Domain layer, catch-all folders,
+cross-layer dependency violations, and duplication of business rules across layers. When in doubt,
+prefer explicit domain modelling and clear separation of responsibilities.
 
 ---
 
 # 10. Environment Configuration
 
-## QA-Environment Defaults
-
-QA-environment defaults must be expressed as `${VAR:-default}` entries in `docker-compose.yml`'s `api` service `environment:` block, not as a committed `appsettings.{Environment}.json` file.
-
-`docker-compose.yml` is the project's single source of truth for which environment variables the QA environment needs. It also serves as the reference for what to configure as environment variables on the actual QA deployment (Render). A second, parallel JSON-file mechanism duplicates that list and risks drifting from what the real deployment needs.
-
-Production and Development configuration are unaffected by this rule — they continue to use `appsettings.json` / `appsettings.Development.json` as already established.
+QA-environment defaults must be expressed as `${VAR:-default}` entries in `docker-compose.yml`'s
+`api` service `environment:` block, not as a committed `appsettings.{Environment}.json` file.
+`docker-compose.yml` is the single source of truth for the environment variables the QA environment
+needs, and the reference for what to configure on the actual QA deployment (Render); a parallel
+JSON-file mechanism duplicates that list and risks drifting from the real deployment. Production and
+Development configuration are unaffected — they continue to use `appsettings.json` /
+`appsettings.Development.json` as already established.

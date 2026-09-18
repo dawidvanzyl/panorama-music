@@ -3,273 +3,152 @@ name: verify-implementation
 description: >
   Load this skill when the user says "verify-implementation", "verify
   implementation", or "/verify-implementation". Reviews the implementation
-  against the issue requirements and project coding standards, runs automated
-  checks, and produces a gated report before acceptance criteria are ticked off.
+  against the issue requirements and project coding standards and produces a gated
+  report before acceptance criteria are ticked off. Reviews code only — it does not
+  run the automated checks, which pass before it is called.
 license: MIT
-compatibility: opencode
 metadata:
   audience: maintainers
   workflow: implement-issue-integration
 ---
 
-## Announcement
-
-At the start of execution, always post a visible message to the user:
-
-> "Loaded skill: **verify-implementation**. Starting review..."
-
 ## Role
 
-You are a senior developer performing a critical review of a peer's
-implementation. Be thorough, direct, and constructive. Do not rubber-stamp —
-question assumptions, spot edge cases, and hold the code to the requirements in
-the issue and the standards documented in the project.
+You are a senior developer critically reviewing a peer's implementation against the
+issue and the project's standards. Don't rubber-stamp: question assumptions and look
+for edge cases. Severity, sourcing and Out of Scope rules are in
+`.claude/shared/review-severity.md` (read in step 3).
 
-Every finding must be justified. If something looks wrong, say why. If something
-looks suspicious but you cannot prove it is wrong, flag it as a Question. An
-out-of-scope observation worth noting for a future issue is a Suggestion — never
-a Blocker.
+**You review code; you never run the automated checks.** `implement-issue` runs the
+build/format/test gauntlet green before invoking you, so you can assume the code
+compiles and the tests pass — spend your turns on requirements, correctness and
+standards, not on re-running what already passed. A failing build isn't yours to
+report; it means you were called too early, so say so and stop.
 
-Never report a Blocker or Warning that asks for work listed under
-`## Out of Scope`; if it is worth recording at all, it is a Suggestion.
+**Read-only.** Never modify source files, issues, PRs, labels or any other state, and
+never commit, push or check out. The only write is the report in `journal_dir`, which
+lives outside the repo. Git is limited to `diff`, `fetch`, `rev-parse`, `ls-remote`
+and `merge-base`. **Never fix what you find.** A repaired blocker is an unreviewed
+change, and it erases the record of what was wrong. The finding and the
+implementer's disposition of it are the artefact.
 
 ## Inputs
 
-- `issue_number` — required.
-- `base_branch` — passed by the tech lead in `subagent` mode, since it already
-  knows the milestone. Derive it otherwise:
+- `issue_number`: required. Infer it from the session if possible, otherwise ask
+  "What is the issue number to verify?"
+- `mode`: `interactive` (default) or `subagent`.
+- `journal_dir`: required in `subagent` mode. The absolute path to the story's
+  journal.
+- `cycle`: defaults to `1`. `interactive` mode always behaves as cycle 1.
+- `prev_verify_sha`: the previous cycle's `VERIFIED_SHA`. Absent on cycle 1.
+- `prev_report`: the previous report, with the implementer's disposition on every
+  finding.
+- `base_branch`: passed by the tech lead in `subagent` mode. Otherwise derive it:
+  - On a `milestone/*` branch, use `master`.
+  - If the story has a milestone, use `milestone/m{number}`, taken from the
+    assigned milestone's title (`gh issue view {issue_number} --json milestone`), the
+    same way `prepare-milestone-base` and `close-milestone` derive it. The milestone
+    belongs to the story. Never read it from the branch name or a PR, because verify
+    runs before the PR exists.
+  - If the story has no milestone, use `master`. That is the ordinary state for
+    standalone work.
 
-  - On a `milestone/*` branch → `master`.
-  - Story **has** a milestone → `milestone/m{number}`, taken from the assigned
-    milestone's title exactly as `prepare-milestone-base` and `close-milestone`
-    derive it:
-
-    ```bash
-    gh issue view {issue_number} --json milestone
-    ```
-
-  - Story has **no** milestone → `master`. Standalone work — a tech-debt item, a
-    dependency bump, a one-off fix between milestones — branches from `master` and
-    returns to it. This is an ordinary state, not an error.
-
-  > The milestone belongs to the **story**, not the branch. A branch name says
-  > nothing about which milestone it serves, and never needs to — its issue is
-  > assigned to one. Do not read the base from the branch's pull request either:
-  > verify runs inside the gauntlet, before the PR exists.
-
-  **Before defaulting to `master`, rule out a forgotten assignment.** Work cut from
-  a milestone branch but never assigned to the milestone is the one case where the
-  default is badly wrong: the diff would carry every story already merged into that
-  milestone and report them all as part of this change.
-
-  ```bash
-  git ls-remote --heads origin 'refs/heads/milestone/*'
-  ```
-
-  For each result, test whether it is an ancestor of HEAD:
-
-  ```bash
-  git merge-base --is-ancestor origin/{branch} HEAD
-  ```
-
-  If one is, this branch was cut from it. Stop and report the missing milestone
-  assignment rather than proceeding on either base. Between milestones there are no
-  open milestone branches and this costs nothing.
-
-  > Grouped work always lives on a `milestone/*` branch, so this check is complete.
-
-- `journal_dir` — required in `subagent` mode. Absolute path to this story's
-  journal directory; the report is written here.
-- `mode` — `interactive` (default) or `subagent`.
-- `cycle` — integer, default `1`.
-- `prev_verify_sha` — the `VERIFIED_SHA` from the previous cycle. Absent on
-  cycle 1.
-- `prev_report` — the previous cycle's report with the implementer's
-  disposition on every finding of every severity: `ACTIONED`, `DEFERRED`,
-  `INVALID`, or `RESOLVED_BY: developer`.
-
-If `issue_number` is not available, ask: "What is the issue number to verify?"
-
-`interactive` mode always runs cycle-1 behaviour.
-
-## Goal
-
-Review the implementation made for the issue. Run automated checks, review
-against the issue requirements and coding standards, and inspect for correctness
-and contract compliance. Produce a report grouped by severity, with every
-finding citing its source, ending in a machine-readable verdict.
+    **First rule out a forgotten assignment.** If the branch was cut from a
+    milestone branch, diffing against `master` would count every story already
+    merged into that milestone as part of this change. For each
+    `git ls-remote --heads origin 'refs/heads/milestone/*'`, run
+    `git merge-base --is-ancestor origin/{branch} HEAD`. If any is an ancestor,
+    stop and report the missing milestone assignment. Grouped work always lives
+    on a `milestone/*` branch, so this check is complete, and it costs nothing
+    between milestones.
 
 ## Procedure
 
-### 0) Gather inputs
+### 1) Capture changes
 
-- Session-infer `issue_number` if not passed.
-- If `issue_number` is missing, ask: "What is the issue number to verify?"
-- Do not proceed until confirmed.
+- **Cycle 1:** `git fetch origin {base_branch}`, then `git diff origin/{base_branch}...HEAD`.
+- **Cycles 2+:** `git diff {prev_verify_sha}..HEAD`, which is the delta only.
 
-### 1) Capture changes and determine scope
+In both cases, also run `git diff HEAD` and review the union with the working tree.
+Record `git rev-parse HEAD` as `VERIFIED_SHA`. Scopes: any path in `src/` is
+backend, any path in `frontend/` is frontend.
 
-Cycle 1 (no `prev_verify_sha`) — review the full branch:
+### 2) Prior findings (cycles 2+)
 
-```
-git fetch origin {base_branch}
-git diff origin/{base_branch}...HEAD
-git diff HEAD
-git rev-parse HEAD
-```
+Read `prev_report` and handle each finding, whatever its severity:
 
-Cycles 2+ — review only the delta since the last verify:
+| Disposition | Action |
+|---|---|
+| `RESOLVED_BY: developer` | Settled permanently. Never re-raise or re-assess it. |
+| `ACTIONED: {what}` | Look for the fix in the delta. If found, drop the finding. If not, carry it forward with `NOT CONFIRMED`. |
+| `INVALID: {reason}` | Weigh the reason against the source you originally cited. If it holds, drop the finding and list it under Withdrawn. If it doesn't, keep the finding with `DISPUTED — {one-line rebuttal}`, which forces `NEEDS_RULING`. |
+| `DEFERRED: {reason}` | Keep it as a 💡 Suggestion, noting the reason. Never escalate it back to a Blocker or Warning. |
+| none | Carry it forward with `NO DISPOSITION`, unless the delta shows it resolved. |
 
-```
-git diff {prev_verify_sha}..HEAD
-git diff HEAD
-git rev-parse HEAD
-```
+Every severity carries forward until it is actioned, withdrawn or settled. A report
+that silently drops an earlier Suggestion is wrong.
 
-Review the union of the committed and working-tree diffs. Record the current
-SHA for `VERIFIED_SHA`.
+On cycles 2+, skip the full requirements sweep in step 4. Check the delta for new
+violations only.
 
-- Determine scopes: any path in `src/` → backend, `frontend/` → frontend.
+### 3) Read the issue and standards
 
-### 1.5) Prior findings (cycles 2+ only)
+From issue `#{issue_number}`, extract:
 
-Skip on cycle 1.
+- `## Functional Requirements`
+- `## API / Interface Contract`
+- `## Domain & Data`
+- `## Context & Constraints`
+- `## Acceptance Criteria (G/W/T)`: the UC codes
+- `## Test Specifications`: the IT codes
+- `## Out of Scope`
+- `## Notes`, if present: edge cases, security considerations and deliberate
+  deferrals
 
-Read `prev_report`. For each finding:
+Then read `.claude/shared/review-severity.md`. It defines the severity levels, which
+standards docs to read, the security delegation and the report column rules. Read the
+standards docs it lists for the scopes you detected. If a doc doesn't exist, note that
+and skip it.
 
-- Marked `RESOLVED_BY: developer` → settled. Do not re-raise, do not re-assess.
-- Marked invalid by the implementer with a reason → adjudicate it. Weigh the
-  reason against the issue text and standards you cited originally.
-  - Reason holds → drop the finding. Record it under Withdrawn.
-  - Reason does not hold → keep the finding, add `DISPUTED` to its row with a
-    one-line rebuttal, and set the verdict to `NEEDS_RULING`.
-- Marked `ACTIONED: {what}` → check the delta for the fix. Confirmed → drop it.
-  Not present in the delta → carry it forward with `NOT CONFIRMED` in its row.
-- Marked `DEFERRED: {reason}` → keep it, restated as a 💡 Suggestion, and note
-  the reason. Do not escalate it back to a Blocker or Warning.
-- Marked `INVALID: {reason}` → adjudicate as above. This applies to warnings,
-  suggestions, and questions exactly as it does to blockers.
-- Otherwise → check the delta for evidence it was resolved. Unresolved findings
-  carry forward unchanged, whatever their severity.
+### 4) Requirements and correctness (cycle 1)
 
-**Carry every severity forward.** Warnings, suggestions, and questions survive
-across cycles until they are actioned, withdrawn, or settled — they are never
-silently dropped just because they did not gate the verdict. A cycle-2 report
-that omits a cycle-1 suggestion with no disposition is wrong.
+For each extracted section, ask whether the diff satisfies it, and whether anything is
+missing, wrong or inconsistent:
 
-Any finding of any severity that arrives with no disposition at all → carry it
-forward unchanged and add `NO DISPOSITION` to its row.
+- A deviation from the API contract is a ❌ Blocker.
+- A violation of Context & Constraints is a ❌ Blocker.
+- A diff that implements anything listed in Out of Scope is a ❌ Blocker: "Diff
+  implements work explicitly excluded in Out of Scope: {item}."
+- Every UC code needs a corresponding test.
+- No unit test may carry an IT code. IT codes are QA's Playwright work, so never
+  expect their tests in this diff.
+- Look for evidence that the Notes were read and acted on.
 
-On cycles 2+, do not re-run the full requirements sweep from step 5. Confirm
-prior findings and check the delta for new violations only.
+If a section is absent or empty, say so in one line under Requirements Verification.
+That is not a finding.
 
-### 2) Read the issue
+### 5) Standards and security (every cycle)
 
-Fetch issue `#{issue_number}` and extract the following sections. These are
-the primary reference for whether the implementation is correct — not just
-whether it is clean.
+Apply the *Standards docs to read* rules in `review-severity.md` to every file in the
+diff. Then run its *Security review* delegation on the diff from step 1, and merge the
+rows it returns into your tables.
 
-- **`## Functional Requirements`** — the behaviours the implementation must
-  deliver. Used in step 5 to verify coverage.
-- **`## API / Interface Contract`** — the agreed endpoint signatures, payloads,
-  and error cases. Any deviation is a blocker.
-- **`## Domain & Data`** — the entities, fields, and business rules in scope.
-  Used to verify domain logic correctness.
-- **`## Context & Constraints`** — patterns and restrictions that must be
-  respected. Any violation is a blocker.
-- **`## Test Specifications`** — the IT codes. Proven by Playwright and owned by
-  QA; confirm no unit test carries one, but never expect the implementation to
-  contain their tests.
-- **`## Acceptance Criteria (G/W/T)`** — the UC codes. Used to verify
-  that every criterion has a corresponding test.
-- **`## Out of Scope`** — a hard boundary. Never report a finding that asks for
-  work listed here.
-- **`## Notes`** — edge cases, security considerations, and deliberate
-  deferrals. Review the diff for evidence that Notes were read and acted on.
+Run the security review on every cycle, because a fix can open a new hole. On cycles
+2+ it only sees the delta, so later passes stay cheap. Findings that were already
+raised flow through step 2 rather than being re-reported.
 
-### 3) Read relevant standards
+### 6) Report
 
-Read `.claude/shared/review-severity.md` — it defines the severity
-levels, the standards docs to read, the security delegation, and the report
-column rules used from here on.
-
-Then read the standards doc(s) it lists for the scopes detected in step 1.
-
-### 4) Run automated checks
-
-Read `.claude/shared/automated-checks.md` and run the checks it defines for the
-scopes detected in step 1, recording pass/fail per check.
-
-**Short-circuit.** If any automated check fails, stop here. Emit a report
-containing only the check results, the failing output (last ~50 lines per
-failing command), and:
-
-```
-VERDICT: BLOCKED (1)
-VERIFIED_SHA: {sha}
-```
-
-Do not perform steps 5–6. A broken build cannot be reviewed meaningfully.
-
-### 5) Requirements and correctness review
-
-Using the issue content extracted in step 2, review the diff against each
-requirement. For each section — `## Functional Requirements`,
-`## API / Interface Contract`, `## Domain & Data`, `## Context & Constraints`,
-`## Acceptance Criteria (G/W/T)`, and `## Notes` — ask: does the diff satisfy
-this? Is there anything missing, wrong, or inconsistent?
-
-Additionally, check `## Out of Scope`: does the diff implement anything listed
-there? If so → ❌ Blocker: "Diff implements work explicitly excluded in Out of
-Scope: {item}."
-
-Apply the severity levels defined in
-`.claude/shared/review-severity.md` — read that file now if you have not
-already. Gating behaviour, which is specific to this skill:
-
-- ❌ Blocker → gating (`BLOCKED`).
-- ❓ Question → gating via `NEEDS_RULING`.
-- ⚠️ Warning and 💡 Suggestion → non-gating, but each still requires a
-  disposition from the implementer and is carried across cycles per step 1.5.
-
-If a section referenced above is absent or empty in the issue, state that in one
-line under Requirements Verification. It is not a finding.
-
-### 6) Standards review
-
-Follow the *Standards docs to read* rules in
-`.claude/shared/review-severity.md`, applied to every file in the diff.
-
-**Security review:** run the delegation described under *Security review* in
-that same file, passing the diff already captured in step 1. Merge its rows into
-the severity tables built in step 7.
-
-Run it on every cycle, not just cycle 1 — a fix applied in response to a blocker
-can introduce a new hole. The cost is bounded because the diff passed in on
-cycles 2+ is only the delta since `prev_verify_sha`, so later passes are far
-smaller than the first. Do not re-report a security finding the previous cycle
-already raised; those flow through step 1.5 like any other finding.
-
-### 7) Build the report
-
-Construct the report from findings collected in steps 1–6. Do not output a
-template or placeholder — populate every section with real data.
-
-Use flat markdown headings and tables. Omit any section that has 0 items.
+Populate every section with real data. Use flat headings, and omit empty sections.
 
 ````markdown
 ## Verify Report — #{issue_number} — {issue_title} — cycle {cycle}
 
-{Automated checks summary lines — see `.claude/shared/automated-checks.md`}
-
 ### Requirements Verification
-
 | Requirement | Status | Evidence |
 |------------|--------|----------|
-| AC1 | Implemented | File(s)/test(s)/diff evidence |
-| AC2 | Implemented | File(s)/test(s)/diff evidence |
-| TC1 | Covered | Test evidence |
-| TC2 | Not verified | Reason |
+| Functional requirement / 48UC1 | Implemented | File(s)/test(s)/diff evidence |
+| 48UC2 | Not verified | Reason |
 
 ### ❌ Blocker
 | # | file:line | Category | Detail |
@@ -278,51 +157,40 @@ Use flat markdown headings and tables. Omit any section that has 0 items.
 | 2 | —          | Requirements | Functional requirement not addressed: "When X occurs, Y must happen" |
 
 ### ⚠️ Warning
-(same structure; non-gating)
+(same structure)
 
 ### 💡 Suggestions
-(same structure; non-gating)
+(same structure)
 
 ### ❓ Questions
 | # | file:line | Question | Context |
 |---|-----------|----------|---------|
 | 1 | Song.cs:55 | Should ratings accept decimals or only integers? | Issue says "rating 1–5" but doesn't specify type |
 
-### Withdrawn (cycles 2+)
+### Withdrawn
 | # | Finding | Implementer reason | Outcome |
 |---|---------|--------------------|---------|
-
-### Automated check output
-```text
-Include raw output only for checks that FAILED (last ~50 lines each).
-Omit this section entirely if all checks passed.
-```
 
 ---
 VERDICT: {PASS | BLOCKED (n) | NEEDS_RULING (n)}
 VERIFIED_SHA: {sha}
 ````
 
-Column rules: as defined under *Report column rules* in
-`.claude/shared/review-severity.md`. In addition, this skill annotates
-the **Detail** cell with `DISPUTED — {rebuttal}` when rejecting an implementer's
-`INVALID` marking, and with `NOT CONFIRMED` / `NO DISPOSITION` per step 1.5.
+Column rules come from `review-severity.md`. The Detail cell also carries the
+step-2 annotations: `DISPUTED`, `NOT CONFIRMED` and `NO DISPOSITION`.
 
-Verdict rules:
-- `PASS` — zero blockers, zero questions, no disputed findings. Warnings and
-  suggestions may be present.
-- `BLOCKED (n)` — n blockers, no questions and no disputed findings.
-- `NEEDS_RULING (n)` — any open question, or any finding marked `DISPUTED`.
+**Verdict:** the verdict block always closes the report.
 
-> `NEEDS_RULING` means the work has stopped and cannot restart without a decision
-> from above. The decision may be made by the tech lead rather than reaching a
-> person at all, so the verdict deliberately does not name its audience.
+- `NEEDS_RULING (n)`: any open ❓ Question or `DISPUTED` finding. Work stops until
+  a decision comes from above. That may be the tech lead rather than a person, so
+  the verdict doesn't name its audience.
+- `BLOCKED (n)`: otherwise, n ❌ Blockers.
+- `PASS`: none of the above. ⚠️ Warnings and 💡 Suggestions don't gate, but each
+  still needs a disposition from the implementer.
 
-The verdict block is always emitted, and is always the last lines of the report.
+### 7) Deliver
 
-### 8) Present the report
-
-`interactive` mode — output the report, then ask:
+**`interactive`:** print the report, then ask:
 
 > "Review complete. How do you want to proceed? You can:
 > - fix specific items now
@@ -330,21 +198,13 @@ The verdict block is always emitted, and is always the last lines of the report.
 > - dismiss the entire report and proceed
 > - re-run the review after making changes"
 
-If the user fixes items, re-run steps 1–6 and present an updated report.
+If the user fixes items, re-run steps 1–5. Close with "Verify complete for
+#{issue_number}. {n} blocker(s), {n} warning(s), {n} question(s), {n} suggestion(s)."
 
-`subagent` mode — **write** the report, do not print it. Ask nothing; the parent
-skill owns the loop.
-
-```
-{journal_dir}/verify-{cycle}.md
-```
-
-Write it as you go rather than composing it in a final turn. You cannot tell when
-a turn limit or a quota exhaustion is about to end the session, and a report that
-exists only in the last message leaves nothing behind when that happens — the whole
-cycle then has to be re-run.
-
-Reply with the verdict block and the path, nothing else:
+**`subagent`:** write the report to `{journal_dir}/verify-{cycle}.md` as you go, not
+in a final turn. A session killed by its turn limit or quota leaves nothing behind
+otherwise, and the whole cycle has to be re-run. Ask nothing, because the parent owns
+the loop. Reply with only:
 
 ```
 VERDICT: {PASS | BLOCKED (n) | NEEDS_RULING (n)}
@@ -352,38 +212,7 @@ VERIFIED_SHA: {sha}
 REPORT: {journal_dir}/verify-{cycle}.md
 ```
 
-Never paste the findings tables, the diff, or automated-check output into the
-reply. The parent reads the verdict and opens the file only when the verdict alone
-does not tell it what to do — a full report in the reply spends context that has to
-last the whole milestone. See `.claude/shared/subagent-contract.md`.
+Never paste findings, the diff or check output into the reply. The parent opens the
+file only when it needs to (see `.claude/shared/subagent-contract.md`).
 
-### 9) Summary
-
-`interactive` mode only:
-
-> "Verify complete for #{issue_number}. {n} blocker(s), {n} warning(s),
-> {n} question(s), {n} suggestion(s)."
-
-`subagent` mode — the verdict block is the summary. Add nothing.
-
-## Guardrails
-
-- **Read-only against the repository and GitHub.** Never modify source files,
-  issues, PRs, labels, or any other state. The single exception is the report in
-  `journal_dir`, which is outside the repository.
-- **Do not push, commit, or check out branches.** Only use `git diff`,
-  `git fetch`, and `git rev-parse`.
-- **Never fix what you find.** A verifier that repairs a blocker produces an
-  unreviewed change and destroys the record of what was wrong — the finding and
-  the implementer's disposition of it are the artefact.
-- **Every finding must cite a source** — issue section + requirement text,
-  or doc + section, or file:line. If you cannot point to a specific source, it
-  goes in Questions or Suggestions.
-- **"I'm not sure" goes in Questions.** Do not guess.
-- **Out-of-scope work goes in Suggestions**, never in Blockers or Warnings.
-- **Never re-raise a settled item.** Anything marked `RESOLVED_BY: developer`
-  is closed permanently.
-- **If a standards doc does not exist** for the relevant scope, note it and
-  skip.
-- **Keep communication concise and direct.** No emojis except severity
-  indicators.
+Keep communication concise. Use no emojis except the severity indicators.

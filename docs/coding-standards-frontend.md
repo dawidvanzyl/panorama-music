@@ -2,60 +2,33 @@
 
 TypeScript, Web Components, Vite, and architectural conventions for the Panorama Music frontend.
 
-> For workflow, branching, commit, and pull request rules see `coding-standards.md`.
->
-> For backend conventions see `coding-standards-backend.md`.
->
-> Code style and formatting are governed by `.editorconfig` and `Prettier`, and must not be duplicated here.
->
-> Architectural rules and structural enforcement are implemented and enforced via `eslint.config.js` and the `pm-architecture` ESLint plugin (CI-gated).
+> Workflow, branching, commit and PR rules: `coding-standards.md`. Backend conventions:
+> `coding-standards-backend.md`. Code style and formatting are governed by `.editorconfig` and
+> Prettier; architectural/structural rules are enforced via `eslint.config.js` and the
+> `pm-architecture` ESLint plugin (CI-gated). None of these are duplicated here.
 
 ---
 
 # 1. Architectural Principles
 
-## DDD-Aware Frontend
+The frontend follows a pragmatic Domain-Driven Design: features are self-contained and independently
+evolvable, business logic does not leak into UI components, data fetching and caching are centralised
+and consistent, and the folder structure reflects domain features rather than technical layers. It is
+organised around **bounded contexts (features)**, not generic technical folders.
 
-The frontend is structured using a pragmatic Domain-Driven Design approach.
+**Feature ownership.** Each feature owns its UI components, services (API interaction + caching),
+models (feature-specific types), state (session/UI where applicable), and pages (route-level
+components). A feature is self-contained and must not depend on the internal structure of another
+feature.
 
-The goal is to ensure:
-
-* Features are self-contained and independently evolvable
-* Business logic does not leak into UI components
-* Data fetching and caching are centralised and consistent
-* UI structure reflects domain features rather than technical layers
-
-The frontend is organised around **bounded contexts (features)** rather than generic technical folders.
-
----
-
-## Feature Ownership
-
-Each feature owns:
-
-* UI components
-* services (API interaction + caching)
-* models (feature-specific types)
-* state (session or UI state where applicable)
-* pages (route-level components)
-
-Features must be self-contained and must not depend on internal structure of other features.
-
----
-
-## Shared Layer
-
-A `shared/` layer exists for cross-feature concerns.
-
-It is strictly limited to reusable infrastructure and UI primitives.
-
-`shared/` must NOT contain feature-specific or domain-specific logic.
+**Shared layer.** A `shared/` layer exists for cross-feature concerns, strictly limited to reusable
+infrastructure and UI primitives. It must not contain feature- or domain-specific logic.
 
 ---
 
 # 2. Project Structure
 
-The frontend is a vanilla TypeScript SPA built with Vite using Web Components.
+A vanilla TypeScript SPA built with Vite using Web Components.
 
 ```text
 src/
@@ -63,13 +36,11 @@ src/
         authentication/
         songs/
         playlists/
-
     shared/
         components/
         services/
         state/
         utils/
-
     styles/
     main.ts
     index.html
@@ -79,7 +50,7 @@ src/
 
 # 3. Feature Structure
 
-Each feature follows a consistent internal structure:
+Each feature follows a consistent internal structure; include only the folders it needs:
 
 ```text
 features/<feature-name>/
@@ -90,319 +61,109 @@ features/<feature-name>/
     state/
 ```
 
-Not every folder is required for every feature.
+If a feature grows beyond this, add folders by responsibility, following the same principles as the
+shared layer — no catch-all folders, no ambiguous names.
 
-Only include folders that are needed.
-
-If a feature grows beyond this structure, introduce additional folders by responsibility. Follow the same principles as the shared layer — no catch-all folders, no ambiguous names.
-
----
-
-## Feature Isolation Rules
-
-Features must:
-
-* avoid importing internal modules from other features
-* communicate via shared services or APIs only
-* not directly access another feature’s state or models
+**Isolation.** Features must not import internal modules from other features or access another
+feature's state or models directly; they communicate via shared services or APIs only.
 
 ---
 
 # 4. Web Component Architecture
 
-## Naming Conventions
+**Naming.** Custom elements use a `pm-` prefix and kebab-case (`pm-song-card`, `pm-login-form`);
+class names use PascalCase (`PmSongCard`, `PmLoginForm`); one component per file (`pm-song-card.ts`).
 
-* Custom elements use `pm-` prefix and kebab-case:
+**Responsibilities.** Components render UI, handle user interactions, and emit events. They are not
+responsible for API calls, caching, business logic, state persistence, or authentication logic.
 
-  * `pm-song-card`
-  * `pm-login-form`
-
-* Class names use PascalCase:
-
-  * `PmSongCard`
-  * `PmLoginForm`
-
-* One component per file:
-
-  * `pm-song-card.ts`
-
----
-
-## Component Responsibilities
-
-Components are responsible for:
-
-* rendering UI
-* handling user interactions
-* emitting events
-
-Components are NOT responsible for:
-
-* API calls
-* caching
-* business logic
-* state persistence
-* authentication logic
-
----
-
-## Component Boundaries
-
-Components must be:
-
-* small and composable
-* stateless where possible
-* driven by inputs and events
-
-Large “god components” are prohibited.
+**Boundaries.** Components stay small and composable, stateless where possible, and driven by inputs
+and events. Large "god components" are prohibited.
 
 ---
 
 # 5. Services and Data Access
 
-## Service Responsibilities
+Services are the **only layer allowed to interact with APIs**. They handle API communication, request
+caching, request deduplication, and transformation of responses into feature models. They must not
+manipulate the DOM, contain UI or presentation logic, or render components.
 
-Services are the **only layer allowed to interact with APIs**.
+**Fetch policy.** Direct `fetch` inside components is prohibited — all API calls go through a feature
+or shared service.
 
-Services are responsible for:
-
-* API communication
-* request caching
-* request deduplication
-* data transformation into feature models
-
-Services must NOT:
-
-* manipulate DOM
-* contain UI logic
-* directly render components
-* contain presentation concerns
-
----
-
-## Fetch Policy
-
-Direct use of `fetch` inside components is prohibited.
-
-All API calls must go through feature or shared services.
-
----
-
-## Caching Rules
-
-Services must implement caching for stable or reusable data where appropriate.
-
-Examples:
-
-* song lists
-* reference data
-* user profile data
-
-Caching must be:
-
-* consistent within a feature
-* transparent to components
-* Cache invalidation is the responsibility of the service that owns the data. Invalidation must occur in response to mutations, not be left to callers.
+**Caching.** Services cache stable or reusable data where appropriate (song lists, reference data,
+user profile data). Caching is consistent within a feature and transparent to components. Cache
+invalidation is the responsibility of the service that owns the data and must occur in response to
+mutations, not be left to callers.
 
 ---
 
 # 6. State Management
 
-## State Ownership
+State is explicitly owned by either a feature (feature state) or shared infrastructure
+(global/session state). It must not be stored inside UI components, duplicated across features, or
+managed through ad-hoc variables or globals.
 
-State must be explicitly owned by either:
-
-* a feature (feature state)
-* shared infrastructure (global/session state)
-
----
-
-## Authentication State
-
-Authentication and session state must be centralised.
-
-It must not be duplicated across features.
-
-Authentication state includes:
-
-* current user
-* session tokens
-* login status
-
----
-
-## State Rules
-
-State must NOT be:
-
-* stored inside UI components
-* duplicated across features
-* managed through ad-hoc variables or globals
+**Authentication state** — current user, session tokens, login status — is centralised in shared
+infrastructure and never duplicated across features.
 
 ---
 
 # 7. Shared Layer Rules
 
-## Allowed in `shared/`
+**Allowed in `shared/`:** reusable UI components (design system), API base clients, HTTP utilities,
+authentication primitives (non-feature workflows), generic utilities (formatting, parsing, helpers),
+shared state primitives.
 
-* reusable UI components (design system)
-* API base clients
-* HTTP utilities
-* authentication primitives (non-feature workflows)
-* generic utilities (formatting, parsing, helpers)
-* shared state primitives
+**Prohibited in `shared/`:** feature-specific logic, domain workflows (songs, playlists, etc.),
+business rules, feature-owned services, UI tied to a specific bounded context.
 
----
-
-## Prohibited in `shared/`
-
-* feature-specific logic
-* domain workflows (songs, playlists, etc.)
-* business rules
-* feature-owned services
-* UI tied to a specific bounded context
-
----
-
-## Shared Layer Principle
-
-If code contains domain meaning, it does not belong in `shared/`.
-
-`shared/` is infrastructure, not an application layer.
+If code carries domain meaning it does not belong in `shared/` — `shared/` is infrastructure, not an
+application layer.
 
 ---
 
 # 8. TypeScript Rules
 
-## Language Strictness
-
-* `strict: true` must be enabled
-* `any` is prohibited
-* use `unknown` with explicit narrowing
-
----
-
-## Modelling Rules
-
-* Prefer interfaces for object shapes
-* Models must be feature-owned unless truly shared
-* Frontend models are always distinct from backend contracts. Mapping is mandatory; duplication of backend shapes into feature models is expected and correct.
-
----
-
-## API Contracts
-
-* API responses must be mapped into feature models
-* Components must never depend directly on raw API responses
+- **Strictness:** `strict: true` is enabled, `any` is prohibited, use `unknown` with explicit
+  narrowing.
+- **Modelling:** prefer interfaces for object shapes; models are feature-owned unless truly shared.
+  Frontend models are always distinct from backend contracts — mapping is mandatory, and duplicating
+  backend shapes into feature models is expected and correct.
+- **API contracts:** map API responses into feature models; components never depend directly on raw
+  API responses.
 
 ---
 
 # 9. CSS Conventions
 
-* Component-scoped styles must use Shadow DOM where applicable
-* Global styles are restricted to:
-
-  * resets
-  * design tokens
-  * typography rules
-  * app-shell layout regions (e.g. `.pm-app-shell`, `.pm-shell`, `.pm-shell main`) — the fixed-chrome layout (nav bar, sidebar, footer, and the content region between them) is a single, global structural concern with no per-component owner, so its sizing/spacing rules are scoped here rather than duplicated per page component
-
----
-
-## Naming
-
-* Use BEM-style naming inside components when Shadow DOM is not used:
-
-  * `song-card__title`
-  * `song-card--active`
+- Component-scoped styles use Shadow DOM where applicable.
+- Global styles are restricted to resets, design tokens, typography rules, and app-shell layout
+  regions (e.g. `.pm-app-shell`, `.pm-shell`, `.pm-shell main`) — the fixed-chrome layout (nav bar,
+  sidebar, footer, and the content region between them) is a single global structural concern with no
+  per-component owner, so its sizing/spacing rules are scoped here rather than duplicated per page
+  component.
+- When Shadow DOM is not used, name with BEM style inside components (`song-card__title`,
+  `song-card--active`).
+- Avoid global style leakage, cross-component styling dependencies, and styling based on an unrelated
+  feature's structure.
 
 ---
 
-## Styling Rules
+# 10. Testing
 
-* Avoid global style leakage
-* Avoid cross-component styling dependencies
-* Do not style based on unrelated feature structure
+Three layers: **unit** and **component** tests with Vitest, **integration**/E2E tests with Playwright.
 
----
-
-# 10. Testing Principles
-
-## Test Strategy Overview
-
-Frontend testing is divided into three layers:
-
-* Unit Tests
-* Component Tests
-* Integration Tests
-
-The following tools are used:
-
-* Vitest for unit and component tests
-* Playwright for integration and end-to-end tests
-
----
-
-## Unit Tests
-
-Unit tests cover:
-
-* services
-* state logic
-* utilities
-* pure functions
-
-Unit tests must be fast and isolated.
-
----
-
-## Component Tests
-
-Component tests cover:
-
-* rendering behaviour
-* user interaction
-* event emission
-
-Components must be tested without real API calls.
-
----
-
-## Integration Tests
-
-Integration tests cover:
-
-* feature workflows
-* service + component interaction
-* authentication flows
-* routing behaviour
-
-Integration tests validate user journeys, not implementation details.
+- **Unit** — services, state logic, utilities, pure functions; fast and isolated.
+- **Component** — rendering behaviour, user interaction, event emission; tested without real API
+  calls.
+- **Integration** — feature workflows, service + component interaction, authentication flows, routing;
+  validate user journeys, not implementation details.
 
 ---
 
 # 11. Architectural Constraints
 
-The following are prohibited unless explicitly justified:
-
-* API calls inside components
-* business logic inside components
-* large monolithic components
-* unmanaged global state
-* duplication of state across features
-* direct cross-feature internal imports
-* use of `any` in TypeScript
-
----
-
-# 12. Design Philosophy
-
-The frontend is designed to:
-
-* separate UI from business logic
-* centralise data access and caching
-* enforce feature ownership
-* minimise coupling between features
-* remain predictable as the codebase grows
-
-The system prioritises maintainability and clarity over flexibility.
+Prohibited unless explicitly justified: API calls inside components, business logic inside
+components, large monolithic components, unmanaged global state, duplication of state across features,
+direct cross-feature internal imports, and use of `any` in TypeScript.
