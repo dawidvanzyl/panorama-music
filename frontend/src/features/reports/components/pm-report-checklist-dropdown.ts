@@ -86,6 +86,13 @@ export class PmReportChecklistDropdown extends HTMLElement {
 
     this.toggle.addEventListener('click', this.handleToggleClick);
     document.addEventListener('click', this.handleOutsideClick);
+
+    // `options`/`values` are normally set before this element is appended
+    // (the caller builds it, assigns its properties, then appends it), so
+    // those setters' render() calls run while `this.panel`/`this.toggle`
+    // are still null and no-op. Render once more here, now that both are
+    // wired up, or the panel stays permanently empty (#324).
+    this.render();
   }
 
   disconnectedCallback(): void {

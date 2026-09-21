@@ -295,6 +295,7 @@ export default defineConfig({
       { name: '317UC5', description: 'Run report is unavailable until every filter is completed or removed' },
       { name: '317UC6', description: 'Clear returns the builder to no filters and Student only' },
       { name: '317UC7', description: 'The reports service maps a run response to ordered columns, sections with rows and the student count' },
+      { name: '317UC-bug1', description: 'An in-operator checklist dropdown renders its options whether set before or after the element connects (#324)' },
     ],
   },
 })
