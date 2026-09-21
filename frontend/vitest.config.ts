@@ -288,6 +288,13 @@ export default defineConfig({
       { name: '309UC8', description: 'The enrol modal offers only combinations the school runs an instrument course for' },
       { name: '309UC9', description: 'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control' },
       { name: '309UC12', description: "The enrol modal states that the entry's own combination is no longer offered, and suppresses that where nothing is offered under the occurrence type at all" },
+      { name: '317UC1', description: 'A new report builder holds only Student, locked, with the counter at 1 / 10' },
+      { name: '317UC2', description: 'At ten columns selected every unselected column is disabled, and deselecting one re-enables them' },
+      { name: '317UC3', description: 'Choosing a text, list or yes/no attribute resets the operator and value to that type default' },
+      { name: '317UC4', description: "Changing an 'in' filter's operator to 'equals' keeps only the first value" },
+      { name: '317UC5', description: 'Run report is unavailable until every filter is completed or removed' },
+      { name: '317UC6', description: 'Clear returns the builder to no filters and Student only' },
+      { name: '317UC7', description: 'The reports service maps a run response to ordered columns, sections with rows and the student count' },
     ],
   },
 })
