@@ -296,6 +296,8 @@ export default defineConfig({
       { name: '317UC6', description: 'Clear returns the builder to no filters and Student only' },
       { name: '317UC7', description: 'The reports service maps a run response to ordered columns, sections with rows and the student count' },
       { name: '317UC-bug1', description: 'An in-operator checklist dropdown renders its options whether set before or after the element connects (#324)' },
+      { name: '317UC-bug2', description: 'Switching a filter operator to in starts its values empty rather than carrying over the prior value (#325)' },
+      { name: '317UC-bug3', description: 'An in-checklist dropdown stays open across a tick and only closes on the trigger or an outside click (R3)' },
     ],
   },
 })

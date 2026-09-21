@@ -55,12 +55,18 @@ export function replaceFilter(
 
 /**
  * Only `in` ever holds more than one value (317UC4) — switching away from it
- * keeps just the first value, and switching a text/list filter's operator
- * within its own allowed set otherwise leaves the values untouched.
+ * keeps just the first value. Switching *to* `in` from anything else starts
+ * empty (317UC-bug2 / #325): a List filter defaults to `equals` and the
+ * registry's first option (`chooseAttribute`), and that value was never
+ * something the Teacher ticked under "is any of" — carrying it over would
+ * pre-select an option they never chose.
  */
 export function changeOperator(filter: ReportFilterModel, operator: ReportFilterModel['operator']): ReportFilterModel {
   if (filter.operator === 'in' && operator !== 'in') {
     return { ...filter, operator, values: filter.values.length > 0 ? [filter.values[0]] : [] };
+  }
+  if (operator === 'in' && filter.operator !== 'in') {
+    return { ...filter, operator, values: [] };
   }
   return { ...filter, operator };
 }

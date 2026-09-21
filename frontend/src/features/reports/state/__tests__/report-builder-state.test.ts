@@ -147,6 +147,26 @@ describe('changeOperator', { tags: ['317UC4'] }, () => {
   });
 });
 
+describe('changeOperator — switching to in starts empty', { tags: ['317UC-bug2'] }, () => {
+  it('clears the carried-over equals value when switching to in (#325)', () => {
+    // The exact shape chooseAttribute() produces for a freshly-chosen List
+    // attribute: equals + the registry's first option.
+    const filter: ReportFilterModel = { field: 'student.grade', operator: 'equals', values: ['Grade1'] };
+
+    const after = changeOperator(filter, 'in');
+
+    expect(after.values).toEqual([]);
+  });
+
+  it('clears values switching from contains to in too', () => {
+    const filter: ReportFilterModel = { field: 'student.name', operator: 'contains', values: ['zyl'] };
+
+    const after = changeOperator(filter, 'in');
+
+    expect(after.values).toEqual([]);
+  });
+});
+
 describe('canRun', { tags: ['317UC5'] }, () => {
   it('is false with an empty text value', () => {
     const definition = {
