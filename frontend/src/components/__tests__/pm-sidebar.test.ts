@@ -33,6 +33,7 @@ const ALL_LINK_IDS = [
   'courseManagementLink',
   'extraCurricularsLink',
   'guardianRelationshipsLink',
+  'reportsLink',
 ];
 
 /**
@@ -71,7 +72,7 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
     },
     {
       roles: ['Teacher'],
-      expected: ['studentManagementLink', 'waitingListLink', 'courseManagementLink', 'extraCurricularsLink'],
+      expected: ['studentManagementLink', 'waitingListLink', 'courseManagementLink', 'extraCurricularsLink', 'reportsLink'],
     },
     {
       roles: ['Coordinator'],
@@ -93,6 +94,7 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
         'courseManagementLink',
         'extraCurricularsLink',
         'guardianRelationshipsLink',
+        'reportsLink',
       ],
     },
   ])('offers exactly the entries $roles permits', ({ roles, expected }) => {

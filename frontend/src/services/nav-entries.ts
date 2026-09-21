@@ -105,6 +105,14 @@ export const NAV_ENTRIES: NavEntry[] = [
     // Guardian Relationships are Coordinator-owned; Admin owns nothing in it.
     roles: ['Coordinator'],
   },
+  {
+    id: 'reportsLink',
+    path: '/reports',
+    icon: 'summarize',
+    label: 'Reports',
+    roles: ['Teacher'],
+    matchesNested: true,
+  },
 ];
 
 export function isNavEntryPermitted(entry: NavEntry): boolean {
