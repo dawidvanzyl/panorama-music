@@ -87,17 +87,7 @@ export class ReportBuilderPage extends BasePage {
     return this.filterRow(index).locator('pm-report-checklist-dropdown #toggle');
   }
 
-  /**
-   * Opens the `in` checklist, unless it is already open — the toggle button
-   * itself only ever toggles, and the row re-renders (a fresh, closed
-   * dropdown) after every value change, so callers cannot assume its
-   * starting state.
-   */
   async openChecklist(index: number): Promise<void> {
-    const openPanel = this.filterRow(index).locator(
-      'pm-report-checklist-dropdown .checklist__panel--open'
-    );
-    if ((await openPanel.count()) > 0) return;
     await this.checklistToggle(index).click();
   }
 
@@ -107,17 +97,10 @@ export class ReportBuilderPage extends BasePage {
       .filter({ hasText: optionLabel });
   }
 
-  /**
-   * Ticks each named option in the `in` checklist. Ticking one option changes
-   * the filter's own values, which re-renders the whole filter row (a fresh
-   * `pm-report-checklist-dropdown`, closed) — so the checklist is reopened
-   * before every tick, the way a user would have to click the toggle again
-   * to see the panel re-appear. Leaves it closed after the last tick, for
-   * the same reason.
-   */
+  /** Opens the `in` checklist and ticks each named option, leaving it open. */
   async tickChecklistOptions(index: number, optionLabels: string[]): Promise<void> {
+    await this.openChecklist(index);
     for (const label of optionLabels) {
-      await this.openChecklist(index);
       await this.checklistOption(index, label).locator('input[type="checkbox"]').click();
     }
   }
