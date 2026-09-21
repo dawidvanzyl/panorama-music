@@ -8,7 +8,7 @@ model: opus
 effort: high
 permissionMode: auto
 background: true
-maxTurns: 30
+maxTurns: 60
 color: yellow
 disallowedTools: Bash, PowerShell, Edit
 hooks:
