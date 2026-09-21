@@ -178,8 +178,41 @@ export class PmReportFilterRow extends HTMLElement {
     if (!this.valueSlot || !this._filter) return;
 
     const field = this.currentField();
+    if (!field) {
+      this.valueSlot.textContent = '';
+      return;
+    }
+
+    // R3: a tick inside the `in` checklist re-renders this row like any
+    // other state change. Reusing the existing dropdown element — rather
+    // than tearing it down and appending a fresh, closed one — is what lets
+    // its open/closed state survive that re-render. The value-control type
+    // only ever changes via chooseAttribute() (attribute or operator
+    // switch), which always rebuilds the row from a fresh state, so an
+    // already-mounted checklist dropdown here can only belong to this same
+    // field and operator.
+    if (field.dataType === 'List' && this._filter.operator === 'in') {
+      const existing = this.valueSlot.firstElementChild;
+      if (this.valueSlot.children.length === 1 && existing?.tagName === 'PM-REPORT-CHECKLIST-DROPDOWN') {
+        const dropdown = existing as PmReportChecklistDropdown;
+        dropdown.options = field.options;
+        dropdown.values = this._filter.values;
+        return;
+      }
+
+      this.valueSlot.textContent = '';
+      const dropdown = document.createElement('pm-report-checklist-dropdown') as PmReportChecklistDropdown;
+      dropdown.className = 'filter-row__value';
+      dropdown.options = field.options;
+      dropdown.values = this._filter.values;
+      dropdown.addEventListener('checklist-changed', (event) => {
+        this.emitValues((event as CustomEvent<{ values: string[] }>).detail.values);
+      });
+      this.valueSlot.appendChild(dropdown);
+      return;
+    }
+
     this.valueSlot.textContent = '';
-    if (!field) return;
 
     if (field.dataType === 'Boolean') {
       const toggle = document.createElement('div');
@@ -208,19 +241,7 @@ export class PmReportFilterRow extends HTMLElement {
       return;
     }
 
-    // List: `equals` is a single select; `in` is the checklist dropdown.
-    if (this._filter.operator === 'in') {
-      const dropdown = document.createElement('pm-report-checklist-dropdown') as PmReportChecklistDropdown;
-      dropdown.className = 'filter-row__value';
-      dropdown.options = field.options;
-      dropdown.values = this._filter.values;
-      dropdown.addEventListener('checklist-changed', (event) => {
-        this.emitValues((event as CustomEvent<{ values: string[] }>).detail.values);
-      });
-      this.valueSlot.appendChild(dropdown);
-      return;
-    }
-
+    // List `equals` is the only case left here — `in` is handled above.
     const select = document.createElement('select');
     select.className = 'filter-row__select filter-row__value';
     for (const option of field.options) {

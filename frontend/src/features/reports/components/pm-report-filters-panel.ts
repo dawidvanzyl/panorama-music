@@ -114,14 +114,24 @@ export class PmReportFiltersPanel extends HTMLElement {
     this.countBadge.textContent = String(this._filters.length);
     this.emptyMessage.hidden = this._filters.length > 0;
 
-    this.rowsContainer.textContent = '';
+    // Rows are reused by index rather than torn down and rebuilt on every
+    // render (R3): a row's own value control — the in-operator checklist in
+    // particular — carries open/closed DOM state that a fresh element would
+    // lose, and a tick re-renders this panel like any other state change.
     this._filters.forEach((filter, index) => {
-      const row = document.createElement('pm-report-filter-row') as PmReportFilterRow;
+      let row = this.rowsContainer!.children[index] as PmReportFilterRow | undefined;
+      if (!row) {
+        row = document.createElement('pm-report-filter-row') as PmReportFilterRow;
+        this.rowsContainer!.appendChild(row);
+      }
       row.fields = this._fields!;
       row.filter = filter;
       row.dataset.index = String(index);
-      this.rowsContainer!.appendChild(row);
     });
+
+    while (this.rowsContainer.children.length > this._filters.length) {
+      this.rowsContainer.lastElementChild?.remove();
+    }
   }
 }
 
