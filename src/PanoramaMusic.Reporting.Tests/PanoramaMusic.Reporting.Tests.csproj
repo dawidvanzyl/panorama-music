@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Testcontainers.PostgreSql" Version="4.14.0" />
+		<PackageReference Include="Shouldly" Version="4.3.0" />
+		<PackageReference Include="Moq" Version="4.20.72" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="xunit.v3" Version="3.2.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\PanoramaMusic.Reporting.Domain\PanoramaMusic.Reporting.Domain.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Reporting.Application\PanoramaMusic.Reporting.Application.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Reporting.Infrastructure\PanoramaMusic.Reporting.Infrastructure.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Persistence\PanoramaMusic.Persistence.csproj" />
+		<!-- Test-only: seeds the Students schema this context reads, via the real
+		     StudentMigrator, so PopulationReader integration tests run against the
+		     actual table shapes rather than a hand-copied approximation. -->
+		<ProjectReference Include="..\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj" />
+	</ItemGroup>
+</Project>
