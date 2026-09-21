@@ -72,7 +72,13 @@ describe('pm-sidebar — entries gated by role alone', { tags: ['239UC1'] }, () 
     },
     {
       roles: ['Teacher'],
-      expected: ['studentManagementLink', 'waitingListLink', 'courseManagementLink', 'extraCurricularsLink', 'reportsLink'],
+      expected: [
+        'studentManagementLink',
+        'waitingListLink',
+        'courseManagementLink',
+        'extraCurricularsLink',
+        'reportsLink',
+      ],
     },
     {
       roles: ['Coordinator'],

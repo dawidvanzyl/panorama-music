@@ -127,7 +127,9 @@ export class PmReportChecklistDropdown extends HTMLElement {
       this.panel.appendChild(row);
     }
 
-    const chosenLabels = this._options.filter((option) => this._values.includes(option.value)).map((option) => option.label);
+    const chosenLabels = this._options
+      .filter((option) => this._values.includes(option.value))
+      .map((option) => option.label);
     this.toggle.textContent = chosenLabels.length > 0 ? chosenLabels.join(' · ') : 'Select…';
   }
 
@@ -135,7 +137,9 @@ export class PmReportChecklistDropdown extends HTMLElement {
     const next = checked ? [...this._values, value] : this._values.filter((v) => v !== value);
     this._values = next;
     this.render();
-    this.dispatchEvent(new CustomEvent('checklist-changed', { bubbles: true, composed: true, detail: { values: next } }));
+    this.dispatchEvent(
+      new CustomEvent('checklist-changed', { bubbles: true, composed: true, detail: { values: next } }),
+    );
   }
 
   private handleToggleClick = (event: MouseEvent): void => {

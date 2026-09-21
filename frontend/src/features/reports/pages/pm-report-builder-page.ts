@@ -234,7 +234,10 @@ export class PmReportBuilderPage extends HTMLElement {
 
   private handleColumnToggle = (event: CustomEvent<{ key: string }>): void => {
     if (!this._fields) return;
-    this._definition = { ...this._definition, columns: toggleColumn(this._fields, this._definition.columns, event.detail.key) };
+    this._definition = {
+      ...this._definition,
+      columns: toggleColumn(this._fields, this._definition.columns, event.detail.key),
+    };
     this.render();
   };
 
@@ -257,9 +260,10 @@ export class PmReportBuilderPage extends HTMLElement {
       })
       .catch((error: unknown) => {
         this._running = false;
-        const message = error instanceof ReportsError && error.status >= 400 && error.status < 500
-          ? error.message
-          : 'Could not run the report. Try again.';
+        const message =
+          error instanceof ReportsError && error.status >= 400 && error.status < 500
+            ? error.message
+            : 'Could not run the report. Try again.';
         this.showError(message, false);
         this.render();
       });

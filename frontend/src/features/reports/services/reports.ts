@@ -1,11 +1,7 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
 import { registerSessionCache } from '../../../services/session-cache';
-import type {
-  ReportDefinitionModel,
-  ReportFieldsModel,
-  ReportResultModel,
-} from '../models/report';
+import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel } from '../models/report';
 
 const API_BASE = '/api/reports';
 

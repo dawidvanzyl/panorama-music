@@ -47,8 +47,22 @@ const fields: ReportFieldsModel = {
   filters: [textField, listField, boolField],
   columns: [
     { key: 'student.name', collection: 'Student', header: 'Student', displayOrder: 1, dependsOn: null, locked: true },
-    { key: 'student.class', collection: 'Student', header: 'Class', displayOrder: 2, dependsOn: 'student.name', locked: false },
-    { key: 'student.phase', collection: 'Student', header: 'Phase', displayOrder: 3, dependsOn: 'student.name', locked: false },
+    {
+      key: 'student.class',
+      collection: 'Student',
+      header: 'Class',
+      displayOrder: 2,
+      dependsOn: 'student.name',
+      locked: false,
+    },
+    {
+      key: 'student.phase',
+      collection: 'Student',
+      header: 'Phase',
+      displayOrder: 3,
+      dependsOn: 'student.name',
+      locked: false,
+    },
   ],
 };
 
@@ -69,22 +83,18 @@ describe('createDefinition', { tags: ['317UC1'] }, () => {
 
 describe('toggleColumn — ten-column cap', { tags: ['317UC2'] }, () => {
   it('refuses a tick that would exceed 10, and re-enables once one is deselected', () => {
-    const tenSelected = [
-      'student.name',
-      'c1',
-      'c2',
-      'c3',
-      'c4',
-      'c5',
-      'c6',
-      'c7',
-      'c8',
-      'c9',
-    ];
+    const tenSelected = ['student.name', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
     const twelveColumnFields: ReportFieldsModel = {
       filters: [],
       columns: [
-        { key: 'student.name', collection: 'Student', header: 'Student', displayOrder: 1, dependsOn: null, locked: true },
+        {
+          key: 'student.name',
+          collection: 'Student',
+          header: 'Student',
+          displayOrder: 1,
+          dependsOn: null,
+          locked: true,
+        },
         ...Array.from({ length: 11 }, (_, i) => ({
           key: `c${i + 1}`,
           collection: 'Student',
@@ -125,7 +135,11 @@ describe('chooseAttribute', { tags: ['317UC3'] }, () => {
 
 describe('changeOperator', { tags: ['317UC4'] }, () => {
   it('keeps only the first value when in switches to equals', () => {
-    const filter: ReportFilterModel = { field: 'student.grade', operator: 'in', values: ['Grade4', 'Grade5', 'Grade6'] };
+    const filter: ReportFilterModel = {
+      field: 'student.grade',
+      operator: 'in',
+      values: ['Grade4', 'Grade5', 'Grade6'],
+    };
 
     const after = changeOperator(filter, 'equals');
 
@@ -135,22 +149,34 @@ describe('changeOperator', { tags: ['317UC4'] }, () => {
 
 describe('canRun', { tags: ['317UC5'] }, () => {
   it('is false with an empty text value', () => {
-    const definition = { filters: [{ field: 'student.name', operator: 'contains', values: [''] } as ReportFilterModel], columns: ['student.name'] };
+    const definition = {
+      filters: [{ field: 'student.name', operator: 'contains', values: [''] } as ReportFilterModel],
+      columns: ['student.name'],
+    };
     expect(canRun(definition)).toBe(false);
   });
 
   it('is false with a whitespace-only value', () => {
-    const definition = { filters: [{ field: 'student.name', operator: 'contains', values: ['   '] } as ReportFilterModel], columns: ['student.name'] };
+    const definition = {
+      filters: [{ field: 'student.name', operator: 'contains', values: ['   '] } as ReportFilterModel],
+      columns: ['student.name'],
+    };
     expect(canRun(definition)).toBe(false);
   });
 
   it('is false with an in filter with nothing checked', () => {
-    const definition = { filters: [{ field: 'student.grade', operator: 'in', values: [] } as ReportFilterModel], columns: ['student.name'] };
+    const definition = {
+      filters: [{ field: 'student.grade', operator: 'in', values: [] } as ReportFilterModel],
+      columns: ['student.name'],
+    };
     expect(canRun(definition)).toBe(false);
   });
 
   it('is true once the value is completed', () => {
-    const definition = { filters: [{ field: 'student.name', operator: 'contains', values: ['zyl'] } as ReportFilterModel], columns: ['student.name'] };
+    const definition = {
+      filters: [{ field: 'student.name', operator: 'contains', values: ['zyl'] } as ReportFilterModel],
+      columns: ['student.name'],
+    };
     expect(canRun(definition)).toBe(true);
   });
 
@@ -181,9 +207,30 @@ describe('toggleColumn — P4 cascade', () => {
     const chainFields: ReportFieldsModel = {
       filters: [],
       columns: [
-        { key: 'student.name', collection: 'Student', header: 'Student', displayOrder: 1, dependsOn: null, locked: true },
-        { key: 'anchor', collection: 'Student', header: 'Anchor', displayOrder: 2, dependsOn: 'student.name', locked: false },
-        { key: 'dependant', collection: 'Student', header: 'Dependant', displayOrder: 3, dependsOn: 'anchor', locked: false },
+        {
+          key: 'student.name',
+          collection: 'Student',
+          header: 'Student',
+          displayOrder: 1,
+          dependsOn: null,
+          locked: true,
+        },
+        {
+          key: 'anchor',
+          collection: 'Student',
+          header: 'Anchor',
+          displayOrder: 2,
+          dependsOn: 'student.name',
+          locked: false,
+        },
+        {
+          key: 'dependant',
+          collection: 'Student',
+          header: 'Dependant',
+          displayOrder: 3,
+          dependsOn: 'anchor',
+          locked: false,
+        },
       ],
     };
 

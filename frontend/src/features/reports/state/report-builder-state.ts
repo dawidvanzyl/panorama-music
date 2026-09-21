@@ -1,12 +1,22 @@
 import { registerSessionCache } from '../../../services/session-cache';
-import type { ReportDefinitionModel, ReportField, ReportFieldsModel, ReportFilterModel, ReportResultModel } from '../models/report';
+import type {
+  ReportDefinitionModel,
+  ReportField,
+  ReportFieldsModel,
+  ReportFilterModel,
+  ReportResultModel,
+} from '../models/report';
 
-const _studentColumnKey = 'student.name';
 const _maxColumns = 10;
 
-/** No filters, columns holding only the locked Student column (317UC1). */
-export function createDefinition(_fields: ReportFieldsModel): ReportDefinitionModel {
-  return { filters: [], columns: [_studentColumnKey] };
+/**
+ * No filters, columns holding only the locked column(s) the registry
+ * declares (317UC1) — Student in #317. Reads the lock from `fields` rather
+ * than hardcoding a key, so a future registry change is a data change here
+ * too, not a code change.
+ */
+export function createDefinition(fields: ReportFieldsModel): ReportDefinitionModel {
+  return { filters: [], columns: fields.columns.filter((column) => column.locked).map((column) => column.key) };
 }
 
 export function addFilter(definition: ReportDefinitionModel, filter: ReportFilterModel): ReportDefinitionModel {
@@ -35,7 +45,11 @@ export function chooseAttribute(field: ReportField): ReportFilterModel {
   }
 }
 
-export function replaceFilter(definition: ReportDefinitionModel, index: number, filter: ReportFilterModel): ReportDefinitionModel {
+export function replaceFilter(
+  definition: ReportDefinitionModel,
+  index: number,
+  filter: ReportFilterModel,
+): ReportDefinitionModel {
   return { ...definition, filters: definition.filters.map((existing, i) => (i === index ? filter : existing)) };
 }
 

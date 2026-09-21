@@ -162,9 +162,10 @@ export class PmReportResultsPage extends HTMLElement {
       })
       .catch((error: unknown) => {
         this._running = false;
-        const message = error instanceof ReportsError && error.status >= 400 && error.status < 500
-          ? error.message
-          : 'Could not run the report. Try again.';
+        const message =
+          error instanceof ReportsError && error.status >= 400 && error.status < 500
+            ? error.message
+            : 'Could not run the report. Try again.';
         this.errorBanner!.textContent = message;
         this.errorBanner!.hidden = false;
         this.render();

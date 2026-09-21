@@ -241,14 +241,22 @@ export class PmReportFilterRow extends HTMLElement {
   private handleAttributeChange = (): void => {
     if (!this.attributeSelect) return;
     this.dispatchEvent(
-      new CustomEvent('filter-attribute-changed', { bubbles: true, composed: true, detail: { field: this.attributeSelect.value } }),
+      new CustomEvent('filter-attribute-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { field: this.attributeSelect.value },
+      }),
     );
   };
 
   private handleOperatorChange = (): void => {
     if (!this.operatorSelect) return;
     this.dispatchEvent(
-      new CustomEvent('filter-operator-changed', { bubbles: true, composed: true, detail: { operator: this.operatorSelect.value } }),
+      new CustomEvent('filter-operator-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { operator: this.operatorSelect.value },
+      }),
     );
   };
 

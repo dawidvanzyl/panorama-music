@@ -149,7 +149,9 @@ export class PmReportColumnsPanel extends HTMLElement {
         row.appendChild(lock);
       } else if (!isDisabled) {
         row.addEventListener('click', () => {
-          this.dispatchEvent(new CustomEvent('column-toggle-requested', { bubbles: true, composed: true, detail: { key: column.key } }));
+          this.dispatchEvent(
+            new CustomEvent('column-toggle-requested', { bubbles: true, composed: true, detail: { key: column.key } }),
+          );
         });
       }
 
