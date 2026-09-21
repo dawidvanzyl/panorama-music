@@ -381,12 +381,18 @@ test.describe(
         .filterRow(0)
         .locator('pm-report-checklist-dropdown input[type="checkbox"]:checked');
       const checkedCount = await checkboxes.count();
+      // Each uncheck re-renders the row (a fresh, closed checklist), so the
+      // panel is reopened before every click rather than just once.
       for (let i = 0; i < checkedCount; i++) {
+        await builder.openChecklist(0);
         await checkboxes.first().click();
       }
 
       await expect(builder.runButton).toBeDisabled();
 
+      // Unticking closed the checklist (the row re-renders on every value
+      // change), so it has to be reopened before the next option is visible.
+      await builder.openChecklist(0);
       await builder
         .filterRow(0)
         .locator('pm-report-checklist-dropdown .checklist__option input')
