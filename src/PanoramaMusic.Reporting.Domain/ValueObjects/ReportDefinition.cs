@@ -59,6 +59,13 @@ public sealed class ReportDefinition
 			validatedFilters.Add(new ReportFilter(filter.Field, op.Value, filter.Values));
 		}
 
+		// Checked on the raw request before any key is resolved: a column list
+		// this long already violates "at most ten columns" regardless of
+		// whether every key turns out to be valid, so there is no reason to
+		// resolve any of them first.
+		if (columnKeys.Count > _maxColumns)
+			throw new InvalidReportDefinitionException(ReportDefinitionMessages.TooManyColumns);
+
 		var seenColumns = new HashSet<string>();
 		var validatedColumns = new List<ColumnAttribute>(columnKeys.Count);
 		foreach (var key in columnKeys)
@@ -74,9 +81,6 @@ public sealed class ReportDefinition
 
 		if (!seenColumns.Contains(_studentColumnKey))
 			throw new InvalidReportDefinitionException(ReportDefinitionMessages.StudentColumnRequired);
-
-		if (validatedColumns.Count > _maxColumns)
-			throw new InvalidReportDefinitionException(ReportDefinitionMessages.TooManyColumns);
 
 		var ordered = validatedColumns.OrderBy(column => column.DisplayOrder).ToList();
 
