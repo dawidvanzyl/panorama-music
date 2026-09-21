@@ -11,6 +11,12 @@ styles.replaceSync(`
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
     }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1;
+    }
     .results-page__breadcrumb {
       font-size: 12px;
       color: var(--pm-text-muted);
@@ -49,6 +55,9 @@ styles.replaceSync(`
       gap: 8px;
     }
     .results-page__action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       height: 34px;
       padding: 0 14px;
       background: transparent;
@@ -79,8 +88,14 @@ template.innerHTML = `
       <p class="results-page__subline" id="subline"></p>
     </div>
     <div class="results-page__actions">
-      <button type="button" class="results-page__action" id="edit">Edit report</button>
-      <button type="button" class="results-page__action" id="runAgain">Run again</button>
+      <button type="button" class="results-page__action" id="edit">
+        <span class="material-symbols-outlined">edit</span>
+        Edit report
+      </button>
+      <button type="button" class="results-page__action" id="runAgain">
+        <span class="material-symbols-outlined">refresh</span>
+        Run again
+      </button>
     </div>
   </div>
   <p class="results-page__caption">Filters choose which students appear; each collection lists all of a student's records.</p>

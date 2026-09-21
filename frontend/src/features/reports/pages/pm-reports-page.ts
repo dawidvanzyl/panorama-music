@@ -7,6 +7,12 @@ styles.replaceSync(`
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
     }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
+      font-size: 18px;
+      line-height: 1;
+    }
     .reports-page__header {
       display: flex;
       justify-content: space-between;
@@ -25,6 +31,9 @@ styles.replaceSync(`
       margin: 0 0 24px;
     }
     .reports-page__create {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       height: 38px;
       padding: 0 16px;
       background: var(--pm-accent);
@@ -57,7 +66,10 @@ template.innerHTML = `
       <div>
         <h1 class="reports-page__title">Reports</h1>
       </div>
-      <button type="button" class="reports-page__create" id="create">+ Create report</button>
+      <button type="button" class="reports-page__create" id="create">
+        <span class="material-symbols-outlined">add</span>
+        Create report
+      </button>
     </div>
     <p class="reports-page__subtitle">Saved student reports.</p>
     <div class="reports-page__empty" id="empty">No saved reports yet.</div>

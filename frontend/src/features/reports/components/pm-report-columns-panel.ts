@@ -7,6 +7,12 @@ styles.replaceSync(`
       display: block;
       flex: 0 0 300px;
     }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1;
+    }
     .columns-panel__card {
       background: var(--pm-surface);
       border: 1px solid var(--pm-border);
@@ -143,10 +149,16 @@ export class PmReportColumnsPanel extends HTMLElement {
       row.appendChild(label);
 
       if (column.locked) {
-        const lock = document.createElement('span');
-        lock.className = 'columns-panel__lock';
-        lock.textContent = 'required';
-        row.appendChild(lock);
+        const lockIcon = document.createElement('span');
+        lockIcon.className = 'material-symbols-outlined columns-panel__lock';
+        lockIcon.textContent = 'lock';
+
+        const lockLabel = document.createElement('span');
+        lockLabel.className = 'columns-panel__lock';
+        lockLabel.textContent = 'required';
+
+        row.appendChild(lockIcon);
+        row.appendChild(lockLabel);
       } else if (!isDisabled) {
         row.addEventListener('click', () => {
           this.dispatchEvent(

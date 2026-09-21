@@ -28,6 +28,12 @@ styles.replaceSync(`
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
     }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
+      font-size: 18px;
+      line-height: 1;
+    }
     .builder-page__breadcrumb {
       font-size: 12px;
       color: var(--pm-text-muted);
@@ -46,6 +52,9 @@ styles.replaceSync(`
     }
     .builder-page__clear,
     .builder-page__run {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       height: 38px;
       padding: 0 16px;
       border-radius: var(--pm-radius);
@@ -98,7 +107,10 @@ template.innerHTML = `
   <div class="builder-page__breadcrumb"><a id="backLink">Reports</a> &rsaquo; New report</div>
   <div class="builder-page__toolbar">
     <button type="button" class="builder-page__clear" id="clear">Clear</button>
-    <button type="button" class="builder-page__run" id="run">Run report</button>
+    <button type="button" class="builder-page__run" id="run">
+      <span class="material-symbols-outlined">play_arrow</span>
+      Run report
+    </button>
   </div>
   <div class="builder-page__error" id="error" hidden></div>
   <div class="builder-page__body" id="body" hidden>
@@ -157,7 +169,12 @@ export class PmReportBuilderPage extends HTMLElement {
       this.body!.hidden = false;
       this.render();
     } catch {
+      this._fields = null;
       this.body!.hidden = true;
+      // render() bails out while _fields is null, so Run report is disabled
+      // explicitly here — otherwise the button stays clickable and a Run
+      // against the still-default definition would slip through.
+      if (this.runButton) this.runButton.disabled = true;
       this.showError('Could not load report fields. Try again.', true);
     }
   }
