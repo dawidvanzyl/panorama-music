@@ -1,5 +1,6 @@
 using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace PanoramaMusic.Reporting.Domain.Services;
 
@@ -14,6 +15,10 @@ namespace PanoramaMusic.Reporting.Domain.Services;
 /// </summary>
 public sealed class ReportLayoutBuilder
 {
+	[SuppressMessage(
+		"Style",
+		"IDE0060:Remove unused parameter",
+		Justification = "Part of the shipped public contract #318 builds on (D9) — always empty until a collection reader is registered.")]
 	public ReportLayout Build(
 		ReportDefinition definition,
 		IReadOnlyList<PopulationMember> population,
