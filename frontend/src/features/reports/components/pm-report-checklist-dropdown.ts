@@ -155,7 +155,14 @@ export class PmReportChecklistDropdown extends HTMLElement {
   };
 
   private handleOutsideClick = (event: MouseEvent): void => {
-    if (!this.contains(event.target as Node)) {
+    // event.target is retargeted at each shadow boundary it crosses — a
+    // listener on document (outside every nested shadow root this component
+    // sits under) sees it collapsed all the way to the outermost shadow
+    // host, never to this element or any of its own descendants (#326).
+    // composedPath() is the actual, un-retargeted node sequence the event
+    // passed through, so it is what correctly answers "did this click
+    // originate inside this component".
+    if (!event.composedPath().includes(this)) {
       this.panel?.classList.remove('checklist__panel--open');
     }
   };

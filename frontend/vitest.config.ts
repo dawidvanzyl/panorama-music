@@ -298,6 +298,7 @@ export default defineConfig({
       { name: '317UC-bug1', description: 'An in-operator checklist dropdown renders its options whether set before or after the element connects (#324)' },
       { name: '317UC-bug2', description: 'Switching a filter operator to in starts its values empty rather than carrying over the prior value (#325)' },
       { name: '317UC-bug3', description: 'An in-checklist dropdown stays open across a tick and only closes on the trigger or an outside click (R3)' },
+      { name: '317UC-bug4', description: 'The outside-click check uses composedPath, so a tick on the checklist itself never misreads as outside under nested shadow DOM (#326)' },
     ],
   },
 })
