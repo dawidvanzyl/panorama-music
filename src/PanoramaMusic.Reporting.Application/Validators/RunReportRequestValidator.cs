@@ -21,36 +21,50 @@ public sealed class RunReportRequestValidator : AbstractValidator<RunReportReque
 	public RunReportRequestValidator()
 	{
 		RuleFor(x => x.Filters)
+			.Cascade(CascadeMode.Stop)
 			.NotNull()
 			.Must(filters => filters.Count <= _maxFilters)
 			.WithMessage($"At most {_maxFilters} filters may be supplied.");
 
 		RuleFor(x => x.Columns)
+			.Cascade(CascadeMode.Stop)
 			.NotNull()
 			.Must(columns => columns.Count <= _maxColumns)
 			.WithMessage($"At most {_maxColumns} columns may be supplied.");
 
 		RuleForEach(x => x.Columns)
+			.Cascade(CascadeMode.Stop)
 			.NotEmpty()
 			.MaximumLength(_maxKeyLength);
 
-		RuleForEach(x => x.Filters).ChildRules(filter =>
-		{
-			filter.RuleFor(f => f.Field)
-				.NotEmpty()
-				.MaximumLength(_maxKeyLength);
+		// A null element (a request body with a `null` entry in its `filters`
+		// array) must fail validation here rather than skip ChildRules and
+		// throw a NullReferenceException in ToFilterInputs.
+		RuleForEach(x => x.Filters)
+			.Cascade(CascadeMode.Stop)
+			.NotNull()
+			.ChildRules(filter =>
+			{
+				filter.RuleFor(f => f.Field)
+					.Cascade(CascadeMode.Stop)
+					.NotEmpty()
+					.MaximumLength(_maxKeyLength);
 
-			filter.RuleFor(f => f.Operator)
-				.NotEmpty()
-				.MaximumLength(_maxKeyLength);
+				filter.RuleFor(f => f.Operator)
+					.Cascade(CascadeMode.Stop)
+					.NotEmpty()
+					.MaximumLength(_maxKeyLength);
 
-			filter.RuleFor(f => f.Values)
-				.NotNull()
-				.Must(values => values.Count <= _maxValuesPerFilter)
-				.WithMessage($"At most {_maxValuesPerFilter} values may be supplied per filter.");
+				filter.RuleFor(f => f.Values)
+					.Cascade(CascadeMode.Stop)
+					.NotNull()
+					.Must(values => values.Count <= _maxValuesPerFilter)
+					.WithMessage($"At most {_maxValuesPerFilter} values may be supplied per filter.");
 
-			filter.RuleForEach(f => f.Values)
-				.MaximumLength(_maxValueLength);
-		});
+				filter.RuleForEach(f => f.Values)
+					.Cascade(CascadeMode.Stop)
+					.NotNull()
+					.MaximumLength(_maxValueLength);
+			});
 	}
 }
