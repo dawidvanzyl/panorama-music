@@ -54,9 +54,9 @@ public sealed class ReportDefinition
 					ReportDefinitionMessages.InvalidOperator(filter.Field, filter.Operator));
 			}
 
-			ValidateValues(attribute, op.Value, filter);
+			var validatedValues = ValidateValues(attribute, op.Value, filter);
 
-			validatedFilters.Add(new ReportFilter(filter.Field, op.Value, filter.Values));
+			validatedFilters.Add(new ReportFilter(filter.Field, op.Value, validatedValues));
 		}
 
 		// Checked on the raw request before any key is resolved: a column list
@@ -95,7 +95,7 @@ public sealed class ReportDefinition
 		_ => null,
 	};
 
-	private static void ValidateValues(FilterAttribute attribute, FilterOperator op, ReportFilterInput filter)
+	private static IReadOnlyList<string> ValidateValues(FilterAttribute attribute, FilterOperator op, ReportFilterInput filter)
 	{
 		var nonBlankValues = filter.Values.Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
 		if (nonBlankValues.Count == 0)
@@ -124,5 +124,7 @@ public sealed class ReportDefinition
 			if (!attribute.IsValidOptionValue(value))
 				throw new InvalidReportDefinitionException(ReportDefinitionMessages.InvalidValue(filter.Field, value));
 		}
+
+		return nonBlankValues;
 	}
 }

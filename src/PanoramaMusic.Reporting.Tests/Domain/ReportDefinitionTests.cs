@@ -104,6 +104,34 @@ public class ReportDefinitionTests
 	}
 
 	[Fact]
+	[Trait("AC", "317UC-bug5")]
+	public void Create_BooleanEqualsWithBlankAndValidValue_StoresOnlyTheNonBlankValue()
+	{
+		// review-1 Blocker 2 (#317): the raw values, including the blank,
+		// used to flow into ReportFilter unchanged even though validation
+		// itself ran on the non-blank subset. A predicate builder always
+		// reads values[0], so a leading blank silently became the bound
+		// value ("" == "Yes" -> false, running Has Sibling = No instead of
+		// Yes) with no rejection at all.
+		var filters = new[] { new ReportFilterInput("student.hasSiblings", "equals", ["", "Yes"]) };
+
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry);
+
+		definition.Filters.Single().Values.ShouldBe(["Yes"]);
+	}
+
+	[Fact]
+	[Trait("AC", "317UC-bug5")]
+	public void Create_ListEqualsWithBlankAndValidValue_StoresOnlyTheNonBlankValue()
+	{
+		var filters = new[] { new ReportFilterInput("student.grade", "equals", ["", "Grade4"]) };
+
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry);
+
+		definition.Filters.Single().Values.ShouldBe(["Grade4"]);
+	}
+
+	[Fact]
 	[Trait("AC", "317UC6")]
 	public void Create_ColumnSetMissingStudent_ThrowsInvalidReportDefinitionException()
 	{
