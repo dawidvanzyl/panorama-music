@@ -15,6 +15,25 @@ const fields: ReportFieldsModel = {
         { value: 'Grade5', label: 'Grade 5' },
       ],
     },
+    {
+      key: 'student.phase',
+      collection: 'Student',
+      label: 'Phase',
+      dataType: 'List',
+      operators: ['equals', 'in'],
+      options: [
+        { value: 'Junior', label: 'Junior' },
+        { value: 'Senior', label: 'Senior' },
+      ],
+    },
+    {
+      key: 'student.name',
+      collection: 'Student',
+      label: 'Name',
+      dataType: 'Text',
+      operators: ['equals', 'contains'],
+      options: [],
+    },
   ],
   columns: [],
 };
@@ -64,5 +83,63 @@ describe('pm-report-filter-row — in checklist survives a re-render', { tags: [
     const selectAfter = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild;
     expect(selectAfter?.tagName).toBe('SELECT');
     expect(selectAfter).not.toBe(dropdown);
+  });
+});
+
+describe('pm-report-filter-row — text input and list select survive a re-render', { tags: ['317UC-bug8'] }, () => {
+  let el: PmReportFilterRow;
+
+  beforeEach(() => {
+    el = new PmReportFilterRow();
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('keeps the same text input element across a values-only re-render (review-1 Blocker 3)', () => {
+    el.fields = fields;
+    el.filter = { field: 'student.name', operator: 'contains', values: ['z'] };
+
+    const inputBefore = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild;
+    expect(inputBefore?.tagName).toBe('INPUT');
+
+    // The exact sequence a keystroke produces: the builder page re-renders
+    // the whole tree and the filters panel reuses this row.
+    el.filter = { field: 'student.name', operator: 'contains', values: ['zy'] };
+
+    const inputAfter = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild as HTMLInputElement;
+    expect(inputAfter).toBe(inputBefore);
+    expect(inputAfter.value).toBe('zy');
+  });
+
+  it('keeps the same select element across a values-only re-render for a list equals filter', () => {
+    el.fields = fields;
+    el.filter = { field: 'student.grade', operator: 'equals', values: ['Grade4'] };
+
+    const selectBefore = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild;
+    expect(selectBefore?.tagName).toBe('SELECT');
+
+    el.filter = { field: 'student.grade', operator: 'equals', values: ['Grade5'] };
+
+    const selectAfter = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild as HTMLSelectElement;
+    expect(selectAfter).toBe(selectBefore);
+    expect(selectAfter.value).toBe('Grade5');
+  });
+
+  it('rebuilds the select (with the new field options) when the attribute switches between two List fields', () => {
+    el.fields = fields;
+    el.filter = { field: 'student.grade', operator: 'equals', values: ['Grade4'] };
+    const gradeSelect = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild;
+
+    // The exact shape chooseAttribute() produces for a freshly-chosen List
+    // attribute: equals + the new field's first option. Reusing the old
+    // <select> here would leave Grade's options mounted under Phase.
+    el.filter = { field: 'student.phase', operator: 'equals', values: ['Junior'] };
+
+    const phaseSelect = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild as HTMLSelectElement;
+    expect(phaseSelect).not.toBe(gradeSelect);
+    expect([...phaseSelect.options].map((o) => o.value)).toEqual(['Junior', 'Senior']);
   });
 });

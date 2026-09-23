@@ -1,6 +1,7 @@
 import '../components/pm-report-results-table';
 import type { PmReportResultsTable } from '../components/pm-report-results-table';
 import { runReport, ReportsError } from '../services/reports';
+import { formatReportDate } from '../services/report-date-format';
 import { holdResult, takeHeldDefinition, takeHeldResult } from '../state/report-builder-state';
 import type { ReportDefinitionModel, ReportResultModel } from '../models/report';
 
@@ -152,9 +153,7 @@ export class PmReportResultsPage extends HTMLElement {
 
     const count = this._result.studentCount;
     const noun = count === 1 ? 'student' : 'students';
-    const runAt = this._result.ranAt;
-    const formatted = `${runAt.getDate()} ${runAt.toLocaleString('en-GB', { month: 'short' })} ${runAt.getFullYear()}, ${String(runAt.getHours()).padStart(2, '0')}:${String(runAt.getMinutes()).padStart(2, '0')}`;
-    this.subline.textContent = `${count} ${noun} · Last run ${formatted}`;
+    this.subline.textContent = `${count} ${noun} · Last run ${formatReportDate(this._result.ranAt)}`;
 
     this.table.columns = this._result.columns;
     this.table.sections = this._result.sections;

@@ -299,6 +299,8 @@ export default defineConfig({
       { name: '317UC-bug2', description: 'Switching a filter operator to in starts its values empty rather than carrying over the prior value (#325)' },
       { name: '317UC-bug3', description: 'An in-checklist dropdown stays open across a tick and only closes on the trigger or an outside click (R3)' },
       { name: '317UC-bug4', description: 'The outside-click check uses composedPath, so a tick on the checklist itself never misreads as outside under nested shadow DOM (#326)' },
+      { name: '317UC-bug7', description: 'formatReportDate renders yyyy-MM-dd HH:mm in local time, never a locale month name (R6)' },
+      { name: '317UC-bug8', description: 'The text filter input and the list equals select survive a values-only re-render, the same way the checklist does (review-1 Blocker 3)' },
     ],
   },
 })
