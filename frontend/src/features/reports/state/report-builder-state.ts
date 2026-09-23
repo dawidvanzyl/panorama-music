@@ -56,7 +56,7 @@ export function replaceFilter(
 /**
  * Only `in` ever holds more than one value (317UC4) — switching away from it
  * keeps just the first value. Switching *to* `in` from anything else starts
- * empty (317UC-bug2 / #325): a List filter defaults to `equals` and the
+ * empty (#325): a List filter defaults to `equals` and the
  * registry's first option (`chooseAttribute`), and that value was never
  * something the Teacher ticked under "is any of" — carrying it over would
  * pre-select an option they never chose.

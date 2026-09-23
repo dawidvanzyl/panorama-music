@@ -38,7 +38,7 @@ const fields: ReportFieldsModel = {
   columns: [],
 };
 
-describe('pm-report-filter-row — in checklist survives a re-render', { tags: ['317UC-bug3'] }, () => {
+describe('pm-report-filter-row — in checklist survives a re-render', { tags: ['317UC18'] }, () => {
   let el: PmReportFilterRow;
 
   beforeEach(() => {
@@ -86,7 +86,7 @@ describe('pm-report-filter-row — in checklist survives a re-render', { tags: [
   });
 });
 
-describe('pm-report-filter-row — text input and list select survive a re-render', { tags: ['317UC-bug8'] }, () => {
+describe('pm-report-filter-row — text input and list select survive a re-render', { tags: ['317UC23'] }, () => {
   let el: PmReportFilterRow;
 
   beforeEach(() => {

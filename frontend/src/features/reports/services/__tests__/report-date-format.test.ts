@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatReportDate } from '../report-date-format';
 
-describe('formatReportDate', { tags: ['317UC-bug7'] }, () => {
+describe('formatReportDate', { tags: ['317UC22'] }, () => {
   it('renders yyyy-MM-dd HH:mm (R6)', () => {
     const date = new Date(2026, 8, 22, 10, 15); // September (month index 8)
 

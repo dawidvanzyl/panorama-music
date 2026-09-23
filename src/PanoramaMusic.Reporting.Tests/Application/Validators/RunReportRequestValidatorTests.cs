@@ -17,7 +17,7 @@ public class RunReportRequestValidatorTests
 	private readonly RunReportRequestValidator _validator = new();
 
 	[Fact]
-	[Trait("AC", "317UC-bug6")]
+	[Trait("AC", "317UC21")]
 	public void Validate_NullFilters_ReturnsFailureRatherThanThrowing()
 	{
 		var request = new RunReportRequest(null!, ["student.name"]);
@@ -28,7 +28,7 @@ public class RunReportRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug6")]
+	[Trait("AC", "317UC21")]
 	public void Validate_NullColumns_ReturnsFailureRatherThanThrowing()
 	{
 		var request = new RunReportRequest([], null!);
@@ -39,7 +39,7 @@ public class RunReportRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug6")]
+	[Trait("AC", "317UC21")]
 	public void Validate_NullFilterElement_ReturnsFailureRatherThanThrowing()
 	{
 		var request = new RunReportRequest([null!], ["student.name"]);
@@ -50,7 +50,7 @@ public class RunReportRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug6")]
+	[Trait("AC", "317UC21")]
 	public void Validate_NullValuesOnAFilter_ReturnsFailureRatherThanThrowing()
 	{
 		var request = new RunReportRequest([new ReportFilterRequest("student.name", "contains", null!)], ["student.name"]);
@@ -61,7 +61,7 @@ public class RunReportRequestValidatorTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug6")]
+	[Trait("AC", "317UC21")]
 	public void Validate_WellFormedRequest_IsValid()
 	{
 		var request = new RunReportRequest(

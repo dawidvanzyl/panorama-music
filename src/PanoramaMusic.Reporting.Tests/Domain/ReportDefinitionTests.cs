@@ -104,7 +104,7 @@ public class ReportDefinitionTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug5")]
+	[Trait("AC", "317UC20")]
 	public void Create_BooleanEqualsWithBlankAndValidValue_StoresOnlyTheNonBlankValue()
 	{
 		// review-1 Blocker 2 (#317): the raw values, including the blank,
@@ -121,7 +121,7 @@ public class ReportDefinitionTests
 	}
 
 	[Fact]
-	[Trait("AC", "317UC-bug5")]
+	[Trait("AC", "317UC20")]
 	public void Create_ListEqualsWithBlankAndValidValue_StoresOnlyTheNonBlankValue()
 	{
 		var filters = new[] { new ReportFilterInput("student.grade", "equals", ["", "Grade4"]) };

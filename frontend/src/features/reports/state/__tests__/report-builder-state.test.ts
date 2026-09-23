@@ -147,7 +147,7 @@ describe('changeOperator', { tags: ['317UC4'] }, () => {
   });
 });
 
-describe('changeOperator — switching to in starts empty', { tags: ['317UC-bug2'] }, () => {
+describe('changeOperator — switching to in starts empty', { tags: ['317UC17'] }, () => {
   it('clears the carried-over equals value when switching to in (#325)', () => {
     // The exact shape chooseAttribute() produces for a freshly-chosen List
     // attribute: equals + the registry's first option.

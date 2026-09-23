@@ -7,7 +7,7 @@ const gradeOptions: ReportFieldOption[] = [
   { value: 'Grade5', label: 'Grade 5' },
 ];
 
-describe('pm-report-checklist-dropdown — renders after connecting', { tags: ['317UC-bug1'] }, () => {
+describe('pm-report-checklist-dropdown — renders after connecting', { tags: ['317UC16'] }, () => {
   let el: PmReportChecklistDropdown;
 
   afterEach(() => {

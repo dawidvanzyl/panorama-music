@@ -27,7 +27,7 @@ if (!customElements.get('pm-test-outer-host')) {
 
 describe(
   'pm-report-checklist-dropdown — outside-click detection under nested shadow DOM',
-  { tags: ['317UC-bug4'] },
+  { tags: ['317UC19'] },
   () => {
     let outer: PmTestOuterHost;
     let dropdown: PmReportChecklistDropdown;
