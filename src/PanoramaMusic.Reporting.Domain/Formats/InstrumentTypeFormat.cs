@@ -7,9 +7,6 @@ public sealed class InstrumentTypeFormat(string courseTypeSource, string instrum
 {
 	public string Format(SourceValues sources)
 	{
-		if (sources.GetString(courseTypeSource) != "Instrument")
-			return string.Empty;
-
-		return sources.GetString(instrumentTypeSource) ?? string.Empty;
+		return sources.GetString(courseTypeSource) != "Instrument" ? string.Empty : sources.GetString(instrumentTypeSource) ?? string.Empty;
 	}
 }

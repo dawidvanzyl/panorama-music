@@ -16,9 +16,6 @@ public sealed class StepTypeFormat(string courseTypeSource, string stepTypeSourc
 			return string.Empty;
 
 		var step = sources.GetString(stepTypeSource);
-		if (step is null)
-			return string.Empty;
-
-		return step.StartsWith("Step", StringComparison.Ordinal) ? step["Step".Length..] : step;
+		return step is null ? string.Empty : step.StartsWith("Step", StringComparison.Ordinal) ? step["Step".Length..] : step;
 	}
 }

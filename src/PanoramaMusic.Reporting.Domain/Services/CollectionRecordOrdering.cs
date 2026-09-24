@@ -54,16 +54,16 @@ public static class CollectionRecordOrdering
 
 		public int Compare(
 			(int CourseType, int LessonType, int Duration, int Occurrence, int InstrumentType, int StepType, Guid StudentCourseId) x,
-			(int CourseType, int LessonType, int Duration, int Occurrence, int InstrumentType, int StepType, Guid StudentCourseId) y)
-		{
-			int result;
-			if ((result = x.CourseType.CompareTo(y.CourseType)) != 0) return result;
-			if ((result = x.LessonType.CompareTo(y.LessonType)) != 0) return result;
-			if ((result = x.Duration.CompareTo(y.Duration)) != 0) return result;
-			if ((result = x.Occurrence.CompareTo(y.Occurrence)) != 0) return result;
-			if ((result = x.InstrumentType.CompareTo(y.InstrumentType)) != 0) return result;
-			if ((result = x.StepType.CompareTo(y.StepType)) != 0) return result;
-			return x.StudentCourseId.CompareTo(y.StudentCourseId);
-		}
+			(int CourseType, int LessonType, int Duration, int Occurrence, int InstrumentType, int StepType, Guid StudentCourseId) y) =>
+			FirstNonZero(
+				x.CourseType.CompareTo(y.CourseType),
+				x.LessonType.CompareTo(y.LessonType),
+				x.Duration.CompareTo(y.Duration),
+				x.Occurrence.CompareTo(y.Occurrence),
+				x.InstrumentType.CompareTo(y.InstrumentType),
+				x.StepType.CompareTo(y.StepType),
+				x.StudentCourseId.CompareTo(y.StudentCourseId));
+
+		private static int FirstNonZero(params int[] results) => results.FirstOrDefault(result => result != 0);
 	}
 }

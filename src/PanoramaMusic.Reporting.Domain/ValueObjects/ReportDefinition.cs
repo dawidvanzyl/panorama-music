@@ -173,10 +173,7 @@ public sealed class ReportDefinition
 		if (attribute.Datasource is null || !datasourceOptions.TryGetValue(attribute.Datasource.Value, out var options))
 			throw new InvalidReportDefinitionException(ReportDefinitionMessages.InvalidValue(filter.Field, value));
 
-		var match = options.FirstOrDefault(option => Guid.TryParse(option.Value, out var optionGuid) && optionGuid == parsed);
-		if (match is null)
-			throw new InvalidReportDefinitionException(ReportDefinitionMessages.InvalidValue(filter.Field, value));
-
+		var match = options.FirstOrDefault(option => Guid.TryParse(option.Value, out var optionGuid) && optionGuid == parsed) ?? throw new InvalidReportDefinitionException(ReportDefinitionMessages.InvalidValue(filter.Field, value));
 		return match.Value;
 	}
 }
