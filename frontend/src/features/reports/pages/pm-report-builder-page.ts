@@ -17,6 +17,7 @@ import {
   clear as clearDefinition,
   holdDefinition,
   holdResult,
+  holdFields,
   takeHeldDefinition,
 } from '../state/report-builder-state';
 import type { ReportDefinitionModel, ReportFieldsModel } from '../models/report';
@@ -273,6 +274,7 @@ export class PmReportBuilderPage extends HTMLElement {
       .then((result) => {
         holdDefinition(this._definition);
         holdResult(result);
+        holdFields(this._fields!);
         window.location.hash = '#/reports/results';
       })
       .catch((error: unknown) => {

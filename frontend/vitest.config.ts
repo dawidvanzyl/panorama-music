@@ -305,6 +305,9 @@ export default defineConfig({
       { name: '318UC2', description: 'Unticking Guardian with Cell and Email ticked unticks them with it' },
       { name: '318UC3', description: 'At nine columns with Guardian unticked, Cell and the other Guardian dependants are disabled' },
       { name: '318UC4', description: 'The attribute dropdown groups Student, Guardian, Course and Extra-Curricular, each row tagged with its collection badge' },
+      { name: '320UC1', description: 'The print filter summary joins each filter as attribute, operator word and values, prefixing a label shared by more than one collection' },
+      { name: '320UC2', description: 'The print header carries no Filters line for a report with no filters' },
+      { name: '320UC3', description: "The print header's run line reads the timestamp, the pluralised student count and an optional Created by segment" },
     ],
   },
 })
