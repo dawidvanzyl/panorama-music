@@ -35,4 +35,7 @@ public static class ReportDefinitionMessages
 	public static string DuplicateColumn(string key) => $"Duplicate column '{Truncate(key)}'.";
 
 	public const string TooManyColumns = "A report may select at most 10 columns.";
+
+	public static string MissingAnchor(string key, string anchor) =>
+		$"Column '{Truncate(key)}' requires '{Truncate(anchor)}' to also be selected.";
 }
