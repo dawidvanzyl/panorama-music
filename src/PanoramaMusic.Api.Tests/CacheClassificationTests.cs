@@ -155,6 +155,15 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["UpdateOwnBankingDetails"] = CacheExpectation.NoStore,
 		["RevealOwnAccountNumber"] = CacheExpectation.NoStore,
 		["GetOwnBankingActivity"] = CacheExpectation.NoStore,
+
+		// The Student field registry is code-defined metadata (keys, labels,
+		// operators, options) — it names no student and is identical for every
+		// caller, so it carries no more than the course catalogue does.
+		["GetReportFields"] = CacheExpectation.Cacheable,
+
+		// A run's result names every matching student across whichever columns
+		// were selected, including sibling and date-of-birth scalars.
+		["RunReport"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

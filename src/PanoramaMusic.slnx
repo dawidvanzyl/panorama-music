@@ -15,6 +15,11 @@
     <Project Path="PanoramaMusic.Identity.Domain/PanoramaMusic.Identity.Domain.csproj" />
     <Project Path="PanoramaMusic.Identity.Infrastructure/PanoramaMusic.Identity.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Domains/Reporting/">
+    <Project Path="PanoramaMusic.Reporting.Application/PanoramaMusic.Reporting.Application.csproj" />
+    <Project Path="PanoramaMusic.Reporting.Domain/PanoramaMusic.Reporting.Domain.csproj" />
+    <Project Path="PanoramaMusic.Reporting.Infrastructure/PanoramaMusic.Reporting.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Domains/Students/">
     <Project Path="PanoramaMusic.Students.Application/PanoramaMusic.Students.Application.csproj" />
     <Project Path="PanoramaMusic.Students.Domain/PanoramaMusic.Students.Domain.csproj" />
@@ -42,6 +47,9 @@
     <Project Path="PanoramaMusic.Identity.Domain.Tests/PanoramaMusic.Identity.Domain.Tests.csproj" />
     <Project Path="PanoramaMusic.Identity.Infrastructure.Tests/PanoramaMusic.Identity.Infrastructure.Tests.csproj" />
     <Project Path="PanoramaMusic.Identity.Tests/PanoramaMusic.Identity.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Domains/Reporting/">
+    <Project Path="PanoramaMusic.Reporting.Tests/PanoramaMusic.Reporting.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Domains/Students/">
     <Project Path="PanoramaMusic.Students.Tests/PanoramaMusic.Students.Tests.csproj" />

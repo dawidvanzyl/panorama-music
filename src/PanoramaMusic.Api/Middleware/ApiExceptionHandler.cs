@@ -9,6 +9,7 @@ using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using System.Text.Json;
 using IdentityExceptions = PanoramaMusic.Identity.Domain.Exceptions;
+using ReportingExceptions = PanoramaMusic.Reporting.Domain.Exceptions;
 using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 using TeachersExceptions = PanoramaMusic.Teachers.Domain.Exceptions;
 
@@ -89,7 +90,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException or TeachersExceptions.DomainException)
+		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException or TeachersExceptions.DomainException or ReportingExceptions.DomainException)
 		{
 			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = exception.Message, correlationId }, cancellationToken);

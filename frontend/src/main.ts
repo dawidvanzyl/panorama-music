@@ -20,6 +20,9 @@ import './features/students/pages/pm-waiting-list-page';
 import './features/teachers/pages/pm-teachers-page';
 import './features/teachers/pages/pm-teacher-detail-page';
 import './features/teachers/components/pm-my-details-menu';
+import './features/reports/pages/pm-reports-page';
+import './features/reports/pages/pm-report-builder-page';
+import './features/reports/pages/pm-report-results-page';
 import { isAuthenticated, tryRefresh } from './services/auth';
 import { hasRole, hasAnyRole } from './services/token-storage';
 import { resolveLandingPath } from './services/nav-entries';
@@ -30,7 +33,7 @@ import { resolveLandingPath } from './services/nav-entries';
 // refuses and bounce straight back.
 const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password']);
 const ADMIN_ONLY_PATHS = new Set(['/admin/users', '/admin/sessions', '/admin/activity-log']);
-const TEACHER_ONLY_PATHS = new Set(['/students']);
+const TEACHER_ONLY_PATHS = new Set(['/students', '/reports', '/reports/new', '/reports/results']);
 const COORDINATOR_ONLY_PATHS = new Set(['/students/guardian-relationships']);
 // Open to Teacher and Coordinator, never Admin: each of these areas is owned
 // by one of the two, and the screen itself narrows down to what a
@@ -56,6 +59,9 @@ const ROUTES: Record<string, () => string> = {
   '/extra-curriculars': () => '<pm-extra-curriculars-page></pm-extra-curriculars-page>',
   '/waiting-list': () => '<pm-waiting-list-page></pm-waiting-list-page>',
   '/teachers': () => '<pm-teachers-page></pm-teachers-page>',
+  '/reports': () => '<pm-reports-page></pm-reports-page>',
+  '/reports/new': () => '<pm-report-builder-page></pm-report-builder-page>',
+  '/reports/results': () => '<pm-report-results-page></pm-report-results-page>',
   // `/` renders nothing of its own — it is resolved to a landing screen below
   // before any route lookup happens.
   '/': () => '',
