@@ -631,14 +631,31 @@ test.describe(
   'Report Builder — filters and columns offer only the registry, never banking',
   { tag: ['@11IT16'] },
   () => {
+    // The full registry, in group order (Student, Guardian, Course,
+    // Extra-Curricular), per #318's contract. #317 shipped the Student group
+    // alone; #318 adds the other three, so this list now covers all of them.
     const EXPECTED_FILTERS = [
-      'Name',
-      'Grade',
-      'Phase',
-      'Class',
-      'Language',
-      'Has Sibling',
-      'Eldest',
+      'Student · Name',
+      'Student · Grade',
+      'Student · Phase',
+      'Student · Class',
+      'Student · Language',
+      'Student · Has Sibling',
+      'Student · Eldest',
+      'Guardian · Name',
+      'Guardian · Relationship',
+      'Guardian · Receives Correspondence',
+      'Guardian · Responsible For Payment',
+      'Guardian · Married',
+      'Course · Course Type',
+      'Course · Lesson Type',
+      'Course · Duration',
+      'Course · Occurrence',
+      'Course · Instrument Type',
+      'Course · Step Type',
+      'Course · Teacher',
+      'Extra-Curricular · Activity',
+      'Extra-Curricular · Phase',
     ];
     const EXPECTED_COLUMNS = [
       'Student',
@@ -649,25 +666,41 @@ test.describe(
       'Has Sibling',
       'Number Of Siblings',
       'Eldest',
+      'Guardian',
+      'Cell',
+      'Email',
+      'Receives Correspondence',
+      'Responsible For Payment',
+      'Married',
+      'Course Type',
+      'Lesson Type',
+      'Duration',
+      'Occurrence',
+      'Instrument Type',
+      'Step Type',
+      'Teacher',
+      'Activity',
+      'Phase',
+      'Practice Times',
     ];
 
-    test('the attribute dropdown offers exactly the Student filters', async ({ page }) => {
+    test('the attribute dropdown offers exactly the registry, grouped', async ({ page }) => {
       const builder = await openBuilder(page);
 
       await builder.addFilter();
 
-      await expect(builder.attributeDropdownOptions(0)).toHaveText(
-        EXPECTED_FILTERS.map((label) => `Student · ${label}`)
-      );
+      await expect(builder.attributeDropdownOptions(0)).toHaveText(EXPECTED_FILTERS);
+      expect(EXPECTED_FILTERS).toHaveLength(21);
       await expect(builder.filterRow(0).locator('#attribute')).not.toContainText(
         /bank|account|branch/i
       );
     });
 
-    test('the columns panel offers exactly the Student columns', async ({ page }) => {
+    test('the columns panel offers exactly the registry, grouped', async ({ page }) => {
       const builder = await openBuilder(page);
 
       await expect(builder.columnItems()).toHaveCount(EXPECTED_COLUMNS.length);
+      expect(EXPECTED_COLUMNS).toHaveLength(24);
       const itemTexts = await builder.columnItems().allTextContents();
       EXPECTED_COLUMNS.forEach((header, index) => {
         expect(itemTexts[index]).toContain(header);
@@ -689,6 +722,20 @@ test.describe(
         'student.language',
         'student.hasSiblings',
         'student.isEldest',
+        'guardian.name',
+        'guardian.relationship',
+        'guardian.receivesCorrespondence',
+        'guardian.responsibleForPayment',
+        'guardian.married',
+        'course.courseType',
+        'course.lessonType',
+        'course.durationType',
+        'course.occurrenceType',
+        'course.instrumentType',
+        'course.stepType',
+        'course.teacher',
+        'extraCurricular.activity',
+        'extraCurricular.phase',
       ]);
       expect((body.columns ?? []).map((c) => c.key).sort()).toEqual(
         [
@@ -700,6 +747,22 @@ test.describe(
           'student.hasSiblings',
           'student.numberOfSiblings',
           'student.isEldest',
+          'guardian.name',
+          'guardian.cell',
+          'guardian.email',
+          'guardian.receivesCorrespondence',
+          'guardian.responsibleForPayment',
+          'guardian.married',
+          'course.courseType',
+          'course.lessonType',
+          'course.durationType',
+          'course.occurrenceType',
+          'course.instrumentType',
+          'course.stepType',
+          'course.teacher',
+          'extraCurricular.activity',
+          'extraCurricular.phase',
+          'extraCurricular.practiceTimes',
         ].sort()
       );
       expect(JSON.stringify(body).toLowerCase()).not.toMatch(/bank|account|branch/);

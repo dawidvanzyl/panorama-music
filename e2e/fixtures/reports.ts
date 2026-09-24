@@ -2,6 +2,13 @@ import type { Page } from '@playwright/test';
 import { expect } from './base';
 import type { SeededEnrollmentTarget } from './enrollment';
 
+export interface ReportStudentEnrolment {
+  courseId: string;
+  teacherId: string;
+  instrumentType?: string | null;
+  stepType?: string | null;
+}
+
 export interface SeedReportStudentOptions {
   firstName: string;
   lastName: string;
@@ -12,6 +19,14 @@ export interface SeedReportStudentOptions {
   language?: string;
   /** ISO `yyyy-MM-dd`. Defaults to `2014-05-12`. */
   dateOfBirth?: string;
+  /**
+   * The exact courses to enrol the student in, instead of `target`. When
+   * given, the student is enrolled in these and *not* in `target` — plan-qa's
+   * "explicit enrolments" convention (11IT13, 14, 34, 35), so a scenario
+   * counting a student's course rows isn't thrown off by the default
+   * `seedEnrollmentTarget` course.
+   */
+  enrolments?: ReportStudentEnrolment[];
 }
 
 /**
@@ -19,7 +34,8 @@ export interface SeedReportStudentOptions {
  * a report scenario needs to filter or project on — `seedEnrolledStudent`
  * takes none of these. Makes the same two calls (create, enrol) as that
  * fixture, through `page.evaluate` so the requests carry the signed-in
- * caller's bearer token.
+ * caller's bearer token. When `options.enrolments` is given, the student is
+ * enrolled in exactly those courses instead of `target`'s.
  */
 export async function seedReportStudent(
   page: Page,
@@ -28,9 +44,12 @@ export async function seedReportStudent(
 ): Promise<string> {
   const grade = options.grade ?? 'Grade4';
   const isPrivate = grade === 'Private';
+  const enrolments: ReportStudentEnrolment[] = options.enrolments ?? [
+    { courseId: target.courseId, teacherId: target.teacherId },
+  ];
 
   const seeded = await page.evaluate(
-    async ({ options, grade, isPrivate, courseId, teacherId }) => {
+    async ({ options, grade, isPrivate, enrolments }) => {
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
@@ -51,29 +70,35 @@ export async function seedReportStudent(
       });
       const student = (await studentResponse.json()) as { studentId: string };
 
-      const enrollResponse = await fetch(`/api/students/${student.studentId}/courses`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          courseId,
-          teacherId,
-          instrumentType: null,
-          stepType: null,
-          enrolledDate: new Date().toISOString().slice(0, 10),
-        }),
-      });
+      const enrollStatuses: number[] = [];
+      for (const enrolment of enrolments) {
+        const enrollResponse = await fetch(`/api/students/${student.studentId}/courses`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            courseId: enrolment.courseId,
+            teacherId: enrolment.teacherId,
+            instrumentType: enrolment.instrumentType ?? null,
+            stepType: enrolment.stepType ?? null,
+            enrolledDate: new Date().toISOString().slice(0, 10),
+          }),
+        });
+        enrollStatuses.push(enrollResponse.status);
+      }
 
       return {
         studentStatus: studentResponse.status,
-        enrollStatus: enrollResponse.status,
+        enrollStatuses,
         studentId: student.studentId,
       };
     },
-    { options, grade, isPrivate, courseId: target.courseId, teacherId: target.teacherId }
+    { options, grade, isPrivate, enrolments }
   );
 
   expect(seeded.studentStatus).toBe(201);
-  expect(seeded.enrollStatus).toBe(201);
+  for (const status of seeded.enrollStatuses) {
+    expect(status).toBe(201);
+  }
 
   return seeded.studentId;
 }
