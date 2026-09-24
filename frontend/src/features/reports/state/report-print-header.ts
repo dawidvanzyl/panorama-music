@@ -52,11 +52,6 @@ function operatorWord(operator: ReportFilterOperator): string {
   }
 }
 
-/**
- * The field's label, prefixed with its collection's presentation label
- * (`Guardian · Name`) only when more than one collection in `fields.filters`
- * uses that same label.
- */
 function attributeLabel(field: ReportField, fields: ReportFieldsModel): string {
   const collectionsSharingLabel = new Set(
     fields.filters.filter((candidate) => candidate.label === field.label).map((candidate) => candidate.collection),

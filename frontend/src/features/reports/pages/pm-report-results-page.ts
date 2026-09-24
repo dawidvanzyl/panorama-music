@@ -101,11 +101,15 @@ styles.replaceSync(`
         font-size: 18px;
         font-weight: 700;
         color: var(--pm-text);
+        margin-bottom: 4px;
       }
       #printRunLine,
       #printFilters {
         font-size: 12px;
         color: var(--pm-text-muted);
+      }
+      #printFilters {
+        margin-top: 4px;
       }
       #printFilters[hidden] {
         display: none;

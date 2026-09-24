@@ -266,7 +266,7 @@ export class PmReportBuilderPage extends HTMLElement {
   };
 
   private handleRun = (): void => {
-    if (this._running || !canRun(this._definition)) return;
+    if (this._running || !this._fields || !canRun(this._definition)) return;
     this._running = true;
     this.render();
 
