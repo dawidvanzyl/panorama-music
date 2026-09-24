@@ -34,45 +34,42 @@ export async function switchToScreenMedia(page: Page): Promise<void> {
  * counts as light only if every ancestor's background is light".
  */
 export async function ownBackgroundIsLight(locator: Locator): Promise<boolean> {
-  return locator.evaluate(
-    (el, threshold) => {
-      let current: Element | null = el;
-      while (current) {
-        const bg = getComputedStyle(current).backgroundColor;
-        if (!isTransparentInPage(bg)) return relativeLuminanceInPage(bg) >= threshold;
-        current = parentAcrossShadow(current);
-      }
-      return true;
+  return locator.evaluate((el, threshold) => {
+    let current: Element | null = el;
+    while (current) {
+      const bg = getComputedStyle(current).backgroundColor;
+      if (!isTransparentInPage(bg)) return relativeLuminanceInPage(bg) >= threshold;
+      current = parentAcrossShadow(current);
+    }
+    return true;
 
-      function relativeLuminanceInPage(color: string): number {
-        const match = color.match(/rgba?\(([^)]+)\)/);
-        if (!match) return 1;
-        const parts = match[1].split(',').map((p) => parseFloat(p.trim()));
-        const [r, g, b] = parts;
-        const a = parts.length > 3 ? parts[3] : 1;
-        const cr = r * a + 255 * (1 - a);
-        const cg = g * a + 255 * (1 - a);
-        const cb = b * a + 255 * (1 - a);
-        const toLinear = (c: number): number => {
-          const s = c / 255;
-          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-        };
-        return 0.2126 * toLinear(cr) + 0.7152 * toLinear(cg) + 0.0722 * toLinear(cb);
-      }
-      function isTransparentInPage(color: string): boolean {
-        const match = color.match(/rgba\(([^)]+)\)/);
-        if (!match) return color === 'transparent';
-        const parts = match[1].split(',').map((p) => parseFloat(p.trim()));
-        return parts.length > 3 && parts[3] === 0;
-      }
-      function parentAcrossShadow(node: Element): Element | null {
-        if (node.parentElement) return node.parentElement;
-        const root = node.getRootNode();
-        return root instanceof ShadowRoot ? root.host : null;
-      }
-    },
-    LIGHT_BACKGROUND_THRESHOLD
-  );
+    function relativeLuminanceInPage(color: string): number {
+      const match = color.match(/rgba?\(([^)]+)\)/);
+      if (!match) return 1;
+      const parts = match[1].split(',').map((p) => parseFloat(p.trim()));
+      const [r, g, b] = parts;
+      const a = parts.length > 3 ? parts[3] : 1;
+      const cr = r * a + 255 * (1 - a);
+      const cg = g * a + 255 * (1 - a);
+      const cb = b * a + 255 * (1 - a);
+      const toLinear = (c: number): number => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * toLinear(cr) + 0.7152 * toLinear(cg) + 0.0722 * toLinear(cb);
+    }
+    function isTransparentInPage(color: string): boolean {
+      const match = color.match(/rgba\(([^)]+)\)/);
+      if (!match) return color === 'transparent';
+      const parts = match[1].split(',').map((p) => parseFloat(p.trim()));
+      return parts.length > 3 && parts[3] === 0;
+    }
+    function parentAcrossShadow(node: Element): Element | null {
+      if (node.parentElement) return node.parentElement;
+      const root = node.getRootNode();
+      return root instanceof ShadowRoot ? root.host : null;
+    }
+  }, LIGHT_BACKGROUND_THRESHOLD);
 }
 
 /** The element's own computed background colour is white (not merely light). */
@@ -234,7 +231,8 @@ export async function isTallerThanOneLine(locator: Locator): Promise<boolean> {
   return locator.evaluate((el) => {
     const style = getComputedStyle(el);
     const fontSize = parseFloat(style.fontSize);
-    const lineHeight = style.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(style.lineHeight);
+    const lineHeight =
+      style.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(style.lineHeight);
     return el.clientHeight > lineHeight * 1.4;
   });
 }
