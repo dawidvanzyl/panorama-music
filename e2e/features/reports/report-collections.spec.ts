@@ -14,6 +14,7 @@ import { seedActivity, assignActivity } from '../../fixtures/extraCurriculars';
 import { deactivateTeacher } from '../../fixtures/teachers';
 import { ReportBuilderPage } from '../../pages/reports/ReportBuilderPage';
 import { ReportResultsPage } from '../../pages/reports/ReportResultsPage';
+import { ReportsPage } from '../../pages/reports/ReportsPage';
 
 /**
  * Every scenario mints its own token and uses it as its seeded students'
@@ -29,6 +30,25 @@ async function openBuilder(
   roles: UserRole[] = ['Teacher']
 ): Promise<ReportBuilderPage> {
   const reportsPage = await goToReportsPage(page, roles);
+  await reportsPage.createReport();
+  const builder = new ReportBuilderPage(page);
+  await expect(builder.filtersEmptyMessage).toBeVisible();
+  return builder;
+}
+
+/**
+ * Signs in and lands on the Reports list, without opening the builder yet —
+ * for a scenario whose seeding must happen before the builder ever opens.
+ * Datasource options are read when the builder opens (no cache, plan D2), so
+ * a teacher or activity a scenario seeds must exist *before* that read, not
+ * after it.
+ */
+async function loginForReports(page: Page, roles: UserRole[] = ['Teacher']): Promise<ReportsPage> {
+  return goToReportsPage(page, roles);
+}
+
+/** Opens the builder from an already-landed Reports list, once seeding is done. */
+async function openBuilderFrom(reportsPage: ReportsPage, page: Page): Promise<ReportBuilderPage> {
   await reportsPage.createReport();
   const builder = new ReportBuilderPage(page);
   await expect(builder.filtersEmptyMessage).toBeVisible();
@@ -104,8 +124,9 @@ test.describe('Report Builder — filtering by Course · Teacher', { tag: ['@11I
 
   test("S1 — Teacher filter returns only that teacher's students", async ({ page }) => {
     const token = uniqueToken();
-    const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+    const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
     const { target1 } = await seedTwoTeacherFixture(page, token);
+    const builder = await openBuilderFrom(reportsPage, page);
 
     await builder.addFilter();
     await builder.chooseAttribute(0, 'Course · Teacher');
@@ -123,8 +144,9 @@ test.describe('Report Builder — filtering by Course · Teacher', { tag: ['@11I
 
   test('S2 — "is any of" two teachers returns the union, each student once', async ({ page }) => {
     const token = uniqueToken();
-    const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+    const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
     const { target1, target2 } = await seedTwoTeacherFixture(page, token);
+    const builder = await openBuilderFrom(reportsPage, page);
 
     await builder.addFilter();
     await builder.chooseAttribute(0, 'Course · Teacher');
@@ -143,14 +165,17 @@ test.describe('Report Builder — filtering by Course · Teacher', { tag: ['@11I
 
   test('S3 — an inactive teacher is listed with the suffix and still filters', async ({ page }) => {
     const token = uniqueToken();
+    const reportsPage = await loginForReports(page, [
+      'Teacher',
+      'Coordinator',
+      'BankingCoordinator',
+    ]);
     const target1 = await seedEnrollmentTarget(page);
     const target2 = await seedEnrollmentTarget(page);
     await seedReportStudent(page, target2, { firstName: 'Ben', lastName: token });
-
-    await goToReportsPage(page, ['Teacher', 'Coordinator', 'BankingCoordinator']);
     await deactivateTeacher(page, target2.teacherId);
 
-    const builder = await openBuilder(page, ['Teacher', 'Coordinator', 'BankingCoordinator']);
+    const builder = await openBuilderFrom(reportsPage, page);
 
     await builder.addFilter();
     await builder.chooseAttribute(0, 'Course · Teacher');
@@ -191,7 +216,7 @@ test.describe(
   () => {
     test("S1 — both filters must hold, each by any of the student's records", async ({ page }) => {
       const token = uniqueToken();
-      const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
       const fatherId = await fatherRelationshipId(page);
 
@@ -231,6 +256,8 @@ test.describe(
         guardianRelationshipId: fatherId,
       });
       await assignActivity(page, danId, extraCurricularId);
+
+      const builder = await openBuilderFrom(reportsPage, page);
 
       await builder.addFilter();
       await builder.chooseAttribute(0, 'Guardian · Receives Correspondence');
@@ -843,8 +870,9 @@ test.describe(
 
     test('S1 — an unprojected collection filter never multiplies rows', async ({ page }) => {
       const token = uniqueToken();
-      const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       await seedActivityFixture(page, token);
+      const builder = await openBuilderFrom(reportsPage, page);
 
       await builder.addFilter();
       await builder.chooseAttribute(0, 'Extra-Curricular · Activity');
@@ -868,8 +896,9 @@ test.describe(
       page,
     }) => {
       const token = uniqueToken();
-      const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       await seedActivityFixture(page, token);
+      const builder = await openBuilderFrom(reportsPage, page);
 
       await builder.addFilter();
       await builder.chooseAttribute(0, 'Extra-Curricular · Activity');
