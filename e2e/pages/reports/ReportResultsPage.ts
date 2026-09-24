@@ -10,10 +10,17 @@ export class ReportResultsPage extends BasePage {
   readonly caption: Locator;
   readonly editButton: Locator;
   readonly runAgainButton: Locator;
+  readonly printButton: Locator;
+  readonly actionsContainer: Locator;
   readonly errorBanner: Locator;
   readonly emptyMessage: Locator;
   readonly table: Locator;
   readonly headerRow: Locator;
+  readonly tableCard: Locator;
+  readonly printHeader: Locator;
+  readonly printTitle: Locator;
+  readonly printRunLine: Locator;
+  readonly printFilters: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -24,10 +31,17 @@ export class ReportResultsPage extends BasePage {
     this.caption = this.host.locator('.results-page__caption');
     this.editButton = this.host.locator('#edit');
     this.runAgainButton = this.host.locator('#runAgain');
+    this.printButton = this.host.locator('#print');
+    this.actionsContainer = this.host.locator('.results-page__actions');
     this.errorBanner = this.host.locator('#error');
     this.emptyMessage = this.host.locator('pm-report-results-table #empty');
     this.table = this.host.locator('pm-report-results-table #table');
     this.headerRow = this.host.locator('pm-report-results-table #headerRow');
+    this.tableCard = this.host.locator('pm-report-results-table .results-table__card');
+    this.printHeader = this.host.locator('#printHeader');
+    this.printTitle = this.host.locator('#printTitle');
+    this.printRunLine = this.host.locator('#printRunLine');
+    this.printFilters = this.host.locator('#printFilters');
   }
 
   async editReport(): Promise<void> {
@@ -36,6 +50,16 @@ export class ReportResultsPage extends BasePage {
 
   async runAgain(): Promise<void> {
     await this.runAgainButton.click();
+  }
+
+  async print(): Promise<void> {
+    await this.printButton.click();
+  }
+
+  /** The offered actions' accessible names, in document order, e.g. `['Edit report', 'Run again', 'Print']`. */
+  async actionLabels(): Promise<string[]> {
+    const texts = await this.actionsContainer.locator('button').allTextContents();
+    return texts.map((text) => text.trim());
   }
 
   async followReportsBreadcrumb(): Promise<void> {
