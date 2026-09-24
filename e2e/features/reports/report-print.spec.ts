@@ -464,7 +464,12 @@ test.describe(
       page,
     }) => {
       const token = uniqueToken();
-      const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+      // R16: at plan-dev's frozen print metrics, 12 students × 2 columns
+      // renders at about 480px — under a 600px viewport, so nothing could
+      // ever be shown cut off. 40 students clears twice the viewport height
+      // with margin (about 1600px against a 1200px floor).
+      const studentCount = 40;
+      const names = Array.from({ length: studentCount }, (_, i) => `S${i + 1}`);
       const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
       for (const name of names) {
@@ -484,17 +489,21 @@ test.describe(
       await switchToPrintMedia(page, 600);
 
       // --- All sections present ---
-      await expect(results.allSections()).toHaveCount(12);
+      await expect(results.allSections()).toHaveCount(studentCount);
 
-      // --- Not truncated to one screen ---
+      // --- Not truncated to one screen: the layout is at least twice the
+      //     viewport height (R16), not merely taller than it ---
       const documentMetrics = await page.evaluate(() => ({
         scrollHeight: document.documentElement.scrollHeight,
         clientHeight: document.documentElement.clientHeight,
       }));
-      expect(documentMetrics.scrollHeight).toBeGreaterThan(documentMetrics.clientHeight);
+      expect(documentMetrics.scrollHeight).toBeGreaterThanOrEqual(documentMetrics.clientHeight * 2);
 
-      const lastSection = results.sectionFor(`L ${token}`);
-      expect(await bottomEdgeWithinDocumentScrollHeight(lastSection)).toBe(true);
+      // --- The last row is laid out, not cut off ---
+      const lastName = names[names.length - 1];
+      const lastRow = results.sectionRows(`${lastName} ${token}`).last();
+      await expect(lastRow).toBeVisible();
+      expect(await bottomEdgeWithinDocumentScrollHeight(lastRow)).toBe(true);
 
       // --- No clipping ancestor ---
       const chain = await ancestorChain(results.table);
