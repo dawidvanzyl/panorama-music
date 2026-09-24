@@ -46,12 +46,40 @@ or a GitHub label.
 - `qa_plan_file`: required. The frozen `plan-qa.md`.
 - `base_branch`: required in `subagent` mode. It is never inferred, because stories
   branch from and merge into the milestone branch.
-- `pr_number`: the story's open PR.
-- `cycle`: defaults to `1`. Cycle 1 writes the specs; later cycles re-run them after
-  developer fixes.
+- `phase`: `specify` or `run` (default `run`). The tech lead runs `specify` first,
+  before any code exists; see *Specify phase* below.
+- `branch`: required for `specify` — the feature branch name to create.
+- `dev_plan_file`: required for `specify` — its `## Test hooks` table is the only
+  source of selectors for elements that don't exist yet.
+- `pr_number`: the story's open PR (`run` only).
+- `cycle`: defaults to `1`. Each `run` cycle runs every spec against the developer's
+  latest push.
 - `mode`: `interactive` (default) or `subagent`.
 
-## Procedure
+## Specify phase
+
+Write the specs before the developer starts, so the developer builds against them and
+must turn them green before reporting done.
+
+1. `git fetch origin && git checkout -b {branch} origin/{base_branch}`.
+2. Create `{journal_dir}/qa-spec.md` with a `## Progress` heading.
+3. Read as in step 2 below, plus `dev_plan_file`'s `## Test hooks`.
+4. Write the specs as in step 4 below. For elements that don't exist yet, use exactly
+   the hooks in `## Test hooks`; for existing UI, reuse existing page objects. A
+   scenario that needs a hook the table lacks is a `NEEDS_RULING` — never guess one.
+5. Type-check the specs (`cd e2e && npx tsc --noEmit`), commit them per spec and push
+   the branch. Don't stand up a stack or run them: they are expected to fail until
+   the code exists, and no bug is logged in this phase.
+
+Reply with `VERDICT: SPECIFIED`, `REPORT: {journal_dir}/qa-spec.md`, `BRANCH`, `SHA`
+and `IT_CODES: {n} specified`.
+
+In every later `run` cycle, **the specs you wrote here are frozen with the plan.** Fix
+a spec only where it contradicts `qa_plan_file` or a hook in `## Test hooks`. Never
+adapt a spec or page object to behaviour that deviates from either — that behaviour is
+a bug to log.
+
+## Procedure (`run` phase)
 
 ### 1) Get the branch
 
@@ -106,8 +134,8 @@ wrong tag, or no tag, is invisible to both.
 
 - **Follow the existing conventions.** Extend the page objects in `e2e/pages/` and the
   fixtures in `e2e/fixtures/` rather than inlining a parallel style.
-- **Selectors are yours to choose.** Prefer semantic, stable locators over structural
-  ones.
+- **Selectors:** for elements the story adds, use the hooks in `dev_plan_file`'s
+  `## Test hooks`; otherwise prefer semantic, stable locators over structural ones.
 - **Honour the isolation marking.** A parallel-safe scenario seeds its own data and
   never depends on other data being absent. See the unique-value helpers in
   `e2e/features/courses/course-management.spec.ts`.

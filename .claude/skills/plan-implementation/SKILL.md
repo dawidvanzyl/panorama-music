@@ -107,12 +107,31 @@ only for a change that genuinely touches nothing the standards cover.}
 | UC code | What it proves | Where |
 |---|---|---|
 
+## Test hooks
+| Element | Hook (`data-testid` or accessible name) | Used by |
+|---|---|---|
+{Every element QA's specs must find, fixed here because QA writes the specs before the
+code exists. The developer renders exactly these; QA's page objects use exactly these.}
+
 ## Risks & decisions
 {Anything the developer will have to decide, and your recommendation. Any dependency
 on another story. Anything explicitly out of scope per the sub-issue.}
+
+## Deliverables checklist
+1. {file or component} — {what it must do} — proven by {UC code / IT code / check}
+{Numbered, exhaustive: every change above, every UC and IT code, every migration,
+standards obligation and knock-on edit to existing code or tests. A developer who
+ticks every item cannot ship a gap. The developer ticks it item by item.}
 ```
 
 Never plan work under the sub-issue's `## Out of Scope`.
+
+**The plan's labels stay in the plan.** `D1`, ruling numbers and story references are
+for the journal; never ask for a code comment, test name or justification string that
+carries one. Plan no comments beyond `docs/coding-standards.md` §6 — the code speaks
+for itself. Check that every story dependency the plan relies on (e.g. a control
+another story delivers, a column count only a later story reaches) is in the story's
+`depends_on`; if not, it's a `NEEDS_RULING` on order before you write the plans.
 
 ### 3) Write `plan-qa.md`
 
@@ -125,7 +144,7 @@ shouldn't perform it), **boundaries** (empty, first, last, at capacity, already
 exists), and **persistence** (anything claimed recorded survives a reload).
 
 - **Describe behaviour, never selectors.** No CSS, no `data-testid`, no route strings
-  that don't already exist. "The roster lists the student", not "`#roster-table`
+  that don't already exist — hooks live in plan-dev's `## Test hooks`, not here. "The roster lists the student", not "`#roster-table`
   contains a row". A plan pinned to the wrong selector gets "fixed" by weakening the
   assertion, invisibly.
 - **Mark isolation.** Each scenario is **parallel-safe** (touches only data it seeds)

@@ -118,9 +118,28 @@ requirement or commit-structure exception; exceptions exist only if added here.
 - One IT code per Playwright spec file/`describe` block, repeated across every G/W/T
   line that block covers.
 - Never use `NFC` as a code — assign a real `UC`/`IT` code.
+- No suffixes or variants (`317UC-bug1`, `317UC3a`). A test added during rework takes
+  the next free `{issue_number}UC{n}`.
 - Codes are opaque literal match strings to the runners (`dotnet test --filter
   "AC=CODE"`, vitest `--tags-filter="AC=CODE"`, `playwright test --grep "@CODE"`); the
   format carries no meaning to tooling beyond the literal string.
 - **Not retroactive:** applies to all new issues going forward, never retroactively.
   Existing milestone-prefixed codes (e.g. `M1UC12`, `@M1.2IT3`) on already-created
   issues and tests remain valid — do not rename or migrate them.
+
+## 6. Code Comments
+
+The code speaks for itself. Names, types and small functions carry the intent; a
+comment is the exception, written only when the code cannot say it.
+
+- **Default to none.** Before writing one, try renaming or extracting until it is
+  unnecessary.
+- **Allowed:** a non-obvious *why* — an invariant, a security or concurrency reason, a
+  workaround for an external defect — that would surprise a competent reader. One or
+  two lines. Public-API doc comments only where the project already uses them.
+- **Never:** a restatement of what the code does; a story, issue, ruling, decision or
+  review reference (`#317`, `R3`, `D4`, `review-1 Blocker 3`); a plan or journal
+  label; a description of temporary state or of what a later story will change.
+  That history lives in the PR and the journal, not the code.
+- The same applies to test names, `[SuppressMessage]` justifications and other
+  strings that read as prose.

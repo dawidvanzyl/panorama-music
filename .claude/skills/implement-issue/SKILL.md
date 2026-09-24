@@ -19,6 +19,8 @@ metadata:
   (absolute path to the story's journal), `dev_plan_file` (the frozen `plan-dev.md`,
   your roadmap) and `qa_plan_file` (the frozen `plan-qa.md`, read-only — what QA will
   assert).
+- `subagent`, required when QA wrote the specs first: `branch` — the feature branch
+  QA created and pushed with the story's failing Playwright specs. You build on it.
 - Optional (`subagent`): `plan_open_issues_file` — the critique's open non-blocker
   findings (Warnings/Questions/Suggestions the owner let through) for you to honour or
   disposition.
@@ -75,12 +77,15 @@ ignoring any `## Post-Implementation Summary`. Extract:
 - `## Notes`, if present, last — edge cases, security considerations and deliberate
   deferrals that must not be overridden.
 
-Also read `docs/coding-standards.md`, plus for backend scope
-`docs/coding-standards-backend.md` and `src/.editorconfig`, and for frontend scope
-`docs/coding-standards-frontend.md` and `frontend/.editorconfig`.
+Also read, in full and before coding, `docs/coding-standards.md`, plus for backend
+scope `docs/coding-standards-backend.md` and `src/.editorconfig`, and for frontend
+scope `docs/coding-standards-frontend.md` and `frontend/.editorconfig`. They are
+binding, not background — in particular §5 (test codes) and §6 (comments).
 
-Then read `dev_plan_file` — your roadmap: the approach, the changes by layer, the UC
-codes to cover and the risks, written and critiqued before the build. Build to it. Then
+Then read `dev_plan_file` — your specification: the approach, the changes by layer,
+the test hooks, the UC codes and the deliverables checklist, written and critiqued
+before the build. **Follow it as written.** Deviate only on a real obstacle hit during
+implementation, and raise it before deviating. Then
 read `qa_plan_file`: the preconditions, actors, paths and outcomes QA will assert.
 Satisfying a requirement differently from what the QA plan expects is a bug report
 waiting to be filed, so build to both. Both are **read-only** and frozen at owner
@@ -112,6 +117,10 @@ state your understanding and raise it for confirmation.
 
 ### 3) Create feature branch
 
+**If `branch` was given** (QA wrote the specs first), don't create one: check it out
+with `git fetch origin && git checkout -B {branch} origin/{branch}` and build on it.
+Its failing specs are your target. Otherwise:
+
 Prefix from labels: `type: feature` → `feature/`, `type: bug` → `bug/`,
 `type: tech-debt` → `tech-debt/`. Slug per `docs/coding-standards.md` (kebab-case from
 the title, max 5 words, no milestone number).
@@ -137,8 +146,17 @@ is redone from scratch, and the PR is squash-merged, so a granular trail costs
 nothing.
 
 - Implement every functional requirement within the constraints, contract and
-  scope boundary.
-- One test per UC code, named for the G/W/T behaviour it verifies:
+  scope boundary, and every item of the plan's deliverables checklist. Copy the
+  checklist into `implement-{attempt}.md` and tick each item with the file and test
+  that prove it as it lands.
+- **Comments: default to none** (`docs/coding-standards.md` §6). Never write a story,
+  issue, ruling, decision (`D4`) or review reference, or a description of temporary
+  state, into code, test names or suppression justifications — including labels you
+  read in the plan or the journal.
+- **Fix the class, not the instance.** On any bug or finding, search for the same
+  mistake elsewhere in the branch and fix every occurrence.
+- One test per UC code, tagged with exactly that code, named for the G/W/T behaviour
+  it verifies. A test added in rework takes the next free `{issue_number}UC{n}`:
   - backend — xUnit, `[Trait("AC", "{code}")]` with the exact code (e.g. `48UC1`)
   - frontend — vitest service tests (mock fetch, no DOM) in
     `frontend/src/services/__tests__/`; install vitest if absent
@@ -156,8 +174,16 @@ nothing.
 - Run and fix until clean **the full set in `.claude/shared/automated-checks.md`** for
   the scopes you touched — backend build, format and tests, and frontend lint,
   format:check, typecheck, build and test. Read the commands from that file, not from
-  memory; it matches `ci.yml`, so a local pass means what a CI pass means. This is the
-  one place the gauntlet runs in the automated flow.
+  memory; it matches `ci.yml`, so a local pass means what a CI pass means. Backend
+  tests run on the **whole solution** (`src/PanoramaMusic.slnx`), never a single
+  project — cross-cutting tests live in other projects. This is the one place the
+  gauntlet runs in the automated flow.
+- **Run the story's IT specs locally until every one passes**, when QA wrote them
+  first: a fresh QA stack (`qa-implement` step 3), then
+  `cd e2e && npx playwright test --grep "@{IT_CODE}"` once per code, then tear it
+  down. You may not edit a spec; a spec you believe is wrong is a raise. Record each
+  code's result in `implement-{attempt}.md`. Never open the PR or report `FIXED`
+  with an IT code red.
 
 ### 5) Verify (gauntlet loop, max 3 cycles)
 
