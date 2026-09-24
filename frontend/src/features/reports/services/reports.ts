@@ -1,6 +1,5 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
-import { registerSessionCache } from '../../../services/session-cache';
 import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel } from '../models/report';
 
 const API_BASE = '/api/reports';
@@ -129,28 +128,17 @@ function mapRunResult(api: ApiReportRunResult): ReportResultModel {
   };
 }
 
-let _fieldsCache: ReportFieldsModel | null = null;
-
-export function clearReportsCache(): void {
-  _fieldsCache = null;
-}
-
-registerSessionCache(clearReportsCache);
-
 /**
- * The Student registry, cached for the session. A failed call is not cached
- * — the builder's Retry action must try the network again, not replay a
- * remembered failure.
+ * The Student registry. Never cached: the Guardian, Course and
+ * Extra-Curricular filters carry live datasource options (teacher names,
+ * relationships, activities), so a stale copy would show the builder options
+ * that no longer exist or hide ones just added.
  */
 export async function getFields(): Promise<ReportFieldsModel> {
-  if (_fieldsCache) return _fieldsCache;
-
-  const fields = await guardNetworkFailure(async () => {
+  return guardNetworkFailure(async () => {
     const response = await fetch(`${API_BASE}/fields`, { headers: authHeaders() });
     return mapFields(await handleResponse<ApiReportFields>(response));
   });
-  _fieldsCache = fields;
-  return fields;
 }
 
 /** Runs a report definition against live data. Never cached — every call is a fresh run. */

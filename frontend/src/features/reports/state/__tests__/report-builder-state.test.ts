@@ -106,13 +106,13 @@ describe('toggleColumn — ten-column cap', { tags: ['317UC2'] }, () => {
       ],
     };
 
-    expect(columnAvailability(tenSelected).atLimit).toBe(true);
+    expect(columnAvailability(twelveColumnFields, tenSelected).disabled.has('c10')).toBe(true);
 
     const attemptedEleventh = toggleColumn(twelveColumnFields, tenSelected, 'c10');
     expect(attemptedEleventh).toEqual(tenSelected);
 
     const afterDeselect = tenSelected.filter((key) => key !== 'c9');
-    expect(columnAvailability(afterDeselect).atLimit).toBe(false);
+    expect(columnAvailability(twelveColumnFields, afterDeselect).disabled.has('c10')).toBe(false);
 
     const nowAllowed = toggleColumn(twelveColumnFields, afterDeselect, 'c10');
     expect(nowAllowed).toContain('c10');

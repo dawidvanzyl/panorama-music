@@ -1,5 +1,6 @@
 import './pm-report-checklist-dropdown';
 import type { PmReportChecklistDropdown } from './pm-report-checklist-dropdown';
+import { collectionPresentation, groupFilterAttributes } from '../state/report-collections';
 import type { ReportField, ReportFieldsModel, ReportFilterModel } from '../models/report';
 
 const styles = new CSSStyleSheet();
@@ -18,8 +19,8 @@ styles.replaceSync(`
       flex: 0 0 auto;
       font-size: 11px;
       font-weight: 700;
-      color: var(--pm-accent);
-      background: rgba(79, 124, 255, 0.15);
+      color: var(--collection-colour, var(--pm-accent));
+      background: color-mix(in srgb, var(--collection-colour, var(--pm-accent)) 15%, transparent);
       border-radius: 4px;
       padding: 2px 6px;
     }
@@ -85,7 +86,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
   <div class="filter-row">
-    <span class="filter-row__badge">STU</span>
+    <span class="filter-row__badge" data-testid="filter-row-badge"></span>
     <select class="filter-row__select filter-row__attribute" id="attribute"></select>
     <select class="filter-row__select filter-row__operator" id="operator"></select>
     <span id="valueSlot"></span>
@@ -100,6 +101,7 @@ export class PmReportFilterRow extends HTMLElement {
   private operatorSelect: HTMLSelectElement | null = null;
   private valueSlot: HTMLElement | null = null;
   private removeButton: HTMLButtonElement | null = null;
+  private badge: HTMLElement | null = null;
 
   private _fields: ReportFieldsModel | null = null;
   private _filter: ReportFilterModel | null = null;
@@ -127,6 +129,7 @@ export class PmReportFilterRow extends HTMLElement {
     this.operatorSelect = this.shadowRoot!.getElementById('operator') as HTMLSelectElement;
     this.valueSlot = this.shadowRoot!.getElementById('valueSlot') as HTMLElement;
     this.removeButton = this.shadowRoot!.getElementById('remove') as HTMLButtonElement;
+    this.badge = this.shadowRoot!.querySelector('[data-testid="filter-row-badge"]') as HTMLElement;
 
     this.attributeSelect.addEventListener('change', this.handleAttributeChange);
     this.operatorSelect.addEventListener('change', this.handleOperatorChange);
@@ -153,16 +156,31 @@ export class PmReportFilterRow extends HTMLElement {
     if (!this.attributeSelect || !this._fields || !this._filter) return;
 
     this.attributeSelect.textContent = '';
-    for (const field of this._fields.filters) {
-      const option = document.createElement('option');
-      option.value = field.key;
-      option.textContent = `${field.collection} · ${field.label}`;
-      this.attributeSelect.appendChild(option);
+    for (const group of groupFilterAttributes(this._fields)) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.collection.label;
+      for (const field of group.fields) {
+        const option = document.createElement('option');
+        option.value = field.key;
+        option.textContent = `${group.collection.label} · ${field.label}`;
+        optgroup.appendChild(option);
+      }
+      this.attributeSelect.appendChild(optgroup);
     }
     this.attributeSelect.value = this._filter.field;
 
+    this.renderBadge();
     this.renderOperator();
     this.renderValueControl();
+  }
+
+  private renderBadge(): void {
+    if (!this.badge || !this._filter) return;
+
+    const field = this.currentField();
+    const collection = collectionPresentation(field?.collection ?? 'Student');
+    this.badge.textContent = collection.badge;
+    this.style.setProperty('--collection-colour', collection.colour);
   }
 
   private renderOperator(): void {
@@ -208,7 +226,7 @@ export class PmReportFilterRow extends HTMLElement {
     // state change. Reusing the existing dropdown element — rather than
     // tearing it down and appending a fresh, closed one — is what lets its
     // open/closed state survive that re-render.
-    if (field.dataType === 'List' && this._filter.operator === 'in') {
+    if ((field.dataType === 'List' || field.dataType === 'Datasource') && this._filter.operator === 'in') {
       const existing = this.valueSlot.firstElementChild;
       if (sameField && this.valueSlot.children.length === 1 && existing?.tagName === 'PM-REPORT-CHECKLIST-DROPDOWN') {
         const dropdown = existing as PmReportChecklistDropdown;
@@ -273,7 +291,7 @@ export class PmReportFilterRow extends HTMLElement {
       return;
     }
 
-    // List `equals` is the only case left here — `in` is handled above.
+    // List or Datasource `equals` is the only case left here — `in` is handled above.
     const value = this._filter.values[0] ?? '';
     const existing = this.valueSlot.firstElementChild;
     if (sameField && this.valueSlot.children.length === 1 && existing instanceof HTMLSelectElement) {

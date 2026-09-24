@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getFields, runReport, clearReportsCache, ReportsError } from '../reports';
+import { getFields, runReport, ReportsError } from '../reports';
 import type { ReportDefinitionModel } from '../../models/report';
 
 const mockFetch = vi.fn();
@@ -8,7 +8,6 @@ globalThis.fetch = mockFetch;
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
-  clearReportsCache();
 });
 
 const apiFields = {
@@ -35,27 +34,28 @@ const apiFields = {
 };
 
 describe('getFields', () => {
-  it('maps the registry and caches it for a second call', async () => {
+  it('maps the registry', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiFields });
 
-    const first = await getFields();
-    const second = await getFields();
-
-    expect(first.filters[0].key).toBe('student.name');
-    expect(first.columns[0].locked).toBe(true);
-    expect(second).toEqual(first);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not cache a failed call', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'boom' }) });
-    await expect(getFields()).rejects.toThrow(ReportsError);
-
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiFields });
     const result = await getFields();
 
-    expect(result.filters).toHaveLength(1);
+    expect(result.filters[0].key).toBe('student.name');
+    expect(result.columns[0].locked).toBe(true);
+  });
+
+  it('is never cached — a second call fetches again, so live datasource options stay current', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiFields });
+
+    await getFields();
+    await getFields();
+
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects with ReportsError on a failed call', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'boom' }) });
+
+    await expect(getFields()).rejects.toThrow(ReportsError);
   });
 });
 
