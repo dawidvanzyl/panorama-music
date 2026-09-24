@@ -2,11 +2,6 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Domain.Formats;
 
-/// <summary>
-/// Step Type column: blank unless the course type is Instrument or Theory,
-/// otherwise the stored step with its leading <c>Step</c> prefix removed
-/// (e.g. <c>Step2A</c> -&gt; <c>2A</c>, <c>Other</c> stays <c>Other</c>).
-/// </summary>
 public sealed class StepTypeFormat(string courseTypeSource, string stepTypeSource) : IColumnFormat
 {
 	public string Format(SourceValues sources)

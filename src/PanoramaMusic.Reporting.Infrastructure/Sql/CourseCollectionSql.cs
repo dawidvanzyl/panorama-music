@@ -2,8 +2,8 @@ namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 
 /// <summary>
 /// The Course collection's fixed, set-based query. The join to
-/// <c>teachers.teachers</c> is the issue's sanctioned cross-schema read —
-/// only the teacher's id, name and active flag are ever touched.
+/// <c>teachers.teachers</c> touches only the teacher's id, name and active
+/// flag — nothing else that table carries.
 /// </summary>
 internal static class CourseCollectionSql
 {

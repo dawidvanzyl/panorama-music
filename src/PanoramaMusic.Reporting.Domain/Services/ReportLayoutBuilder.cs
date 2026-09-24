@@ -3,16 +3,6 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Domain.Services;
 
-/// <summary>
-/// Turns a population plus the records of every selected non-Student
-/// collection into the finished <see cref="ReportLayout"/>. A student's
-/// section spans as many rows as the largest record count among the
-/// selected non-Student collections (at least one). Each collection fills
-/// its own columns downward; where it runs out, its cells are blank —
-/// collections are never cross-multiplied. A Student column's cell prints on
-/// the section's first row only; every collection record's values print in
-/// full on its own row, including values equal to the row above.
-/// </summary>
 public sealed class ReportLayoutBuilder
 {
 	public ReportLayout Build(

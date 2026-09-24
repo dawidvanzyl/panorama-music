@@ -8,7 +8,7 @@ using Xunit;
 namespace PanoramaMusic.Reporting.Tests.Infrastructure;
 
 /// <summary>
-/// Exercises <c>PopulationReader</c>'s new Guardian/Course/Extra-Curricular
+/// Exercises <c>PopulationReader</c>'s Guardian/Course/Extra-Curricular
 /// `EXISTS` predicates through the real DI graph against a live Postgres.
 /// Each test scopes its assertions to the students it itself seeded, the
 /// same convention <c>PopulationReaderTests</c> uses.
@@ -35,8 +35,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 			["student.name"],
 			registry,
 			new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>> { [datasource] = [new(value, value)] });
-
-	// --- 318UC1: Guardian · Married = Yes includes a student with any married guardian exactly once ---
 
 	[Fact]
 	[Trait("AC", "318UC1")]
@@ -69,8 +67,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 			() => population.ShouldNotContain(m => m.StudentId == fayId));
 	}
 
-	// --- 318UC3: a student with Instrument + Theory courses is included by a Course Type = Theory filter ---
-
 	[Fact]
 	[Trait("AC", "318UC3")]
 	public async Task ReadAsync_CourseTypeTheory_IncludesStudentWithATheoryAndAnInstrumentCourse()
@@ -102,8 +98,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 
 		population.ShouldContain(m => m.StudentId == halId);
 	}
-
-	// --- 318UC4: an Extra-Curricular · Activity filter includes only holders, once each ---
 
 	[Fact]
 	[Trait("AC", "318UC4")]
@@ -141,10 +135,7 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 			() => population.ShouldNotContain(m => m.StudentId == maxId));
 	}
 
-	// --- Supporting per-pair tests ---
-
 	[Theory]
-	[Trait("Supporting", "GuardianName")]
 	[InlineData("equals")]
 	[InlineData("contains")]
 	public async Task ReadAsync_GuardianName_MatchesLiterallyAndExcludesOthers(string op)
@@ -170,7 +161,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "GuardianRelationship")]
 	public async Task ReadAsync_GuardianRelationship_EqualsAndInMatchByGuid()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -200,7 +190,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Theory]
-	[Trait("Supporting", "GuardianFlags")]
 	[InlineData("guardian.receivesCorrespondence")]
 	[InlineData("guardian.responsibleForPayment")]
 	public async Task ReadAsync_GuardianBooleanFlags_YesAndNoFilterCorrectly(string field)
@@ -237,7 +226,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "CourseType")]
 	public async Task ReadAsync_CourseTypeIn_MatchesAnyListedType()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -263,7 +251,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Theory]
-	[Trait("Supporting", "LessonStructure")]
 	[InlineData("course.lessonType", "Individual")]
 	[InlineData("course.durationType", "Hour")]
 	[InlineData("course.occurrenceType", "DuringSchool")]
@@ -288,7 +275,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "InstrumentTypeGuard")]
 	public async Task ReadAsync_InstrumentTypeFilter_IgnoresAStaleValueOnANonInstrumentCourse()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -319,7 +305,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "StepTypeGuard")]
 	public async Task ReadAsync_StepTypeFilter_IgnoresAStaleValueOnAnUnrelatedCourseType()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -348,7 +333,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "CourseTeacher")]
 	public async Task ReadAsync_CourseTeacher_EqualsAndInMatchByGuid()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -378,7 +362,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "ExtraCurricularActivityIn")]
 	public async Task ReadAsync_ActivityIn_MatchesAnyListedActivity()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -401,7 +384,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Theory]
-	[Trait("Supporting", "ExtraCurricularPhase")]
 	[InlineData("equals")]
 	[InlineData("in")]
 	public async Task ReadAsync_ExtraCurricularPhase_MatchesTheActivitysPhase(string op)
@@ -422,7 +404,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("Supporting", "TwoFiltersSameCollectionDifferentRecords")]
 	public async Task ReadAsync_TwoGuardianFilters_CanBeSatisfiedByDifferentRecords()
 	{
 		var ct = TestContext.Current.CancellationToken;

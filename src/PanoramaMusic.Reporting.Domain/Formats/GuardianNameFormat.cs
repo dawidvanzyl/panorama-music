@@ -2,7 +2,6 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Domain.Formats;
 
-/// <summary>Guardian column: <c>{first} {surname} · {relationship}</c> (P2).</summary>
 public sealed class GuardianNameFormat(string firstNameSource, string surnameSource, string relationshipSource)
 	: IColumnFormat
 {

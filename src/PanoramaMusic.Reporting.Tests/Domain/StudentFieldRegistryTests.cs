@@ -10,7 +10,7 @@ public class StudentFieldRegistryTests
 
 	[Fact]
 	[Trait("AC", "317UC3")]
-	public void Filters_TwentyOneAttributes_DeclaredVerbatimFromTheIssue()
+	public void Filters_TwentyOneAttributes_MatchTheRegistryContract()
 	{
 		_registry.Filters.Select(f => f.Key).ShouldBe(
 		[
@@ -40,7 +40,7 @@ public class StudentFieldRegistryTests
 
 	[Fact]
 	[Trait("AC", "317UC3")]
-	public void Columns_TwentyFourAttributes_DeclaredVerbatimFromTheIssue()
+	public void Columns_TwentyFourAttributes_MatchTheRegistryContract()
 	{
 		_registry.Columns.Select(c => c.Key).ShouldBe(
 		[

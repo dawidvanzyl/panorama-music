@@ -1,4 +1,4 @@
-using PanoramaMusic.Reporting.Domain.Enums;
+using Dapper;
 using PanoramaMusic.Reporting.Infrastructure.Sql;
 using PanoramaMusic.Teachers.Infrastructure.Persistence;
 using Shouldly;
@@ -8,9 +8,9 @@ using Xunit;
 namespace PanoramaMusic.Reporting.Tests.Infrastructure;
 
 /// <summary>
-/// 318UC15: nothing beyond a teacher's name and active status is reachable
-/// from the Teachers context — neither through Reporting's own SQL nor
-/// through the narrow function it reads live options from.
+/// Nothing beyond a teacher's name and active status is reachable from the
+/// Teachers context — neither through Reporting's own SQL nor through the
+/// narrow function it reads live options from.
 /// </summary>
 public class TeacherReachTests
 {
@@ -19,15 +19,16 @@ public class TeacherReachTests
 
 	[Fact]
 	[Trait("AC", "318UC15")]
-	public void CourseCollectionSql_EveryTeacherAliasedColumn_IsInTheAllowlist()
+	public void TeacherAliasedColumns_InCourseCollectionSqlAndGetTeacherNames_AreAllInTheAllowlist()
 	{
-		var teacherColumns = Regex.Matches(CourseCollectionSql.Query, @"\bt\.(\w+)")
-			.Select(match => match.Groups[1].Value)
-			.Distinct()
-			.ToList();
+		var courseColumns = TeacherAliasedColumns(CourseCollectionSql.Query);
+		var functionColumns = TeacherAliasedColumns(GetTeacherNamesFunctionSql());
 
-		teacherColumns.ShouldNotBeEmpty();
-		teacherColumns.ShouldAllBe(column => _allowedTeacherColumns.Contains(column));
+		ShouldlyHelpers.Satisfy(
+			() => courseColumns.ShouldNotBeEmpty(),
+			() => courseColumns.ShouldAllBe(column => _allowedTeacherColumns.Contains(column)),
+			() => functionColumns.ShouldNotBeEmpty(),
+			() => functionColumns.ShouldAllBe(column => _allowedTeacherColumns.Contains(column)));
 	}
 
 	[Fact]
@@ -35,23 +36,20 @@ public class TeacherReachTests
 	public void ReportingSql_ContainsNoForbiddenTeacherToken()
 	{
 		var catalog = new StudentSqlCatalog();
-		var teacherEquals = catalog.TryGetPredicateBuilder("course.teacher", FilterOperator.Equals)!;
-		var teacherIn = catalog.TryGetPredicateBuilder("course.teacher", FilterOperator.In)!;
-		var parameters = new Dapper.DynamicParameters();
+		var parameters = new DynamicParameters();
+		var predicateFragments = catalog.PredicateKeys
+			.Select((pair, index) => catalog.TryGetPredicateBuilder(pair.Field, pair.Operator)!(
+				$"f{index}", parameters, [Guid.NewGuid().ToString()]).Sql)
+			.ToList();
 
-		var predicateSql = string.Join(
-			" ",
-			teacherEquals("f0", parameters, [Guid.NewGuid().ToString()]).Sql,
-			teacherIn("f1", parameters, [Guid.NewGuid().ToString()]).Sql);
-
-		var haystacks = new[]
+		var haystacks = new List<string>
 		{
 			GuardianCollectionSql.Query,
 			CourseCollectionSql.Query,
 			ExtraCurricularCollectionSql.Query,
-			predicateSql,
 			GetTeacherNamesFunctionSql(),
 		};
+		haystacks.AddRange(predicateFragments);
 
 		foreach (var haystack in haystacks)
 		{
@@ -62,6 +60,9 @@ public class TeacherReachTests
 			}
 		}
 	}
+
+	private static List<string> TeacherAliasedColumns(string sql) =>
+		[.. Regex.Matches(sql, @"\bt\.(\w+)").Select(match => match.Groups[1].Value).Distinct()];
 
 	private static string GetTeacherNamesFunctionSql()
 	{

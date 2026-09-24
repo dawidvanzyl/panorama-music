@@ -2,7 +2,6 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Domain.Formats;
 
-/// <summary>Maps a stored value to its registered option label; an unknown value renders verbatim.</summary>
 public sealed class OptionLabelFormat(string source, IReadOnlyList<FieldOption> options) : IColumnFormat
 {
 	public string Format(SourceValues sources)

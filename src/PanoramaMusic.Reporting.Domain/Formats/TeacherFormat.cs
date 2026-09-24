@@ -2,7 +2,6 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Domain.Formats;
 
-/// <summary>Teacher column: the name, ' (inactive)' when inactive, or '(removed)' when the teacher no longer exists.</summary>
 public sealed class TeacherFormat(
 	string firstNameSource,
 	string surnameSource,

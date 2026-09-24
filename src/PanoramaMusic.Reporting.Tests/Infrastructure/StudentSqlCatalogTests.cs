@@ -45,7 +45,6 @@ public class StudentSqlCatalogTests
 	}
 
 	[Theory]
-	[Trait("AC", "318UC15")]
 	[InlineData(ReportCollection.Guardian)]
 	[InlineData(ReportCollection.Course)]
 	[InlineData(ReportCollection.ExtraCurricular)]

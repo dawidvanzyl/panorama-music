@@ -3,10 +3,7 @@ using System.Globalization;
 
 namespace PanoramaMusic.Reporting.Domain.Formats;
 
-/// <summary>
-/// Practice Times column: zips the day and start-time arrays, sorts Monday-first
-/// then by time, and renders <c>{Day} {HH:mm}</c> joined with <c>&#160;·&#160;</c>, invariant culture.
-/// </summary>
+/// <summary>Invariant-culture formatting keeps the rendered time locale-stable.</summary>
 public sealed class PracticeTimesFormat(string daysSource, string startTimesSource) : IColumnFormat
 {
 	public string Format(SourceValues sources)

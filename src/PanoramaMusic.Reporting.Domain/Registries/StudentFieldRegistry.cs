@@ -7,11 +7,10 @@ namespace PanoramaMusic.Reporting.Domain.Registries;
 /// <summary>
 /// The code-defined allowlist of every attribute a report may filter or
 /// project over the Student, Guardian, Course and Extra-Curricular
-/// collections — the "Registry contract" tables in the issue, verbatim. No
-/// banking attribute is ever registered here, and no SQL lives here: the
-/// Infrastructure catalog and collection-SQL classes map these same keys and
-/// source names to SQL, and a startup/test parity check keeps them in lock
-/// step.
+/// collections. No banking attribute is ever registered here, and no SQL
+/// lives here: the Infrastructure catalog and collection-SQL classes map
+/// these same keys and source names to SQL, and a startup/test parity check
+/// keeps them in lock step.
 /// <para>
 /// This is a singleton value the DI container hands out — it has no mutable
 /// state and is safe to share across requests.

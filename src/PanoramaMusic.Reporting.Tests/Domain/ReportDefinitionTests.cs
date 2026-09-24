@@ -154,8 +154,8 @@ public class ReportDefinitionTests
 	public void Create_ElevenColumns_ThrowsInvalidReportDefinitionException()
 	{
 		// The count cap is checked on the raw request before any key is
-		// resolved (see ReportDefinition.Create), so this is rejected as "too
-		// many columns" even though the #317 registry itself only has 8 keys.
+		// resolved, so a list this long is rejected as "too many columns"
+		// even though none of these keys are registered.
 		var columns = Enumerable.Range(0, 11).Select(i => $"student.name{i}").ToArray();
 
 		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], columns, _registry, _noDatasourceOptions));
@@ -171,7 +171,6 @@ public class ReportDefinitionTests
 	}
 
 	[Fact]
-	[Trait("AC", "318UC14")]
 	public void Create_ColumnWhoseAnchorIsNotSelected_ThrowsMissingAnchor()
 	{
 		Should.Throw<InvalidReportDefinitionException>(() =>

@@ -5,11 +5,10 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 namespace PanoramaMusic.Reporting.Domain.Services;
 
 /// <summary>
-/// Orders one collection's records for a student's section, per the issue's
-/// "Records are ordered" rule: Guardian by guardian id ascending; Course by
-/// Course Type -&gt; Lesson Type -&gt; Duration -&gt; Occurrence -&gt; Instrument Type
-/// -&gt; Step Type, each in the option order of the registry contract; Extra-
-/// Curricular by Activity A-&gt;Z. Uses only the order sources
+/// Orders one collection's records for a student's section: Guardian by
+/// guardian id ascending; Course by Course Type -&gt; Lesson Type -&gt; Duration
+/// -&gt; Occurrence -&gt; Instrument Type -&gt; Step Type, each in registry option
+/// order; Extra-Curricular by Activity A-&gt;Z. Uses only the order sources
 /// <see cref="StudentFieldRegistry.OrderSources"/> names for the collection.
 /// </summary>
 public static class CollectionRecordOrdering
