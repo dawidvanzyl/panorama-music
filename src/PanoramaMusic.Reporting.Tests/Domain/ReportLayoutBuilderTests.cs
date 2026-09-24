@@ -59,4 +59,88 @@ public class ReportLayoutBuilderTests
 
 		layout.Sections.Select(s => s.StudentId).ShouldBe([first.StudentId, second.StudentId]);
 	}
+
+	private static CollectionRecord Guardian(Guid studentId, string name) =>
+		new(studentId, new SourceValues(new Dictionary<string, object?> { ["firstName"] = name, ["surname"] = "G", ["relationship"] = "Father" }));
+
+	private static CollectionRecord Course(Guid studentId, string courseType) =>
+		new(studentId, new SourceValues(new Dictionary<string, object?> { ["courseType"] = courseType }));
+
+	[Fact]
+	[Trait("AC", "318UC2")]
+	public void Build_TwoGuardiansThreeCourses_ThreeRowsWithGuardianBlankOnRowThree()
+	{
+		var definition = ReportDefinition.Create([], ["student.name", "guardian.name", "course.courseType"], _registry, _noDatasourceOptions);
+		var studentId = Guid.NewGuid();
+		var member = new PopulationMember(studentId, new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Gus", ["lastName"] = "Z" }));
+
+		var collections = new Dictionary<ReportCollection, IReadOnlyList<CollectionRecord>>
+		{
+			[ReportCollection.Guardian] = [Guardian(studentId, "G1"), Guardian(studentId, "G2")],
+			[ReportCollection.Course] = [Course(studentId, "Theory"), Course(studentId, "G2Recorder"), Course(studentId, "Instrument")],
+		};
+
+		var layout = _builder.Build(definition, [member], collections);
+
+		var rows = layout.Sections.Single().Rows;
+		ShouldlyHelpers.Satisfy(
+			() => rows.Count.ShouldBe(3),
+			() => rows[2][1].ShouldBe(string.Empty));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC5")]
+	public void Build_ThreeRowSection_StudentAndClassCellsOnRowOneOnlyCourseTypeRepeatsEveryRow()
+	{
+		var definition = ReportDefinition.Create([], ["student.name", "student.class", "course.courseType"], _registry, _noDatasourceOptions);
+		var studentId = Guid.NewGuid();
+		var member = new PopulationMember(studentId, new SourceValues(new Dictionary<string, object?>
+		{
+			["firstName"] = "Amy",
+			["lastName"] = "Z",
+			["grade"] = "Grade4",
+			["class"] = "A1",
+		}));
+
+		var collections = new Dictionary<ReportCollection, IReadOnlyList<CollectionRecord>>
+		{
+			[ReportCollection.Course] = [Course(studentId, "Instrument"), Course(studentId, "Instrument"), Course(studentId, "Instrument")],
+		};
+
+		var layout = _builder.Build(definition, [member], collections);
+
+		var rows = layout.Sections.Single().Rows;
+		ShouldlyHelpers.Satisfy(
+			() => rows.Count.ShouldBe(3),
+			() => rows[0][0].ShouldBe("Amy Z"),
+			() => rows[0][1].ShouldBe("4A1"),
+			() => rows[1][0].ShouldBe(string.Empty),
+			() => rows[1][1].ShouldBe(string.Empty),
+			() => rows[0][2].ShouldBe("Instrument"),
+			() => rows[1][2].ShouldBe("Instrument"),
+			() => rows[2][2].ShouldBe("Instrument"));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC6")]
+	public void Build_NoGuardiansTwoCourses_TwoRowsWithBlankGuardianCells()
+	{
+		var definition = ReportDefinition.Create([], ["student.name", "guardian.name", "course.courseType"], _registry, _noDatasourceOptions);
+		var studentId = Guid.NewGuid();
+		var member = new PopulationMember(studentId, new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Bo", ["lastName"] = "Z" }));
+
+		var collections = new Dictionary<ReportCollection, IReadOnlyList<CollectionRecord>>
+		{
+			[ReportCollection.Guardian] = [],
+			[ReportCollection.Course] = [Course(studentId, "Theory"), Course(studentId, "G2Recorder")],
+		};
+
+		var layout = _builder.Build(definition, [member], collections);
+
+		var rows = layout.Sections.Single().Rows;
+		ShouldlyHelpers.Satisfy(
+			() => rows.Count.ShouldBe(2),
+			() => rows[0][1].ShouldBe(string.Empty),
+			() => rows[1][1].ShouldBe(string.Empty));
+	}
 }

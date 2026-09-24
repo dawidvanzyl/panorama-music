@@ -169,4 +169,64 @@ public class ReportDefinitionTests
 
 		definition.Columns.Select(c => c.Key).ShouldBe(["student.name", "student.class", "student.isEldest"]);
 	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_ColumnWhoseAnchorIsNotSelected_ThrowsMissingAnchor()
+	{
+		Should.Throw<InvalidReportDefinitionException>(() =>
+			ReportDefinition.Create([], ["student.name", "guardian.cell"], _registry, _noDatasourceOptions));
+	}
+
+	[Fact]
+	public void Create_ColumnsAcrossCollections_AreOrderedByCollectionThenDisplayOrder()
+	{
+		var definition = ReportDefinition.Create(
+			[],
+			["extraCurricular.activity", "course.courseType", "guardian.name", "student.name", "student.class"],
+			_registry,
+			_noDatasourceOptions);
+
+		definition.Columns.Select(c => c.Key).ShouldBe(
+			["student.name", "student.class", "guardian.name", "course.courseType", "extraCurricular.activity"]);
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterValueNotAmongLiveOptions_ThrowsInvalidValue()
+	{
+		var teacherId = Guid.NewGuid();
+		var options = new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+		{
+			[ReportDatasource.Teacher] = [new(teacherId.ToString(), "Amy Jacobs")],
+		};
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [Guid.NewGuid().ToString()]) };
+
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, options));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterMissingFromMap_ThrowsInvalidValue()
+	{
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [Guid.NewGuid().ToString()]) };
+
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterValueAmongLiveOptions_IsAccepted()
+	{
+		var teacherId = Guid.NewGuid();
+		var options = new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+		{
+			[ReportDatasource.Teacher] = [new(teacherId.ToString(), "Amy Jacobs")],
+		};
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [teacherId.ToString()]) };
+
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry, options);
+
+		definition.Filters.Single().Values.ShouldBe([teacherId.ToString()]);
+	}
 }

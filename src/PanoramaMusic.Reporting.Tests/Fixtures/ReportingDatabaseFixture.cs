@@ -1,12 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using PanoramaMusic.Audit.Infrastructure.Persistence;
+using PanoramaMusic.DataProtection.Persistence;
+using PanoramaMusic.Identity.Infrastructure.Persistence;
 using PanoramaMusic.Persistence;
 using PanoramaMusic.Persistence.Extensions;
 using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
 using PanoramaMusic.Reporting.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Persistence;
+using PanoramaMusic.Teachers.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -14,12 +19,12 @@ namespace PanoramaMusic.Reporting.Tests.Fixtures;
 
 /// <summary>
 /// Starts a disposable Postgres, provisions the restricted panorama_app role,
-/// and runs the Students context migrations (Reporting reads that schema
-/// directly and owns none of its own) — mirroring what InitializeDatabase
-/// does at application startup. Wires a real DI graph via
+/// and runs the DataProtection, Audit, Identity, Student and Teacher context
+/// migrations — <c>teachers.teachers</c> references <c>identity.users</c>, so
+/// the chain needs Identity ahead of it, in production order — mirroring what
+/// InitializeDatabase does at application startup. Wires a real DI graph via
 /// <c>AddInfrastructure</c> + <c>AddReportingInfrastructure</c>, so reader
-/// tests exercise the same DI-composed <see cref="IPopulationReader"/>
-/// production code runs.
+/// tests exercise the same DI-composed production code runs.
 /// </summary>
 public sealed class ReportingDatabaseFixture : IAsyncLifetime
 {
@@ -46,7 +51,11 @@ public sealed class ReportingDatabaseFixture : IAsyncLifetime
 		}.ConnectionString;
 
 		DatabaseMigrator.EnsureApplicationRole(migrationConnectionString, _applicationConnectionString);
+		DataProtectionMigrator.Run(migrationConnectionString);
+		AuditMigrator.Run(migrationConnectionString);
+		IdentityMigrator.Run(migrationConnectionString);
 		StudentMigrator.Run(migrationConnectionString);
+		TeacherMigrator.Run(migrationConnectionString);
 
 		var services = new ServiceCollection();
 		services.AddInfrastructure(_applicationConnectionString);
@@ -81,6 +90,48 @@ public sealed class ReportingDatabaseFixture : IAsyncLifetime
 		{
 			var reader = scope.ServiceProvider.GetRequiredService<IPopulationReader>();
 			return await reader.ReadAsync(definition, cancellationToken);
+		}
+		finally
+		{
+			await unitOfWork.RollbackAsync(cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Runs the real, DI-resolved <see cref="ICollectionReader"/> for
+	/// <paramref name="collection"/>, in its own scope and unit of work that
+	/// always rolls back.
+	/// </summary>
+	public async Task<IReadOnlyList<CollectionRecord>> ReadCollectionAsync(
+		ReportCollection collection, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+	{
+		await using var scope = _serviceProvider.CreateAsyncScope();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		await unitOfWork.BeginAsync(cancellationToken);
+		try
+		{
+			var reader = scope.ServiceProvider.GetServices<ICollectionReader>().Single(r => r.Collection == collection);
+			return await reader.ReadAsync(studentIds, [], cancellationToken);
+		}
+		finally
+		{
+			await unitOfWork.RollbackAsync(cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Runs the real, DI-resolved <see cref="IDatasourceOptionReader"/>, in its
+	/// own scope and unit of work that always rolls back.
+	/// </summary>
+	public async Task<IReadOnlyList<FieldOption>> ReadOptionsAsync(ReportDatasource datasource, CancellationToken cancellationToken)
+	{
+		await using var scope = _serviceProvider.CreateAsyncScope();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		await unitOfWork.BeginAsync(cancellationToken);
+		try
+		{
+			var reader = scope.ServiceProvider.GetRequiredService<IDatasourceOptionReader>();
+			return await reader.ReadAsync(datasource, cancellationToken);
 		}
 		finally
 		{
