@@ -50,7 +50,7 @@ describe('pm-report-filter-row — in checklist survives a re-render', { tags: [
     document.body.removeChild(el);
   });
 
-  it('keeps the same dropdown element (and its open state) across a values-only re-render (R3)', () => {
+  it('keeps the same dropdown element (and its open state) across a values-only re-render', () => {
     el.fields = fields;
     const filter: ReportFilterModel = { field: 'student.grade', operator: 'in', values: [] };
     el.filter = filter;
@@ -98,7 +98,7 @@ describe('pm-report-filter-row — text input and list select survive a re-rende
     document.body.removeChild(el);
   });
 
-  it('keeps the same text input element across a values-only re-render (review-1 Blocker 3)', () => {
+  it('keeps the same text input element across a values-only re-render', () => {
     el.fields = fields;
     el.filter = { field: 'student.name', operator: 'contains', values: ['z'] };
 

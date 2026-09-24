@@ -107,12 +107,11 @@ public class ReportDefinitionTests
 	[Trait("AC", "317UC20")]
 	public void Create_BooleanEqualsWithBlankAndValidValue_StoresOnlyTheNonBlankValue()
 	{
-		// review-1 Blocker 2 (#317): the raw values, including the blank,
-		// used to flow into ReportFilter unchanged even though validation
-		// itself ran on the non-blank subset. A predicate builder always
-		// reads values[0], so a leading blank silently became the bound
-		// value ("" == "Yes" -> false, running Has Sibling = No instead of
-		// Yes) with no rejection at all.
+		// The raw values, including the blank, used to flow into ReportFilter
+		// unchanged even though validation itself ran on the non-blank
+		// subset. A predicate builder always reads values[0], so a leading
+		// blank silently became the bound value ("" == "Yes" -> false,
+		// running Has Sibling = No instead of Yes) with no rejection at all.
 		var filters = new[] { new ReportFilterInput("student.hasSiblings", "equals", ["", "Yes"]) };
 
 		var definition = ReportDefinition.Create(filters, _studentOnly, _registry);

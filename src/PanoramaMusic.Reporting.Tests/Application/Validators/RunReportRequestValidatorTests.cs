@@ -6,11 +6,11 @@ using Xunit;
 namespace PanoramaMusic.Reporting.Tests.Application.Validators;
 
 /// <summary>
-/// review-1 Warning 1 (#317): without <c>CascadeMode.Stop</c>, a
-/// <c>.NotNull().Must(...)</c> chain still ran <c>Must</c> against the null
-/// value, throwing a <see cref="NullReferenceException"/> instead of
-/// producing a validation failure — a request omitting a required array (or
-/// carrying a null element inside <c>filters</c>) returned 500, not 400.
+/// Without <c>CascadeMode.Stop</c>, a <c>.NotNull().Must(...)</c> chain still
+/// ran <c>Must</c> against the null value, throwing a
+/// <see cref="NullReferenceException"/> instead of producing a validation
+/// failure — a request omitting a required array (or carrying a null element
+/// inside <c>filters</c>) returned 500, not 400.
 /// </summary>
 public class RunReportRequestValidatorTests
 {

@@ -6,8 +6,9 @@ namespace PanoramaMusic.Reporting.Domain.Interfaces;
 /// <summary>
 /// Reads one non-Student collection's records for a whole population in a
 /// single set-based query (never one query per student — N+1 is a defect).
-/// #317 registers none; #318 adds Guardian, Course and ExtraCurricular
-/// readers without changing this contract or <c>ReportRunner</c>.
+/// No implementation is registered while the registry declares no
+/// non-Student collection; a Guardian, Course or ExtraCurricular reader
+/// implements this without changing the contract or <c>ReportRunner</c>.
 /// </summary>
 public interface ICollectionReader
 {

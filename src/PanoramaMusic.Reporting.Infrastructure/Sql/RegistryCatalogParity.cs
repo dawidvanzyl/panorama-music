@@ -4,10 +4,10 @@ using PanoramaMusic.Reporting.Domain.Registries;
 namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 
 /// <summary>
-/// The parity check D1 relies on: the Domain registry and this Infrastructure
-/// catalog are one allowlist split across two layers, and this is what keeps
-/// them from drifting apart. Run at startup (<c>AddReportingInfrastructure</c>)
-/// and in a test (317UC3).
+/// The Domain registry and this Infrastructure catalog are one allowlist
+/// split across two layers, and this check is what keeps them from drifting
+/// apart. Run at startup (<c>AddReportingInfrastructure</c>) and in a test
+/// (317UC3).
 /// </summary>
 public static class RegistryCatalogParity
 {
