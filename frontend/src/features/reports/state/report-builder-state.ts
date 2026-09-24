@@ -168,6 +168,7 @@ export function clear(fields: ReportFieldsModel): ReportDefinitionModel {
 
 let _heldDefinition: ReportDefinitionModel | null = null;
 let _heldResult: ReportResultModel | null = null;
+let _heldFields: ReportFieldsModel | null = null;
 
 /** Holds the builder's definition across the Run report -> results -> Edit report round trip. */
 export function holdDefinition(definition: ReportDefinitionModel): void {
@@ -186,9 +187,19 @@ export function takeHeldResult(): ReportResultModel | null {
   return _heldResult;
 }
 
+/** Holds the field list the builder ran with, so the results page can label filters without re-fetching. */
+export function holdFields(fields: ReportFieldsModel): void {
+  _heldFields = fields;
+}
+
+export function takeHeldFields(): ReportFieldsModel | null {
+  return _heldFields;
+}
+
 export function clearBuilderState(): void {
   _heldDefinition = null;
   _heldResult = null;
+  _heldFields = null;
 }
 
 registerSessionCache(clearBuilderState);

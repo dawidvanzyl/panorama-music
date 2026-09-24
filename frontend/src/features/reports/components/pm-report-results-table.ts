@@ -37,6 +37,37 @@ styles.replaceSync(`
       font-size: 13px;
       text-align: center;
     }
+    @media print {
+      .results-table__card {
+        overflow: visible;
+        border: none;
+        border-radius: 0;
+      }
+      table {
+        width: 100%;
+        font-size: 11px;
+      }
+      thead {
+        display: table-header-group;
+      }
+      thead th {
+        border-bottom: 2px solid var(--pm-border);
+        padding: 6px 8px;
+      }
+      tbody td {
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--pm-border);
+      }
+      th,
+      td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        vertical-align: top;
+      }
+      tbody.results-table__section {
+        break-inside: avoid;
+      }
+    }
   `);
 
 const template = document.createElement('template');

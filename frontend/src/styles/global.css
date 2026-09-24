@@ -100,3 +100,53 @@ main {
   background: var(--pm-border);
   border-radius: 3px;
 }
+
+@media print {
+  :root {
+    --pm-bg: #fff;
+    --pm-surface: #fff;
+    --pm-surface-2: #f4f4f6;
+    --pm-border: #d4d4da;
+    --pm-text: #111;
+    --pm-text-muted: #555;
+    --pm-shadow: none;
+    color-scheme: light;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  html {
+    background: var(--pm-bg);
+  }
+
+  pm-nav-bar,
+  pm-sidebar,
+  pm-app-footer {
+    display: none;
+  }
+
+  .pm-app-shell {
+    height: auto;
+    overflow: visible;
+    display: block;
+  }
+
+  .pm-shell {
+    display: block;
+    overflow: visible;
+  }
+
+  .pm-shell main {
+    overflow: visible;
+    padding: 0;
+  }
+
+  body,
+  #app {
+    min-height: 0;
+  }
+
+  @page {
+    margin: 1cm;
+  }
+}
