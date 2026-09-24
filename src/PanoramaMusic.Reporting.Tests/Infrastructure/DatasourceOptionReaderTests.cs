@@ -57,7 +57,8 @@ public class DatasourceOptionReaderTests : IClassFixture<ReportingDatabaseFixtur
 
 		var options = await _fixture.ReadOptionsAsync(ReportDatasource.ExtraCurricular, ct);
 
-		options.Count(option => option.Value == activityId.ToString()).ShouldBe(1);
-		options.ShouldContain(option => option.Value == activityId.ToString() && option.Label == $"Choir {token} (Junior)");
+		ShouldlyHelpers.Satisfy(
+			() => options.Count(option => option.Value == activityId.ToString()).ShouldBe(1),
+			() => options.ShouldContain(option => option.Value == activityId.ToString() && option.Label == $"Choir {token} (Junior)"));
 	}
 }

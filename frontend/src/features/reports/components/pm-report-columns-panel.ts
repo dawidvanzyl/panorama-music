@@ -155,11 +155,11 @@ export class PmReportColumnsPanel extends HTMLElement {
         check.className = 'columns-panel__check' + (isChecked ? ' columns-panel__check--checked' : '');
         check.textContent = isChecked ? '✓' : '';
 
-        const label2 = document.createElement('span');
-        label2.textContent = column.header;
+        const header = document.createElement('span');
+        header.textContent = column.header;
 
         row.appendChild(check);
-        row.appendChild(label2);
+        row.appendChild(header);
 
         if (column.locked) {
           const lockIcon = document.createElement('span');

@@ -72,4 +72,26 @@ public class RunReportRequestValidatorTests
 
 		result.IsValid.ShouldBeTrue();
 	}
+
+	[Fact]
+	public void Validate_OneHundredValuesOnAFilter_IsValid()
+	{
+		var values = Enumerable.Range(0, 100).Select(i => $"v{i}").ToList();
+		var request = new RunReportRequest([new ReportFilterRequest("student.grade", "in", values)], ["student.name"]);
+
+		var result = _validator.Validate(request);
+
+		result.IsValid.ShouldBeTrue();
+	}
+
+	[Fact]
+	public void Validate_OneHundredAndOneValuesOnAFilter_IsInvalid()
+	{
+		var values = Enumerable.Range(0, 101).Select(i => $"v{i}").ToList();
+		var request = new RunReportRequest([new ReportFilterRequest("student.grade", "in", values)], ["student.name"]);
+
+		var result = _validator.Validate(request);
+
+		result.IsValid.ShouldBeFalse();
+	}
 }

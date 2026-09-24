@@ -1,7 +1,7 @@
 -- get_teacher_names
--- The narrow teacher projection the Reporting context reads for its Course ·
--- Teacher filter and column: id, name and active status only. Nothing else
--- teachers.teachers carries is ever returned.
+-- The narrow teacher projection the Reporting context reads to list the
+-- Course · Teacher filter's live options: id, name and active status only.
+-- Nothing else teachers.teachers carries is ever returned.
 
 CREATE OR REPLACE FUNCTION teachers.get_teacher_names()
 RETURNS TABLE(

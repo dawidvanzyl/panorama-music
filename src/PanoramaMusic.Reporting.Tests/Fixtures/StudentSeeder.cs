@@ -11,8 +11,8 @@ namespace PanoramaMusic.Reporting.Tests.Fixtures;
 public static class StudentSeeder
 {
 	// Group · HalfHour · DuringSchool, from seed_lesson_structures.sql — reused
-	// from CourseFunctionTests; any seeded structure works since #317 reads no
-	// column of it.
+	// from CourseFunctionTests; used only where a course's own structure
+	// doesn't matter to the assertion.
 	public static readonly Guid LessonStructureId = Guid.Parse("805c3cfd-7d2e-4376-b93b-4b4e2547f5e8");
 
 	// Individual · Hour · DuringSchool and Individual · HalfHour · DuringSchool,

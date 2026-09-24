@@ -18,8 +18,8 @@ public class ReportRunnerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
-	private static readonly IReadOnlyDictionary<PanoramaMusic.Reporting.Domain.Enums.ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
-		new Dictionary<PanoramaMusic.Reporting.Domain.Enums.ReportDatasource, IReadOnlyList<FieldOption>>();
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	[Fact]
 	public async Task RunAsync_EmptyPopulation_NeverCallsAnyCollectionReader()
@@ -57,6 +57,41 @@ public class ReportRunnerTests
 		collectionReaderMock.Verify(
 			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
 			Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "318UC4")]
+	public async Task RunAsync_ActivityFilterWithNoExtraCurricularColumn_NeverCallsTheExtraCurricularReaderAndGivesOneRowPerSection()
+	{
+		var activityId = Guid.NewGuid();
+		var members = new[]
+		{
+			new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Jo", ["lastName"] = "Z" })),
+			new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Kim", ["lastName"] = "Z" })),
+		};
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(members);
+		var extraCurricularReaderMock = new Mock<ICollectionReader>();
+		extraCurricularReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.ExtraCurricular);
+
+		var definition = ReportDefinition.Create(
+			[new ReportFilterInput("extraCurricular.activity", "equals", [activityId.ToString()])],
+			["student.name"],
+			_registry,
+			new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+			{
+				[ReportDatasource.ExtraCurricular] = [new(activityId.ToString(), "Choir")],
+			});
+		var runner = new ReportRunner(_populationReaderMock.Object, [extraCurricularReaderMock.Object], new ReportLayoutBuilder());
+
+		var layout = await runner.RunAsync(definition, TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => extraCurricularReaderMock.Verify(
+				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+				Times.Never),
+			() => layout.Sections.ShouldAllBe(section => section.Rows.Count == 1));
 	}
 
 	[Fact]

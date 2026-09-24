@@ -43,6 +43,18 @@ const boolField: ReportField = {
   ],
 };
 
+const datasourceField: ReportField = {
+  key: 'course.teacher',
+  collection: 'Course',
+  label: 'Teacher',
+  dataType: 'Datasource',
+  operators: ['equals', 'in'],
+  options: [
+    { value: 'teacher-1', label: 'Amy Jacobs' },
+    { value: 'teacher-2', label: 'Ben Smith' },
+  ],
+};
+
 const fields: ReportFieldsModel = {
   filters: [textField, listField, boolField],
   columns: [
@@ -131,6 +143,14 @@ describe('chooseAttribute', { tags: ['317UC3'] }, () => {
   it('resets a boolean attribute to equals + Yes', () => {
     expect(chooseAttribute(boolField)).toEqual({ field: 'student.hasSiblings', operator: 'equals', values: ['Yes'] });
   });
+
+  it('resets a datasource attribute to equals + the first live option, the same as a list attribute', () => {
+    expect(chooseAttribute(datasourceField)).toEqual({
+      field: 'course.teacher',
+      operator: 'equals',
+      values: ['teacher-1'],
+    });
+  });
 });
 
 describe('changeOperator', { tags: ['317UC4'] }, () => {
@@ -148,7 +168,7 @@ describe('changeOperator', { tags: ['317UC4'] }, () => {
 });
 
 describe('changeOperator — switching to in starts empty', { tags: ['317UC17'] }, () => {
-  it('clears the carried-over equals value when switching to in (#325)', () => {
+  it('clears the carried-over equals value when switching to in', () => {
     // The exact shape chooseAttribute() produces for a freshly-chosen List
     // attribute: equals + the registry's first option.
     const filter: ReportFilterModel = { field: 'student.grade', operator: 'equals', values: ['Grade1'] };
@@ -214,7 +234,7 @@ describe('clear', { tags: ['317UC6'] }, () => {
   });
 });
 
-describe('toggleColumn — P4 cascade', () => {
+describe('toggleColumn — anchor cascade', () => {
   it('ticking a dependant auto-ticks its anchor', () => {
     const after = toggleColumn(fields, ['student.name'], 'student.class');
 
@@ -222,8 +242,8 @@ describe('toggleColumn — P4 cascade', () => {
   });
 
   it('unticking the anchor unticks its dependants', () => {
-    // Student is locked and can never itself be unticked in #317, so this
-    // exercises the generic cascade against a synthetic unlocked anchor.
+    // Student is locked and can never itself be unticked, so this exercises
+    // the generic cascade against a synthetic unlocked anchor.
     const chainFields: ReportFieldsModel = {
       filters: [],
       columns: [

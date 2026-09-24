@@ -27,7 +27,7 @@ public static class RegistryExtensions
 			column.Locked))]);
 
 	private static IReadOnlyList<FieldOption> OptionsFor(
-		Domain.ValueObjects.FilterAttribute filter,
+		FilterAttribute filter,
 		IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> datasourceOptions) =>
 		filter.Datasource is { } datasource && datasourceOptions.TryGetValue(datasource, out var options)
 			? options

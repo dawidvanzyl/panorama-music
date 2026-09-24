@@ -11,8 +11,9 @@ const _maxColumns = 10;
 
 /**
  * No filters, columns holding only the locked column(s) the registry
- * declares. Reads the lock from `fields` rather than hardcoding a key, so a
- * future registry change is a data change here too, not a code change.
+ * declares. Reads the lock from `fields` rather than hardcoding a key, so
+ * changing which columns are locked is a registry data change, not a code
+ * change here.
  */
 export function createDefinition(fields: ReportFieldsModel): ReportDefinitionModel {
   return { filters: [], columns: fields.columns.filter((column) => column.locked).map((column) => column.key) };
