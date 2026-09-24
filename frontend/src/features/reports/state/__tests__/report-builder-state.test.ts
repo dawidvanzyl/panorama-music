@@ -259,3 +259,82 @@ describe('toggleColumn — P4 cascade', () => {
     expect(after).toEqual(['student.name']);
   });
 });
+
+const guardianColumns: ReportFieldsModel['columns'] = [
+  { key: 'student.name', collection: 'Student', header: 'Student', displayOrder: 1, dependsOn: null, locked: true },
+  {
+    key: 'guardian.name',
+    collection: 'Guardian',
+    header: 'Guardian',
+    displayOrder: 1,
+    dependsOn: 'student.name',
+    locked: false,
+  },
+  {
+    key: 'guardian.cell',
+    collection: 'Guardian',
+    header: 'Cell',
+    displayOrder: 2,
+    dependsOn: 'guardian.name',
+    locked: false,
+  },
+  {
+    key: 'guardian.email',
+    collection: 'Guardian',
+    header: 'Email',
+    displayOrder: 3,
+    dependsOn: 'guardian.name',
+    locked: false,
+  },
+];
+
+describe('toggleColumn — Guardian anchor cascade', { tags: ['318UC1', '318UC2'] }, () => {
+  it('ticking Cell with Guardian unticked also ticks Guardian, raising the count by two', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+
+    const after = toggleColumn(guardianFields, ['student.name'], 'guardian.cell');
+
+    expect(after).toEqual(['student.name', 'guardian.name', 'guardian.cell']);
+  });
+
+  it('unticking Guardian with Cell and Email ticked unticks them with it', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+
+    const after = toggleColumn(
+      guardianFields,
+      ['student.name', 'guardian.name', 'guardian.cell', 'guardian.email'],
+      'guardian.name',
+    );
+
+    expect(after).toEqual(['student.name']);
+  });
+});
+
+describe('columnAvailability — Guardian dependant needs two slots', { tags: ['318UC3'] }, () => {
+  it('disables Cell and the other Guardian dependants when only one slot remains', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+    const nineSelected = ['student.name', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
+    const withGuardianDependants: ReportFieldsModel = {
+      filters: [],
+      columns: [
+        ...nineSelected
+          .filter((key) => key !== 'student.name')
+          .map((key, index) => ({
+            key,
+            collection: 'Student',
+            header: key,
+            displayOrder: index + 2,
+            dependsOn: 'student.name',
+            locked: false,
+          })),
+        ...guardianFields.columns,
+      ],
+    };
+
+    const availability = columnAvailability(withGuardianDependants, nineSelected);
+
+    expect(availability.disabled.has('guardian.cell')).toBe(true);
+    expect(availability.disabled.has('guardian.email')).toBe(true);
+    expect(availability.disabled.has('guardian.name')).toBe(false);
+  });
+});

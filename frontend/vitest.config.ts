@@ -301,6 +301,10 @@ export default defineConfig({
       { name: '317UC19', description: 'The outside-click check uses composedPath, so a tick on the checklist itself never misreads as outside under nested shadow DOM (#326)' },
       { name: '317UC22', description: 'formatReportDate renders yyyy-MM-dd HH:mm in local time, never a locale month name (R6)' },
       { name: '317UC23', description: 'The text filter input and the list equals select survive a values-only re-render, the same way the checklist does (review-1 Blocker 3)' },
+      { name: '318UC1', description: 'Ticking Cell with Guardian unticked also ticks Guardian and raises the counter by two' },
+      { name: '318UC2', description: 'Unticking Guardian with Cell and Email ticked unticks them with it' },
+      { name: '318UC3', description: 'At nine columns with Guardian unticked, Cell and the other Guardian dependants are disabled' },
+      { name: '318UC4', description: 'The attribute dropdown groups Student, Guardian, Course and Extra-Curricular, each row tagged with its collection badge' },
     ],
   },
 })
