@@ -10,8 +10,9 @@ namespace PanoramaMusic.Reporting.Application.Handlers;
 /// <summary>
 /// Builds the <see cref="ReportDefinition"/> first — which throws before any
 /// reader is touched when the definition is invalid — then runs it and maps
-/// the result. <see cref="TimeProvider"/> is injected so <c>ranAt</c> is
-/// testable (D8).
+/// the result. <see cref="TimeProvider"/> is injected rather than read from
+/// <see cref="DateTimeOffset.UtcNow"/> directly, so a test can fix
+/// <c>ranAt</c> to a known value.
 /// </summary>
 public sealed class RunReportHandler(
 	StudentFieldRegistry registry,

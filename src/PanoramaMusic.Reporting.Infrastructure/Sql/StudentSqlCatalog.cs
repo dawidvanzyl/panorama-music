@@ -4,7 +4,7 @@ using PanoramaMusic.Reporting.Domain.Enums;
 namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 
 /// <summary>
-/// The SQL half of the Student registry allowlist (D1): every identifier and
+/// The SQL half of the Student registry allowlist: every identifier and
 /// operator fragment <see cref="Domain.Registries.StudentFieldRegistry"/>'s
 /// keys and source names resolve to. Every user-supplied value is bound
 /// through <see cref="DynamicParameters"/> — nothing here ever concatenates

@@ -8,9 +8,9 @@ namespace PanoramaMusic.Reporting.Application.Services;
 /// <summary>
 /// Orchestrates one run: the population query, then exactly one query per
 /// selected non-Student collection over every population id — never one query
-/// per student. #317 selects only the Student collection, so the collection
-/// loop never runs; #318 exercises it once Guardian/Course/ExtraCurricular
-/// readers are registered.
+/// per student. The registry currently declares no non-Student collection,
+/// so the collection loop never runs; it exercises once a non-Student
+/// collection reader is registered.
 /// </summary>
 public sealed class ReportRunner(
 	IPopulationReader populationReader,

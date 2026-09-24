@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
 		var registry = new StudentFieldRegistry();
 		var catalog = new StudentSqlCatalog();
 
-		// D1: the registry and catalog are one allowlist split across two
+		// The registry and catalog are one allowlist split across two
 		// layers — a drift between them is a startup failure, not a runtime
 		// surprise a request could trigger.
 		RegistryCatalogParity.Validate(registry, catalog);
@@ -31,9 +31,9 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton(TimeProvider.System);
 
 		services.AddScoped<IPopulationReader, PopulationReader>();
-		// No ICollectionReader is registered in #317 — Student is the only
-		// selected collection. #318 adds Guardian/Course/ExtraCurricular
-		// readers here without changing ReportRunner's dependency shape.
+		// No ICollectionReader is registered — the registry currently
+		// declares no non-Student collection. A future reader registers
+		// here without changing ReportRunner's dependency shape.
 		services.AddScoped<ReportRunner>();
 
 		services.AddScoped<GetReportFieldsHandler>();

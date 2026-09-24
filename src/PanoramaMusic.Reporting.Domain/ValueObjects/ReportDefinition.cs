@@ -101,9 +101,10 @@ public sealed class ReportDefinition
 		if (nonBlankValues.Count == 0)
 			throw new InvalidReportDefinitionException(ReportDefinitionMessages.MissingValue(filter.Field));
 
-		// Only `in` ever carries more than one value: `equals` and `contains`
-		// (D10 — no UI control produces several substrings) are each rejected
-		// otherwise, the same as an unknown value would be.
+		// Only `in` ever carries more than one value: no builder control for
+		// `equals` or `contains` can produce several substrings, so more than
+		// one value under either is rejected here, the same as an unknown
+		// value would be.
 		if (op is FilterOperator.Equals or FilterOperator.Contains && nonBlankValues.Count > 1)
 		{
 			throw new InvalidReportDefinitionException(

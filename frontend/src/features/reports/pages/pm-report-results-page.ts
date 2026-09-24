@@ -135,7 +135,7 @@ export class PmReportResultsPage extends HTMLElement {
     });
     this.runAgainButton.addEventListener('click', this.handleRunAgain);
 
-    // D4: the result lives in memory only — a reload with nothing held sends
+    // The result lives in memory only — a reload with nothing held sends
     // the Teacher back to the Reports list rather than rendering an empty
     // shell.
     this._definition = takeHeldDefinition();

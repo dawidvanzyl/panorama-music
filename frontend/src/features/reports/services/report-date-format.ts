@@ -1,7 +1,7 @@
 /**
- * `yyyy-MM-dd HH:mm` in local time (R6, supersedes R5 — no locale month
- * names, no three-letter month table). Applies to every Reporting date
- * display (#317–#322), not only the results page's "Last run" sub-line.
+ * `yyyy-MM-dd HH:mm` in local time — a fixed numeric format rather than a
+ * locale month name, so every date renders identically regardless of the
+ * viewer's browser locale.
  */
 export function formatReportDate(date: Date): string {
   const year = date.getFullYear();

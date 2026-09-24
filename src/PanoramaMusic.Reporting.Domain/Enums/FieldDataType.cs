@@ -4,7 +4,7 @@ namespace PanoramaMusic.Reporting.Domain.Enums;
 /// The shape of a filter attribute's value, which decides which operators and
 /// value controls it offers. <c>Datasource</c> is reserved for a future
 /// attribute whose options come from another table rather than a fixed list;
-/// no #317 attribute uses it.
+/// no currently-registered attribute uses it.
 /// </summary>
 public enum FieldDataType
 {

@@ -204,10 +204,10 @@ export class PmReportFilterRow extends HTMLElement {
     // actually be wrong.
     const sameField = this._valueControlFieldKey === field.key;
 
-    // R3: a tick inside the `in` checklist re-renders this row like any
-    // other state change. Reusing the existing dropdown element — rather
-    // than tearing it down and appending a fresh, closed one — is what lets
-    // its open/closed state survive that re-render.
+    // A tick inside the `in` checklist re-renders this row like any other
+    // state change. Reusing the existing dropdown element — rather than
+    // tearing it down and appending a fresh, closed one — is what lets its
+    // open/closed state survive that re-render.
     if (field.dataType === 'List' && this._filter.operator === 'in') {
       const existing = this.valueSlot.firstElementChild;
       if (sameField && this.valueSlot.children.length === 1 && existing?.tagName === 'PM-REPORT-CHECKLIST-DROPDOWN') {
@@ -248,11 +248,11 @@ export class PmReportFilterRow extends HTMLElement {
       return;
     }
 
-    // review-1 Blocker 3: a values-only re-render (every keystroke, since
-    // an `input` event bubbles up and rebuilds the whole tree the same way
-    // a tick does — R3's bug class) used to tear down and recreate this
-    // control, so a text input lost focus after its very first character.
-    // Reused in place here, exactly like the checklist dropdown above.
+    // A values-only re-render (every keystroke, since an `input` event
+    // bubbles up and rebuilds the whole tree the same way a checklist tick
+    // does) used to tear down and recreate this control, so a text input
+    // lost focus after its very first character. Reused in place here,
+    // exactly like the checklist dropdown above.
     if (field.dataType === 'Text') {
       const existing = this.valueSlot.firstElementChild;
       const value = this._filter.values[0] ?? '';

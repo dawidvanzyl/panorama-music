@@ -115,7 +115,7 @@ export class PmReportFiltersPanel extends HTMLElement {
     this.emptyMessage.hidden = this._filters.length > 0;
 
     // Rows are reused by index rather than torn down and rebuilt on every
-    // render (R3): a row's own value control — the in-operator checklist in
+    // render: a row's own value control — the in-operator checklist in
     // particular — carries open/closed DOM state that a fresh element would
     // lose, and a tick re-renders this panel like any other state change.
     this._filters.forEach((filter, index) => {
