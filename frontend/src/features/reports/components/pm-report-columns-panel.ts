@@ -1,3 +1,4 @@
+import { groupColumns } from '../state/report-collections';
 import type { ReportFieldsModel } from '../models/report';
 
 const styles = new CSSStyleSheet();
@@ -37,7 +38,7 @@ styles.replaceSync(`
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.04em;
-      color: var(--pm-text-muted);
+      color: var(--collection-colour, var(--pm-text-muted));
       margin: 8px 0 4px;
     }
     .columns-panel__item {
@@ -66,8 +67,8 @@ styles.replaceSync(`
       color: white;
     }
     .columns-panel__check--checked {
-      background: var(--pm-accent);
-      border-color: var(--pm-accent);
+      background: var(--collection-colour, var(--pm-accent));
+      border-color: var(--collection-colour, var(--pm-accent));
     }
     .columns-panel__lock {
       color: var(--pm-text-muted);
@@ -83,18 +84,17 @@ template.innerHTML = `
       <span>Columns</span>
       <span class="columns-panel__counter" id="counter">1 / 10</span>
     </div>
-    <div class="columns-panel__group-label">STUDENT</div>
-    <div id="items"></div>
+    <div id="groups"></div>
   </div>
 `;
 
 export class PmReportColumnsPanel extends HTMLElement {
   private counter: HTMLElement | null = null;
-  private itemsContainer: HTMLElement | null = null;
+  private groupsContainer: HTMLElement | null = null;
 
   private _fields: ReportFieldsModel | null = null;
   private _selected: string[] = [];
-  private _atLimit = false;
+  private _disabledKeys: ReadonlySet<string> = new Set();
 
   constructor() {
     super();
@@ -105,7 +105,7 @@ export class PmReportColumnsPanel extends HTMLElement {
 
   connectedCallback(): void {
     this.counter = this.shadowRoot!.getElementById('counter') as HTMLElement;
-    this.itemsContainer = this.shadowRoot!.getElementById('items') as HTMLElement;
+    this.groupsContainer = this.shadowRoot!.getElementById('groups') as HTMLElement;
     this.render();
   }
 
@@ -119,55 +119,75 @@ export class PmReportColumnsPanel extends HTMLElement {
     this.render();
   }
 
-  set atLimit(atLimit: boolean) {
-    this._atLimit = atLimit;
+  set disabledKeys(disabledKeys: ReadonlySet<string>) {
+    this._disabledKeys = disabledKeys;
     this.render();
   }
 
   private render(): void {
-    if (!this.itemsContainer || !this.counter || !this._fields) return;
+    if (!this.groupsContainer || !this.counter || !this._fields) return;
 
     this.counter.textContent = `${this._selected.length} / 10`;
 
-    this.itemsContainer.textContent = '';
-    const columns = [...this._fields.columns].sort((a, b) => a.displayOrder - b.displayOrder);
-    for (const column of columns) {
-      const isChecked = this._selected.includes(column.key);
-      const isDisabled = !isChecked && this._atLimit && !column.locked;
+    this.groupsContainer.textContent = '';
+    for (const group of groupColumns(this._fields)) {
+      const groupEl = document.createElement('div');
+      groupEl.dataset.testid = `column-group-${group.collection.key}`;
+      groupEl.style.setProperty('--collection-colour', group.collection.colour);
 
-      const row = document.createElement('div');
-      row.className = 'columns-panel__item' + (isDisabled ? ' columns-panel__item--disabled' : '');
+      const label = document.createElement('div');
+      label.className = 'columns-panel__group-label';
+      label.dataset.testid = 'column-group-label';
+      label.textContent = group.collection.heading;
+      groupEl.appendChild(label);
 
-      const check = document.createElement('span');
-      check.className = 'columns-panel__check' + (isChecked ? ' columns-panel__check--checked' : '');
-      check.textContent = isChecked ? '✓' : '';
+      for (const column of group.columns) {
+        const isChecked = this._selected.includes(column.key);
+        const isUnavailable = !isChecked && this._disabledKeys.has(column.key);
 
-      const label = document.createElement('span');
-      label.textContent = column.header;
+        const row = document.createElement('div');
+        row.className = 'columns-panel__item' + (isUnavailable ? ' columns-panel__item--disabled' : '');
+        row.dataset.testid = `column-item-${column.key}`;
+        row.dataset.checked = String(isChecked);
+        row.dataset.unavailable = String(isUnavailable);
 
-      row.appendChild(check);
-      row.appendChild(label);
+        const check = document.createElement('span');
+        check.className = 'columns-panel__check' + (isChecked ? ' columns-panel__check--checked' : '');
+        check.textContent = isChecked ? '✓' : '';
 
-      if (column.locked) {
-        const lockIcon = document.createElement('span');
-        lockIcon.className = 'material-symbols-outlined columns-panel__lock';
-        lockIcon.textContent = 'lock';
+        const header = document.createElement('span');
+        header.textContent = column.header;
 
-        const lockLabel = document.createElement('span');
-        lockLabel.className = 'columns-panel__lock';
-        lockLabel.textContent = 'required';
+        row.appendChild(check);
+        row.appendChild(header);
 
-        row.appendChild(lockIcon);
-        row.appendChild(lockLabel);
-      } else if (!isDisabled) {
-        row.addEventListener('click', () => {
-          this.dispatchEvent(
-            new CustomEvent('column-toggle-requested', { bubbles: true, composed: true, detail: { key: column.key } }),
-          );
-        });
+        if (column.locked) {
+          const lockIcon = document.createElement('span');
+          lockIcon.className = 'material-symbols-outlined columns-panel__lock';
+          lockIcon.textContent = 'lock';
+
+          const lockLabel = document.createElement('span');
+          lockLabel.className = 'columns-panel__lock';
+          lockLabel.textContent = 'required';
+
+          row.appendChild(lockIcon);
+          row.appendChild(lockLabel);
+        } else if (!isUnavailable) {
+          row.addEventListener('click', () => {
+            this.dispatchEvent(
+              new CustomEvent('column-toggle-requested', {
+                bubbles: true,
+                composed: true,
+                detail: { key: column.key },
+              }),
+            );
+          });
+        }
+
+        groupEl.appendChild(row);
       }
 
-      this.itemsContainer.appendChild(row);
+      this.groupsContainer.appendChild(groupEl);
     }
   }
 }

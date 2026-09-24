@@ -143,3 +143,60 @@ describe('pm-report-filter-row — text input and list select survive a re-rende
     expect([...phaseSelect.options].map((o) => o.value)).toEqual(['Junior', 'Senior']);
   });
 });
+
+const groupedFields: ReportFieldsModel = {
+  filters: [
+    {
+      key: 'student.grade',
+      collection: 'Student',
+      label: 'Grade',
+      dataType: 'List',
+      operators: ['equals', 'in'],
+      options: [{ value: 'Grade4', label: 'Grade 4' }],
+    },
+    {
+      key: 'course.teacher',
+      collection: 'Course',
+      label: 'Teacher',
+      dataType: 'Datasource',
+      operators: ['equals', 'in'],
+      options: [
+        { value: 'teacher-1', label: 'Amy Jacobs' },
+        { value: 'teacher-2', label: 'Ben Smith' },
+      ],
+    },
+  ],
+  columns: [],
+};
+
+describe('pm-report-filter-row — attribute grouping and Datasource controls', () => {
+  let el: PmReportFilterRow;
+
+  beforeEach(() => {
+    el = new PmReportFilterRow();
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('groups the attribute select into optgroups carrying the collection labels', () => {
+    el.fields = groupedFields;
+    el.filter = { field: 'student.grade', operator: 'equals', values: ['Grade4'] };
+
+    const attributeSelect = el.shadowRoot!.getElementById('attribute') as HTMLSelectElement;
+    const groupLabels = [...attributeSelect.querySelectorAll('optgroup')].map((group) => group.label);
+
+    expect(groupLabels).toEqual(['Student', 'Course']);
+  });
+
+  it('mounts the checklist dropdown for a Datasource attribute on the in operator', () => {
+    el.fields = groupedFields;
+    el.filter = { field: 'course.teacher', operator: 'in', values: [] };
+
+    const mounted = el.shadowRoot!.getElementById('valueSlot')!.firstElementChild;
+
+    expect(mounted?.tagName).toBe('PM-REPORT-CHECKLIST-DROPDOWN');
+  });
+});

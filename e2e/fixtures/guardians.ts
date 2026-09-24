@@ -9,6 +9,8 @@ export interface GuardianSeedInput {
   receivesCorrespondence?: boolean;
   responsibleForPayment?: boolean;
   married?: boolean;
+  /** Defaults to the first seeded relationship. Pass `guardianRelationshipIdByName`'s result for a named one. */
+  guardianRelationshipId?: string;
 }
 
 export interface SeededGuardian {
@@ -41,6 +43,27 @@ export async function firstGuardianRelationshipId(page: Page): Promise<string> {
 }
 
 /**
+ * The id of the relationship type with this exact name, e.g. `Father`. A
+ * report scenario that asserts the Guardian column's rendered relationship
+ * name (`{first} {surname} · {relationship}`, P2) must seed by a named
+ * relationship rather than "the first one", per plan-qa's scoping convention —
+ * relationship rows are ordered by name, and the relationships spec creates
+ * transient rows in parallel that could otherwise change which one is first.
+ */
+export async function guardianRelationshipIdByName(page: Page, name: string): Promise<string> {
+  return page.evaluate(async (name) => {
+    const response = await fetch('/api/guardian-relationships', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const relationships = (await response.json()) as {
+      guardianRelationshipId: string;
+      name: string;
+    }[];
+    return relationships.find((r) => r.name === name)!.guardianRelationshipId;
+  }, name);
+}
+
+/**
  * Adds a guardian to a student through the real endpoint, from the signed-in
  * session. Whether the guardian ends up private to this student or shared with
  * their siblings is decided by when this is called relative to the sibling
@@ -53,7 +76,8 @@ export async function addGuardianToStudent(
   studentId: string,
   input: GuardianSeedInput = {}
 ): Promise<SeededGuardian> {
-  const guardianRelationshipId = await firstGuardianRelationshipId(page);
+  const guardianRelationshipId =
+    input.guardianRelationshipId ?? (await firstGuardianRelationshipId(page));
   const firstName = input.firstName ?? 'Guardian';
   const surname = input.surname ?? `G-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 

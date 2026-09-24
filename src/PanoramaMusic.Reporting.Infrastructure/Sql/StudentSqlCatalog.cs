@@ -1,5 +1,6 @@
 using Dapper;
 using PanoramaMusic.Reporting.Domain.Enums;
+using PanoramaMusic.Reporting.Infrastructure.Sql.Predicates;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 
@@ -9,7 +10,7 @@ namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 /// keys and source names resolve to. Every user-supplied value is bound
 /// through <see cref="DynamicParameters"/> — nothing here ever concatenates
 /// request text into a fragment. A parity check (registered at startup and in
-/// a test, 317UC3) keeps this catalog and the Domain registry in lock step.
+/// a test) keeps this catalog and the Domain registry in lock step.
 /// </summary>
 public sealed class StudentSqlCatalog
 {
@@ -47,6 +48,15 @@ public sealed class StudentSqlCatalog
 			[("student.hasSiblings", FilterOperator.Equals)] = HasSiblingsEquals,
 			[("student.isEldest", FilterOperator.Equals)] = IsEldestEquals,
 		};
+
+		foreach (var (key, builder) in GuardianPredicates.Build())
+			_predicates[key] = builder;
+
+		foreach (var (key, builder) in CoursePredicates.Build())
+			_predicates[key] = builder;
+
+		foreach (var (key, builder) in ExtraCurricularPredicates.Build())
+			_predicates[key] = builder;
 	}
 
 	/// <summary>Logical source name -> its select expression and whether it needs the sibling-stats CTE.</summary>

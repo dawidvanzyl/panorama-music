@@ -30,5 +30,12 @@
 		     StudentMigrator, so PopulationReader integration tests run against the
 		     actual table shapes rather than a hand-copied approximation. -->
 		<ProjectReference Include="..\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj" />
+		<!-- Test-only: teachers.teachers references identity.users, so the fixture's
+		     migrator chain needs DataProtection, Audit and Identity ahead of Teacher,
+		     the same production order InitializeDatabase runs. -->
+		<ProjectReference Include="..\PanoramaMusic.DataProtection\PanoramaMusic.DataProtection.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Audit.Infrastructure\PanoramaMusic.Audit.Infrastructure.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Teachers.Infrastructure\PanoramaMusic.Teachers.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

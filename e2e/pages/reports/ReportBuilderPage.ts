@@ -64,6 +64,39 @@ export class ReportBuilderPage extends BasePage {
     return this.filterRow(index).locator('#attribute option');
   }
 
+  /** The attribute `<select>`'s `<optgroup>` elements, in document order. */
+  attributeGroups(index: number): Locator {
+    return this.filterRow(index).locator('#attribute optgroup');
+  }
+
+  /** The `n`th optgroup's accessible name (`label` attribute), e.g. "Guardian". */
+  attributeGroupLabel(index: number, groupIndex: number): Locator {
+    return this.attributeGroups(index).nth(groupIndex);
+  }
+
+  /** The labels of every optgroup in the attribute dropdown, in document order. */
+  async attributeGroupLabels(index: number): Promise<string[]> {
+    return this.attributeGroups(index).evaluateAll((groups) =>
+      groups.map((g) => g.getAttribute('label') ?? '')
+    );
+  }
+
+  /** The option labels within the named optgroup, e.g. "Guardian" -> ["Guardian · Name", ...]. */
+  async attributeGroupOptions(index: number, groupLabel: string): Promise<string[]> {
+    return this.attributeGroups(index).evaluateAll((groups, groupLabel) => {
+      const group = groups.find((g) => g.getAttribute('label') === groupLabel);
+      if (!group) return [];
+      return Array.from(group.querySelectorAll('option')).map(
+        (o) => (o as { textContent: string | null }).textContent ?? ''
+      );
+    }, groupLabel);
+  }
+
+  /** The collection badge (STU/GRD/CRS/ECA) rendered in a filter row. */
+  filterRowBadge(index: number): Locator {
+    return this.filterRow(index).locator('[data-testid="filter-row-badge"]');
+  }
+
   operatorControl(index: number): Locator {
     return this.filterRow(index).locator('#operator');
   }
@@ -81,6 +114,11 @@ export class ReportBuilderPage extends BasePage {
     await this.filterRow(index)
       .locator('select.filter-row__value')
       .selectOption({ label: optionLabel });
+  }
+
+  /** The `is` value select's own option labels, e.g. to inspect a Datasource's live options. */
+  async filterValueOptions(index: number): Promise<string[]> {
+    return this.filterRow(index).locator('select.filter-row__value option').allTextContents();
   }
 
   checklistToggle(index: number): Locator {
@@ -126,26 +164,61 @@ export class ReportBuilderPage extends BasePage {
 
   // --- Columns ---
 
-  columnItem(header: string): Locator {
-    return this.host
-      .locator('pm-report-columns-panel .columns-panel__item')
-      .filter({ hasText: header });
+  /**
+   * The columns panel's group for one collection (`Student`, `Guardian`,
+   * `Course` or `ExtraCurricular`), per plan-dev's Test hooks.
+   */
+  columnGroup(collection: string): Locator {
+    return this.host.locator(`pm-report-columns-panel [data-testid="column-group-${collection}"]`);
+  }
+
+  /** The group's own heading (STUDENT, GUARDIAN, COURSE, EXTRA-CURRICULAR). */
+  columnGroupLabel(collection: string): Locator {
+    return this.columnGroup(collection).locator('[data-testid="column-group-label"]');
+  }
+
+  /**
+   * A column item by its visible header text, scoped to one collection's
+   * group so an ambiguous header (e.g. "Phase", which appears under both
+   * Student and Extra-Curricular) resolves to the one the caller means.
+   */
+  columnItem(header: string, collection = 'Student'): Locator {
+    return this.columnGroup(collection).locator('.columns-panel__item').filter({ hasText: header });
+  }
+
+  /** A column item by its registry key, e.g. `guardian.cell`. */
+  columnByKey(key: string): Locator {
+    return this.host.locator(`pm-report-columns-panel [data-testid="column-item-${key}"]`);
   }
 
   columnItems(): Locator {
     return this.host.locator('pm-report-columns-panel .columns-panel__item');
   }
 
-  async tickColumn(header: string): Promise<void> {
-    await this.columnItem(header).click();
+  async tickColumn(header: string, collection = 'Student'): Promise<void> {
+    await this.columnItem(header, collection).click();
   }
 
-  columnCheck(header: string): Locator {
-    return this.columnItem(header).locator('.columns-panel__check');
+  async tickColumnByKey(key: string): Promise<void> {
+    await this.columnByKey(key).click();
   }
 
-  columnRequiredLabel(header: string): Locator {
-    return this.columnItem(header).locator('.columns-panel__lock').filter({ hasText: 'required' });
+  columnCheck(header: string, collection = 'Student'): Locator {
+    return this.columnItem(header, collection).locator('.columns-panel__check');
+  }
+
+  columnRequiredLabel(header: string, collection = 'Student'): Locator {
+    return this.columnItem(header, collection)
+      .locator('.columns-panel__lock')
+      .filter({ hasText: 'required' });
+  }
+
+  async isColumnTicked(key: string): Promise<boolean> {
+    return (await this.columnByKey(key).getAttribute('data-checked')) === 'true';
+  }
+
+  async isColumnUnavailable(key: string): Promise<boolean> {
+    return (await this.columnByKey(key).getAttribute('data-unavailable')) === 'true';
   }
 
   // --- Actions ---

@@ -36,4 +36,26 @@ public sealed class SourceValues
 		DateTime dt => DateOnly.FromDateTime(dt),
 		_ => null,
 	};
+
+	public Guid? GetGuid(string source) => Get(source) switch
+	{
+		Guid g => g,
+		_ => null,
+	};
+
+	public IReadOnlyList<string> GetStrings(string source) => Get(source) switch
+	{
+		string[] values => values,
+		IEnumerable<string> values => [.. values],
+		_ => [],
+	};
+
+	public IReadOnlyList<TimeOnly> GetTimes(string source) => Get(source) switch
+	{
+		TimeOnly[] values => values,
+		TimeSpan[] values => [.. values.Select(TimeOnly.FromTimeSpan)],
+		IEnumerable<TimeOnly> values => [.. values],
+		IEnumerable<TimeSpan> values => [.. values.Select(TimeOnly.FromTimeSpan)],
+		_ => [],
+	};
 }

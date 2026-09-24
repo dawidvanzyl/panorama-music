@@ -43,6 +43,18 @@ const boolField: ReportField = {
   ],
 };
 
+const datasourceField: ReportField = {
+  key: 'course.teacher',
+  collection: 'Course',
+  label: 'Teacher',
+  dataType: 'Datasource',
+  operators: ['equals', 'in'],
+  options: [
+    { value: 'teacher-1', label: 'Amy Jacobs' },
+    { value: 'teacher-2', label: 'Ben Smith' },
+  ],
+};
+
 const fields: ReportFieldsModel = {
   filters: [textField, listField, boolField],
   columns: [
@@ -106,13 +118,13 @@ describe('toggleColumn — ten-column cap', { tags: ['317UC2'] }, () => {
       ],
     };
 
-    expect(columnAvailability(tenSelected).atLimit).toBe(true);
+    expect(columnAvailability(twelveColumnFields, tenSelected).disabled.has('c10')).toBe(true);
 
     const attemptedEleventh = toggleColumn(twelveColumnFields, tenSelected, 'c10');
     expect(attemptedEleventh).toEqual(tenSelected);
 
     const afterDeselect = tenSelected.filter((key) => key !== 'c9');
-    expect(columnAvailability(afterDeselect).atLimit).toBe(false);
+    expect(columnAvailability(twelveColumnFields, afterDeselect).disabled.has('c10')).toBe(false);
 
     const nowAllowed = toggleColumn(twelveColumnFields, afterDeselect, 'c10');
     expect(nowAllowed).toContain('c10');
@@ -131,6 +143,14 @@ describe('chooseAttribute', { tags: ['317UC3'] }, () => {
   it('resets a boolean attribute to equals + Yes', () => {
     expect(chooseAttribute(boolField)).toEqual({ field: 'student.hasSiblings', operator: 'equals', values: ['Yes'] });
   });
+
+  it('resets a datasource attribute to equals + the first live option, the same as a list attribute', () => {
+    expect(chooseAttribute(datasourceField)).toEqual({
+      field: 'course.teacher',
+      operator: 'equals',
+      values: ['teacher-1'],
+    });
+  });
 });
 
 describe('changeOperator', { tags: ['317UC4'] }, () => {
@@ -148,7 +168,7 @@ describe('changeOperator', { tags: ['317UC4'] }, () => {
 });
 
 describe('changeOperator — switching to in starts empty', { tags: ['317UC17'] }, () => {
-  it('clears the carried-over equals value when switching to in (#325)', () => {
+  it('clears the carried-over equals value when switching to in', () => {
     // The exact shape chooseAttribute() produces for a freshly-chosen List
     // attribute: equals + the registry's first option.
     const filter: ReportFilterModel = { field: 'student.grade', operator: 'equals', values: ['Grade1'] };
@@ -214,7 +234,7 @@ describe('clear', { tags: ['317UC6'] }, () => {
   });
 });
 
-describe('toggleColumn — P4 cascade', () => {
+describe('toggleColumn — anchor cascade', () => {
   it('ticking a dependant auto-ticks its anchor', () => {
     const after = toggleColumn(fields, ['student.name'], 'student.class');
 
@@ -222,8 +242,8 @@ describe('toggleColumn — P4 cascade', () => {
   });
 
   it('unticking the anchor unticks its dependants', () => {
-    // Student is locked and can never itself be unticked in #317, so this
-    // exercises the generic cascade against a synthetic unlocked anchor.
+    // Student is locked and can never itself be unticked, so this exercises
+    // the generic cascade against a synthetic unlocked anchor.
     const chainFields: ReportFieldsModel = {
       filters: [],
       columns: [
@@ -257,5 +277,84 @@ describe('toggleColumn — P4 cascade', () => {
     const after = toggleColumn(chainFields, ['student.name', 'anchor', 'dependant'], 'anchor');
 
     expect(after).toEqual(['student.name']);
+  });
+});
+
+const guardianColumns: ReportFieldsModel['columns'] = [
+  { key: 'student.name', collection: 'Student', header: 'Student', displayOrder: 1, dependsOn: null, locked: true },
+  {
+    key: 'guardian.name',
+    collection: 'Guardian',
+    header: 'Guardian',
+    displayOrder: 1,
+    dependsOn: 'student.name',
+    locked: false,
+  },
+  {
+    key: 'guardian.cell',
+    collection: 'Guardian',
+    header: 'Cell',
+    displayOrder: 2,
+    dependsOn: 'guardian.name',
+    locked: false,
+  },
+  {
+    key: 'guardian.email',
+    collection: 'Guardian',
+    header: 'Email',
+    displayOrder: 3,
+    dependsOn: 'guardian.name',
+    locked: false,
+  },
+];
+
+describe('toggleColumn — Guardian anchor cascade', { tags: ['318UC1', '318UC2'] }, () => {
+  it('ticking Cell with Guardian unticked also ticks Guardian, raising the count by two', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+
+    const after = toggleColumn(guardianFields, ['student.name'], 'guardian.cell');
+
+    expect(after).toEqual(['student.name', 'guardian.name', 'guardian.cell']);
+  });
+
+  it('unticking Guardian with Cell and Email ticked unticks them with it', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+
+    const after = toggleColumn(
+      guardianFields,
+      ['student.name', 'guardian.name', 'guardian.cell', 'guardian.email'],
+      'guardian.name',
+    );
+
+    expect(after).toEqual(['student.name']);
+  });
+});
+
+describe('columnAvailability — Guardian dependant needs two slots', { tags: ['318UC3'] }, () => {
+  it('disables Cell and the other Guardian dependants when only one slot remains', () => {
+    const guardianFields: ReportFieldsModel = { filters: [], columns: guardianColumns };
+    const nineSelected = ['student.name', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
+    const withGuardianDependants: ReportFieldsModel = {
+      filters: [],
+      columns: [
+        ...nineSelected
+          .filter((key) => key !== 'student.name')
+          .map((key, index) => ({
+            key,
+            collection: 'Student',
+            header: key,
+            displayOrder: index + 2,
+            dependsOn: 'student.name',
+            locked: false,
+          })),
+        ...guardianFields.columns,
+      ],
+    };
+
+    const availability = columnAvailability(withGuardianDependants, nineSelected);
+
+    expect(availability.disabled.has('guardian.cell')).toBe(true);
+    expect(availability.disabled.has('guardian.email')).toBe(true);
+    expect(availability.disabled.has('guardian.name')).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 using Moq;
 using PanoramaMusic.Reporting.Application.Services;
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.Services;
@@ -17,6 +18,8 @@ public class ReportRunnerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	[Fact]
 	public async Task RunAsync_EmptyPopulation_NeverCallsAnyCollectionReader()
@@ -26,7 +29,7 @@ public class ReportRunnerTests
 			.ReturnsAsync([]);
 		var collectionReaderMock = new Mock<ICollectionReader>();
 
-		var definition = ReportDefinition.Create([], ["student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 		var runner = new ReportRunner(_populationReaderMock.Object, [collectionReaderMock.Object], new ReportLayoutBuilder());
 
 		var layout = await runner.RunAsync(definition, TestContext.Current.CancellationToken);
@@ -46,7 +49,7 @@ public class ReportRunnerTests
 			.ReturnsAsync([new PopulationMember(Guid.NewGuid(), SourceValues.Empty)]);
 		var collectionReaderMock = new Mock<ICollectionReader>();
 
-		var definition = ReportDefinition.Create([], ["student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 		var runner = new ReportRunner(_populationReaderMock.Object, [collectionReaderMock.Object], new ReportLayoutBuilder());
 
 		await runner.RunAsync(definition, TestContext.Current.CancellationToken);
@@ -54,5 +57,94 @@ public class ReportRunnerTests
 		collectionReaderMock.Verify(
 			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
 			Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "318UC4")]
+	public async Task RunAsync_ActivityFilterWithNoExtraCurricularColumn_NeverCallsTheExtraCurricularReaderAndGivesOneRowPerSection()
+	{
+		var activityId = Guid.NewGuid();
+		var members = new[]
+		{
+			new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Jo", ["lastName"] = "Z" })),
+			new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Kim", ["lastName"] = "Z" })),
+		};
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(members);
+		var extraCurricularReaderMock = new Mock<ICollectionReader>();
+		extraCurricularReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.ExtraCurricular);
+
+		var definition = ReportDefinition.Create(
+			[new ReportFilterInput("extraCurricular.activity", "equals", [activityId.ToString()])],
+			["student.name"],
+			_registry,
+			new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+			{
+				[ReportDatasource.ExtraCurricular] = [new(activityId.ToString(), "Choir")],
+			});
+		var runner = new ReportRunner(_populationReaderMock.Object, [extraCurricularReaderMock.Object], new ReportLayoutBuilder());
+
+		var layout = await runner.RunAsync(definition, TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => extraCurricularReaderMock.Verify(
+				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+				Times.Never),
+			() => layout.Sections.ShouldAllBe(section => section.Rows.Count == 1));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC7")]
+	public async Task RunAsync_ThreeSelectedCollectionsAndManyMembers_EachReaderIsCalledOnceWithEveryPopulationId()
+	{
+		var members = Enumerable.Range(0, 50).Select(_ => new PopulationMember(Guid.NewGuid(), SourceValues.Empty)).ToList();
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(members);
+
+		var guardianReaderMock = new Mock<ICollectionReader>();
+		guardianReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.Guardian);
+		guardianReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
+
+		var courseReaderMock = new Mock<ICollectionReader>();
+		courseReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.Course);
+		courseReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
+
+		var extraCurricularReaderMock = new Mock<ICollectionReader>();
+		extraCurricularReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.ExtraCurricular);
+		extraCurricularReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
+
+		var definition = ReportDefinition.Create(
+			[],
+			["student.name", "guardian.name", "course.courseType", "extraCurricular.activity"],
+			_registry,
+			new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>());
+		var runner = new ReportRunner(
+			_populationReaderMock.Object,
+			[guardianReaderMock.Object, courseReaderMock.Object, extraCurricularReaderMock.Object],
+			new ReportLayoutBuilder());
+
+		await runner.RunAsync(definition, TestContext.Current.CancellationToken);
+
+		var expectedIds = members.Select(m => m.StudentId).ToList();
+		guardianReaderMock.Verify(
+			reader => reader.ReadAsync(
+				It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 50 && expectedIds.All(ids.Contains)),
+				It.IsAny<IReadOnlyList<ColumnAttribute>>(),
+				It.IsAny<CancellationToken>()),
+			Times.Once);
+		courseReaderMock.Verify(
+			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+			Times.Once);
+		extraCurricularReaderMock.Verify(
+			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+			Times.Once);
 	}
 }

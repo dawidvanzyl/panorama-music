@@ -199,10 +199,10 @@ export class PmReportBuilderPage extends HTMLElement {
     this.filtersPanel.fields = this._fields;
     this.filtersPanel.filters = this._definition.filters;
 
-    const availability = columnAvailability(this._definition.columns);
+    const availability = columnAvailability(this._fields, this._definition.columns);
     this.columnsPanel.fields = this._fields;
     this.columnsPanel.selected = this._definition.columns;
-    this.columnsPanel.atLimit = availability.atLimit;
+    this.columnsPanel.disabledKeys = availability.disabled;
 
     this.runButton.disabled = this._running || !this._fields || !canRun(this._definition);
   }

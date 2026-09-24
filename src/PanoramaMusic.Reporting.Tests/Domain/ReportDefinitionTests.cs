@@ -1,3 +1,4 @@
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
@@ -12,13 +13,16 @@ public class ReportDefinitionTests
 
 	private static readonly string[] _studentOnly = ["student.name"];
 
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
+
 	[Fact]
 	[Trait("AC", "317UC1")]
 	public void Create_FilterNamesUnknownField_ThrowsInvalidReportDefinitionException()
 	{
 		var filters = new[] { new ReportFilterInput("student.unknown", "equals", ["x"]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -27,7 +31,7 @@ public class ReportDefinitionTests
 	{
 		var columns = new[] { "student.name", "student.unknown" };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], columns, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], columns, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -55,7 +59,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.grade", "contains", ["Grade4"]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -64,7 +68,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.grade", "equals", ["Grade99"]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -73,7 +77,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.name", "contains", []) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -82,7 +86,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.name", "contains", ["   "]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -91,7 +95,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.grade", "equals", ["Grade4", "Grade5"]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -100,7 +104,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.name", "contains", ["a", "b"]) };
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -114,7 +118,7 @@ public class ReportDefinitionTests
 		// running Has Sibling = No instead of Yes) with no rejection at all.
 		var filters = new[] { new ReportFilterInput("student.hasSiblings", "equals", ["", "Yes"]) };
 
-		var definition = ReportDefinition.Create(filters, _studentOnly, _registry);
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions);
 
 		definition.Filters.Single().Values.ShouldBe(["Yes"]);
 	}
@@ -125,7 +129,7 @@ public class ReportDefinitionTests
 	{
 		var filters = new[] { new ReportFilterInput("student.grade", "equals", ["", "Grade4"]) };
 
-		var definition = ReportDefinition.Create(filters, _studentOnly, _registry);
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions);
 
 		definition.Filters.Single().Values.ShouldBe(["Grade4"]);
 	}
@@ -134,7 +138,7 @@ public class ReportDefinitionTests
 	[Trait("AC", "317UC6")]
 	public void Create_ColumnSetMissingStudent_ThrowsInvalidReportDefinitionException()
 	{
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], ["student.class"], _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], ["student.class"], _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -142,7 +146,7 @@ public class ReportDefinitionTests
 	public void Create_DuplicateColumnKey_ThrowsInvalidReportDefinitionException()
 	{
 		Should.Throw<InvalidReportDefinitionException>(() =>
-			ReportDefinition.Create([], ["student.name", "student.class", "student.class"], _registry));
+			ReportDefinition.Create([], ["student.name", "student.class", "student.class"], _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
@@ -150,19 +154,78 @@ public class ReportDefinitionTests
 	public void Create_ElevenColumns_ThrowsInvalidReportDefinitionException()
 	{
 		// The count cap is checked on the raw request before any key is
-		// resolved (see ReportDefinition.Create), so this is rejected as "too
-		// many columns" even though the #317 registry itself only has 8 keys.
+		// resolved, so a list this long is rejected as "too many columns"
+		// even though none of these keys are registered.
 		var columns = Enumerable.Range(0, 11).Select(i => $"student.name{i}").ToArray();
 
-		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], columns, _registry));
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create([], columns, _registry, _noDatasourceOptions));
 	}
 
 	[Fact]
 	[Trait("AC", "317UC6")]
 	public void Create_ValidColumns_AreReturnedInDisplayOrder()
 	{
-		var definition = ReportDefinition.Create([], ["student.isEldest", "student.class", "student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.isEldest", "student.class", "student.name"], _registry, _noDatasourceOptions);
 
 		definition.Columns.Select(c => c.Key).ShouldBe(["student.name", "student.class", "student.isEldest"]);
+	}
+
+	[Fact]
+	public void Create_ColumnWhoseAnchorIsNotSelected_ThrowsMissingAnchor()
+	{
+		Should.Throw<InvalidReportDefinitionException>(() =>
+			ReportDefinition.Create([], ["student.name", "guardian.cell"], _registry, _noDatasourceOptions));
+	}
+
+	[Fact]
+	public void Create_ColumnsAcrossCollections_AreOrderedByCollectionThenDisplayOrder()
+	{
+		var definition = ReportDefinition.Create(
+			[],
+			["extraCurricular.activity", "course.courseType", "guardian.name", "student.name", "student.class"],
+			_registry,
+			_noDatasourceOptions);
+
+		definition.Columns.Select(c => c.Key).ShouldBe(
+			["student.name", "student.class", "guardian.name", "course.courseType", "extraCurricular.activity"]);
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterValueNotAmongLiveOptions_ThrowsInvalidValue()
+	{
+		var teacherId = Guid.NewGuid();
+		var options = new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+		{
+			[ReportDatasource.Teacher] = [new(teacherId.ToString(), "Amy Jacobs")],
+		};
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [Guid.NewGuid().ToString()]) };
+
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, options));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterMissingFromMap_ThrowsInvalidValue()
+	{
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [Guid.NewGuid().ToString()]) };
+
+		Should.Throw<InvalidReportDefinitionException>(() => ReportDefinition.Create(filters, _studentOnly, _registry, _noDatasourceOptions));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public void Create_DatasourceFilterValueAmongLiveOptions_IsAccepted()
+	{
+		var teacherId = Guid.NewGuid();
+		var options = new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>
+		{
+			[ReportDatasource.Teacher] = [new(teacherId.ToString(), "Amy Jacobs")],
+		};
+		var filters = new[] { new ReportFilterInput("course.teacher", "equals", [teacherId.ToString()]) };
+
+		var definition = ReportDefinition.Create(filters, _studentOnly, _registry, options);
+
+		definition.Filters.Single().Values.ShouldBe([teacherId.ToString()]);
 	}
 }

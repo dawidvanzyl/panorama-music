@@ -11,9 +11,9 @@ const _maxColumns = 10;
 
 /**
  * No filters, columns holding only the locked column(s) the registry
- * declares (317UC1) — Student in #317. Reads the lock from `fields` rather
- * than hardcoding a key, so a future registry change is a data change here
- * too, not a code change.
+ * declares. Reads the lock from `fields` rather than hardcoding a key, so
+ * changing which columns are locked is a registry data change, not a code
+ * change here.
  */
 export function createDefinition(fields: ReportFieldsModel): ReportDefinitionModel {
   return { filters: [], columns: fields.columns.filter((column) => column.locked).map((column) => column.key) };
@@ -28,18 +28,20 @@ export function removeFilter(definition: ReportDefinitionModel, index: number): 
 }
 
 /**
- * The default operator/value(s) for a newly chosen attribute (317UC3):
- * text -> contains + empty; list -> equals + the first option; boolean ->
- * equals + Yes, with the builder showing no operator control for it.
+ * The default operator/value(s) for a newly chosen attribute: text -> contains
+ * + empty; list and datasource -> equals + the first option; boolean ->
+ * equals + Yes, with the builder showing no operator control for it. A
+ * Datasource attribute's options arrive live on `field.options`, the same
+ * shape a List attribute's fixed options take.
  */
 export function chooseAttribute(field: ReportField): ReportFilterModel {
   switch (field.dataType) {
     case 'List':
+    case 'Datasource':
       return { field: field.key, operator: 'equals', values: field.options.length > 0 ? [field.options[0].value] : [] };
     case 'Boolean':
       return { field: field.key, operator: 'equals', values: ['Yes'] };
     case 'Text':
-    case 'Datasource':
     default:
       return { field: field.key, operator: 'contains', values: [''] };
   }
@@ -54,12 +56,12 @@ export function replaceFilter(
 }
 
 /**
- * Only `in` ever holds more than one value (317UC4) — switching away from it
- * keeps just the first value. Switching *to* `in` from anything else starts
- * empty (#325): a List filter defaults to `equals` and the
- * registry's first option (`chooseAttribute`), and that value was never
- * something the Teacher ticked under "is any of" — carrying it over would
- * pre-select an option they never chose.
+ * Only `in` ever holds more than one value — switching away from it keeps
+ * just the first value. Switching *to* `in` from anything else starts empty:
+ * a List or Datasource filter defaults to `equals` and the first option
+ * (`chooseAttribute`), and that value was never something the Teacher
+ * ticked under "is any of" — carrying it over would pre-select an option
+ * they never chose.
  */
 export function changeOperator(filter: ReportFilterModel, operator: ReportFilterModel['operator']): ReportFilterModel {
   if (filter.operator === 'in' && operator !== 'in') {
@@ -76,7 +78,7 @@ export function setValues(filter: ReportFilterModel, values: string[]): ReportFi
 }
 
 /**
- * P4's column cascade, applied generically over whatever dependency graph the
+ * The column cascade, applied generically over whatever dependency graph the
  * registry declares: ticking a dependant auto-ticks its anchor (counting
  * toward the cap); unticking an anchor unticks its dependants; the locked
  * column is never removed; a tick that would exceed the ten-column cap is
@@ -123,21 +125,43 @@ export function toggleColumn(fields: ReportFieldsModel, selected: string[], key:
   return [...selected, ...toAdd];
 }
 
-/** Unticked columns are disabled once the cap is reached (317UC2). */
-export function columnAvailability(selected: string[]): { atLimit: boolean } {
-  return { atLimit: selected.length >= _maxColumns };
+/**
+ * An unselected, unlocked column is disabled when ticking it — which also
+ * auto-ticks its own unselected ancestor chain, the same walk `toggleColumn`
+ * does — would take the selection past the ten-column cap.
+ */
+export function columnAvailability(fields: ReportFieldsModel, selected: string[]): { disabled: ReadonlySet<string> } {
+  const byKey = new Map(fields.columns.map((column) => [column.key, column]));
+  const disabled = new Set<string>();
+
+  for (const column of fields.columns) {
+    if (column.locked || selected.includes(column.key)) continue;
+
+    const toAdd: string[] = [];
+    let cursor: string | null = column.key;
+    const seen = new Set<string>();
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor);
+      if (!selected.includes(cursor) && !toAdd.includes(cursor)) toAdd.push(cursor);
+      cursor = byKey.get(cursor)?.dependsOn ?? null;
+    }
+
+    if (selected.length + toAdd.length > _maxColumns) disabled.add(column.key);
+  }
+
+  return { disabled };
 }
 
 /**
  * False while any filter has no non-blank (trimmed) value, or an `in` filter
- * has none checked (317UC5) — completing the value or removing the row is
- * what re-enables Run report.
+ * has none checked — completing the value or removing the row is what
+ * re-enables Run report.
  */
 export function canRun(definition: ReportDefinitionModel): boolean {
   return definition.filters.every((filter) => filter.values.some((value) => value.trim().length > 0));
 }
 
-/** Back to no filters and Student only (317UC6). */
+/** Back to no filters and Student only. */
 export function clear(fields: ReportFieldsModel): ReportDefinitionModel {
   return createDefinition(fields);
 }

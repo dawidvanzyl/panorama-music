@@ -2,6 +2,7 @@ using Moq;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Requests;
 using PanoramaMusic.Reporting.Application.Services;
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Registries;
@@ -15,12 +16,13 @@ namespace PanoramaMusic.Reporting.Tests.Application;
 public class RunReportHandlerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
+	private readonly Mock<IDatasourceOptionReader> _datasourceOptionReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
 
 	private RunReportHandler CreateHandler()
 	{
 		var runner = new ReportRunner(_populationReaderMock.Object, [], new ReportLayoutBuilder());
-		return new RunReportHandler(_registry, runner, TimeProvider.System);
+		return new RunReportHandler(_registry, _datasourceOptionReaderMock.Object, runner, TimeProvider.System);
 	}
 
 	[Fact]
@@ -61,5 +63,30 @@ public class RunReportHandlerTests
 			() => result.Columns.Single().Key.ShouldBe("student.name"),
 			() => result.Sections.Single().StudentId.ShouldBe(studentId),
 			() => result.Sections.Single().Rows.Single().Single().ShouldBe("Amy van Zyl"));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public async Task HandleAsync_FiltersReferenceOneDatasource_ReadsOnlyThatDatasourceOnce()
+	{
+		var teacherId = Guid.NewGuid();
+		_datasourceOptionReaderMock
+			.Setup(reader => reader.ReadAsync(ReportDatasource.Teacher, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([new FieldOption(teacherId.ToString(), "Amy Jacobs")]);
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+
+		var handler = CreateHandler();
+		var request = new RunReportRequest(
+			[new ReportFilterRequest("course.teacher", "equals", [teacherId.ToString()])],
+			["student.name"]);
+
+		await handler.HandleAsync(request, TestContext.Current.CancellationToken);
+
+		_datasourceOptionReaderMock.Verify(
+			reader => reader.ReadAsync(ReportDatasource.Teacher, It.IsAny<CancellationToken>()), Times.Once);
+		_datasourceOptionReaderMock.Verify(
+			reader => reader.ReadAsync(ReportDatasource.GuardianRelationship, It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

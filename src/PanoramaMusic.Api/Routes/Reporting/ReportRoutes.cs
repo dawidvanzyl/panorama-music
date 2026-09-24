@@ -16,7 +16,8 @@ public static class ReportRoutes
 			.RequireAuthorization("TeacherPolicy");
 
 		group
-			.MapGet("/fields", (GetReportFieldsHandler handler) => Results.Ok(handler.Handle()))
+			.MapGet("/fields", async (GetReportFieldsHandler handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(ct)))
+			.MarkSensitiveResponse()
 			.WithName("GetReportFields")
 			.Produces<ReportFieldsResult>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)

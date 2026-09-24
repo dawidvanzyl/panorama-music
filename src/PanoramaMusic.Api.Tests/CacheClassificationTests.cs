@@ -156,10 +156,10 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["RevealOwnAccountNumber"] = CacheExpectation.NoStore,
 		["GetOwnBankingActivity"] = CacheExpectation.NoStore,
 
-		// The Student field registry is code-defined metadata (keys, labels,
-		// operators, options) — it names no student and is identical for every
-		// caller, so it carries no more than the course catalogue does.
-		["GetReportFields"] = CacheExpectation.Cacheable,
+		// The Student field registry's datasource filters carry live teacher
+		// names and relationship/activity labels, the same reference data
+		// GetTeachers and similar payloads carry.
+		["GetReportFields"] = CacheExpectation.NoStore,
 
 		// A run's result names every matching student across whichever columns
 		// were selected, including sibling and date-of-birth scalars.

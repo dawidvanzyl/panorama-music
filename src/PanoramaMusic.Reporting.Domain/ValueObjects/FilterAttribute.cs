@@ -15,7 +15,8 @@ public sealed class FilterAttribute
 		ReportCollection collection,
 		FieldDataType dataType,
 		IReadOnlyList<FilterOperator> operators,
-		IReadOnlyList<FieldOption> options)
+		IReadOnlyList<FieldOption> options,
+		ReportDatasource? datasource = null)
 	{
 		Key = key;
 		Label = label;
@@ -23,6 +24,7 @@ public sealed class FilterAttribute
 		DataType = dataType;
 		Operators = operators;
 		Options = options;
+		Datasource = datasource;
 	}
 
 	public string Key { get; }
@@ -35,8 +37,11 @@ public sealed class FilterAttribute
 
 	public IReadOnlyList<FilterOperator> Operators { get; }
 
-	/// <summary>Empty for a text attribute; populated for list and boolean attributes.</summary>
+	/// <summary>Empty for a text or datasource attribute; populated for list and boolean attributes.</summary>
 	public IReadOnlyList<FieldOption> Options { get; }
+
+	/// <summary>Non-null exactly when <see cref="DataType"/> is <see cref="FieldDataType.Datasource"/>.</summary>
+	public ReportDatasource? Datasource { get; }
 
 	public bool AllowsOperator(FilterOperator op) => Operators.Contains(op);
 
