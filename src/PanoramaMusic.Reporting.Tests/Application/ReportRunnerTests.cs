@@ -17,6 +17,8 @@ public class ReportRunnerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
+	private static readonly IReadOnlyDictionary<PanoramaMusic.Reporting.Domain.Enums.ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<PanoramaMusic.Reporting.Domain.Enums.ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	[Fact]
 	public async Task RunAsync_EmptyPopulation_NeverCallsAnyCollectionReader()
@@ -26,7 +28,7 @@ public class ReportRunnerTests
 			.ReturnsAsync([]);
 		var collectionReaderMock = new Mock<ICollectionReader>();
 
-		var definition = ReportDefinition.Create([], ["student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 		var runner = new ReportRunner(_populationReaderMock.Object, [collectionReaderMock.Object], new ReportLayoutBuilder());
 
 		var layout = await runner.RunAsync(definition, TestContext.Current.CancellationToken);
@@ -46,7 +48,7 @@ public class ReportRunnerTests
 			.ReturnsAsync([new PopulationMember(Guid.NewGuid(), SourceValues.Empty)]);
 		var collectionReaderMock = new Mock<ICollectionReader>();
 
-		var definition = ReportDefinition.Create([], ["student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 		var runner = new ReportRunner(_populationReaderMock.Object, [collectionReaderMock.Object], new ReportLayoutBuilder());
 
 		await runner.RunAsync(definition, TestContext.Current.CancellationToken);

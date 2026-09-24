@@ -13,7 +13,7 @@ namespace PanoramaMusic.Reporting.Application.Validators;
 public sealed class RunReportRequestValidator : AbstractValidator<RunReportRequest>
 {
 	private const int _maxFilters = 50;
-	private const int _maxValuesPerFilter = 20;
+	private const int _maxValuesPerFilter = 100;
 	private const int _maxValueLength = 200;
 	private const int _maxColumns = 20;
 	private const int _maxKeyLength = 100;

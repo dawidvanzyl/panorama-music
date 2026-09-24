@@ -13,12 +13,14 @@ public class ReportLayoutBuilderTests
 	private readonly ReportLayoutBuilder _builder = new();
 	private static readonly IReadOnlyDictionary<ReportCollection, IReadOnlyList<CollectionRecord>> _noCollections =
 		new Dictionary<ReportCollection, IReadOnlyList<CollectionRecord>>();
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	[Fact]
 	[Trait("AC", "317UC7")]
 	public void Build_ClassColumnEndToEnd_Grade4A2FormatsAs4A2AndPrivateFormatsAsPrivate()
 	{
-		var definition = ReportDefinition.Create([], ["student.name", "student.class"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name", "student.class"], _registry, _noDatasourceOptions);
 
 		var member = new PopulationMember(
 			Guid.NewGuid(),
@@ -49,7 +51,7 @@ public class ReportLayoutBuilderTests
 	[Fact]
 	public void Build_PopulationOrder_IsPreservedInSections()
 	{
-		var definition = ReportDefinition.Create([], ["student.name"], _registry);
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 		var first = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "A", ["lastName"] = "A" }));
 		var second = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "B", ["lastName"] = "B" }));
 

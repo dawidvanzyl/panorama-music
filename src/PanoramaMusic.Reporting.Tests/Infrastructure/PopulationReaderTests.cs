@@ -1,3 +1,4 @@
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
 using PanoramaMusic.Reporting.Tests.Fixtures;
@@ -18,6 +19,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 {
 	private readonly ReportingDatabaseFixture _fixture;
 	private readonly StudentFieldRegistry _registry = new();
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	public PopulationReaderTests(ReportingDatabaseFixture fixture)
 	{
@@ -40,7 +43,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var definition = ReportDefinition.Create(
 			[],
 			["student.name", "student.hasSiblings", "student.numberOfSiblings", "student.isEldest"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 		var main = population.Single(m => m.StudentId == mainId);
@@ -63,7 +67,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var definition = ReportDefinition.Create(
 			[new ReportFilterInput("student.name", "contains", ["ZYL"])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 
@@ -92,13 +97,15 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var noSiblingDefinition = ReportDefinition.Create(
 			[new ReportFilterInput("student.hasSiblings", "equals", ["No"])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 		var noSiblingPopulation = await _fixture.ReadPopulationAsync(noSiblingDefinition, ct);
 
 		var eldestDefinition = ReportDefinition.Create(
 			[new ReportFilterInput("student.isEldest", "equals", ["Yes"])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 		var eldestPopulation = await _fixture.ReadPopulationAsync(eldestDefinition, ct);
 
 		ShouldlyHelpers.Satisfy(
@@ -128,7 +135,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var definition = ReportDefinition.Create(
 			[new ReportFilterInput("student.name", "contains", [token])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 
@@ -150,7 +158,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var definition = ReportDefinition.Create(
 			[new ReportFilterInput("student.name", "contains", [token])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 
@@ -173,7 +182,8 @@ public class PopulationReaderTests : IClassFixture<ReportingDatabaseFixture>
 		var definition = ReportDefinition.Create(
 			[new ReportFilterInput("student.name", "contains", [$"' OR 1=1 --{token}"])],
 			["student.name"],
-			_registry);
+			_registry,
+			_noDatasourceOptions);
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 

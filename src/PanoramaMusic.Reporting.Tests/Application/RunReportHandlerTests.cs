@@ -15,12 +15,13 @@ namespace PanoramaMusic.Reporting.Tests.Application;
 public class RunReportHandlerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
+	private readonly Mock<IDatasourceOptionReader> _datasourceOptionReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
 
 	private RunReportHandler CreateHandler()
 	{
 		var runner = new ReportRunner(_populationReaderMock.Object, [], new ReportLayoutBuilder());
-		return new RunReportHandler(_registry, runner, TimeProvider.System);
+		return new RunReportHandler(_registry, _datasourceOptionReaderMock.Object, runner, TimeProvider.System);
 	}
 
 	[Fact]

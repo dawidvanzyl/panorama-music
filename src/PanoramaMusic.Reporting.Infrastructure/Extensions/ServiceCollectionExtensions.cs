@@ -31,9 +31,10 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton(TimeProvider.System);
 
 		services.AddScoped<IPopulationReader, PopulationReader>();
-		// No ICollectionReader is registered — the registry currently
-		// declares no non-Student collection. A future reader registers
-		// here without changing ReportRunner's dependency shape.
+		services.AddScoped<ICollectionReader, GuardianCollectionReader>();
+		services.AddScoped<ICollectionReader, CourseCollectionReader>();
+		services.AddScoped<ICollectionReader, ExtraCurricularCollectionReader>();
+		services.AddScoped<IDatasourceOptionReader, DatasourceOptionReader>();
 		services.AddScoped<ReportRunner>();
 
 		services.AddScoped<GetReportFieldsHandler>();
