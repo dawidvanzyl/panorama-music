@@ -19,6 +19,9 @@ styles.replaceSync(`
       font-size: 16px;
       line-height: 1;
     }
+    .material-symbols-outlined::before {
+      content: attr(data-icon);
+    }
     .results-page__breadcrumb {
       font-size: 12px;
       color: var(--pm-text-muted);
@@ -125,15 +128,15 @@ template.innerHTML = `
     </div>
     <div class="results-page__actions">
       <button type="button" class="results-page__action" id="edit">
-        <span class="material-symbols-outlined">edit</span>
+        <span class="material-symbols-outlined" aria-hidden="true" data-icon="edit"></span>
         Edit report
       </button>
       <button type="button" class="results-page__action" id="runAgain">
-        <span class="material-symbols-outlined">refresh</span>
+        <span class="material-symbols-outlined" aria-hidden="true" data-icon="refresh"></span>
         Run again
       </button>
       <button type="button" class="results-page__action" id="print">
-        <span class="material-symbols-outlined">print</span>
+        <span class="material-symbols-outlined" aria-hidden="true" data-icon="print"></span>
         Print
       </button>
     </div>

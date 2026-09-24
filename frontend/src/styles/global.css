@@ -115,6 +115,10 @@ main {
     -webkit-print-color-adjust: exact;
   }
 
+  html {
+    background: var(--pm-bg);
+  }
+
   pm-nav-bar,
   pm-sidebar,
   pm-app-footer {
