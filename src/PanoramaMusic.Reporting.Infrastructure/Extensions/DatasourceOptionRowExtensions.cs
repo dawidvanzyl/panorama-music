@@ -3,20 +3,24 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Extensions;
 
-internal sealed record GuardianRelationshipOptionRow(Guid GuardianRelationshipId, string Name);
-
-internal sealed record TeacherNameOptionRow(Guid TeacherId, string FirstName, string Surname, bool IsActive);
-
-internal sealed record ExtraCurricularOptionRow(Guid ExtraCurricularId, string Description, string Phase);
-
+/// <summary>
+/// Maps a dynamic datasource-option row to a <see cref="FieldOption"/>. Reads
+/// by column name rather than binding to a typed record, since Dapper's
+/// constructor-based materialization needs verbatim snake_case parameter
+/// names to match a function's own output columns.
+/// </summary>
 internal static class DatasourceOptionRowExtensions
 {
-	public static FieldOption ToFieldOption(this GuardianRelationshipOptionRow row) =>
-		new(row.GuardianRelationshipId.ToString(), row.Name);
+	public static FieldOption ToGuardianRelationshipOption(this IDictionary<string, object> row) =>
+		new(((Guid)row["guardian_relationship_id"]).ToString(), (string)row["name"]);
 
-	public static FieldOption ToFieldOption(this TeacherNameOptionRow row) =>
-		new(row.TeacherId.ToString(), TeacherLabel.Compose(row.FirstName, row.Surname, row.IsActive));
+	public static FieldOption ToTeacherOption(this IDictionary<string, object> row) =>
+		new(
+			((Guid)row["teacher_id"]).ToString(),
+			TeacherLabel.Compose((string)row["first_name"], (string)row["surname"], (bool)row["is_active"]));
 
-	public static FieldOption ToFieldOption(this ExtraCurricularOptionRow row) =>
-		new(row.ExtraCurricularId.ToString(), ActivityOptionLabel.Compose(row.Description, row.Phase));
+	public static Guid ExtraCurricularId(this IDictionary<string, object> row) => (Guid)row["extra_curricular_id"];
+
+	public static FieldOption ToExtraCurricularOption(this IDictionary<string, object> row) =>
+		new(row.ExtraCurricularId().ToString(), ActivityOptionLabel.Compose((string)row["description"], (string)row["phase"]));
 }

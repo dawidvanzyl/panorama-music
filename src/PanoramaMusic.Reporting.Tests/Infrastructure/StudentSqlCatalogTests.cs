@@ -1,3 +1,4 @@
+using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Infrastructure.Sql;
 using Shouldly;
@@ -32,9 +33,9 @@ public class StudentSqlCatalogTests
 
 	[Fact]
 	[Trait("AC", "317UC3")]
-	public void Sources_ResolveEveryColumnsDeclaredSource()
+	public void Sources_ResolveEveryStudentColumnsDeclaredSource()
 	{
-		foreach (var column in _registry.Columns)
+		foreach (var column in _registry.Columns.Where(column => column.Collection == ReportCollection.Student))
 		{
 			foreach (var source in column.Sources)
 			{
@@ -42,4 +43,31 @@ public class StudentSqlCatalogTests
 			}
 		}
 	}
+
+	[Theory]
+	[Trait("AC", "318UC15")]
+	[InlineData(ReportCollection.Guardian)]
+	[InlineData(ReportCollection.Course)]
+	[InlineData(ReportCollection.ExtraCurricular)]
+	public void CollectionSql_ResolvesEveryDeclaredColumnSourceAndOrderSource(ReportCollection collection)
+	{
+		var collectionSources = CollectionSourcesFor(collection);
+		var columnSources = _registry.Columns
+			.Where(column => column.Collection == collection)
+			.SelectMany(column => column.Sources)
+			.Distinct();
+
+		foreach (var source in columnSources.Concat(StudentFieldRegistry.OrderSources(collection)))
+		{
+			collectionSources.Values.ShouldContain(source, $"Missing source '{source}' for collection '{collection}'.");
+		}
+	}
+
+	private static IReadOnlyDictionary<string, string> CollectionSourcesFor(ReportCollection collection) => collection switch
+	{
+		ReportCollection.Guardian => GuardianCollectionSql.Sources,
+		ReportCollection.Course => CourseCollectionSql.Sources,
+		ReportCollection.ExtraCurricular => ExtraCurricularCollectionSql.Sources,
+		_ => throw new ArgumentOutOfRangeException(nameof(collection)),
+	};
 }

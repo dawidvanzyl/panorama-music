@@ -27,18 +27,18 @@ public sealed class DatasourceOptionReader(IUnitOfWork unitOfWork) : IDatasource
 	{
 		var command = new CommandDefinition(
 			"students.get_guardian_relationships", transaction: unitOfWork.Transaction, commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken);
-		var rows = await unitOfWork.Connection.QueryAsync<GuardianRelationshipOptionRow>(command);
+		var rows = await unitOfWork.Connection.QueryAsync(command);
 
-		return [.. rows.Select(row => row.ToFieldOption())];
+		return [.. rows.Select(row => ((IDictionary<string, object>)row).ToGuardianRelationshipOption())];
 	}
 
 	private async Task<IReadOnlyList<FieldOption>> ReadTeachersAsync(CancellationToken cancellationToken)
 	{
 		var command = new CommandDefinition(
 			"teachers.get_teacher_names", transaction: unitOfWork.Transaction, commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken);
-		var rows = await unitOfWork.Connection.QueryAsync<TeacherNameOptionRow>(command);
+		var rows = await unitOfWork.Connection.QueryAsync(command);
 
-		return [.. rows.Select(row => row.ToFieldOption())];
+		return [.. rows.Select(row => ((IDictionary<string, object>)row).ToTeacherOption())];
 	}
 
 	/// <summary>
@@ -54,12 +54,12 @@ public sealed class DatasourceOptionReader(IUnitOfWork unitOfWork) : IDatasource
 			unitOfWork.Transaction,
 			commandType: CommandType.StoredProcedure,
 			cancellationToken: cancellationToken);
-		var rows = await unitOfWork.Connection.QueryAsync<ExtraCurricularOptionRow>(command);
+		var rows = (await unitOfWork.Connection.QueryAsync(command)).Select(row => (IDictionary<string, object>)row).ToList();
 
 		return [.. rows
-			.DistinctBy(row => row.ExtraCurricularId)
-			.OrderBy(row => row.Description, StringComparer.Ordinal)
-			.ThenBy(row => row.Phase, StringComparer.Ordinal)
-			.Select(row => row.ToFieldOption())];
+			.DistinctBy(row => row.ExtraCurricularId())
+			.OrderBy(row => (string)row["description"], StringComparer.Ordinal)
+			.ThenBy(row => (string)row["phase"], StringComparer.Ordinal)
+			.Select(row => row.ToExtraCurricularOption())];
 	}
 }

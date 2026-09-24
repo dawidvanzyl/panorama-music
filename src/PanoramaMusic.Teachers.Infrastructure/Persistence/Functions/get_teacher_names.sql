@@ -1,7 +1,7 @@
 -- get_teacher_names
 -- The narrow teacher projection the Reporting context reads for its Course ·
--- Teacher filter and column: id, name and active status only. Unlike
--- get_teachers(), it never returns is_private or linked_account_id.
+-- Teacher filter and column: id, name and active status only. Nothing else
+-- teachers.teachers carries is ever returned.
 
 CREATE OR REPLACE FUNCTION teachers.get_teacher_names()
 RETURNS TABLE(

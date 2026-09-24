@@ -14,4 +14,9 @@
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>PanoramaMusic.Reporting.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
