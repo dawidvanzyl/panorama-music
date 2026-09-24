@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 
-/** A4 portrait, 1cm margins: 190mm ≈ 718 CSS px, per plan-qa's printable-width note. */
+/** A4 portrait, 1cm margins: 190mm of printable width is about 718 CSS px. */
 export const PRINTABLE_WIDTH_PX = 718;
 
 const LIGHT_BACKGROUND_THRESHOLD = 0.7;
@@ -28,10 +28,10 @@ export async function switchToScreenMedia(page: Page): Promise<void> {
  */
 
 /**
- * The element's own effective background colour is light per the plan's
- * measure. A transparent background defers to the nearest non-transparent
- * ancestor, walking up through shadow hosts — "a transparent background
- * counts as light only if every ancestor's background is light".
+ * The element's own effective background colour is light. A transparent
+ * background defers to the nearest non-transparent ancestor, walking up
+ * through shadow hosts, so a transparently-styled element still counts as
+ * light when everything behind it is.
  */
 export async function ownBackgroundIsLight(locator: Locator): Promise<boolean> {
   return locator.evaluate((el, threshold) => {
@@ -84,7 +84,7 @@ export async function ownBackgroundIsWhite(locator: Locator): Promise<boolean> {
   });
 }
 
-/** The element's own computed `color` is near-black per the plan's luminance measure. */
+/** The element's own computed `color` has a relative luminance of 0.05 or below (near-black). */
 export async function ownTextIsNearBlack(locator: Locator): Promise<boolean> {
   return locator.evaluate((el, threshold) => {
     return luminance(getComputedStyle(el).color) <= threshold;
@@ -107,7 +107,7 @@ export async function ownTextIsNearBlack(locator: Locator): Promise<boolean> {
   }, NEAR_BLACK_THRESHOLD);
 }
 
-/** The element's own computed `color` is muted per the plan's luminance measure. */
+/** The element's own computed `color` has a relative luminance between near-black and 0.2 (muted). */
 export async function ownTextIsMuted(locator: Locator): Promise<boolean> {
   return locator.evaluate(
     (el, thresholds) => {
@@ -134,7 +134,7 @@ export async function ownTextIsMuted(locator: Locator): Promise<boolean> {
   );
 }
 
-/** The element's own computed background is light per the plan's measure, but not white. */
+/** The element's own computed background is light, but not white — a tinted band rather than the page background. */
 export async function ownBackgroundIsLightGrey(locator: Locator): Promise<boolean> {
   const [light, white] = await Promise.all([
     ownBackgroundIsLight(locator),
@@ -167,8 +167,8 @@ export interface AncestorMetric {
  * The chain of ancestor elements from `locator`'s element up to `<html>`,
  * crossing shadow-root boundaries via `getRootNode().host` the way a regular
  * `parentElement` walk cannot. Used by the width- and height-overflow checks,
- * which must inspect every ancestor "up through every shadow host to the
- * document" per the plan.
+ * since a clipping or overflowing ancestor anywhere in that chain — light DOM
+ * or shadow — would hide what's actually being measured.
  */
 export async function ancestorChain(locator: Locator): Promise<AncestorMetric[]> {
   return locator.evaluate((el) => {

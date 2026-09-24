@@ -28,8 +28,8 @@ import {
 
 /**
  * The QA database is shared and filled in parallel, so every scenario mints
- * its own token and uses it as its seeded students' surname, per the plan's
- * scoping convention.
+ * its own token and uses it as its seeded students' surname, keeping one
+ * worker's rows out of another's results.
  */
 function uniqueToken(prefix = 'Print'): string {
   return `${prefix}${test.info().workerIndex}${Date.now()}${crypto.randomUUID().slice(0, 6).replace(/-/g, '')}`;
@@ -38,7 +38,7 @@ function uniqueToken(prefix = 'Print'): string {
 /**
  * Signs in and lands on the Reports list, without opening the builder yet —
  * the builder loads its registry options when it opens (no cache), so every
- * scenario here seeds before opening it (R14).
+ * scenario here seeds before opening it.
  */
 async function loginForReports(page: Page, roles: UserRole[] = ['Teacher']): Promise<ReportsPage> {
   return goToReportsPage(page, roles);
@@ -83,9 +83,8 @@ async function readRunTimestamp(results: ReportResultsPage): Promise<string> {
 }
 
 /**
- * Replaces `window.print` with a call counter that opens no dialog, per
- * plan-qa's Invocation convention (11IT41) — the real dialog would block a
- * headless run.
+ * Replaces `window.print` with a call counter that opens no dialog — the
+ * real dialog would block a headless run.
  */
 async function recordPrintCalls(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -464,10 +463,9 @@ test.describe(
       page,
     }) => {
       const token = uniqueToken();
-      // R16: at plan-dev's frozen print metrics, 12 students × 2 columns
-      // renders at about 480px — under a 600px viewport, so nothing could
-      // ever be shown cut off. 40 students clears twice the viewport height
-      // with margin (about 1600px against a 1200px floor).
+      // 40 students, at two ticked columns, lays out to roughly 1600px —
+      // comfortably past twice the 600px viewport below, so a truncated
+      // layout would have room to actually show as truncated.
       const studentCount = 40;
       const names = Array.from({ length: studentCount }, (_, i) => `S${i + 1}`);
       const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
@@ -492,7 +490,7 @@ test.describe(
       await expect(results.allSections()).toHaveCount(studentCount);
 
       // --- Not truncated to one screen: the layout is at least twice the
-      //     viewport height (R16), not merely taller than it ---
+      //     viewport height, not merely taller than it ---
       const documentMetrics = await page.evaluate(() => ({
         scrollHeight: document.documentElement.scrollHeight,
         clientHeight: document.documentElement.clientHeight,
