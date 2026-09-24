@@ -61,7 +61,9 @@ function attributeLabel(field: ReportField, fields: ReportFieldsModel): string {
   const collectionsSharingLabel = new Set(
     fields.filters.filter((candidate) => candidate.label === field.label).map((candidate) => candidate.collection),
   );
-  return collectionsSharingLabel.size > 1 ? `${collectionPresentation(field.collection).label} · ${field.label}` : field.label;
+  return collectionsSharingLabel.size > 1
+    ? `${collectionPresentation(field.collection).label} · ${field.label}`
+    : field.label;
 }
 
 function formatValues(filter: ReportFilterModel, field: ReportField): string {

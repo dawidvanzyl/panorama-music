@@ -4,26 +4,69 @@ import type { ReportFieldsModel, ReportFilterModel } from '../../models/report';
 
 const fields: ReportFieldsModel = {
   filters: [
-    { key: 'student.grade', collection: 'Student', label: 'Grade', dataType: 'List', operators: ['equals', 'in'], options: [
-      { value: 'Grade4', label: 'Grade 4' },
-      { value: 'Grade5', label: 'Grade 5' },
-      { value: 'Grade6', label: 'Grade 6' },
-    ] },
-    { key: 'student.hasSibling', collection: 'Student', label: 'Has Sibling', dataType: 'Boolean', operators: ['equals'], options: [
-      { value: 'Yes', label: 'Yes' },
-      { value: 'No', label: 'No' },
-    ] },
-    { key: 'student.name', collection: 'Student', label: 'Name', dataType: 'Text', operators: ['contains'], options: [] },
-    { key: 'guardian.name', collection: 'Guardian', label: 'Name', dataType: 'Text', operators: ['contains'], options: [] },
-    { key: 'student.phase', collection: 'Student', label: 'Phase', dataType: 'List', operators: ['equals'], options: [
-      { value: 'Junior', label: 'Junior' },
-    ] },
-    { key: 'extraCurricular.phase', collection: 'ExtraCurricular', label: 'Phase', dataType: 'List', operators: ['equals'], options: [
-      { value: 'Junior', label: 'Junior' },
-    ] },
-    { key: 'student.teacher', collection: 'Student', label: 'Teacher', dataType: 'Datasource', operators: ['equals'], options: [
-      { value: 't1', label: 'Ms Smith (inactive)' },
-    ] },
+    {
+      key: 'student.grade',
+      collection: 'Student',
+      label: 'Grade',
+      dataType: 'List',
+      operators: ['equals', 'in'],
+      options: [
+        { value: 'Grade4', label: 'Grade 4' },
+        { value: 'Grade5', label: 'Grade 5' },
+        { value: 'Grade6', label: 'Grade 6' },
+      ],
+    },
+    {
+      key: 'student.hasSibling',
+      collection: 'Student',
+      label: 'Has Sibling',
+      dataType: 'Boolean',
+      operators: ['equals'],
+      options: [
+        { value: 'Yes', label: 'Yes' },
+        { value: 'No', label: 'No' },
+      ],
+    },
+    {
+      key: 'student.name',
+      collection: 'Student',
+      label: 'Name',
+      dataType: 'Text',
+      operators: ['contains'],
+      options: [],
+    },
+    {
+      key: 'guardian.name',
+      collection: 'Guardian',
+      label: 'Name',
+      dataType: 'Text',
+      operators: ['contains'],
+      options: [],
+    },
+    {
+      key: 'student.phase',
+      collection: 'Student',
+      label: 'Phase',
+      dataType: 'List',
+      operators: ['equals'],
+      options: [{ value: 'Junior', label: 'Junior' }],
+    },
+    {
+      key: 'extraCurricular.phase',
+      collection: 'ExtraCurricular',
+      label: 'Phase',
+      dataType: 'List',
+      operators: ['equals'],
+      options: [{ value: 'Junior', label: 'Junior' }],
+    },
+    {
+      key: 'student.teacher',
+      collection: 'Student',
+      label: 'Teacher',
+      dataType: 'Datasource',
+      operators: ['equals'],
+      options: [{ value: 't1', label: 'Ms Smith (inactive)' }],
+    },
   ],
   columns: [],
 };
