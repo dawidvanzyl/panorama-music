@@ -48,6 +48,8 @@ styles.replaceSync(`
       font-weight: 600;
       line-height: 1.4;
       white-space: nowrap;
+      vertical-align: middle;
+      letter-spacing: 0.02em;
     }
     @media print {
       .results-table__card {

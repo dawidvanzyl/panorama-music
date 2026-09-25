@@ -160,6 +160,11 @@ public class ReportRunnerTests
 		extraCurricularReaderMock.Verify(
 			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
 			Times.Once);
+		_siblingGroupReaderMock.Verify(
+			reader => reader.ReadAsync(
+				It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 50 && expectedIds.All(ids.Contains)),
+				It.IsAny<CancellationToken>()),
+			Times.Once);
 	}
 
 	[Fact]

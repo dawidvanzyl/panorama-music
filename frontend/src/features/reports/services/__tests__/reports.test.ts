@@ -92,8 +92,6 @@ describe('runReport', { tags: ['317UC7'] }, () => {
     expect(result.studentCount).toBe(2);
     expect(result.columns).toEqual(apiResult.columns);
     expect(result.sections).toEqual(apiResult.sections);
-    expect(result.sections[0].siblingBadge).toBe('1.2');
-    expect(result.sections[1].siblingBadge).toBeNull();
   });
 
   it('is never cached — a second call fetches again', async () => {
@@ -125,6 +123,49 @@ describe('runReport', { tags: ['317UC7'] }, () => {
     const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
 
     await expect(runReport(definition)).rejects.toThrow(ReportsError);
+  });
+});
+
+describe('siblingBadge mapping', { tags: ['319UC7'] }, () => {
+  it('maps a badged and an unmarked section through runReport', async () => {
+    const apiResult = {
+      ranAt: '2026-09-21T10:15:00Z',
+      studentCount: 2,
+      columns: [{ key: 'student.name', header: 'Student' }],
+      sections: [
+        { studentId: 's1', rows: [['Amy van Zyl']], siblingBadge: '1.2' },
+        { studentId: 's2', rows: [['Ben Smith']], siblingBadge: null },
+      ],
+    };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
+    const result = await runReport(definition);
+
+    expect(result.sections[0].siblingBadge).toBe('1.2');
+    expect(result.sections[1].siblingBadge).toBeNull();
+  });
+
+  it('maps a badged and an unmarked section through runSavedReport', async () => {
+    const apiResult = {
+      reportId: 'r1',
+      name: 'Siblings',
+      createdBy: 'a@test.com',
+      isOwner: true,
+      ranAt: '2026-09-21T10:15:00Z',
+      studentCount: 2,
+      columns: [{ key: 'student.name', header: 'Student' }],
+      sections: [
+        { studentId: 's1', rows: [['Cal Z']], siblingBadge: '1.1' },
+        { studentId: 's2', rows: [['Dee Z']], siblingBadge: null },
+      ],
+    };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
+
+    const result = await runSavedReport('r1');
+
+    expect(result.sections[0].siblingBadge).toBe('1.1');
+    expect(result.sections[1].siblingBadge).toBeNull();
   });
 });
 

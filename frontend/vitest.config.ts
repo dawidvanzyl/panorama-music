@@ -314,6 +314,7 @@ export default defineConfig({
       { name: '321UC4', description: 'The reports service invalidates the saved-reports list cache on save and on run, and never caches a failed call' },
       { name: '321UC11', description: 'sameDefinition treats two definitions as equal when their columns match as a set regardless of order' },
       { name: '319UC6', description: 'A badged section shows the sibling badge beside the name on the first row only and adds no column' },
+      { name: '319UC7', description: 'The reports service maps siblingBadge for both a string and null through runReport and runSavedReport' },
     ],
   },
 })
