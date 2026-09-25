@@ -8,7 +8,8 @@ public sealed class ReportLayoutBuilder
 	public ReportLayout Build(
 		ReportDefinition definition,
 		IReadOnlyList<PopulationMember> population,
-		IReadOnlyDictionary<ReportCollection, IReadOnlyList<CollectionRecord>> collections)
+		IReadOnlyDictionary<ReportCollection, IReadOnlyList<CollectionRecord>> collections,
+		IReadOnlyDictionary<Guid, SiblingBadge> siblingBadges)
 	{
 		var selectedNonStudentCollections = definition.SelectedCollections
 			.Where(collection => collection != ReportCollection.Student)
@@ -52,7 +53,7 @@ public sealed class ReportLayoutBuilder
 				rows.Add(row);
 			}
 
-			sections.Add(new ReportLayoutSection(member.StudentId, rows));
+			sections.Add(new ReportLayoutSection(member.StudentId, rows, siblingBadges.GetValueOrDefault(member.StudentId)));
 		}
 
 		return new ReportLayout(definition.Columns, sections);

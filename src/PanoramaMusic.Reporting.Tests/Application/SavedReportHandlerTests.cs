@@ -18,6 +18,7 @@ public class SavedReportHandlerTests
 	private readonly Mock<IUserContext> _userContextMock = new();
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
 	private readonly Mock<IDatasourceOptionReader> _datasourceOptionReaderMock = new();
+	private readonly Mock<ISiblingGroupReader> _siblingGroupReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
 
 	public SavedReportHandlerTests()
@@ -25,6 +26,9 @@ public class SavedReportHandlerTests
 		_repositoryMock
 			.Setup(repo => repo.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync((SavedReportRecord?)null);
+		_siblingGroupReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<SiblingGroupMembership>)[]);
 	}
 
 	[Fact]
@@ -41,7 +45,8 @@ public class SavedReportHandlerTests
 	public async Task RunSavedReportHandler_UnknownId_ThrowsEntityNotFoundException()
 	{
 		var factory = new ReportDefinitionFactory(_registry, _datasourceOptionReaderMock.Object);
-		var runner = new ReportRunner(_populationReaderMock.Object, [], new ReportLayoutBuilder());
+		var runner = new ReportRunner(
+			_populationReaderMock.Object, [], new ReportLayoutBuilder(), _siblingGroupReaderMock.Object, new SiblingBadgeResolver());
 		var handler = new RunSavedReportHandler(factory, _repositoryMock.Object, runner, _userContextMock.Object, TimeProvider.System);
 
 		await Should.ThrowAsync<EntityNotFoundException>(() => handler.HandleAsync(Guid.NewGuid(), TestContext.Current.CancellationToken));

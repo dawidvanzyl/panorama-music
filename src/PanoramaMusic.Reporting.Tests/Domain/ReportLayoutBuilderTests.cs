@@ -15,6 +15,8 @@ public class ReportLayoutBuilderTests
 		new Dictionary<ReportCollection, IReadOnlyList<CollectionRecord>>();
 	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
 		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
+	private static readonly IReadOnlyDictionary<Guid, SiblingBadge> _noSiblingBadges =
+		new Dictionary<Guid, SiblingBadge>();
 
 	[Fact]
 	[Trait("AC", "317UC7")]
@@ -41,7 +43,7 @@ public class ReportLayoutBuilderTests
 				["class"] = null,
 			}));
 
-		var layout = _builder.Build(definition, [member, privateMember], _noCollections);
+		var layout = _builder.Build(definition, [member, privateMember], _noCollections, _noSiblingBadges);
 
 		ShouldlyHelpers.Satisfy(
 			() => layout.Sections[0].Rows[0][1].ShouldBe("4A2"),
@@ -55,7 +57,7 @@ public class ReportLayoutBuilderTests
 		var first = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "A", ["lastName"] = "A" }));
 		var second = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "B", ["lastName"] = "B" }));
 
-		var layout = _builder.Build(definition, [first, second], _noCollections);
+		var layout = _builder.Build(definition, [first, second], _noCollections, _noSiblingBadges);
 
 		layout.Sections.Select(s => s.StudentId).ShouldBe([first.StudentId, second.StudentId]);
 	}
@@ -80,7 +82,7 @@ public class ReportLayoutBuilderTests
 			[ReportCollection.Course] = [Course(studentId, "Theory"), Course(studentId, "G2Recorder"), Course(studentId, "Instrument")],
 		};
 
-		var layout = _builder.Build(definition, [member], collections);
+		var layout = _builder.Build(definition, [member], collections, _noSiblingBadges);
 
 		var rows = layout.Sections.Single().Rows;
 		ShouldlyHelpers.Satisfy(
@@ -107,7 +109,7 @@ public class ReportLayoutBuilderTests
 			[ReportCollection.Course] = [Course(studentId, "Instrument"), Course(studentId, "Instrument"), Course(studentId, "Instrument")],
 		};
 
-		var layout = _builder.Build(definition, [member], collections);
+		var layout = _builder.Build(definition, [member], collections, _noSiblingBadges);
 
 		var rows = layout.Sections.Single().Rows;
 		ShouldlyHelpers.Satisfy(
@@ -135,12 +137,27 @@ public class ReportLayoutBuilderTests
 			[ReportCollection.Course] = [Course(studentId, "Theory"), Course(studentId, "G2Recorder")],
 		};
 
-		var layout = _builder.Build(definition, [member], collections);
+		var layout = _builder.Build(definition, [member], collections, _noSiblingBadges);
 
 		var rows = layout.Sections.Single().Rows;
 		ShouldlyHelpers.Satisfy(
 			() => rows.Count.ShouldBe(2),
 			() => rows[0][1].ShouldBe(string.Empty),
 			() => rows[1][1].ShouldBe(string.Empty));
+	}
+
+	[Fact]
+	public void Build_OneMemberGivenABadgeAndOneNot_CarriesTheGivenBadgeAndNullOtherwise()
+	{
+		var definition = ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
+		var badged = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Amy", ["lastName"] = "Z" }));
+		var unbadged = new PopulationMember(Guid.NewGuid(), new SourceValues(new Dictionary<string, object?> { ["firstName"] = "Bo", ["lastName"] = "Z" }));
+		var badges = new Dictionary<Guid, SiblingBadge> { [badged.StudentId] = new SiblingBadge(1, 2) };
+
+		var layout = _builder.Build(definition, [badged, unbadged], _noCollections, badges);
+
+		ShouldlyHelpers.Satisfy(
+			() => layout.Sections.Single(s => s.StudentId == badged.StudentId).SiblingBadge!.Label.ShouldBe("1.2"),
+			() => layout.Sections.Single(s => s.StudentId == unbadged.StudentId).SiblingBadge.ShouldBeNull());
 	}
 }

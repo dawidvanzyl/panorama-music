@@ -32,10 +32,12 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton(registry);
 		services.AddSingleton(catalog);
 		services.AddSingleton<ReportLayoutBuilder>();
+		services.AddSingleton<SiblingBadgeResolver>();
 
 		services.AddSingleton(TimeProvider.System);
 
 		services.AddScoped<IPopulationReader, PopulationReader>();
+		services.AddScoped<ISiblingGroupReader, SiblingGroupReader>();
 		services.AddScoped<ICollectionReader, GuardianCollectionReader>();
 		services.AddScoped<ICollectionReader, CourseCollectionReader>();
 		services.AddScoped<ICollectionReader, ExtraCurricularCollectionReader>();
