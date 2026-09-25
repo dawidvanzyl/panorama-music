@@ -162,7 +162,7 @@ export interface RunReportApiResult {
     ranAt?: string;
     studentCount?: number;
     columns?: { key: string; header: string }[];
-    sections?: { studentId: string; rows: string[][] }[];
+    sections?: { studentId: string; rows: string[][]; siblingBadge: string | null }[];
     error?: string;
   };
 }
@@ -289,7 +289,7 @@ export interface RunSavedReportApiResult {
     ranAt?: string;
     studentCount?: number;
     columns?: { key: string; header: string }[];
-    sections?: { studentId: string; rows: string[][] }[];
+    sections?: { studentId: string; rows: string[][]; siblingBadge: string | null }[];
     error?: string;
   };
 }
