@@ -958,6 +958,7 @@ test.describe('Reports is offered to Teacher alone', { tag: ['@11IT30'] }, () =>
         '/reports/new',
         '/reports/results',
         `/reports/${savedReportId}`,
+        `/reports/${savedReportId}/edit`,
       ]) {
         await page.goto(`/#${path}`);
         await expect(page).toHaveURL(landingUrl(...roles));
