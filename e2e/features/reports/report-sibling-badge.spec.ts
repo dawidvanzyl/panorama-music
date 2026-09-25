@@ -193,15 +193,17 @@ test.describe('Report results — a present sibling pair shows an age-ordered ba
       },
     });
     expect(saved.status).toBe(201);
+    if (!saved.body.id) throw new Error('save did not return an id');
+    const id = saved.body.id;
 
     const reportsPage = new ReportsPage(page);
     await reportsPage.gotoReports();
     await reportsPage.waitForLoaded();
-    const row = reportsPage.rowByName(`Siblings ${token}`);
-    await reportsPage.run(row);
+    await reportsPage.run(reportsPage.rowById(id));
 
     const results = new ReportResultsPage(page);
-    await expect(page).toHaveURL(/#\/reports\/results$/);
+    await expect(page).toHaveURL(new RegExp(`#/reports/${id}$`));
+    await expect(results.subline).toBeVisible();
     await expect(results.siblingBadge(`Hal ${token}`)).toHaveText('1.1');
     await expect(results.siblingBadge(`Gus ${token}`)).toHaveText('1.2');
   });
