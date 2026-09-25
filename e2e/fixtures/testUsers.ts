@@ -60,7 +60,7 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
  * the role that actually maintains it — so every navigation helper below
  * signs in as a purpose-built account instead of the seeded Admin.
  */
-export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void> {
+export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<string> {
   const email = uniqueTestEmail(roles.join('-').toLowerCase());
   const password = 'RolesPass123!';
   await createRegisteredUser(page, email, password, roles);
@@ -69,6 +69,7 @@ export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void>
   await loginPage.gotoLogin();
   await loginPage.login(email, password);
   await expect(page).toHaveURL(landingUrl(...roles));
+  return email;
 }
 
 /**
@@ -141,12 +142,12 @@ export async function goToWaitingListPage(page: Page, roles: UserRole[]): Promis
 export async function goToReportsPage(
   page: Page,
   roles: UserRole[] = ['Teacher']
-): Promise<ReportsPage> {
-  await loginAsRoles(page, roles);
+): Promise<ReportsPage & { email: string }> {
+  const email = await loginAsRoles(page, roles);
 
   const reportsPage = new ReportsPage(page);
   await reportsPage.gotoReports();
-  return reportsPage;
+  return Object.assign(reportsPage, { email });
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {

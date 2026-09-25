@@ -11,7 +11,9 @@ export class ReportResultsPage extends BasePage {
   readonly editButton: Locator;
   readonly runAgainButton: Locator;
   readonly printButton: Locator;
+  readonly saveReportButton: Locator;
   readonly actionsContainer: Locator;
+  readonly breadcrumbName: Locator;
   readonly errorBanner: Locator;
   readonly emptyMessage: Locator;
   readonly table: Locator;
@@ -32,7 +34,9 @@ export class ReportResultsPage extends BasePage {
     this.editButton = this.host.locator('#edit');
     this.runAgainButton = this.host.locator('#runAgain');
     this.printButton = this.host.locator('#print');
+    this.saveReportButton = this.host.locator('#saveReport');
     this.actionsContainer = this.host.locator('.results-page__actions');
+    this.breadcrumbName = this.breadcrumb.locator('[data-testid="results-breadcrumb-name"]');
     this.errorBanner = this.host.locator('#error');
     this.emptyMessage = this.host.locator('pm-report-results-table #empty');
     this.table = this.host.locator('pm-report-results-table #table');
@@ -56,10 +60,19 @@ export class ReportResultsPage extends BasePage {
     await this.printButton.click();
   }
 
+  async saveReport(): Promise<void> {
+    await this.saveReportButton.click();
+  }
+
   /** The offered actions' accessible names, in document order, e.g. `['Edit report', 'Run again', 'Print']`. */
   async actionLabels(): Promise<string[]> {
     const texts = await this.actionsContainer.locator('button').allTextContents();
     return texts.map((text) => text.trim());
+  }
+
+  /** Alias for `actionLabels`, named per plan-qa's convention. */
+  async offeredActions(): Promise<string[]> {
+    return this.actionLabels();
   }
 
   async followReportsBreadcrumb(): Promise<void> {

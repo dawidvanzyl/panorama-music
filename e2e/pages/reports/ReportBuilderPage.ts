@@ -18,6 +18,8 @@ export class ReportBuilderPage extends BasePage {
   readonly filtersCountBadge: Locator;
   readonly addFilterButton: Locator;
   readonly columnsCounter: Locator;
+  readonly saveButton: Locator;
+  readonly breadcrumbName: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -31,6 +33,8 @@ export class ReportBuilderPage extends BasePage {
     this.filtersCountBadge = this.host.locator('pm-report-filters-panel #count');
     this.addFilterButton = this.host.locator('pm-report-filters-panel #add');
     this.columnsCounter = this.host.locator('pm-report-columns-panel #counter');
+    this.saveButton = this.host.getByRole('button', { name: 'Save', exact: true });
+    this.breadcrumbName = this.breadcrumb.locator('[data-testid="builder-breadcrumb-name"]');
   }
 
   async gotoNewReport(): Promise<void> {
@@ -39,6 +43,10 @@ export class ReportBuilderPage extends BasePage {
 
   async followReportsBreadcrumb(): Promise<void> {
     await this.breadcrumb.locator('#backLink').click();
+  }
+
+  async save(): Promise<void> {
+    await this.saveButton.click();
   }
 
   // --- Filters ---
