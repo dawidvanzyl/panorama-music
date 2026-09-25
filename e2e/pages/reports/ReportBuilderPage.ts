@@ -174,7 +174,7 @@ export class ReportBuilderPage extends BasePage {
 
   /**
    * The columns panel's group for one collection (`Student`, `Guardian`,
-   * `Course` or `ExtraCurricular`), per plan-dev's Test hooks.
+   * `Course` or `ExtraCurricular`).
    */
   columnGroup(collection: string): Locator {
     return this.host.locator(`pm-report-columns-panel [data-testid="column-group-${collection}"]`);

@@ -70,7 +70,7 @@ export class ReportResultsPage extends BasePage {
     return texts.map((text) => text.trim());
   }
 
-  /** Alias for `actionLabels`, named per plan-qa's convention. */
+  /** Alias for `actionLabels`, named after what it returns rather than how. */
   async offeredActions(): Promise<string[]> {
     return this.actionLabels();
   }

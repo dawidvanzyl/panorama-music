@@ -83,7 +83,7 @@ export class StudentsPage extends BasePage {
    * it carries Save, and Courses only offers Next — so all four Next clicks
    * are required.
    *
-   * A Private-grade student has no Extra-Curriculars step at all (R9):
+   * A Private-grade student has no Extra-Curriculars step at all:
    * Courses is their final step and carries Save directly, so only three
    * Next clicks happen and `activityOptionLabels` is meaningless for them —
    * passing any is a caller error, not something this silently tolerates.
@@ -94,8 +94,7 @@ export class StudentsPage extends BasePage {
    *
    * `activityOptionLabels` stages zero or more activities on the
    * Extra-Curriculars step before Save — each one is the picker's option
-   * label, which is the activity's description alone (per #278's R11
-   * display correction). Staging in create mode
+   * label, which is the activity's description alone. Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
    * through identical UI mechanics.
@@ -632,8 +631,8 @@ export class StudentsPage extends BasePage {
 
   /**
    * The Add Activity panel's picker. Options read the activity's description
-   * alone, per #278's R11 display correction — a student is assigned to an
-   * activity, never to one of its practice times, so no slot is named.
+   * alone — a student is assigned to an activity, never to one of its
+   * practice times, so no slot is named.
    */
   activityPicker(): Locator {
     return this.extraCurricularsStep().locator('#activitySelect');

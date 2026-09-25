@@ -50,8 +50,8 @@ export class ReportsPage extends BasePage {
    * The row(s) whose Created by cell equals this email, exactly. The `has`
    * locator is rooted at `this.page`, not `this.host`: rooting it at the
    * page-level host locator against a row-scoped `filter` returns 0 matches
-   * even when the row is present (R19) — rooting at `page` instead resolves
-   * it relative to each candidate row, as `filter({ has })` requires.
+   * even when the row is present — rooting at `page` instead resolves it
+   * relative to each candidate row, as `filter({ has })` requires.
    */
   rowsByCreatedBy(email: string): Locator {
     return this.rows().filter({

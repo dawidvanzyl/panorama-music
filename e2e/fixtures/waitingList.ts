@@ -213,7 +213,7 @@ export async function fetchAnyLessonStructureId(page: Page): Promise<string> {
 }
 
 /**
- * The three write surfaces this story exposes, reached directly from the
+ * The three waiting-list entry write surfaces, reached directly from the
  * signed-in session. A Teacher is offered no Edit and no Delete on the page at
  * all (272IT26), so the refusal boundary has no UI path to attempt it through
  * — the same reasoning `attemptCaptureWaitingListStudent` follows for capture.

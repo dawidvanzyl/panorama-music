@@ -637,8 +637,7 @@ test.describe(
   { tag: ['@11IT16'] },
   () => {
     // The full registry, in group order (Student, Guardian, Course,
-    // Extra-Curricular), per #318's contract. #317 shipped the Student group
-    // alone; #318 adds the other three, so this list now covers all of them.
+    // Extra-Curricular).
     const EXPECTED_FILTERS = [
       'Student · Name',
       'Student · Grade',

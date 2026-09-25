@@ -21,7 +21,7 @@ test.describe(
     test('the tab strip shows a Courses tab and an Extra-Curriculars tab', async ({ page }) => {
       const studentsPage = await goToStudentsPage(page);
       // A phase is required for the Extra-Curriculars tab to be offered at
-      // all (independent of #293 — true before this story too), so the
+      // all (independent of #293, and true beforehand as well), so the
       // Student tab is filled in to reach the state where "still presented"
       // is meaningful to check.
       await studentsPage.startCreatingStudent({

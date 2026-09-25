@@ -238,8 +238,8 @@ test.describe(
       const { waitingList } = coordinator;
 
       // The link is made through the wizard's own controls, not the fixture:
-      // giving the waiting-list wizard a path to a cross-population link is
-      // this story's central claim.
+      // the waiting-list wizard offering a path to a cross-population link is
+      // exactly what this scenario proves.
       await waitingList.openSiblingsTab(
         waitingList.rowFor('During School', family.familySurname),
       );

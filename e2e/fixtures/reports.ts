@@ -21,10 +21,9 @@ export interface SeedReportStudentOptions {
   dateOfBirth?: string;
   /**
    * The exact courses to enrol the student in, instead of `target`. When
-   * given, the student is enrolled in these and *not* in `target` — plan-qa's
-   * "explicit enrolments" convention (11IT13, 14, 34, 35), so a scenario
-   * counting a student's course rows isn't thrown off by the default
-   * `seedEnrollmentTarget` course.
+   * given, the student is enrolled in these and *not* in `target`, so a
+   * scenario counting a student's course rows isn't thrown off by the
+   * default `seedEnrollmentTarget` course.
    */
   enrolments?: ReportStudentEnrolment[];
 }

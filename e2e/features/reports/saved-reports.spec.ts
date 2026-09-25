@@ -20,7 +20,7 @@ import { SaveReportModal } from '../../pages/reports/SaveReportModal';
 /**
  * The QA database is shared and filled in parallel, so every scenario mints
  * its own token and uses it as its seeded students' surname, or as part of a
- * saved report's own name — plan-qa's scoping convention.
+ * saved report's own name, keeping one worker's rows out of another's.
  */
 function uniqueToken(prefix = 'Sav'): string {
   return `${prefix}${test.info().workerIndex}${Date.now()}${crypto.randomUUID().slice(0, 6).replace(/-/g, '')}`;
@@ -70,7 +70,7 @@ async function saveThroughModal(page: Page, name: string): Promise<void> {
   await modal.waitForClosed();
 }
 
-/** The browser's own `yyyy-MM-dd HH:mm`, in its local time — matching the app's own format (R6). */
+/** The browser's own `yyyy-MM-dd HH:mm`, in its local time — matching how the app renders a run timestamp. */
 async function captureNowFormatted(page: Page): Promise<string> {
   return page.evaluate(() => {
     const d = new Date();
@@ -616,7 +616,7 @@ test.describe(
       expect(await results.offeredActions()).toEqual(['Run again', 'Print']);
     });
 
-    test('in this story the creator gets the same set', async ({ page }) => {
+    test('the creator also gets exactly Run again and Print', async ({ page }) => {
       const token = uniqueToken();
       await loginAsRoles(page, ['Teacher']);
       const id = await apiSave(page, `${token} Mine`);

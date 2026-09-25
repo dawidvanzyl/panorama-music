@@ -157,7 +157,7 @@ test.describe(
       await expect(activitiesPage.row(description)).toBeVisible();
 
       // A second Junior activity with the same description is refused, naming
-      // the phase and the description — R14's own wording.
+      // the phase and the description.
       await activitiesPage.enterActivity(description, 'Junior');
       await activitiesPage.stageSlot({ day: 'Tuesday', startTime: '10:00' });
       await activitiesPage.submit();
