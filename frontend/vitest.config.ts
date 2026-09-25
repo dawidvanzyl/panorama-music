@@ -312,7 +312,7 @@ export default defineConfig({
       { name: '321UC2', description: 'formatLastRun renders — for a report never run, otherwise the same yyyy-MM-dd HH:mm format' },
       { name: '321UC3', description: 'resultActions offers only Run again and Print for any saved report, and the full set for an unsaved one' },
       { name: '321UC4', description: 'The reports service invalidates the saved-reports list cache on save and on run, and never caches a failed call' },
-      { name: '321UC5', description: 'sameDefinition treats two definitions as equal when their columns match as a set regardless of order' },
+      { name: '321UC11', description: 'sameDefinition treats two definitions as equal when their columns match as a set regardless of order' },
     ],
   },
 })

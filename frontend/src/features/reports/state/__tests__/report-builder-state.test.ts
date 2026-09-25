@@ -406,7 +406,7 @@ describe('resultActions', { tags: ['321UC3'] }, () => {
   });
 });
 
-describe('sameDefinition', { tags: ['321UC5'] }, () => {
+describe('sameDefinition', { tags: ['321UC11'] }, () => {
   const filters: ReportFilterModel[] = [{ field: 'student.grade', operator: 'equals', values: ['Grade4'] }];
 
   it('treats two definitions with the same columns in a different order as the same', () => {
