@@ -1,14 +1,19 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Reporting.Application.Handlers;
+using PanoramaMusic.Reporting.Application.Interfaces;
 using PanoramaMusic.Reporting.Application.Requests;
 using PanoramaMusic.Reporting.Application.Services;
 using PanoramaMusic.Reporting.Application.Validators;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.Services;
+using PanoramaMusic.Reporting.Infrastructure.Contexts;
 using PanoramaMusic.Reporting.Infrastructure.Readers;
+using PanoramaMusic.Reporting.Infrastructure.Repositories;
 using PanoramaMusic.Reporting.Infrastructure.Sql;
+using PanoramaMusic.Reporting.Infrastructure.Translators;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Extensions;
 
@@ -37,10 +42,21 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<IDatasourceOptionReader, DatasourceOptionReader>();
 		services.AddScoped<ReportRunner>();
 
+		services.AddScoped<ReportDefinitionFactory>();
+		services.AddScoped<IUserContext, UserContext>();
+		services.AddTransient<ISavedReportRepository, SavedReportRepository>();
+
 		services.AddScoped<GetReportFieldsHandler>();
 		services.AddScoped<RunReportHandler>();
+		services.AddScoped<SaveReportHandler>();
+		services.AddScoped<GetSavedReportsHandler>();
+		services.AddScoped<GetSavedReportHandler>();
+		services.AddScoped<RunSavedReportHandler>();
 
 		services.AddScoped<IValidator<RunReportRequest>, RunReportRequestValidator>();
+		services.AddScoped<IValidator<SaveReportRequest>, SaveReportRequestValidator>();
+
+		services.AddTransient<IAuditEventTranslator, SavedReportCreatedTranslator>();
 
 		return services;
 	}

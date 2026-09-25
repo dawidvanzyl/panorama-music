@@ -83,7 +83,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException or TeachersExceptions.EntityNotFoundException)
+		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException or TeachersExceptions.EntityNotFoundException or ReportingExceptions.EntityNotFoundException)
 		{
 			LogHandled(exception, StatusCodes.Status404NotFound, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status404NotFound, new { error = exception.Message, correlationId }, cancellationToken);
