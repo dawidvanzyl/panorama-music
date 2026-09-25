@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatReportDate } from '../report-date-format';
+import { formatReportDate, formatLastRun } from '../report-date-format';
 
 describe('formatReportDate', { tags: ['317UC22'] }, () => {
   it('renders yyyy-MM-dd HH:mm', () => {
@@ -19,5 +19,17 @@ describe('formatReportDate', { tags: ['317UC22'] }, () => {
       const formatted = formatReportDate(new Date(2026, month, 1, 0, 0));
       expect(formatted).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     }
+  });
+});
+
+describe('formatLastRun', { tags: ['321UC2'] }, () => {
+  it("renders '—' for a report never run", () => {
+    expect(formatLastRun(null)).toBe('—');
+  });
+
+  it('formats a date the same way formatReportDate does', () => {
+    const date = new Date(2026, 8, 22, 10, 15);
+
+    expect(formatLastRun(date)).toBe('2026-09-22 10:15');
   });
 });

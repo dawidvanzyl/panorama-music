@@ -7,8 +7,10 @@ import {
   columnAvailability,
   canRun,
   clear,
+  canSaveName,
+  resultActions,
 } from '../report-builder-state';
-import type { ReportField, ReportFieldsModel, ReportFilterModel } from '../../models/report';
+import type { ReportField, ReportFieldsModel, ReportFilterModel, SavedReportIdentity } from '../../models/report';
 
 const textField: ReportField = {
   key: 'student.name',
@@ -356,5 +358,43 @@ describe('columnAvailability — Guardian dependant needs two slots', { tags: ['
     expect(availability.disabled.has('guardian.cell')).toBe(true);
     expect(availability.disabled.has('guardian.email')).toBe(true);
     expect(availability.disabled.has('guardian.name')).toBe(false);
+  });
+});
+
+describe('canSaveName', { tags: ['321UC1'] }, () => {
+  it('is false for an empty name', () => {
+    expect(canSaveName('')).toBe(false);
+  });
+
+  it('is false for a whitespace-only name', () => {
+    expect(canSaveName('   ')).toBe(false);
+  });
+
+  it('is true for a single character', () => {
+    expect(canSaveName('a')).toBe(true);
+  });
+
+  it('is true for exactly 100 characters', () => {
+    expect(canSaveName('a'.repeat(100))).toBe(true);
+  });
+
+  it('is false for 101 characters', () => {
+    expect(canSaveName('a'.repeat(101))).toBe(false);
+  });
+});
+
+describe('resultActions', { tags: ['321UC3'] }, () => {
+  const identity: SavedReportIdentity = { id: '1', name: 'Grade 4 Contacts', createdBy: 'a@test.com', isOwner: false };
+
+  it('offers only Run again and Print for a saved report the viewer does not own', () => {
+    expect(resultActions(identity)).toEqual(['runAgain', 'print']);
+  });
+
+  it('offers only Run again and Print for a saved report the viewer owns too (R17)', () => {
+    expect(resultActions({ ...identity, isOwner: true })).toEqual(['runAgain', 'print']);
+  });
+
+  it('offers the full action set for an unsaved report', () => {
+    expect(resultActions(null)).toEqual(['edit', 'runAgain', 'saveReport', 'print']);
   });
 });
