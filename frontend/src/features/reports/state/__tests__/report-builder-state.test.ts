@@ -390,7 +390,7 @@ describe('resultActions', { tags: ['321UC3'] }, () => {
     expect(resultActions(identity)).toEqual(['runAgain', 'print']);
   });
 
-  it('offers only Run again and Print for a saved report the viewer owns too (R17)', () => {
+  it('offers only Run again and Print for a saved report the viewer owns too', () => {
     expect(resultActions({ ...identity, isOwner: true })).toEqual(['runAgain', 'print']);
   });
 

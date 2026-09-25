@@ -222,7 +222,7 @@ export class PmReportResultsPage extends HTMLElement {
 
   /**
    * Loads the field list and the saved definition before running, so a
-   * failed field load records no run (R15). Raw field keys never reach the
+   * failed field load records no run. Raw field keys never reach the
    * screen or the print — buildPrintHeader resolves them from this loaded
    * field list, the same as the builder path.
    */

@@ -61,7 +61,7 @@ public sealed class SavedReport : AggregateRoot
 		return report;
 	}
 
-	/// <summary>Runs are not audited — this raises no event (owner ruling).</summary>
+	/// <summary>Runs are not audited — this raises no event.</summary>
 	public void RecordRun(DateTime ranAt)
 	{
 		LastRunAt = ranAt;

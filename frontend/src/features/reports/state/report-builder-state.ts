@@ -178,8 +178,8 @@ export type ResultAction = 'edit' | 'runAgain' | 'saveReport' | 'print';
 /**
  * The results actions offered, as a pure function of whether the report is
  * saved. Every viewer of a saved report's results sees the same restricted
- * set — this story never offers Edit report or Save report on an
- * already-saved report, for the creator or anyone else (P3).
+ * set — Edit report and Save report are never offered on an already-saved
+ * report, for the creator or anyone else.
  */
 export function resultActions(saved: SavedReportIdentity | null): ResultAction[] {
   return saved === null ? ['edit', 'runAgain', 'saveReport', 'print'] : ['runAgain', 'print'];
