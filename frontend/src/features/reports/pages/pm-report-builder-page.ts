@@ -1,8 +1,10 @@
 import '../components/pm-report-filters-panel';
 import '../components/pm-report-columns-panel';
+import '../components/pm-save-report-modal';
 import type { PmReportFiltersPanel } from '../components/pm-report-filters-panel';
 import type { PmReportColumnsPanel } from '../components/pm-report-columns-panel';
-import { getFields, runReport, ReportsError } from '../services/reports';
+import type { PmSaveReportModal } from '../components/pm-save-report-modal';
+import { getFields, runReport, saveReport, ReportsError } from '../services/reports';
 import {
   createDefinition,
   addFilter,
@@ -18,9 +20,11 @@ import {
   holdDefinition,
   holdResult,
   holdFields,
+  holdSavedReport,
   takeHeldDefinition,
+  sameDefinition,
 } from '../state/report-builder-state';
-import type { ReportDefinitionModel, ReportFieldsModel } from '../models/report';
+import type { ReportDefinitionModel, ReportFieldsModel, SavedReportIdentity } from '../models/report';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -52,6 +56,7 @@ styles.replaceSync(`
       margin-bottom: 16px;
     }
     .builder-page__clear,
+    .builder-page__save,
     .builder-page__run {
       display: inline-flex;
       align-items: center;
@@ -64,7 +69,8 @@ styles.replaceSync(`
       font-family: inherit;
       cursor: pointer;
     }
-    .builder-page__clear {
+    .builder-page__clear,
+    .builder-page__save {
       background: transparent;
       border: 1px solid var(--pm-border);
       color: var(--pm-text);
@@ -77,6 +83,9 @@ styles.replaceSync(`
     .builder-page__run:disabled {
       opacity: 0.5;
       cursor: default;
+    }
+    .builder-page__save[hidden] {
+      display: none;
     }
     .builder-page__body {
       display: flex;
@@ -105,9 +114,15 @@ styles.replaceSync(`
 
 const template = document.createElement('template');
 template.innerHTML = `
-  <div class="builder-page__breadcrumb"><a id="backLink">Reports</a> &rsaquo; New report</div>
+  <div class="builder-page__breadcrumb">
+    <a id="backLink">Reports</a> &rsaquo; <span data-testid="builder-breadcrumb-name">New report</span>
+  </div>
   <div class="builder-page__toolbar">
     <button type="button" class="builder-page__clear" id="clear">Clear</button>
+    <button type="button" class="builder-page__save" id="save" data-testid="builder-save">
+      <span class="material-symbols-outlined">save</span>
+      Save
+    </button>
     <button type="button" class="builder-page__run" id="run">
       <span class="material-symbols-outlined">play_arrow</span>
       Run report
@@ -118,18 +133,24 @@ template.innerHTML = `
     <pm-report-filters-panel id="filtersPanel"></pm-report-filters-panel>
     <pm-report-columns-panel id="columnsPanel"></pm-report-columns-panel>
   </div>
+  <pm-save-report-modal id="saveModal"></pm-save-report-modal>
 `;
 
 export class PmReportBuilderPage extends HTMLElement {
   private filtersPanel: PmReportFiltersPanel | null = null;
   private columnsPanel: PmReportColumnsPanel | null = null;
   private runButton: HTMLButtonElement | null = null;
+  private saveButton: HTMLButtonElement | null = null;
+  private breadcrumbName: HTMLElement | null = null;
   private errorBanner: HTMLElement | null = null;
   private body: HTMLElement | null = null;
+  private saveModal: PmSaveReportModal | null = null;
 
   private _fields: ReportFieldsModel | null = null;
   private _definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
   private _running = false;
+  private _savedIdentity: SavedReportIdentity | null = null;
+  private _savedDefinition: ReportDefinitionModel | null = null;
 
   constructor() {
     super();
@@ -142,14 +163,19 @@ export class PmReportBuilderPage extends HTMLElement {
     this.filtersPanel = this.shadowRoot!.getElementById('filtersPanel') as unknown as PmReportFiltersPanel;
     this.columnsPanel = this.shadowRoot!.getElementById('columnsPanel') as unknown as PmReportColumnsPanel;
     this.runButton = this.shadowRoot!.getElementById('run') as HTMLButtonElement;
+    this.saveButton = this.shadowRoot!.getElementById('save') as HTMLButtonElement;
+    this.breadcrumbName = this.shadowRoot!.querySelector('[data-testid="builder-breadcrumb-name"]') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.body = this.shadowRoot!.getElementById('body') as HTMLElement;
+    this.saveModal = this.shadowRoot!.getElementById('saveModal') as unknown as PmSaveReportModal;
 
     this.shadowRoot!.getElementById('backLink')!.addEventListener('click', () => {
       window.location.hash = '#/reports';
     });
     this.shadowRoot!.getElementById('clear')!.addEventListener('click', this.handleClear);
+    this.saveButton.addEventListener('click', this.handleOpenSaveModal);
     this.runButton.addEventListener('click', this.handleRun);
+    this.shadowRoot!.addEventListener('save-report-confirmed', this.handleSaveConfirmed as EventListener);
 
     this.shadowRoot!.addEventListener('filter-add-requested', this.handleAddFilter);
     this.shadowRoot!.addEventListener('filter-attribute-changed', this.handleAttributeChanged as EventListener);
@@ -166,6 +192,8 @@ export class PmReportBuilderPage extends HTMLElement {
       this._fields = await getFields();
       const held = takeHeldDefinition();
       this._definition = held ?? createDefinition(this._fields);
+      this._savedIdentity = null;
+      this._savedDefinition = null;
       this.errorBanner!.hidden = true;
       this.body!.hidden = false;
       this.render();
@@ -195,7 +223,15 @@ export class PmReportBuilderPage extends HTMLElement {
   }
 
   private render(): void {
-    if (!this._fields || !this.filtersPanel || !this.columnsPanel || !this.runButton) return;
+    if (
+      !this._fields ||
+      !this.filtersPanel ||
+      !this.columnsPanel ||
+      !this.runButton ||
+      !this.saveButton ||
+      !this.breadcrumbName
+    )
+      return;
 
     this.filtersPanel.fields = this._fields;
     this.filtersPanel.filters = this._definition.filters;
@@ -206,69 +242,113 @@ export class PmReportBuilderPage extends HTMLElement {
     this.columnsPanel.disabledKeys = availability.disabled;
 
     this.runButton.disabled = this._running || !this._fields || !canRun(this._definition);
+
+    // Rendered only while no saved identity is held — saving an already-saved
+    // report is out of scope for this story.
+    this.saveButton.hidden = this._savedIdentity !== null;
+    this.saveButton.disabled = this._running;
+    this.breadcrumbName.textContent = this._savedIdentity?.name ?? 'New report';
+  }
+
+  /** Applies a definition change, dropping a held saved identity once the definition it was saved with has diverged. */
+  private updateDefinition(next: ReportDefinitionModel): void {
+    this._definition = next;
+    if (this._savedIdentity && this._savedDefinition && !sameDefinition(next, this._savedDefinition)) {
+      this._savedIdentity = null;
+      this._savedDefinition = null;
+      holdSavedReport(null);
+    }
+    this.render();
   }
 
   private handleAddFilter = (): void => {
     if (!this._fields || this._fields.filters.length === 0) return;
     const filter = chooseAttribute(this._fields.filters[0]);
-    this._definition = addFilter(this._definition, filter);
-    this.render();
+    this.updateDefinition(addFilter(this._definition, filter));
   };
 
   private handleAttributeChanged = (event: CustomEvent<{ field: string }>): void => {
     const index = this.rowIndex(event);
     const field = this._fields?.filters.find((f) => f.key === event.detail.field);
     if (index === null || !field) return;
-    this._definition = replaceFilter(this._definition, index, chooseAttribute(field));
-    this.render();
+    this.updateDefinition(replaceFilter(this._definition, index, chooseAttribute(field)));
   };
 
   private handleOperatorChanged = (event: CustomEvent<{ operator: string }>): void => {
     const index = this.rowIndex(event);
     if (index === null) return;
     const filter = this._definition.filters[index];
-    this._definition = replaceFilter(
-      this._definition,
-      index,
-      changeOperator(filter, event.detail.operator as ReturnType<typeof changeOperator>['operator']),
+    this.updateDefinition(
+      replaceFilter(
+        this._definition,
+        index,
+        changeOperator(filter, event.detail.operator as ReturnType<typeof changeOperator>['operator']),
+      ),
     );
-    this.render();
   };
 
   private handleValuesChanged = (event: CustomEvent<{ values: string[] }>): void => {
     const index = this.rowIndex(event);
     if (index === null) return;
     const filter = this._definition.filters[index];
-    this._definition = replaceFilter(this._definition, index, setValues(filter, event.detail.values));
-    this.render();
+    this.updateDefinition(replaceFilter(this._definition, index, setValues(filter, event.detail.values)));
   };
 
   private handleFilterRemove = (event: Event): void => {
     const index = this.rowIndex(event as CustomEvent);
     if (index === null) return;
-    this._definition = removeFilter(this._definition, index);
-    this.render();
+    this.updateDefinition(removeFilter(this._definition, index));
   };
 
   private handleColumnToggle = (event: CustomEvent<{ key: string }>): void => {
     if (!this._fields) return;
-    this._definition = {
+    this.updateDefinition({
       ...this._definition,
       columns: toggleColumn(this._fields, this._definition.columns, event.detail.key),
-    };
-    this.render();
+    });
   };
 
   private handleClear = (): void => {
     if (!this._fields) return;
-    this._definition = clearDefinition(this._fields);
-    this.render();
+    this.updateDefinition(clearDefinition(this._fields));
+  };
+
+  private handleOpenSaveModal = (): void => {
+    this.saveModal?.show();
+  };
+
+  private handleSaveConfirmed = (event: CustomEvent<{ name: string }>): void => {
+    this.saveModal?.setBusy(true);
+
+    saveReport(event.detail.name, this._definition)
+      .then((identity) => {
+        this._savedIdentity = identity;
+        this._savedDefinition = this._definition;
+        holdSavedReport(identity);
+        this.saveModal?.setBusy(false);
+        this.saveModal?.close();
+        this.render();
+      })
+      .catch((error: unknown) => {
+        this.saveModal?.setBusy(false);
+        const message =
+          error instanceof ReportsError && error.status >= 400 && error.status < 500
+            ? error.message
+            : 'Could not save the report. Try again.';
+        this.saveModal?.showError(message);
+      });
   };
 
   private handleRun = (): void => {
     if (this._running || !this._fields || !canRun(this._definition)) return;
     this._running = true;
     this.render();
+
+    if (this._savedIdentity) {
+      holdDefinition(this._definition);
+      window.location.hash = `#/reports/${this._savedIdentity.id}`;
+      return;
+    }
 
     runReport(this._definition)
       .then((result) => {

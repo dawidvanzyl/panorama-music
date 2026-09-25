@@ -67,4 +67,23 @@ export interface ReportResultModel {
   studentCount: number;
   columns: ReportResultColumn[];
   sections: ReportResultSection[];
+  savedReport: SavedReportIdentity | null;
+}
+
+/** A saved report's identity, as every screen that names it needs. */
+export interface SavedReportIdentity {
+  id: string;
+  name: string;
+  createdBy: string;
+  isOwner: boolean;
+}
+
+/** A row on the Reports page's saved-reports list. */
+export interface SavedReportSummary extends SavedReportIdentity {
+  lastRunAt: Date | null;
+}
+
+export interface SavedReportDetail {
+  identity: SavedReportIdentity;
+  definition: ReportDefinitionModel;
 }

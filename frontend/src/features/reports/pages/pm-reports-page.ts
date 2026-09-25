@@ -1,4 +1,8 @@
+import '../components/pm-saved-reports-table';
+import type { PmSavedReportsTable } from '../components/pm-saved-reports-table';
 import { clearBuilderState } from '../state/report-builder-state';
+import { listSavedReports } from '../services/reports';
+import type { SavedReportSummary } from '../models/report';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -57,6 +61,24 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       font-size: 13px;
     }
+    .reports-page__error {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: var(--pm-radius);
+      background: rgba(224, 82, 82, 0.1);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
+      font-size: 13px;
+    }
+    .reports-page__retry {
+      margin-left: 12px;
+      background: none;
+      border: none;
+      color: var(--pm-danger);
+      text-decoration: underline;
+      cursor: pointer;
+      font: inherit;
+    }
   `);
 
 const template = document.createElement('template');
@@ -72,11 +94,17 @@ template.innerHTML = `
       </button>
     </div>
     <p class="reports-page__subtitle">Saved student reports.</p>
-    <div class="reports-page__empty" id="empty">No saved reports yet.</div>
+    <div class="reports-page__error" id="error" data-testid="saved-reports-error" hidden></div>
+    <div class="reports-page__empty" id="empty" hidden>No saved reports yet.</div>
+    <pm-saved-reports-table id="table" hidden></pm-saved-reports-table>
   </div>
 `;
 
 export class PmReportsPage extends HTMLElement {
+  private table: PmSavedReportsTable | null = null;
+  private emptyMessage: HTMLElement | null = null;
+  private errorBanner: HTMLElement | null = null;
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -85,11 +113,58 @@ export class PmReportsPage extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.table = this.shadowRoot!.getElementById('table') as unknown as PmSavedReportsTable;
+    this.emptyMessage = this.shadowRoot!.getElementById('empty') as HTMLElement;
+    this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
+
     this.shadowRoot!.getElementById('create')!.addEventListener('click', () => {
       clearBuilderState();
       window.location.hash = '#/reports/new';
     });
+    this.shadowRoot!.addEventListener('saved-report-run-requested', this.handleRunRequested as EventListener);
+
+    void this.load();
   }
+
+  private async load(): Promise<void> {
+    this.table!.hidden = true;
+    this.emptyMessage!.hidden = true;
+    this.errorBanner!.hidden = true;
+
+    try {
+      const reports = await listSavedReports();
+      this.render(reports);
+    } catch {
+      this.showError();
+    }
+  }
+
+  private render(reports: SavedReportSummary[]): void {
+    if (reports.length === 0) {
+      this.emptyMessage!.hidden = false;
+      this.table!.hidden = true;
+      return;
+    }
+
+    this.table!.reports = reports;
+    this.table!.hidden = false;
+    this.emptyMessage!.hidden = true;
+  }
+
+  private showError(): void {
+    this.errorBanner!.textContent = 'Could not load saved reports. Try again.';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'reports-page__retry';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => void this.load());
+    this.errorBanner!.appendChild(retry);
+    this.errorBanner!.hidden = false;
+  }
+
+  private handleRunRequested = (event: CustomEvent<{ id: string }>): void => {
+    window.location.hash = `#/reports/${event.detail.id}`;
+  };
 }
 
 customElements.define('pm-reports-page', PmReportsPage);

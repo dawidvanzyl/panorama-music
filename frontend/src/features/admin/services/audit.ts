@@ -96,6 +96,10 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
       { value: 'teachers.teacher.classification_changed', label: 'Teacher Classification Changed' },
     ],
   },
+  {
+    context: 'Reporting',
+    options: [{ value: 'reporting.saved_report.created', label: 'Saved Report Created' }],
+  },
 ];
 
 export class AuditError extends Error {

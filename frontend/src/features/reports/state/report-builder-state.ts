@@ -5,6 +5,7 @@ import type {
   ReportFieldsModel,
   ReportFilterModel,
   ReportResultModel,
+  SavedReportIdentity,
 } from '../models/report';
 
 const _maxColumns = 10;
@@ -166,9 +167,44 @@ export function clear(fields: ReportFieldsModel): ReportDefinitionModel {
   return createDefinition(fields);
 }
 
+/** True when the trimmed name is 1-100 characters — Save report's enabled condition. */
+export function canSaveName(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed.length >= 1 && trimmed.length <= 100;
+}
+
+export type ResultAction = 'edit' | 'runAgain' | 'saveReport' | 'print';
+
+/**
+ * The results actions offered, as a pure function of whether the report is
+ * saved. Every viewer of a saved report's results sees the same restricted
+ * set — this story never offers Edit report or Save report on an
+ * already-saved report, for the creator or anyone else (P3).
+ */
+export function resultActions(saved: SavedReportIdentity | null): ResultAction[] {
+  return saved === null ? ['edit', 'runAgain', 'saveReport', 'print'] : ['runAgain', 'print'];
+}
+
+/** Two definitions are the same when their filters and columns are both equal, in order. */
+export function sameDefinition(a: ReportDefinitionModel, b: ReportDefinitionModel): boolean {
+  if (a.columns.length !== b.columns.length || a.filters.length !== b.filters.length) return false;
+  if (a.columns.some((key, index) => key !== b.columns[index])) return false;
+
+  return a.filters.every((filter, index) => {
+    const other = b.filters[index];
+    return (
+      filter.field === other.field &&
+      filter.operator === other.operator &&
+      filter.values.length === other.values.length &&
+      filter.values.every((value, valueIndex) => value === other.values[valueIndex])
+    );
+  });
+}
+
 let _heldDefinition: ReportDefinitionModel | null = null;
 let _heldResult: ReportResultModel | null = null;
 let _heldFields: ReportFieldsModel | null = null;
+let _heldSavedReport: SavedReportIdentity | null = null;
 
 /** Holds the builder's definition across the Run report -> results -> Edit report round trip. */
 export function holdDefinition(definition: ReportDefinitionModel): void {
@@ -196,10 +232,20 @@ export function takeHeldFields(): ReportFieldsModel | null {
   return _heldFields;
 }
 
+/** Holds the identity of the report the builder's current definition is saved as, across the Save -> results/run round trip. */
+export function holdSavedReport(identity: SavedReportIdentity | null): void {
+  _heldSavedReport = identity;
+}
+
+export function takeHeldSavedReport(): SavedReportIdentity | null {
+  return _heldSavedReport;
+}
+
 export function clearBuilderState(): void {
   _heldDefinition = null;
   _heldResult = null;
   _heldFields = null;
+  _heldSavedReport = null;
 }
 
 registerSessionCache(clearBuilderState);

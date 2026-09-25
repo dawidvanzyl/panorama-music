@@ -1,6 +1,14 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
-import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel } from '../models/report';
+import { registerSessionCache } from '../../../services/session-cache';
+import type {
+  ReportDefinitionModel,
+  ReportFieldsModel,
+  ReportResultModel,
+  SavedReportDetail,
+  SavedReportIdentity,
+  SavedReportSummary,
+} from '../models/report';
 
 const API_BASE = '/api/reports';
 
@@ -45,6 +53,43 @@ interface ApiReportRunSection {
 }
 
 interface ApiReportRunResult {
+  ranAt: string;
+  studentCount: number;
+  columns: ApiReportRunColumn[];
+  sections: ApiReportRunSection[];
+}
+
+interface ApiSavedReportSummary {
+  id: string;
+  name: string;
+  createdBy: string;
+  lastRunAt: string | null;
+  isOwner: boolean;
+}
+
+interface ApiSavedReportFilter {
+  field: string;
+  operator: string;
+  values: string[];
+}
+
+interface ApiSavedReportDetail {
+  id: string;
+  name: string;
+  createdBy: string;
+  lastRunAt: string | null;
+  isOwner: boolean;
+  definition: {
+    filters: ApiSavedReportFilter[];
+    columns: string[];
+  };
+}
+
+interface ApiSavedReportRunResult {
+  reportId: string;
+  name: string;
+  createdBy: string;
+  isOwner: boolean;
   ranAt: string;
   studentCount: number;
   columns: ApiReportRunColumn[];
@@ -125,6 +170,47 @@ function mapRunResult(api: ApiReportRunResult): ReportResultModel {
     studentCount: api.studentCount,
     columns: api.columns,
     sections: api.sections,
+    savedReport: null,
+  };
+}
+
+function mapSavedReportSummary(api: ApiSavedReportSummary): SavedReportSummary {
+  return {
+    id: api.id,
+    name: api.name,
+    createdBy: api.createdBy,
+    isOwner: api.isOwner,
+    lastRunAt: api.lastRunAt === null ? null : new Date(api.lastRunAt),
+  };
+}
+
+function mapSavedReportDetail(api: ApiSavedReportDetail): SavedReportDetail {
+  return {
+    identity: { id: api.id, name: api.name, createdBy: api.createdBy, isOwner: api.isOwner },
+    definition: {
+      filters: api.definition.filters.map((filter) => ({
+        field: filter.field,
+        operator: filter.operator as ReportDefinitionModel['filters'][number]['operator'],
+        values: filter.values,
+      })),
+      columns: api.definition.columns,
+    },
+  };
+}
+
+function mapSavedReportRunResult(api: ApiSavedReportRunResult): ReportResultModel {
+  const savedReport: SavedReportIdentity = {
+    id: api.reportId,
+    name: api.name,
+    createdBy: api.createdBy,
+    isOwner: api.isOwner,
+  };
+  return {
+    ranAt: new Date(api.ranAt),
+    studentCount: api.studentCount,
+    columns: api.columns,
+    sections: api.sections,
+    savedReport,
   };
 }
 
@@ -150,5 +236,60 @@ export async function runReport(definition: ReportDefinitionModel): Promise<Repo
       body: JSON.stringify(definition),
     });
     return mapRunResult(await handleResponse<ApiReportRunResult>(response));
+  });
+}
+
+let _savedReportsCache: SavedReportSummary[] | null = null;
+
+export function clearSavedReportsCache(): void {
+  _savedReportsCache = null;
+}
+
+registerSessionCache(clearSavedReportsCache);
+
+/** The Reports page's list, cached for the browser session. Cleared by saving or running a report, and on sign-in. */
+export async function listSavedReports(): Promise<SavedReportSummary[]> {
+  if (_savedReportsCache) return _savedReportsCache;
+
+  return guardNetworkFailure(async () => {
+    const response = await fetch(API_BASE, { headers: authHeaders() });
+    const result = (await handleResponse<ApiSavedReportSummary[]>(response)).map(mapSavedReportSummary);
+    _savedReportsCache = result;
+    return result;
+  });
+}
+
+/** Saves the current definition under a name. Invalidates the saved-reports list cache. */
+export async function saveReport(name: string, definition: ReportDefinitionModel): Promise<SavedReportIdentity> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(API_BASE, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, definition }),
+    });
+    const saved = await handleResponse<ApiSavedReportSummary>(response);
+    clearSavedReportsCache();
+    return { id: saved.id, name: saved.name, createdBy: saved.createdBy, isOwner: saved.isOwner };
+  });
+}
+
+/** A saved report's stored definition. Never cached — always the latest saved state. */
+export async function getSavedReport(id: string): Promise<SavedReportDetail> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { headers: authHeaders() });
+    return mapSavedReportDetail(await handleResponse<ApiSavedReportDetail>(response));
+  });
+}
+
+/** Runs a saved report's stored definition against live data. Invalidates the saved-reports list cache (Last run changes). */
+export async function runSavedReport(id: string): Promise<ReportResultModel> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}/run`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const result = mapSavedReportRunResult(await handleResponse<ApiSavedReportRunResult>(response));
+    clearSavedReportsCache();
+    return result;
   });
 }
