@@ -5,6 +5,7 @@ import type {
   ReportDefinitionModel,
   ReportFieldsModel,
   ReportResultModel,
+  ReportResultSection,
   SavedReportDetail,
   SavedReportIdentity,
   SavedReportSummary,
@@ -50,6 +51,7 @@ interface ApiReportRunColumn {
 interface ApiReportRunSection {
   studentId: string;
   rows: string[][];
+  siblingBadge: string | null;
 }
 
 interface ApiReportRunResult {
@@ -164,12 +166,16 @@ function mapFields(api: ApiReportFields): ReportFieldsModel {
   };
 }
 
+function mapSection(section: ApiReportRunSection): ReportResultSection {
+  return { studentId: section.studentId, rows: section.rows, siblingBadge: section.siblingBadge };
+}
+
 function mapRunResult(api: ApiReportRunResult): ReportResultModel {
   return {
     ranAt: new Date(api.ranAt),
     studentCount: api.studentCount,
     columns: api.columns,
-    sections: api.sections,
+    sections: api.sections.map(mapSection),
     savedReport: null,
   };
 }
@@ -209,7 +215,7 @@ function mapSavedReportRunResult(api: ApiSavedReportRunResult): ReportResultMode
     ranAt: new Date(api.ranAt),
     studentCount: api.studentCount,
     columns: api.columns,
-    sections: api.sections,
+    sections: api.sections.map(mapSection),
     savedReport,
   };
 }

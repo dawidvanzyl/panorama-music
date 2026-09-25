@@ -1,3 +1,4 @@
+using PanoramaMusic.Reporting.Application.Extensions;
 using PanoramaMusic.Reporting.Application.Interfaces;
 using PanoramaMusic.Reporting.Application.Models;
 using PanoramaMusic.Reporting.Application.Services;
@@ -36,6 +37,6 @@ public sealed class RunSavedReportHandler(
 			ranAt,
 			layout.Sections.Count,
 			[.. layout.Columns.Select(column => new ReportRunColumnResult(column.Key, column.Header))],
-			[.. layout.Sections.Select(section => new ReportRunSectionResult(section.StudentId, section.Rows))]);
+			[.. layout.Sections.Select(section => section.ToResult())]);
 	}
 }

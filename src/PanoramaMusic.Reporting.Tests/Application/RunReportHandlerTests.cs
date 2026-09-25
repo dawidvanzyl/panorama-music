@@ -17,11 +17,20 @@ public class RunReportHandlerTests
 {
 	private readonly Mock<IPopulationReader> _populationReaderMock = new();
 	private readonly Mock<IDatasourceOptionReader> _datasourceOptionReaderMock = new();
+	private readonly Mock<ISiblingGroupReader> _siblingGroupReaderMock = new();
 	private readonly StudentFieldRegistry _registry = new();
+
+	public RunReportHandlerTests()
+	{
+		_siblingGroupReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<SiblingGroupMembership>)[]);
+	}
 
 	private RunReportHandler CreateHandler()
 	{
-		var runner = new ReportRunner(_populationReaderMock.Object, [], new ReportLayoutBuilder());
+		var runner = new ReportRunner(
+			_populationReaderMock.Object, [], new ReportLayoutBuilder(), _siblingGroupReaderMock.Object, new SiblingBadgeResolver());
 		var factory = new ReportDefinitionFactory(_registry, _datasourceOptionReaderMock.Object);
 		return new RunReportHandler(factory, runner, TimeProvider.System);
 	}

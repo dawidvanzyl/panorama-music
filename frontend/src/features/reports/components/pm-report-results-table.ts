@@ -37,6 +37,20 @@ styles.replaceSync(`
       font-size: 13px;
       text-align: center;
     }
+    .results-table__sibling-badge {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(79, 124, 255, 0.14);
+      color: var(--pm-accent);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.4;
+      white-space: nowrap;
+      vertical-align: middle;
+      letter-spacing: 0.02em;
+    }
     @media print {
       .results-table__card {
         overflow: visible;
@@ -66,6 +80,9 @@ styles.replaceSync(`
       }
       tbody.results-table__section {
         break-inside: avoid;
+      }
+      .results-table__sibling-badge {
+        border: 1px solid var(--pm-accent);
       }
     }
   `);
@@ -127,6 +144,8 @@ export class PmReportResultsTable extends HTMLElement {
       this.headerRow.appendChild(th);
     }
 
+    const studentColumnIndex = this._columns.findIndex((column) => column.key === 'student.name');
+
     // Every existing <tbody> section is removed and rebuilt; the <thead> is
     // left in place.
     for (const tbody of [...this.table.querySelectorAll('tbody')]) tbody.remove();
@@ -134,15 +153,22 @@ export class PmReportResultsTable extends HTMLElement {
     for (const section of this._sections) {
       const tbody = document.createElement('tbody');
       tbody.className = 'results-table__section';
-      for (const cells of section.rows) {
+      section.rows.forEach((cells, rowIndex) => {
         const tr = document.createElement('tr');
-        for (const cell of cells) {
+        cells.forEach((cell, cellIndex) => {
           const td = document.createElement('td');
           td.textContent = cell;
+          if (rowIndex === 0 && cellIndex === studentColumnIndex && section.siblingBadge) {
+            const badge = document.createElement('span');
+            badge.className = 'results-table__sibling-badge';
+            badge.dataset.testid = 'sibling-badge';
+            badge.textContent = section.siblingBadge;
+            td.appendChild(badge);
+          }
           tr.appendChild(td);
-        }
+        });
         tbody.appendChild(tr);
-      }
+      });
       this.table.appendChild(tbody);
     }
   }

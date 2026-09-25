@@ -104,4 +104,9 @@ export class ReportResultsPage extends BasePage {
   cells(row: Locator): Locator {
     return row.locator('td');
   }
+
+  /** The sibling badge pill in this student's Student cell, if any. */
+  siblingBadge(name: string): Locator {
+    return this.sectionFor(name).locator('[data-testid="sibling-badge"]');
+  }
 }
