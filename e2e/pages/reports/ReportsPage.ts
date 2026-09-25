@@ -46,17 +46,23 @@ export class ReportsPage extends BasePage {
     return this.host.locator(`[data-testid="saved-report-row"][data-report-id="${id}"]`);
   }
 
-  /** The row(s) whose Created by cell equals this email, exactly. */
+  /**
+   * The row(s) whose Created by cell equals this email, exactly. The `has`
+   * locator is rooted at `this.page`, not `this.host`: rooting it at the
+   * page-level host locator against a row-scoped `filter` returns 0 matches
+   * even when the row is present (R19) — rooting at `page` instead resolves
+   * it relative to each candidate row, as `filter({ has })` requires.
+   */
   rowsByCreatedBy(email: string): Locator {
     return this.rows().filter({
-      has: this.host.locator('[data-testid="saved-report-created-by"]', { hasText: email }),
+      has: this.page.locator('[data-testid="saved-report-created-by"]', { hasText: email }),
     });
   }
 
   /** The row whose name cell contains this name (a `uniqueToken()` name is unique on its own). */
   rowByName(name: string): Locator {
     return this.rows().filter({
-      has: this.host.locator('[data-testid="saved-report-name"]', { hasText: name }),
+      has: this.page.locator('[data-testid="saved-report-name"]', { hasText: name }),
     });
   }
 
