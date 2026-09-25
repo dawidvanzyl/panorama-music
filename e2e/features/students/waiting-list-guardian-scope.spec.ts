@@ -406,7 +406,7 @@ test.describe(
   }
 );
 
-test.describe('A Teacher keeps the rights this story scopes', { tag: '@272IT49' }, () => {
+test.describe('A Teacher keeps unrestricted guardian-edit rights', { tag: '@272IT49' }, () => {
   test('a Teacher edits the same guardian a Coordinator may not', async ({ page, browser }) => {
     await goToStudentsPage(page);
     const family = await seedSharedGuardianFamily(page);

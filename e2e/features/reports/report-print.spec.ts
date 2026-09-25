@@ -133,7 +133,7 @@ test.describe('Report Results — Print invokes the browser print', { tag: ['@11
     await expect(results.rows()).toHaveText(rowsBefore);
   });
 
-  test('the offered actions read Edit report, Run again, Print, and Print is enabled', async ({
+  test('the offered actions read Edit report, Run again, Save report, Print, and Print is enabled', async ({
     page,
   }) => {
     const token = uniqueToken();
@@ -145,7 +145,12 @@ test.describe('Report Results — Print invokes the browser print', { tag: ['@11
     await addNameFilter(builder, 0, token);
     const results = await runAndGetResults(page, builder);
 
-    expect(await results.actionLabels()).toEqual(['Edit report', 'Run again', 'Print']);
+    expect(await results.actionLabels()).toEqual([
+      'Edit report',
+      'Run again',
+      'Save report',
+      'Print',
+    ]);
     await expect(results.printButton).toBeEnabled();
   });
 });

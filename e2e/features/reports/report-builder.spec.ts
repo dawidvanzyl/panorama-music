@@ -1,13 +1,18 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
-import { goToReportsPage } from '../../fixtures/testUsers';
+import { goToReportsPage, loginAsRoles } from '../../fixtures/testUsers';
 import type { UserRole } from '../../pages/identity/admin/AdminUsersPage';
 import { seedEnrollmentTarget, type SeededEnrollmentTarget } from '../../fixtures/enrollment';
 import { seedWaitingListEntry, fetchAnyLessonStructureId } from '../../fixtures/waitingList';
 import { insertWaitingListEntry } from '../../fixtures/db';
 import { linkSiblings } from '../../fixtures/siblings';
 import { landingUrl, sidebarEntry, SIDEBAR_ENTRIES } from '../../fixtures/navigation';
-import { seedReportStudent, fetchReportFields, runReportViaApi } from '../../fixtures/reports';
+import {
+  seedReportStudent,
+  fetchReportFields,
+  runReportViaApi,
+  saveReportViaApi,
+} from '../../fixtures/reports';
 import { ReportsPage } from '../../pages/reports/ReportsPage';
 import { ReportBuilderPage } from '../../pages/reports/ReportBuilderPage';
 import { ReportResultsPage } from '../../pages/reports/ReportResultsPage';
@@ -632,8 +637,7 @@ test.describe(
   { tag: ['@11IT16'] },
   () => {
     // The full registry, in group order (Student, Guardian, Course,
-    // Extra-Curricular), per #318's contract. #317 shipped the Student group
-    // alone; #318 adds the other three, so this list now covers all of them.
+    // Extra-Curricular).
     const EXPECTED_FILTERS = [
       'Student · Name',
       'Student · Grade',
@@ -877,7 +881,11 @@ test.describe(
   { tag: ['@11IT18'] },
   () => {
     test('an unsaved run is titled "New report" and leaves the list empty', async ({ page }) => {
-      const builder = await openBuilder(page);
+      const reportsPage = await goToReportsPage(page);
+      const email = reportsPage.email;
+      await reportsPage.createReport();
+      const builder = new ReportBuilderPage(page);
+      await expect(builder.filtersEmptyMessage).toBeVisible();
 
       const results = await runAndGetResults(page, builder);
 
@@ -889,10 +897,12 @@ test.describe(
         "Filters choose which students appear; each collection lists all of a student's records."
       );
 
-      const reportsPage = new ReportsPage(page);
       await results.followReportsBreadcrumb();
+      await reportsPage.waitForLoaded();
 
-      await expect(reportsPage.emptyState).toHaveText('No saved reports yet.');
+      // Parallel specs may have saved reports of their own, so the list isn't
+      // asserted empty — only that this run left no row behind for its creator.
+      await expect(reportsPage.rowsByCreatedBy(email)).toHaveCount(0);
     });
   }
 );
@@ -927,11 +937,28 @@ test.describe('Reports is offered to Teacher alone', { tag: ['@11IT30'] }, () =>
     test(`a ${label} sees no Reports entry and is turned away from every reports route`, async ({
       page,
     }) => {
+      // A fresh Teacher saves a report first, so the loop below can also
+      // prove the guard on the new saved-report route with a real id — a
+      // 403/redirect can't be mistaken for a 404 on a made-up one.
+      await loginAsRoles(page, ['Teacher']);
+      const { status, body } = await saveReportViaApi(page, {
+        name: `Guard ${label}`,
+        definition: { filters: [], columns: ['student.name'] },
+      });
+      expect(status).toBe(201);
+      const savedReportId = body.id;
+      if (!savedReportId) throw new Error('save did not return an id');
+
       await goToReportsPage(page, roles);
 
       await expect(sidebarEntry(page, 'reportsLink')).toBeHidden();
 
-      for (const path of ['/reports', '/reports/new', '/reports/results']) {
+      for (const path of [
+        '/reports',
+        '/reports/new',
+        '/reports/results',
+        `/reports/${savedReportId}`,
+      ]) {
         await page.goto(`/#${path}`);
         await expect(page).toHaveURL(landingUrl(...roles));
         await expect(page.locator('pm-reports-page')).toHaveCount(0);

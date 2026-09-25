@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getFields, runReport, ReportsError } from '../reports';
+import {
+  getFields,
+  runReport,
+  ReportsError,
+  listSavedReports,
+  saveReport,
+  runSavedReport,
+  clearSavedReportsCache,
+} from '../reports';
 import type { ReportDefinitionModel } from '../../models/report';
 
 const mockFetch = vi.fn();
@@ -8,6 +16,7 @@ globalThis.fetch = mockFetch;
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
+  clearSavedReportsCache();
 });
 
 const apiFields = {
@@ -114,5 +123,70 @@ describe('runReport', { tags: ['317UC7'] }, () => {
     const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
 
     await expect(runReport(definition)).rejects.toThrow(ReportsError);
+  });
+});
+
+describe('listSavedReports — session cache', { tags: ['321UC4'] }, () => {
+  const apiList = [{ id: '1', name: 'Grade 4 Contacts', createdBy: 'a@test.com', lastRunAt: null, isOwner: true }];
+  const apiSaved = {
+    id: '2',
+    name: 'New',
+    createdBy: 'a@test.com',
+    createdAt: '2026-09-21T10:00:00Z',
+    lastRunAt: null,
+    isOwner: true,
+  };
+  const apiRun = {
+    reportId: '1',
+    name: 'Grade 4 Contacts',
+    createdBy: 'a@test.com',
+    isOwner: true,
+    ranAt: '2026-09-21T10:15:00Z',
+    studentCount: 0,
+    columns: [],
+    sections: [],
+  };
+
+  it('fetches once across two calls', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+
+    await listSavedReports();
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches again after saveReport invalidates the cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 201, json: async () => apiSaved });
+    await saveReport('New', { filters: [], columns: ['student.name'] });
+
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('fetches again after runSavedReport invalidates the cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiRun });
+    await runSavedReport('1');
+
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not cache a failed call', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'boom' }) });
+    await expect(listSavedReports()).rejects.toThrow(ReportsError);
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

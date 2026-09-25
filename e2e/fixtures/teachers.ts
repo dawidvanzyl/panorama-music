@@ -4,7 +4,7 @@ import { expect } from './base';
 /**
  * Deactivates a teacher through the real endpoint, from the signed-in
  * session. `PATCH /api/teachers/{id}/deactivate` is `BankingCoordinatorPolicy`
- * only, so the caller must hold that role (R2 / plan-qa 11IT8 S3).
+ * only, so the caller must hold that role.
  */
 export async function deactivateTeacher(page: Page, teacherId: string): Promise<void> {
   const status = await page.evaluate(async (teacherId) => {

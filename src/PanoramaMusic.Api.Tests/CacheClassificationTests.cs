@@ -164,6 +164,13 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		// A run's result names every matching student across whichever columns
 		// were selected, including sibling and date-of-birth scalars.
 		["RunReport"] = CacheExpectation.NoStore,
+
+		// A saved report's list, detail and run payloads all carry the same
+		// student-level data as an unsaved run, plus its creator's email.
+		["SaveReport"] = CacheExpectation.NoStore,
+		["GetSavedReports"] = CacheExpectation.NoStore,
+		["GetSavedReport"] = CacheExpectation.NoStore,
+		["RunSavedReport"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

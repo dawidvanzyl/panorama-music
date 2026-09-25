@@ -308,6 +308,11 @@ export default defineConfig({
       { name: '320UC1', description: 'The print filter summary joins each filter as attribute, operator word and values, prefixing a label shared by more than one collection' },
       { name: '320UC2', description: 'The print header carries no Filters line for a report with no filters' },
       { name: '320UC3', description: "The print header's run line reads the timestamp, the pluralised student count and an optional Created by segment" },
+      { name: '321UC1', description: 'canSaveName is false for a blank or whitespace-only name and for 101 characters, true for 1 and 100' },
+      { name: '321UC2', description: 'formatLastRun renders — for a report never run, otherwise the same yyyy-MM-dd HH:mm format' },
+      { name: '321UC3', description: 'resultActions offers only Run again and Print for any saved report, and the full set for an unsaved one' },
+      { name: '321UC4', description: 'The reports service invalidates the saved-reports list cache on save and on run, and never caches a failed call' },
+      { name: '321UC11', description: 'sameDefinition treats two definitions as equal when their columns match as a set regardless of order' },
     ],
   },
 })

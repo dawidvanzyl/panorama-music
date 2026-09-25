@@ -21,10 +21,9 @@ export interface SeedReportStudentOptions {
   dateOfBirth?: string;
   /**
    * The exact courses to enrol the student in, instead of `target`. When
-   * given, the student is enrolled in these and *not* in `target` — plan-qa's
-   * "explicit enrolments" convention (11IT13, 14, 34, 35), so a scenario
-   * counting a student's course rows isn't thrown off by the default
-   * `seedEnrollmentTarget` course.
+   * given, the student is enrolled in these and *not* in `target`, so a
+   * scenario counting a student's course rows isn't thrown off by the
+   * default `seedEnrollmentTarget` course.
    */
   enrolments?: ReportStudentEnrolment[];
 }
@@ -189,4 +188,123 @@ export async function runReportViaApi(
     const responseBody = await response.json().catch(() => ({}));
     return { status: response.status, body: responseBody };
   }, body) as Promise<RunReportApiResult>;
+}
+
+export interface SaveReportBody {
+  name: string;
+  definition: RunReportBody;
+}
+
+export interface SavedReportApiResult {
+  status: number;
+  body: {
+    id?: string;
+    error?: string;
+  };
+}
+
+/** `POST /api/reports`, from the signed-in session. */
+export async function saveReportViaApi(
+  page: Page,
+  body: SaveReportBody
+): Promise<SavedReportApiResult> {
+  return page.evaluate(async (body) => {
+    const response = await fetch('/api/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const responseBody = await response.json().catch(() => ({}));
+    return { status: response.status, body: responseBody };
+  }, body) as Promise<SavedReportApiResult>;
+}
+
+export interface SavedReportSummaryApi {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  lastRunAt: string | null;
+  isOwner: boolean;
+}
+
+export interface ListSavedReportsApiResult {
+  status: number;
+  body: SavedReportSummaryApi[] | { error?: string };
+}
+
+/** `GET /api/reports`, from the signed-in session. */
+export async function listSavedReportsViaApi(page: Page): Promise<ListSavedReportsApiResult> {
+  return page.evaluate(async () => {
+    const response = await fetch('/api/reports', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }) as Promise<ListSavedReportsApiResult>;
+}
+
+export interface SavedReportDetailApi {
+  id: string;
+  name: string;
+  createdBy: string;
+  lastRunAt: string | null;
+  isOwner: boolean;
+  definition?: {
+    filters: { field: string; operator: string; values: string[] }[];
+    columns: string[];
+  };
+  error?: string;
+}
+
+export interface GetSavedReportApiResult {
+  status: number;
+  body: SavedReportDetailApi;
+}
+
+/** `GET /api/reports/{id}`, from the signed-in session. */
+export async function getSavedReportViaApi(
+  page: Page,
+  id: string
+): Promise<GetSavedReportApiResult> {
+  return page.evaluate(async (id) => {
+    const response = await fetch(`/api/reports/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }, id) as Promise<GetSavedReportApiResult>;
+}
+
+export interface RunSavedReportApiResult {
+  status: number;
+  body: {
+    reportId?: string;
+    name?: string;
+    createdBy?: string;
+    isOwner?: boolean;
+    ranAt?: string;
+    studentCount?: number;
+    columns?: { key: string; header: string }[];
+    sections?: { studentId: string; rows: string[][] }[];
+    error?: string;
+  };
+}
+
+/** `POST /api/reports/{id}/run`, from the signed-in session. */
+export async function runSavedReportViaApi(
+  page: Page,
+  id: string
+): Promise<RunSavedReportApiResult> {
+  return page.evaluate(async (id) => {
+    const response = await fetch(`/api/reports/${id}/run`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }, id) as Promise<RunSavedReportApiResult>;
 }

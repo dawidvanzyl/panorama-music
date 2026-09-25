@@ -12,3 +12,8 @@ export function formatReportDate(date: Date): string {
 
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
+
+/** '—' for a report never run, otherwise the same `yyyy-MM-dd HH:mm` format every other Reporting date uses. */
+export function formatLastRun(date: Date | null): string {
+  return date === null ? '—' : formatReportDate(date);
+}

@@ -1,9 +1,19 @@
 import '../components/pm-report-results-table';
+import '../components/pm-save-report-modal';
 import type { PmReportResultsTable } from '../components/pm-report-results-table';
-import { runReport, ReportsError } from '../services/reports';
+import type { PmSaveReportModal } from '../components/pm-save-report-modal';
+import { getFields, getSavedReport, runReport, runSavedReport, saveReport, ReportsError } from '../services/reports';
 import { formatReportDate } from '../services/report-date-format';
 import { buildPrintHeader } from '../state/report-print-header';
-import { holdResult, takeHeldDefinition, takeHeldFields, takeHeldResult } from '../state/report-builder-state';
+import {
+  holdResult,
+  holdSavedReport,
+  resultActions,
+  takeHeldDefinition,
+  takeHeldFields,
+  takeHeldResult,
+  type ResultAction,
+} from '../state/report-builder-state';
 import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel } from '../models/report';
 
 const styles = new CSSStyleSheet();
@@ -117,6 +127,13 @@ styles.replaceSync(`
     }
   `);
 
+const _actionDefinitions: Record<ResultAction, { id: string; icon: string; label: string }> = {
+  edit: { id: 'edit', icon: 'edit', label: 'Edit report' },
+  runAgain: { id: 'runAgain', icon: 'refresh', label: 'Run again' },
+  saveReport: { id: 'saveReport', icon: 'save', label: 'Save report' },
+  print: { id: 'print', icon: 'print', label: 'Print' },
+};
+
 const template = document.createElement('template');
 template.innerHTML = `
   <header class="results-page__print-header" id="printHeader">
@@ -124,43 +141,35 @@ template.innerHTML = `
     <div id="printRunLine"></div>
     <div id="printFilters"></div>
   </header>
-  <div class="results-page__breadcrumb"><a id="backLink">Reports</a> &rsaquo; New report</div>
+  <div class="results-page__breadcrumb">
+    <a id="backLink">Reports</a> &rsaquo; <span data-testid="results-breadcrumb-name">New report</span>
+  </div>
   <div class="results-page__header">
     <div>
       <h1 class="results-page__title" id="title"></h1>
       <p class="results-page__subline" id="subline"></p>
     </div>
-    <div class="results-page__actions">
-      <button type="button" class="results-page__action" id="edit">
-        <span class="material-symbols-outlined" aria-hidden="true" data-icon="edit"></span>
-        Edit report
-      </button>
-      <button type="button" class="results-page__action" id="runAgain">
-        <span class="material-symbols-outlined" aria-hidden="true" data-icon="refresh"></span>
-        Run again
-      </button>
-      <button type="button" class="results-page__action" id="print">
-        <span class="material-symbols-outlined" aria-hidden="true" data-icon="print"></span>
-        Print
-      </button>
-    </div>
+    <div class="results-page__actions" id="actions"></div>
   </div>
   <p class="results-page__caption">Filters choose which students appear; each collection lists all of a student's records.</p>
   <div class="results-page__error" id="error" hidden></div>
   <pm-report-results-table id="table"></pm-report-results-table>
+  <pm-save-report-modal id="saveModal"></pm-save-report-modal>
 `;
 
 export class PmReportResultsPage extends HTMLElement {
   private titleElement: HTMLElement | null = null;
+  private breadcrumbName: HTMLElement | null = null;
   private subline: HTMLElement | null = null;
   private table: PmReportResultsTable | null = null;
   private errorBanner: HTMLElement | null = null;
-  private runAgainButton: HTMLButtonElement | null = null;
-  private printButton: HTMLButtonElement | null = null;
+  private actionsContainer: HTMLElement | null = null;
   private printTitle: HTMLElement | null = null;
   private printRunLine: HTMLElement | null = null;
   private printFilters: HTMLElement | null = null;
+  private saveModal: PmSaveReportModal | null = null;
 
+  private _reportId: string | null = null;
   private _definition: ReportDefinitionModel | null = null;
   private _result: ReportResultModel | null = null;
   private _fields: ReportFieldsModel | null = null;
@@ -175,25 +184,27 @@ export class PmReportResultsPage extends HTMLElement {
 
   connectedCallback(): void {
     this.titleElement = this.shadowRoot!.getElementById('title') as HTMLElement;
+    this.breadcrumbName = this.shadowRoot!.querySelector('[data-testid="results-breadcrumb-name"]') as HTMLElement;
     this.subline = this.shadowRoot!.getElementById('subline') as HTMLElement;
     this.table = this.shadowRoot!.getElementById('table') as unknown as PmReportResultsTable;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
-    this.runAgainButton = this.shadowRoot!.getElementById('runAgain') as HTMLButtonElement;
-    this.printButton = this.shadowRoot!.getElementById('print') as HTMLButtonElement;
+    this.actionsContainer = this.shadowRoot!.getElementById('actions') as HTMLElement;
     this.printTitle = this.shadowRoot!.getElementById('printTitle') as HTMLElement;
     this.printRunLine = this.shadowRoot!.getElementById('printRunLine') as HTMLElement;
     this.printFilters = this.shadowRoot!.getElementById('printFilters') as HTMLElement;
+    this.saveModal = this.shadowRoot!.getElementById('saveModal') as unknown as PmSaveReportModal;
 
     this.shadowRoot!.getElementById('backLink')!.addEventListener('click', () => {
       window.location.hash = '#/reports';
     });
-    this.shadowRoot!.getElementById('edit')!.addEventListener('click', () => {
-      window.location.hash = '#/reports/new';
-    });
-    this.runAgainButton.addEventListener('click', this.handleRunAgain);
-    this.printButton.addEventListener('click', () => {
-      window.print();
-    });
+    this.shadowRoot!.addEventListener('save-report-confirmed', this.handleSaveConfirmed as EventListener);
+
+    this._reportId = this.getAttribute('report-id');
+
+    if (this._reportId) {
+      void this.loadSaved(this._reportId);
+      return;
+    }
 
     // The result lives in memory only — a reload with nothing held sends
     // the Teacher back to the Reports list rather than rendering an empty
@@ -209,8 +220,47 @@ export class PmReportResultsPage extends HTMLElement {
     this.render();
   }
 
+  /**
+   * Loads the field list and the saved definition before running, so a
+   * failed field load records no run. Raw field keys never reach the
+   * screen or the print — buildPrintHeader resolves them from this loaded
+   * field list, the same as the builder path.
+   */
+  private async loadSaved(reportId: string): Promise<void> {
+    try {
+      const [fields, detail] = await Promise.all([getFields(), getSavedReport(reportId)]);
+      this._fields = fields;
+      this._definition = detail.definition;
+
+      const result = await runSavedReport(reportId);
+      this._result = result;
+      holdResult(result);
+      holdSavedReport(result.savedReport ? { identity: result.savedReport, definition: this._definition } : null);
+      this.errorBanner!.hidden = true;
+      this.render();
+    } catch (error: unknown) {
+      const message =
+        error instanceof ReportsError && error.status >= 400 && error.status < 500
+          ? error.message
+          : 'Could not load the saved report. Try again.';
+      this.errorBanner!.textContent = message;
+      this.errorBanner!.hidden = false;
+      this.table!.hidden = true;
+      this.actionsContainer!.textContent = '';
+    }
+  }
+
   private reportTitle(): string {
-    return 'New report';
+    return this._result?.savedReport?.name ?? 'New report';
+  }
+
+  /**
+   * The id to run against: the held result's saved identity once the report
+   * has been saved (from the route, or from Save report on these results),
+   * falling back to the route attribute before any result has loaded.
+   */
+  private savedReportId(): string | null {
+    return this._result?.savedReport?.id ?? this._reportId;
   }
 
   private render(): void {
@@ -219,9 +269,10 @@ export class PmReportResultsPage extends HTMLElement {
       !this._definition ||
       !this._fields ||
       !this.titleElement ||
+      !this.breadcrumbName ||
       !this.subline ||
       !this.table ||
-      !this.runAgainButton ||
+      !this.actionsContainer ||
       !this.printTitle ||
       !this.printRunLine ||
       !this.printFilters
@@ -229,22 +280,27 @@ export class PmReportResultsPage extends HTMLElement {
       return;
     }
 
-    this.titleElement.textContent = this.reportTitle();
+    const title = this.reportTitle();
+    this.titleElement.textContent = title;
+    this.breadcrumbName.textContent = title;
 
     const count = this._result.studentCount;
     const noun = count === 1 ? 'student' : 'students';
-    this.subline.textContent = `${count} ${noun} · Last run ${formatReportDate(this._result.ranAt)}`;
+    const createdBy = this._result.savedReport?.createdBy ?? null;
+    this.subline.textContent =
+      `${count} ${noun} · Last run ${formatReportDate(this._result.ranAt)}` +
+      (createdBy ? ` · Created by ${createdBy}` : '');
 
     this.table.columns = this._result.columns;
     this.table.sections = this._result.sections;
 
-    this.runAgainButton.disabled = this._running;
+    this.renderActions();
 
     const header = buildPrintHeader({
-      title: this.reportTitle(),
+      title,
       ranAt: this._result.ranAt,
       studentCount: this._result.studentCount,
-      creatorEmail: null,
+      creatorEmail: createdBy,
       filters: this._definition.filters,
       fields: this._fields,
     });
@@ -254,12 +310,49 @@ export class PmReportResultsPage extends HTMLElement {
     this.printFilters.hidden = header.filtersLine === null;
   }
 
+  /** Rebuilds the actions container from `resultActions` on every render — an action not offered is not in the DOM. */
+  private renderActions(): void {
+    if (!this.actionsContainer || !this._result) return;
+
+    this.actionsContainer.textContent = '';
+    for (const action of resultActions(this._result.savedReport)) {
+      const definition = _actionDefinitions[action];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'results-page__action';
+      button.id = definition.id;
+      button.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true" data-icon="${definition.icon}"></span>`;
+      button.appendChild(document.createTextNode(definition.label));
+      button.disabled = this._running;
+      button.addEventListener('click', this.actionHandler(action));
+      this.actionsContainer.appendChild(button);
+    }
+  }
+
+  private actionHandler(action: ResultAction): () => void {
+    switch (action) {
+      case 'edit':
+        return () => {
+          window.location.hash = '#/reports/new';
+        };
+      case 'runAgain':
+        return this.handleRunAgain;
+      case 'saveReport':
+        return this.handleOpenSaveModal;
+      case 'print':
+        return () => window.print();
+    }
+  }
+
   private handleRunAgain = (): void => {
     if (this._running || !this._definition) return;
     this._running = true;
     this.render();
 
-    runReport(this._definition)
+    const savedReportId = this.savedReportId();
+    const run = savedReportId ? runSavedReport(savedReportId) : runReport(this._definition);
+
+    run
       .then((result) => {
         this._running = false;
         this._result = result;
@@ -276,6 +369,33 @@ export class PmReportResultsPage extends HTMLElement {
         this.errorBanner!.textContent = message;
         this.errorBanner!.hidden = false;
         this.render();
+      });
+  };
+
+  private handleOpenSaveModal = (): void => {
+    this.saveModal?.show();
+  };
+
+  private handleSaveConfirmed = (event: CustomEvent<{ name: string }>): void => {
+    if (!this._definition || !this._result) return;
+    this.saveModal?.setBusy(true);
+
+    saveReport(event.detail.name, this._definition)
+      .then((identity) => {
+        this._result = { ...this._result!, savedReport: identity };
+        holdResult(this._result);
+        holdSavedReport({ identity, definition: this._definition! });
+        this.saveModal?.setBusy(false);
+        this.saveModal?.close();
+        this.render();
+      })
+      .catch((error: unknown) => {
+        this.saveModal?.setBusy(false);
+        const message =
+          error instanceof ReportsError && error.status >= 400 && error.status < 500
+            ? error.message
+            : 'Could not save the report. Try again.';
+        this.saveModal?.showError(message);
       });
   };
 }

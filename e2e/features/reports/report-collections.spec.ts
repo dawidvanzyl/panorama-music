@@ -18,8 +18,8 @@ import { ReportsPage } from '../../pages/reports/ReportsPage';
 
 /**
  * Every scenario mints its own token and uses it as its seeded students'
- * surname, and part of every activity description it creates — plan-qa's
- * scoping convention, which makes every scenario below parallel-safe.
+ * surname, and part of every activity description it creates, which makes
+ * every scenario below parallel-safe.
  */
 function uniqueToken(prefix = 'Coll'): string {
   return `${prefix}${test.info().workerIndex}${Date.now()}${crypto.randomUUID().slice(0, 6).replace(/-/g, '')}`;
@@ -39,7 +39,7 @@ async function openBuilder(
 /**
  * Signs in and lands on the Reports list, without opening the builder yet —
  * for a scenario whose seeding must happen before the builder ever opens.
- * Datasource options are read when the builder opens (no cache, plan D2), so
+ * Datasource options are read when the builder opens, with no cache, so
  * a teacher or activity a scenario seeds must exist *before* that read, not
  * after it.
  */

@@ -36,5 +36,46 @@ public static class ReportRoutes
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
+
+		group
+			.MapPost("/", async (SaveReportRequest request, SaveReportHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(request, ct);
+				return Results.Created($"/api/reports/{result.Id}", result);
+			})
+			.AddEndpointFilter<ValidationFilter<SaveReportRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("SaveReport")
+			.Produces<SavedReportResult>(StatusCodes.Status201Created)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		group
+			.MapGet("/", async (GetSavedReportsHandler handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(ct)))
+			.MarkSensitiveResponse()
+			.WithName("GetSavedReports")
+			.Produces<IReadOnlyList<SavedReportSummaryResult>>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden);
+
+		group
+			.MapGet("/{id:guid}", async (Guid id, GetSavedReportHandler handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(id, ct)))
+			.MarkSensitiveResponse()
+			.WithName("GetSavedReport")
+			.Produces<SavedReportDetailResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapPost("/{id:guid}/run", async (Guid id, RunSavedReportHandler handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(id, ct)))
+			.MarkSensitiveResponse()
+			.WithName("RunSavedReport")
+			.Produces<SavedReportRunResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

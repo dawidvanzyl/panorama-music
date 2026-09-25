@@ -22,7 +22,8 @@ public class RunReportHandlerTests
 	private RunReportHandler CreateHandler()
 	{
 		var runner = new ReportRunner(_populationReaderMock.Object, [], new ReportLayoutBuilder());
-		return new RunReportHandler(_registry, _datasourceOptionReaderMock.Object, runner, TimeProvider.System);
+		var factory = new ReportDefinitionFactory(_registry, _datasourceOptionReaderMock.Object);
+		return new RunReportHandler(factory, runner, TimeProvider.System);
 	}
 
 	[Fact]

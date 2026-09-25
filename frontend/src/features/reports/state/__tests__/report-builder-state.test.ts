@@ -7,8 +7,17 @@ import {
   columnAvailability,
   canRun,
   clear,
+  canSaveName,
+  resultActions,
+  sameDefinition,
 } from '../report-builder-state';
-import type { ReportField, ReportFieldsModel, ReportFilterModel } from '../../models/report';
+import type {
+  ReportDefinitionModel,
+  ReportField,
+  ReportFieldsModel,
+  ReportFilterModel,
+  SavedReportIdentity,
+} from '../../models/report';
 
 const textField: ReportField = {
   key: 'student.name',
@@ -356,5 +365,71 @@ describe('columnAvailability — Guardian dependant needs two slots', { tags: ['
     expect(availability.disabled.has('guardian.cell')).toBe(true);
     expect(availability.disabled.has('guardian.email')).toBe(true);
     expect(availability.disabled.has('guardian.name')).toBe(false);
+  });
+});
+
+describe('canSaveName', { tags: ['321UC1'] }, () => {
+  it('is false for an empty name', () => {
+    expect(canSaveName('')).toBe(false);
+  });
+
+  it('is false for a whitespace-only name', () => {
+    expect(canSaveName('   ')).toBe(false);
+  });
+
+  it('is true for a single character', () => {
+    expect(canSaveName('a')).toBe(true);
+  });
+
+  it('is true for exactly 100 characters', () => {
+    expect(canSaveName('a'.repeat(100))).toBe(true);
+  });
+
+  it('is false for 101 characters', () => {
+    expect(canSaveName('a'.repeat(101))).toBe(false);
+  });
+});
+
+describe('resultActions', { tags: ['321UC3'] }, () => {
+  const identity: SavedReportIdentity = { id: '1', name: 'Grade 4 Contacts', createdBy: 'a@test.com', isOwner: false };
+
+  it('offers only Run again and Print for a saved report the viewer does not own', () => {
+    expect(resultActions(identity)).toEqual(['runAgain', 'print']);
+  });
+
+  it('offers only Run again and Print for a saved report the viewer owns too', () => {
+    expect(resultActions({ ...identity, isOwner: true })).toEqual(['runAgain', 'print']);
+  });
+
+  it('offers the full action set for an unsaved report', () => {
+    expect(resultActions(null)).toEqual(['edit', 'runAgain', 'saveReport', 'print']);
+  });
+});
+
+describe('sameDefinition', { tags: ['321UC11'] }, () => {
+  const filters: ReportFilterModel[] = [{ field: 'student.grade', operator: 'equals', values: ['Grade4'] }];
+
+  it('treats two definitions with the same columns in a different order as the same', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name', 'student.class'] };
+    const b: ReportDefinitionModel = { filters, columns: ['student.class', 'student.name'] };
+
+    expect(sameDefinition(a, b)).toBe(true);
+  });
+
+  it('is false when the column sets differ', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name', 'student.class'] };
+    const b: ReportDefinitionModel = { filters, columns: ['student.name', 'student.phase'] };
+
+    expect(sameDefinition(a, b)).toBe(false);
+  });
+
+  it('is false when a filter value differs', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name'] };
+    const b: ReportDefinitionModel = {
+      filters: [{ field: 'student.grade', operator: 'equals', values: ['Grade5'] }],
+      columns: ['student.name'],
+    };
+
+    expect(sameDefinition(a, b)).toBe(false);
   });
 });

@@ -46,9 +46,9 @@ export async function firstGuardianRelationshipId(page: Page): Promise<string> {
  * The id of the relationship type with this exact name, e.g. `Father`. A
  * report scenario that asserts the Guardian column's rendered relationship
  * name (`{first} {surname} · {relationship}`, P2) must seed by a named
- * relationship rather than "the first one", per plan-qa's scoping convention —
- * relationship rows are ordered by name, and the relationships spec creates
- * transient rows in parallel that could otherwise change which one is first.
+ * relationship rather than "the first one" — relationship rows are ordered
+ * by name, and the relationships spec creates transient rows in parallel
+ * that could otherwise change which one is first.
  */
 export async function guardianRelationshipIdByName(page: Page, name: string): Promise<string> {
   return page.evaluate(async (name) => {
