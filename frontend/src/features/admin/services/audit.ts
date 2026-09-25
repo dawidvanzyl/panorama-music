@@ -98,7 +98,11 @@ export const AUDIT_EVENT_TYPE_GROUPS: { context: string; options: { value: strin
   },
   {
     context: 'Reporting',
-    options: [{ value: 'reporting.saved_report.created', label: 'Saved Report Created' }],
+    options: [
+      { value: 'reporting.saved_report.created', label: 'Saved Report Created' },
+      { value: 'reporting.saved_report.updated', label: 'Saved Report Updated' },
+      { value: 'reporting.saved_report.deleted', label: 'Saved Report Deleted' },
+    ],
   },
 ];
 

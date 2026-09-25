@@ -2,19 +2,30 @@ import '../components/pm-report-results-table';
 import '../components/pm-save-report-modal';
 import type { PmReportResultsTable } from '../components/pm-report-results-table';
 import type { PmSaveReportModal } from '../components/pm-save-report-modal';
-import { getFields, getSavedReport, runReport, runSavedReport, saveReport, ReportsError } from '../services/reports';
+import {
+  getFields,
+  getSavedReport,
+  runReport,
+  runSavedReport,
+  saveReport,
+  updateReport,
+  ReportsError,
+} from '../services/reports';
 import { formatReportDate } from '../services/report-date-format';
 import { buildPrintHeader } from '../state/report-print-header';
 import {
+  holdDefinition,
+  holdEditingReport,
   holdResult,
   holdSavedReport,
   resultActions,
+  takeEditingReport,
   takeHeldDefinition,
   takeHeldFields,
   takeHeldResult,
   type ResultAction,
 } from '../state/report-builder-state';
-import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel } from '../models/report';
+import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel, SavedReportIdentity } from '../models/report';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -174,6 +185,7 @@ export class PmReportResultsPage extends HTMLElement {
   private _result: ReportResultModel | null = null;
   private _fields: ReportFieldsModel | null = null;
   private _running = false;
+  private _editing: SavedReportIdentity | null = null;
 
   constructor() {
     super();
@@ -212,6 +224,7 @@ export class PmReportResultsPage extends HTMLElement {
     this._definition = takeHeldDefinition();
     this._result = takeHeldResult();
     this._fields = takeHeldFields();
+    this._editing = takeEditingReport();
     if (!this._definition || !this._result || !this._fields) {
       window.location.hash = '#/reports';
       return;
@@ -251,7 +264,19 @@ export class PmReportResultsPage extends HTMLElement {
   }
 
   private reportTitle(): string {
-    return this._result?.savedReport?.name ?? 'New report';
+    return this._result?.savedReport?.name ?? this._editing?.name ?? 'New report';
+  }
+
+  /**
+   * The owned report these results are about, if any: the saved report
+   * itself when the viewer created it, or the edit builder's unsaved run
+   * carrying an owned editing context. Null for a plain unsaved run or a
+   * saved report the viewer did not create — Edit report and Save report
+   * fall back to their create-new behaviour in that case.
+   */
+  private ownedTarget(): SavedReportIdentity | null {
+    const saved = this._result?.savedReport ?? null;
+    return saved?.isOwner ? saved : this._editing;
   }
 
   /**
@@ -332,9 +357,7 @@ export class PmReportResultsPage extends HTMLElement {
   private actionHandler(action: ResultAction): () => void {
     switch (action) {
       case 'edit':
-        return () => {
-          window.location.hash = '#/reports/new';
-        };
+        return this.handleEditReport;
       case 'runAgain':
         return this.handleRunAgain;
       case 'saveReport':
@@ -343,6 +366,18 @@ export class PmReportResultsPage extends HTMLElement {
         return () => window.print();
     }
   }
+
+  private handleEditReport = (): void => {
+    const target = this.ownedTarget();
+    if (!target || !this._definition) {
+      window.location.hash = '#/reports/new';
+      return;
+    }
+
+    holdDefinition(this._definition);
+    holdEditingReport(target);
+    window.location.hash = `#/reports/${target.id}/edit`;
+  };
 
   private handleRunAgain = (): void => {
     if (this._running || !this._definition) return;
@@ -373,18 +408,24 @@ export class PmReportResultsPage extends HTMLElement {
   };
 
   private handleOpenSaveModal = (): void => {
-    this.saveModal?.show();
+    this.saveModal?.show(this.ownedTarget()?.name ?? '');
   };
 
   private handleSaveConfirmed = (event: CustomEvent<{ name: string }>): void => {
     if (!this._definition || !this._result) return;
     this.saveModal?.setBusy(true);
 
-    saveReport(event.detail.name, this._definition)
+    const target = this.ownedTarget();
+    const save = target
+      ? updateReport(target.id, event.detail.name, this._definition)
+      : saveReport(event.detail.name, this._definition);
+
+    save
       .then((identity) => {
         this._result = { ...this._result!, savedReport: identity };
         holdResult(this._result);
         holdSavedReport({ identity, definition: this._definition! });
+        this._editing = null;
         this.saveModal?.setBusy(false);
         this.saveModal?.close();
         this.render();
