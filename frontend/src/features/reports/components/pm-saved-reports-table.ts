@@ -44,7 +44,9 @@ styles.replaceSync(`
     .saved-reports-table__actions {
       text-align: right;
     }
-    .saved-reports-table__run {
+    .saved-reports-table__run,
+    .saved-reports-table__edit,
+    .saved-reports-table__delete {
       display: inline-flex;
       align-items: center;
       height: 28px;
@@ -56,6 +58,14 @@ styles.replaceSync(`
       font-size: 12px;
       font-family: inherit;
       cursor: pointer;
+      margin-left: 8px;
+    }
+    .saved-reports-table__run {
+      margin-left: 0;
+    }
+    .saved-reports-table__delete {
+      color: var(--pm-danger, #e05252);
+      border-color: var(--pm-danger, #e05252);
     }
   `);
 
@@ -139,6 +149,39 @@ export class PmSavedReportsTable extends HTMLElement {
         );
       });
       actionsCell.appendChild(runButton);
+
+      if (report.isOwner) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'saved-reports-table__edit';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', () => {
+          this.dispatchEvent(
+            new CustomEvent('saved-report-edit-requested', {
+              bubbles: true,
+              composed: true,
+              detail: { id: report.id },
+            }),
+          );
+        });
+        actionsCell.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'saved-reports-table__delete';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+          this.dispatchEvent(
+            new CustomEvent('saved-report-delete-requested', {
+              bubbles: true,
+              composed: true,
+              detail: { id: report.id, name: report.name },
+            }),
+          );
+        });
+        actionsCell.appendChild(deleteButton);
+      }
+
       row.appendChild(actionsCell);
 
       this.rowsBody.appendChild(row);

@@ -1,7 +1,9 @@
 import '../components/pm-saved-reports-table';
+import '../components/pm-delete-report-modal';
 import type { PmSavedReportsTable } from '../components/pm-saved-reports-table';
+import type { PmDeleteReportModal } from '../components/pm-delete-report-modal';
 import { clearBuilderState } from '../state/report-builder-state';
-import { listSavedReports } from '../services/reports';
+import { deleteReport, listSavedReports, ReportsError } from '../services/reports';
 import type { SavedReportSummary } from '../models/report';
 
 const styles = new CSSStyleSheet();
@@ -97,6 +99,7 @@ template.innerHTML = `
     <div class="reports-page__error" id="error" data-testid="saved-reports-error" hidden></div>
     <div class="reports-page__empty" id="empty" hidden>No saved reports yet.</div>
     <pm-saved-reports-table id="table" hidden></pm-saved-reports-table>
+    <pm-delete-report-modal id="deleteModal"></pm-delete-report-modal>
   </div>
 `;
 
@@ -104,6 +107,7 @@ export class PmReportsPage extends HTMLElement {
   private table: PmSavedReportsTable | null = null;
   private emptyMessage: HTMLElement | null = null;
   private errorBanner: HTMLElement | null = null;
+  private deleteModal: PmDeleteReportModal | null = null;
 
   constructor() {
     super();
@@ -116,12 +120,16 @@ export class PmReportsPage extends HTMLElement {
     this.table = this.shadowRoot!.getElementById('table') as unknown as PmSavedReportsTable;
     this.emptyMessage = this.shadowRoot!.getElementById('empty') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
+    this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteReportModal;
 
     this.shadowRoot!.getElementById('create')!.addEventListener('click', () => {
       clearBuilderState();
       window.location.hash = '#/reports/new';
     });
     this.shadowRoot!.addEventListener('saved-report-run-requested', this.handleRunRequested as EventListener);
+    this.shadowRoot!.addEventListener('saved-report-edit-requested', this.handleEditRequested as EventListener);
+    this.shadowRoot!.addEventListener('saved-report-delete-requested', this.handleDeleteRequested as EventListener);
+    this.deleteModal!.addEventListener('delete-report-confirmed', this.handleDeleteConfirmed as EventListener);
 
     void this.load();
   }
@@ -165,6 +173,41 @@ export class PmReportsPage extends HTMLElement {
   private handleRunRequested = (event: CustomEvent<{ id: string }>): void => {
     window.location.hash = `#/reports/${event.detail.id}`;
   };
+
+  private handleEditRequested = (event: CustomEvent<{ id: string }>): void => {
+    clearBuilderState();
+    window.location.hash = `#/reports/${event.detail.id}/edit`;
+  };
+
+  private handleDeleteRequested = (event: CustomEvent<{ id: string; name: string }>): void => {
+    this.deleteModal!.show(event.detail.id, event.detail.name);
+  };
+
+  private handleDeleteConfirmed = (event: CustomEvent<{ id: string }>): void => {
+    void this.performDelete(event.detail.id);
+  };
+
+  private async performDelete(id: string): Promise<void> {
+    this.deleteModal!.setBusy(true);
+
+    try {
+      await deleteReport(id);
+      this.deleteModal!.close();
+      await this.load();
+    } catch (error) {
+      this.deleteModal!.setBusy(false);
+      if (error instanceof ReportsError && error.status === 404) {
+        this.deleteModal!.close();
+        await this.load();
+        return;
+      }
+      const message =
+        error instanceof ReportsError && error.status >= 400 && error.status < 500
+          ? error.message
+          : 'Could not delete the report. Try again.';
+      this.deleteModal!.showError(message);
+    }
+  }
 }
 
 customElements.define('pm-reports-page', PmReportsPage);

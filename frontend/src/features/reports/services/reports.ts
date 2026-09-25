@@ -299,3 +299,33 @@ export async function runSavedReport(id: string): Promise<ReportResultModel> {
     return result;
   });
 }
+
+/** Replaces a saved report's name and definition. Invalidates the saved-reports list cache. */
+export async function updateReport(
+  id: string,
+  name: string,
+  definition: ReportDefinitionModel,
+): Promise<SavedReportIdentity> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, definition }),
+    });
+    const saved = await handleResponse<ApiSavedReportSummary>(response);
+    clearSavedReportsCache();
+    return { id: saved.id, name: saved.name, createdBy: saved.createdBy, isOwner: saved.isOwner };
+  });
+}
+
+/** Deletes a saved report. Invalidates the saved-reports list cache. */
+export async function deleteReport(id: string): Promise<void> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    await assertOk(response);
+    clearSavedReportsCache();
+  });
+}
