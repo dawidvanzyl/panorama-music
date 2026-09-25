@@ -75,7 +75,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 		// than by the route, which the authorization middleware never sees. It
 		// is audited on the same terms as a policy denial, since ASVS
 		// 5.0.0-16.3.2 is about the attempt, not about which layer refused it.
-		if (exception is StudentsExceptions.ForbiddenException)
+		if (exception is StudentsExceptions.ForbiddenException or ReportingExceptions.ForbiddenException)
 		{
 			LogHandled(exception, StatusCodes.Status403Forbidden, correlationId);
 			await AuditDeniedAsync(httpContext, exception.Message, cancellationToken);
