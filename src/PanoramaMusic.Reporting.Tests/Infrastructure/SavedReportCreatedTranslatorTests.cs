@@ -16,7 +16,6 @@ public class SavedReportCreatedTranslatorTests
 {
 	private sealed record SomeOtherDomainEvent : IDomainEvent;
 
-
 	private readonly Mock<IAuditContext> _auditContextMock = new();
 	private readonly Mock<IUserContext> _userContextMock = new();
 
