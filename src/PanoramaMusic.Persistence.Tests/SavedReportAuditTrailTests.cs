@@ -6,6 +6,7 @@ using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Reporting.Application.Constants;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Requests;
+using PanoramaMusic.Reporting.Domain.Exceptions;
 using Shouldly;
 using System.Text.Json;
 using Xunit;
@@ -82,5 +83,90 @@ public class SavedReportAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixtur
 		// event type.
 		var countAfterRun = await _reader.CountAsync("audit.audit_events", "target_id", saved.Id, cancellationToken);
 		countAfterRun.ShouldBe(1);
+	}
+
+	[Fact]
+	[Trait("AC", "322UC9")]
+	public async Task GivenASavedReport_WhenItsCreatorUpdatesIt_ThenAnUpdatedRowNamesTheReportAndIsAttributedToTheActingTeacher()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		var flushService = _context.ServiceProvider.GetRequiredService<IAuditFlushService>();
+		var saveHandler = _context.ServiceProvider.GetRequiredService<SaveReportHandler>();
+		var updateHandler = _context.ServiceProvider.GetRequiredService<UpdateSavedReportHandler>();
+
+		await unitOfWork.BeginAsync(cancellationToken);
+		var saved = await saveHandler.HandleAsync(BuildSaveRequest("Grade 4 Contacts"), cancellationToken);
+		await flushService.FlushAsync(cancellationToken);
+
+		await updateHandler.HandleAsync(saved.Id, BuildSaveRequest("Grade 5 Contacts"), cancellationToken);
+		await flushService.FlushAsync(cancellationToken);
+		await unitOfWork.CommitAsync(cancellationToken);
+
+		var row = await _reader.FetchByTargetAsync(ReportingAuditEventTypes.SavedReportUpdated, saved.Id, cancellationToken);
+
+		row.ShouldNotBeNull();
+		row.ActorId.ShouldBe(_context.Contexts.ReportingUserContextMock.Object.UserId);
+		row.Outcome.ShouldBe("success");
+		using var detail = JsonDocument.Parse(row.Detail);
+		detail.RootElement.GetProperty("targetDisplay").GetString().ShouldBe("Grade 5 Contacts");
+	}
+
+	[Fact]
+	[Trait("AC", "322UC9")]
+	public async Task GivenASavedReport_WhenItsCreatorDeletesIt_ThenADeletedRowNamesTheReportAndIsAttributedToTheActingTeacher()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		var flushService = _context.ServiceProvider.GetRequiredService<IAuditFlushService>();
+		var saveHandler = _context.ServiceProvider.GetRequiredService<SaveReportHandler>();
+		var deleteHandler = _context.ServiceProvider.GetRequiredService<DeleteSavedReportHandler>();
+
+		await unitOfWork.BeginAsync(cancellationToken);
+		var saved = await saveHandler.HandleAsync(BuildSaveRequest("Grade 6 Contacts"), cancellationToken);
+		await flushService.FlushAsync(cancellationToken);
+
+		await deleteHandler.HandleAsync(saved.Id, cancellationToken);
+		await flushService.FlushAsync(cancellationToken);
+		await unitOfWork.CommitAsync(cancellationToken);
+
+		var row = await _reader.FetchByTargetAsync(ReportingAuditEventTypes.SavedReportDeleted, saved.Id, cancellationToken);
+
+		row.ShouldNotBeNull();
+		row.ActorId.ShouldBe(_context.Contexts.ReportingUserContextMock.Object.UserId);
+		row.Outcome.ShouldBe("success");
+		using var detail = JsonDocument.Parse(row.Detail);
+		detail.RootElement.GetProperty("targetDisplay").GetString().ShouldBe("Grade 6 Contacts");
+	}
+
+	[Fact]
+	[Trait("AC", "322UC10")]
+	public async Task GivenASavedReport_WhenANonCreatorsUpdateOrDeleteIsForbidden_ThenNoReportAuditRowIsAddedBeyondTheCreate()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		var unitOfWork = _context.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		var flushService = _context.ServiceProvider.GetRequiredService<IAuditFlushService>();
+		var saveHandler = _context.ServiceProvider.GetRequiredService<SaveReportHandler>();
+		var updateHandler = _context.ServiceProvider.GetRequiredService<UpdateSavedReportHandler>();
+		var deleteHandler = _context.ServiceProvider.GetRequiredService<DeleteSavedReportHandler>();
+
+		await unitOfWork.BeginAsync(cancellationToken);
+		var saved = await saveHandler.HandleAsync(BuildSaveRequest("Grade 7 Contacts"), cancellationToken);
+		await flushService.FlushAsync(cancellationToken);
+		await unitOfWork.CommitAsync(cancellationToken);
+
+		_context.Contexts.ReportingUserContextMock.SetupGet(m => m.UserId).Returns(Guid.NewGuid());
+		_context.Contexts.ReportingUserContextMock.SetupGet(m => m.Email).Returns("other-teacher@test.com");
+
+		await unitOfWork.BeginAsync(cancellationToken);
+		await Should.ThrowAsync<ForbiddenException>(
+			() => updateHandler.HandleAsync(saved.Id, BuildSaveRequest("Hijacked"), cancellationToken));
+		await Should.ThrowAsync<ForbiddenException>(
+			() => deleteHandler.HandleAsync(saved.Id, cancellationToken));
+		await flushService.FlushAsync(cancellationToken);
+		await unitOfWork.CommitAsync(cancellationToken);
+
+		var count = await _reader.CountAsync("audit.audit_events", "target_id", saved.Id, cancellationToken);
+		count.ShouldBe(1);
 	}
 }

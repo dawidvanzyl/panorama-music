@@ -88,6 +88,21 @@ public sealed class ApiExceptionHandlerTests
 	}
 
 	[Fact]
+	public async Task TryHandleAsync_ReportingForbiddenException_Returns403WithErrorAndCorrelationId()
+	{
+		var httpContext = CreateHttpContext();
+		var exception = new ReportingExceptions.ForbiddenException("Only the creator of a saved report may change or delete it.");
+
+		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
+
+		handled.ShouldBeTrue();
+		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
+		var body = JsonDocument.Parse(ReadBody(httpContext));
+		body.RootElement.GetProperty("error").GetString().ShouldBe("Only the creator of a saved report may change or delete it.");
+		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
+	}
+
+	[Fact]
 	public async Task TryHandleAsync_CancellationFromClientDisconnect_SwallowsWithoutLoggingOrResponseBody()
 	{
 		var httpContext = CreateHttpContext();
