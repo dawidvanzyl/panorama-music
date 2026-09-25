@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
-import { goToReportsPage } from '../../fixtures/testUsers';
+import { goToReportsPage, loginAsRoles } from '../../fixtures/testUsers';
 import { seedEnrollmentTarget } from '../../fixtures/enrollment';
 import { fetchLessonStructureId, seedCourseOfType, seedWaitingListEntry } from '../../fixtures/waitingList';
 import { linkSiblings } from '../../fixtures/siblings';
@@ -170,7 +170,7 @@ test.describe('Report results — a present sibling pair shows an age-ordered ba
 
   test('S4 — a saved report run from the Reports list shows the badges', async ({ page }) => {
     const token = uniqueToken();
-    const reportsPage = await loginForReports(page);
+    await loginAsRoles(page, ['Teacher', 'Coordinator']);
     const target = await seedEnrollmentTarget(page);
 
     const gusId = await seedReportStudent(page, target, {
@@ -194,6 +194,7 @@ test.describe('Report results — a present sibling pair shows an age-ordered ba
     });
     expect(saved.status).toBe(201);
 
+    const reportsPage = new ReportsPage(page);
     await reportsPage.gotoReports();
     await reportsPage.waitForLoaded();
     const row = reportsPage.rowByName(`Siblings ${token}`);
