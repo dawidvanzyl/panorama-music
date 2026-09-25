@@ -78,8 +78,9 @@ public class SavedReportAuditTrailTests : IClassFixture<UnitOfWorkDatabaseFixtur
 		await unitOfWork.CommitAsync(cancellationToken);
 
 		// Reads over its own connection, so it only ever sees committed rows —
-		// exactly one, from the save; the run raised nothing to add.
-		var countAfterRun = await _reader.CountByTargetAsync(ReportingAuditEventTypes.SavedReportCreated, saved.Id, cancellationToken);
+		// exactly one, from the save; the run raised nothing to add, of any
+		// event type.
+		var countAfterRun = await _reader.CountAsync("audit.audit_events", "target_id", saved.Id, cancellationToken);
 		countAfterRun.ShouldBe(1);
 	}
 }

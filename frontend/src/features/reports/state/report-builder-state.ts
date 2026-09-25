@@ -201,10 +201,15 @@ export function sameDefinition(a: ReportDefinitionModel, b: ReportDefinitionMode
   });
 }
 
+export interface HeldSavedReport {
+  identity: SavedReportIdentity;
+  definition: ReportDefinitionModel;
+}
+
 let _heldDefinition: ReportDefinitionModel | null = null;
 let _heldResult: ReportResultModel | null = null;
 let _heldFields: ReportFieldsModel | null = null;
-let _heldSavedReport: SavedReportIdentity | null = null;
+let _heldSavedReport: HeldSavedReport | null = null;
 
 /** Holds the builder's definition across the Run report -> results -> Edit report round trip. */
 export function holdDefinition(definition: ReportDefinitionModel): void {
@@ -232,12 +237,17 @@ export function takeHeldFields(): ReportFieldsModel | null {
   return _heldFields;
 }
 
-/** Holds the identity of the report the builder's current definition is saved as, across the Save -> results/run round trip. */
-export function holdSavedReport(identity: SavedReportIdentity | null): void {
-  _heldSavedReport = identity;
+/**
+ * Holds the identity of a saved report together with the exact definition it
+ * was saved with, across the Save -> results/run round trip — pairing them
+ * lets a later `load()` confirm the identity still describes what it is
+ * about to restore, rather than trusting a stale identity on its own.
+ */
+export function holdSavedReport(saved: HeldSavedReport | null): void {
+  _heldSavedReport = saved;
 }
 
-export function takeHeldSavedReport(): SavedReportIdentity | null {
+export function takeHeldSavedReport(): HeldSavedReport | null {
   return _heldSavedReport;
 }
 

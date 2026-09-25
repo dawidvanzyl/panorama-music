@@ -235,7 +235,7 @@ export class PmReportResultsPage extends HTMLElement {
       const result = await runSavedReport(reportId);
       this._result = result;
       holdResult(result);
-      holdSavedReport(result.savedReport);
+      holdSavedReport(result.savedReport ? { identity: result.savedReport, definition: this._definition } : null);
       this.errorBanner!.hidden = true;
       this.render();
     } catch (error: unknown) {
@@ -252,6 +252,15 @@ export class PmReportResultsPage extends HTMLElement {
 
   private reportTitle(): string {
     return this._result?.savedReport?.name ?? 'New report';
+  }
+
+  /**
+   * The id to run against: the held result's saved identity once the report
+   * has been saved (from the route, or from Save report on these results),
+   * falling back to the route attribute before any result has loaded.
+   */
+  private savedReportId(): string | null {
+    return this._result?.savedReport?.id ?? this._reportId;
   }
 
   private render(): void {
@@ -340,7 +349,8 @@ export class PmReportResultsPage extends HTMLElement {
     this._running = true;
     this.render();
 
-    const run = this._reportId ? runSavedReport(this._reportId) : runReport(this._definition);
+    const savedReportId = this.savedReportId();
+    const run = savedReportId ? runSavedReport(savedReportId) : runReport(this._definition);
 
     run
       .then((result) => {
@@ -374,7 +384,7 @@ export class PmReportResultsPage extends HTMLElement {
       .then((identity) => {
         this._result = { ...this._result!, savedReport: identity };
         holdResult(this._result);
-        holdSavedReport(identity);
+        holdSavedReport({ identity, definition: this._definition! });
         this.saveModal?.setBusy(false);
         this.saveModal?.close();
         this.render();

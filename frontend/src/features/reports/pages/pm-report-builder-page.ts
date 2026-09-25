@@ -22,6 +22,7 @@ import {
   holdFields,
   holdSavedReport,
   takeHeldDefinition,
+  takeHeldSavedReport,
   sameDefinition,
 } from '../state/report-builder-state';
 import type { ReportDefinitionModel, ReportFieldsModel, SavedReportIdentity } from '../models/report';
@@ -192,8 +193,16 @@ export class PmReportBuilderPage extends HTMLElement {
       this._fields = await getFields();
       const held = takeHeldDefinition();
       this._definition = held ?? createDefinition(this._fields);
-      this._savedIdentity = null;
-      this._savedDefinition = null;
+
+      const heldSaved = takeHeldSavedReport();
+      if (held && heldSaved && sameDefinition(held, heldSaved.definition)) {
+        this._savedIdentity = heldSaved.identity;
+        this._savedDefinition = held;
+      } else {
+        this._savedIdentity = null;
+        this._savedDefinition = null;
+      }
+
       this.errorBanner!.hidden = true;
       this.body!.hidden = false;
       this.render();
@@ -243,8 +252,6 @@ export class PmReportBuilderPage extends HTMLElement {
 
     this.runButton.disabled = this._running || !this._fields || !canRun(this._definition);
 
-    // Rendered only while no saved identity is held — saving an already-saved
-    // report is out of scope for this story.
     this.saveButton.hidden = this._savedIdentity !== null;
     this.saveButton.disabled = this._running;
     this.breadcrumbName.textContent = this._savedIdentity?.name ?? 'New report';
@@ -324,7 +331,7 @@ export class PmReportBuilderPage extends HTMLElement {
       .then((identity) => {
         this._savedIdentity = identity;
         this._savedDefinition = this._definition;
-        holdSavedReport(identity);
+        holdSavedReport({ identity, definition: this._definition });
         this.saveModal?.setBusy(false);
         this.saveModal?.close();
         this.render();

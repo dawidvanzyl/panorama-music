@@ -69,7 +69,7 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 
 	[Fact]
 	[Trait("AC", "321UC5")]
-	public async Task RunSavedReportHandler_StudentChangedAndOneAddedAfterSave_RunReflectsBothAndLastRunMatchesFixedTime()
+	public async Task RunSavedReportHandler_StudentRenamedOutAndOneAddedAfterSave_RunReflectsBothAndLastRunMatchesFixedTime()
 	{
 		var ct = TestContext.Current.CancellationToken;
 		var token = Guid.NewGuid().ToString("N");
@@ -82,10 +82,19 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 			_fixture.UserContextMock.SetupGet(m => m.UserId).Returns(userId);
 			_fixture.UserContextMock.SetupGet(m => m.Email).Returns($"teacher-{token}@test.com");
 
-			var existingId = await StudentSeeder.InsertStudentAsync(connection, "Ivy", token, new DateOnly(2015, 1, 1));
+			var renamedOutId = await StudentSeeder.InsertStudentAsync(connection, "Ivy", token, new DateOnly(2015, 1, 1));
 
 			var saveHandler = services.GetRequiredService<SaveReportHandler>();
 			var saved = await saveHandler.HandleAsync(new SaveReportRequest($"{token} report", BuildDefinition(token)), ct);
+
+			// Changed after the save: Ivy no longer matches the stored name filter.
+			await using (var renameCommand = connection.CreateCommand())
+			{
+				renameCommand.CommandText = "UPDATE students.students SET last_name = @last_name WHERE student_id = @student_id;";
+				renameCommand.Parameters.AddWithValue("last_name", $"NoMatch{Guid.NewGuid():N}");
+				renameCommand.Parameters.AddWithValue("student_id", renamedOutId);
+				await renameCommand.ExecuteNonQueryAsync(ct);
+			}
 
 			var newId = await StudentSeeder.InsertStudentAsync(connection, "Jade", token, new DateOnly(2016, 1, 1));
 
@@ -93,8 +102,8 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 			var runHandler = services.GetRequiredService<RunSavedReportHandler>();
 			var result = await runHandler.HandleAsync(saved.Id, ct);
 
-			result.StudentCount.ShouldBe(2);
-			result.Sections.Select(s => s.StudentId).ShouldBe([existingId, newId], ignoreOrder: true);
+			result.StudentCount.ShouldBe(1);
+			result.Sections.Single().StudentId.ShouldBe(newId);
 
 			var repository = services.GetRequiredService<ISavedReportRepository>();
 			var record = await repository.GetByIdAsync(saved.Id, ct);
