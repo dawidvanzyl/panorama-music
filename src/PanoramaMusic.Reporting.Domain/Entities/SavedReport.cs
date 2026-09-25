@@ -93,12 +93,12 @@ public sealed class SavedReport : AggregateRoot
 	private static string NormaliseName(string name)
 	{
 		var trimmedName = name.Trim();
-		if (trimmedName.Length == 0)
-			throw new InvalidSavedReportException(SavedReportMessages.NameRequired);
 
-		if (trimmedName.Length > _maxNameLength)
-			throw new InvalidSavedReportException(SavedReportMessages.NameTooLong);
-
-		return trimmedName;
+		return trimmedName.Length switch
+		{
+			0 => throw new InvalidSavedReportException(SavedReportMessages.NameRequired),
+			> _maxNameLength => throw new InvalidSavedReportException(SavedReportMessages.NameTooLong),
+			_ => trimmedName,
+		};
 	}
 }
