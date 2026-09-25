@@ -82,8 +82,31 @@ export class ReportsPage extends BasePage {
     return row.getByRole('button', { name: 'Run', exact: true });
   }
 
+  editButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Edit', exact: true });
+  }
+
+  deleteButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Delete', exact: true });
+  }
+
   async run(row: Locator): Promise<void> {
     await this.runButton(row).click();
+  }
+
+  async edit(row: Locator): Promise<void> {
+    await this.editButton(row).click();
+  }
+
+  /** Opens the Delete report confirmation dialog for this row. */
+  async requestDelete(row: Locator): Promise<void> {
+    await this.deleteButton(row).click();
+  }
+
+  /** The row's own action buttons' accessible names, in document order. */
+  async actionNames(row: Locator): Promise<string[]> {
+    const texts = await row.locator('button').allTextContents();
+    return texts.map((text) => text.trim());
   }
 
   async reportIdOf(row: Locator): Promise<string> {
