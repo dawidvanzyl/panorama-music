@@ -59,6 +59,7 @@ export interface ReportResultColumn {
 export interface ReportResultSection {
   studentId: string;
   rows: string[][];
+  siblingBadge: string | null;
 }
 
 /** A completed run, mapped from the API contract into the feature's own shape. */

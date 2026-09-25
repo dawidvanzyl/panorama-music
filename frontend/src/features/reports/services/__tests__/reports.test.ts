@@ -78,8 +78,8 @@ describe('runReport', { tags: ['317UC7'] }, () => {
         { key: 'student.class', header: 'Class' },
       ],
       sections: [
-        { studentId: 's1', rows: [['Amy van Zyl', '4A2']] },
-        { studentId: 's2', rows: [['Ben Smith', 'Private']] },
+        { studentId: 's1', rows: [['Amy van Zyl', '4A2']], siblingBadge: '1.2' },
+        { studentId: 's2', rows: [['Ben Smith', 'Private']], siblingBadge: null },
       ],
     };
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
@@ -92,6 +92,8 @@ describe('runReport', { tags: ['317UC7'] }, () => {
     expect(result.studentCount).toBe(2);
     expect(result.columns).toEqual(apiResult.columns);
     expect(result.sections).toEqual(apiResult.sections);
+    expect(result.sections[0].siblingBadge).toBe('1.2');
+    expect(result.sections[1].siblingBadge).toBeNull();
   });
 
   it('is never cached — a second call fetches again', async () => {
