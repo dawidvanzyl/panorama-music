@@ -9,8 +9,15 @@ import {
   clear,
   canSaveName,
   resultActions,
+  sameDefinition,
 } from '../report-builder-state';
-import type { ReportField, ReportFieldsModel, ReportFilterModel, SavedReportIdentity } from '../../models/report';
+import type {
+  ReportDefinitionModel,
+  ReportField,
+  ReportFieldsModel,
+  ReportFilterModel,
+  SavedReportIdentity,
+} from '../../models/report';
 
 const textField: ReportField = {
   key: 'student.name',
@@ -396,5 +403,33 @@ describe('resultActions', { tags: ['321UC3'] }, () => {
 
   it('offers the full action set for an unsaved report', () => {
     expect(resultActions(null)).toEqual(['edit', 'runAgain', 'saveReport', 'print']);
+  });
+});
+
+describe('sameDefinition', { tags: ['321UC5'] }, () => {
+  const filters: ReportFilterModel[] = [{ field: 'student.grade', operator: 'equals', values: ['Grade4'] }];
+
+  it('treats two definitions with the same columns in a different order as the same', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name', 'student.class'] };
+    const b: ReportDefinitionModel = { filters, columns: ['student.class', 'student.name'] };
+
+    expect(sameDefinition(a, b)).toBe(true);
+  });
+
+  it('is false when the column sets differ', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name', 'student.class'] };
+    const b: ReportDefinitionModel = { filters, columns: ['student.name', 'student.phase'] };
+
+    expect(sameDefinition(a, b)).toBe(false);
+  });
+
+  it('is false when a filter value differs', () => {
+    const a: ReportDefinitionModel = { filters, columns: ['student.name'] };
+    const b: ReportDefinitionModel = {
+      filters: [{ field: 'student.grade', operator: 'equals', values: ['Grade5'] }],
+      columns: ['student.name'],
+    };
+
+    expect(sameDefinition(a, b)).toBe(false);
   });
 });

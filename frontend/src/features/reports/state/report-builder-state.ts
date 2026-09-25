@@ -185,10 +185,16 @@ export function resultActions(saved: SavedReportIdentity | null): ResultAction[]
   return saved === null ? ['edit', 'runAgain', 'saveReport', 'print'] : ['runAgain', 'print'];
 }
 
-/** Two definitions are the same when their filters and columns are both equal, in order. */
+/**
+ * Two definitions are the same when they select the same column set,
+ * regardless of order — a saved definition's columns come back from the
+ * server re-ordered by the registry's own display order, not the order they
+ * were ticked in, so position carries no meaning there — and the same
+ * filters, in order.
+ */
 export function sameDefinition(a: ReportDefinitionModel, b: ReportDefinitionModel): boolean {
   if (a.columns.length !== b.columns.length || a.filters.length !== b.filters.length) return false;
-  if (a.columns.some((key, index) => key !== b.columns[index])) return false;
+  if (!a.columns.every((key) => b.columns.includes(key))) return false;
 
   return a.filters.every((filter, index) => {
     const other = b.filters[index];
