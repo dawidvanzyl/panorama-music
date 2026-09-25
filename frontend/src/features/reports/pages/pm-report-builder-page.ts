@@ -120,7 +120,7 @@ template.innerHTML = `
   <div class="builder-page__toolbar">
     <button type="button" class="builder-page__clear" id="clear">Clear</button>
     <button type="button" class="builder-page__save" id="save" data-testid="builder-save">
-      <span class="material-symbols-outlined">save</span>
+      <span class="material-symbols-outlined" aria-hidden="true">save</span>
       Save
     </button>
     <button type="button" class="builder-page__run" id="run">

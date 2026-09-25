@@ -3,6 +3,14 @@ import { canSaveName } from '../state/report-builder-state';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
+    /* The shared chrome's backdrop is position: fixed, which drops out of
+       normal flow and leaves this host with no box of its own to size
+       against — sizing the host to the viewport itself keeps it a genuine,
+       measurable element while open. */
+    :host([open]) {
+      position: fixed;
+      inset: 0;
+    }
     .modal__card {
       max-width: 440px;
     }
