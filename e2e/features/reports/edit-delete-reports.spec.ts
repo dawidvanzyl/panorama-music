@@ -20,7 +20,7 @@ import { DeleteReportModal } from '../../pages/reports/DeleteReportModal';
 /**
  * The QA database is shared and filled in parallel, so every scenario mints
  * its own token and uses it as its seeded students' surname, or as part of a
- * saved report's own name, per the plan's scoping convention.
+ * saved report's own name, keeping one worker's rows out of another's.
  */
 function uniqueToken(prefix = 'Edt'): string {
   return `${prefix}${test.info().workerIndex}${Date.now()}${crypto.randomUUID().slice(0, 6).replace(/-/g, '')}`;

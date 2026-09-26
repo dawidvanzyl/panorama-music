@@ -140,7 +140,7 @@ export class ReportBuilderPage extends BasePage {
       .evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? '');
   }
 
-  /** The operator select's currently chosen option's own text, e.g. "equals". */
+  /** The operator select's currently chosen option's own text, e.g. "is". */
   async selectedOperatorLabel(index: number): Promise<string> {
     return this.operatorControl(index).evaluate(
       (el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? ''
