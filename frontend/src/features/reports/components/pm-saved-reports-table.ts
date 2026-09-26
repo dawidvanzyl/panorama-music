@@ -41,7 +41,7 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       width: 200px;
     }
-    .saved-reports-table__actions {
+    .saved-reports-table__actions-wrap {
       display: flex;
       gap: 6px;
       justify-content: flex-end;
@@ -51,14 +51,20 @@ styles.replaceSync(`
     .saved-reports-table__delete {
       display: inline-flex;
       align-items: center;
-      height: 28px;
-      padding: 0 12px;
-      border-radius: var(--pm-radius);
-      font-size: 12px;
+      height: 38px;
+      padding: 0 20px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       font-family: inherit;
       cursor: pointer;
     }
-    .saved-reports-table__run,
+    .saved-reports-table__run {
+      background: transparent;
+      border: 1px solid var(--pm-accent);
+      color: var(--pm-accent);
+    }
     .saved-reports-table__edit {
       background: transparent;
       border: 1px solid var(--pm-border);
@@ -66,7 +72,7 @@ styles.replaceSync(`
     }
     .saved-reports-table__delete {
       background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      border: none;
       color: #fff;
     }
   `);
@@ -136,7 +142,9 @@ export class PmSavedReportsTable extends HTMLElement {
       row.appendChild(lastRunCell);
 
       const actionsCell = document.createElement('td');
-      actionsCell.className = 'saved-reports-table__actions';
+      const actionsWrap = document.createElement('div');
+      actionsWrap.className = 'saved-reports-table__actions-wrap';
+      actionsCell.appendChild(actionsWrap);
       const runButton = document.createElement('button');
       runButton.type = 'button';
       runButton.className = 'saved-reports-table__run';
@@ -150,7 +158,7 @@ export class PmSavedReportsTable extends HTMLElement {
           }),
         );
       });
-      actionsCell.appendChild(runButton);
+      actionsWrap.appendChild(runButton);
 
       if (report.isOwner) {
         const editButton = document.createElement('button');
@@ -166,7 +174,7 @@ export class PmSavedReportsTable extends HTMLElement {
             }),
           );
         });
-        actionsCell.appendChild(editButton);
+        actionsWrap.appendChild(editButton);
 
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
@@ -181,7 +189,7 @@ export class PmSavedReportsTable extends HTMLElement {
             }),
           );
         });
-        actionsCell.appendChild(deleteButton);
+        actionsWrap.appendChild(deleteButton);
       }
 
       row.appendChild(actionsCell);

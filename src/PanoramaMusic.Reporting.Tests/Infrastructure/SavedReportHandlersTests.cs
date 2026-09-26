@@ -192,6 +192,13 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 			var saveHandler = services.GetRequiredService<SaveReportHandler>();
 			var saved = await saveHandler.HandleAsync(new SaveReportRequest($"{token} before", BuildDefinition(token)), ct);
 
+			var runHandler = services.GetRequiredService<RunSavedReportHandler>();
+			await runHandler.HandleAsync(saved.Id, ct);
+
+			var repositoryBeforeUpdate = services.GetRequiredService<ISavedReportRepository>();
+			var lastRunBeforeUpdate = (await repositoryBeforeUpdate.GetByIdAsync(saved.Id, ct))!.Report.LastRunAt;
+			lastRunBeforeUpdate.ShouldNotBeNull();
+
 			var updateHandler = services.GetRequiredService<UpdateSavedReportHandler>();
 			await updateHandler.HandleAsync(saved.Id, new SaveReportRequest($"{token} after", BuildDefinition($"{token}-changed")), ct);
 
@@ -202,7 +209,7 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 			record.Report.Name.ShouldBe($"{token} after");
 			record.Report.Definition.Filters.Single().Values.ShouldBe([$"{token}-changed"]);
 			record.Report.CreatedBy.ShouldBe(userId);
-			record.Report.LastRunAt.ShouldBeNull();
+			record.Report.LastRunAt.ShouldBe(lastRunBeforeUpdate);
 
 			return true;
 		}, ct);

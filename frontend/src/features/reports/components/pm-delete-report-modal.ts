@@ -6,7 +6,11 @@ styles.replaceSync(`
       position: fixed;
       inset: 0;
     }
+    .modal__backdrop {
+      background: rgba(0, 0, 0, 0.65);
+    }
     .modal__card {
+      box-sizing: border-box;
       max-width: 440px;
       padding: 32px;
       border-radius: 12px;
@@ -21,7 +25,7 @@ styles.replaceSync(`
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: color-mix(in srgb, var(--pm-danger, #e05252) 15%, transparent);
+      background: rgba(224, 82, 82, 0.12);
       flex-shrink: 0;
     }
     .modal__icon {
@@ -29,9 +33,16 @@ styles.replaceSync(`
     }
     .modal__title {
       color: var(--pm-text);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
     }
-    .modal__body {
+    .modal__message {
       color: var(--pm-text);
+      margin: 0 0 24px;
+    }
+    .modal__actions {
+      gap: 10px;
     }
     .modal__btn--cancel {
       color: var(--pm-text);
@@ -63,9 +74,7 @@ template.innerHTML = `
         <h2 class="modal__title" data-testid="delete-report-title">Delete report</h2>
       </div>
       <div class="modal__body">
-        <p data-testid="delete-report-text">
-          Are you sure you want to delete the report <strong id="reportName" data-testid="delete-report-name"></strong>? This cannot be undone.
-        </p>
+        <p class="modal__message" data-testid="delete-report-text">Are you sure you want to delete the report <strong id="reportName" data-testid="delete-report-name"></strong>? This cannot be undone.</p>
         <p class="modal__error" id="error" data-testid="delete-report-error"></p>
       </div>
       <div class="modal__actions">
