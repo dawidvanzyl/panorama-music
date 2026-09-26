@@ -74,14 +74,19 @@ public class TeacherReachTests
 		};
 		haystacks.AddRange(predicateFragments);
 
-		foreach (var haystack in haystacks)
+		var assertions = new List<Action>();
+		for (var i = 0; i < haystacks.Count; i++)
 		{
-			var lowered = haystack.ToLowerInvariant();
+			var lowered = haystacks[i].ToLowerInvariant();
+			var haystackIndex = i;
 			foreach (var forbidden in _forbiddenTokens)
 			{
-				lowered.ShouldNotContain(forbidden);
+				assertions.Add(() => lowered.Contains(forbidden, StringComparison.Ordinal)
+					.ShouldBeFalse($"forbidden token '{forbidden}' in haystacks[{haystackIndex}]"));
 			}
 		}
+
+		ShouldlyHelpers.Satisfy([.. assertions]);
 	}
 
 	private static IReadOnlyList<ReportFilter> FiltersFor(ReportCollection collection) =>

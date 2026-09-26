@@ -43,7 +43,7 @@ public class ReportPredicateComposerTests
 
 	[Fact]
 	[Trait("AC", "329UC2")]
-	public void ComposedSeparately_InterleavedFilters_PopulationExistsAndCollectionConditionMatch()
+	public void ComposeRecordCondition_InterleavedFilters_MatchesPopulationExistsTextAndBoundValues()
 	{
 		var definition = ReportDefinition.Create(
 			[
@@ -60,27 +60,29 @@ public class ReportPredicateComposerTests
 		var populationParameters = new DynamicParameters();
 		var populationFragments = _composer.ComposePopulationPredicates(definition.Filters, populationParameters);
 
+		var assertions = new List<Action>();
 		foreach (var collection in new[] { ReportCollection.Guardian, ReportCollection.Course, ReportCollection.ExtraCurricular })
 		{
 			var collectionParameters = new DynamicParameters();
 			var condition = _composer.ComposeRecordCondition(collection, definition.FiltersFor(collection), collectionParameters)!;
 
-			var populationFragment = populationFragments.Single(fragment => fragment.Sql.Contains(condition));
-			populationFragment.ShouldNotBeNull();
+			assertions.Add(() => populationFragments.Count(fragment => fragment.Sql.Contains(condition))
+				.ShouldBe(1, $"population EXISTS fragment count for {collection}"));
 
 			foreach (var name in collectionParameters.ParameterNames)
 			{
-				populationParameters.ParameterNames.ShouldContain(name);
-				BoundValueEquals(populationParameters.Get<object>(name), collectionParameters.Get<object>(name)).ShouldBeTrue();
+				var populationValue = populationParameters.Get<object>(name);
+				var collectionValue = collectionParameters.Get<object>(name);
+				assertions.Add(() => AssertBoundValueMatches(name, populationValue, collectionValue));
 			}
 		}
 
 		var guardianParameters = new DynamicParameters();
 		var guardianCondition = _composer.ComposeRecordCondition(ReportCollection.Guardian, definition.FiltersFor(ReportCollection.Guardian), guardianParameters)!;
+		assertions.Add(() => guardianCondition.ShouldContain("g.married"));
+		assertions.Add(() => guardianCondition.ShouldContain("g.receives_correspondence"));
 
-		ShouldlyHelpers.Satisfy(
-			() => guardianCondition.ShouldContain("g.married"),
-			() => guardianCondition.ShouldContain("g.receives_correspondence"));
+		ShouldlyHelpers.Satisfy([.. assertions]);
 	}
 
 	[Fact]
@@ -113,11 +115,15 @@ public class ReportPredicateComposerTests
 			() => extraCurricularSql.ShouldNotContain("student_courses"));
 	}
 
-	private static bool BoundValueEquals(object? left, object? right)
+	private static void AssertBoundValueMatches(string parameterName, object? populationValue, object? collectionValue)
 	{
-		return left is Array leftArray && right is Array rightArray
-			? leftArray.Cast<object>().SequenceEqual(rightArray.Cast<object>())
-			: Equals(left, right);
+		if (populationValue is Array populationArray && collectionValue is Array collectionArray)
+		{
+			populationArray.Cast<object>().ShouldBe(collectionArray.Cast<object>(), $"parameter '{parameterName}'");
+			return;
+		}
+
+		populationValue.ShouldBe(collectionValue, $"parameter '{parameterName}'");
 	}
 
 	private static int CountOccurrences(string haystack, string needle)

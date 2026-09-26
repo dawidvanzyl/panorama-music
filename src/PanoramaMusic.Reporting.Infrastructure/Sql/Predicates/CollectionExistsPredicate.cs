@@ -1,5 +1,3 @@
-using PanoramaMusic.Reporting.Infrastructure.Sql;
-
 namespace PanoramaMusic.Reporting.Infrastructure.Sql.Predicates;
 
 /// <summary>

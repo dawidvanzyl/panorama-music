@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PanoramaMusic.Reporting.Tests.Infrastructure;
 
-/// <summary>Exercises the real, DI-resolved <c>ReportRunner</c> end to end against a live Postgres.</summary>
+/// <summary>Each test scopes its assertions to the students it itself seeded, via a fact-unique token embedded in a seeded name.</summary>
 public class ReportRunnerFilteredCollectionTests : IClassFixture<ReportingDatabaseFixture>
 {
 	private readonly ReportingDatabaseFixture _fixture;
