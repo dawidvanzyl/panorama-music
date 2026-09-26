@@ -253,7 +253,7 @@ export function clearSavedReportsCache(): void {
 
 registerSessionCache(clearSavedReportsCache);
 
-/** The Reports page's list, cached for the browser session. Cleared by saving or running a report, and on sign-in. */
+/** The Reports page's list, cached for the browser session. Cleared by saving, updating, deleting or running a report, and on sign-in. */
 export async function listSavedReports(): Promise<SavedReportSummary[]> {
   if (_savedReportsCache) return _savedReportsCache;
 
@@ -297,5 +297,35 @@ export async function runSavedReport(id: string): Promise<ReportResultModel> {
     const result = mapSavedReportRunResult(await handleResponse<ApiSavedReportRunResult>(response));
     clearSavedReportsCache();
     return result;
+  });
+}
+
+/** Replaces a saved report's name and definition. Invalidates the saved-reports list cache. */
+export async function updateReport(
+  id: string,
+  name: string,
+  definition: ReportDefinitionModel,
+): Promise<SavedReportIdentity> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, definition }),
+    });
+    const saved = await handleResponse<ApiSavedReportSummary>(response);
+    clearSavedReportsCache();
+    return { id: saved.id, name: saved.name, createdBy: saved.createdBy, isOwner: saved.isOwner };
+  });
+}
+
+/** Deletes a saved report. Invalidates the saved-reports list cache. */
+export async function deleteReport(id: string): Promise<void> {
+  return guardNetworkFailure(async () => {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    await assertOk(response);
+    clearSavedReportsCache();
   });
 }

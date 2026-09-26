@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Requests;
+using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Messages;
 using PanoramaMusic.Reporting.Tests.Fixtures;
@@ -169,6 +170,109 @@ public class SavedReportHandlersTests : IClassFixture<ReportingDatabaseFixture>
 				.ToList();
 
 			names.ShouldBe([$"{token} Alpha", $"{token} bravo", $"{token} charlie"]);
+
+			return true;
+		}, ct);
+	}
+
+	[Fact]
+	[Trait("AC", "322UC1")]
+	public async Task UpdateSavedReportHandler_Creator_GetByIdAsyncReadsTheNewNameAndDefinitionWithTheSameCreatedByAndLastRunAt()
+	{
+		var ct = TestContext.Current.CancellationToken;
+		var token = Guid.NewGuid().ToString("N");
+
+		await _fixture.ExecuteInScopeAsync(async services =>
+		{
+			await using var connection = _fixture.OpenConnection();
+			var userId = await IdentitySeeder.InsertUserAsync(connection, $"update-{token}@test.com");
+			_fixture.UserContextMock.SetupGet(m => m.UserId).Returns(userId);
+			_fixture.UserContextMock.SetupGet(m => m.Email).Returns($"update-{token}@test.com");
+
+			var saveHandler = services.GetRequiredService<SaveReportHandler>();
+			var saved = await saveHandler.HandleAsync(new SaveReportRequest($"{token} before", BuildDefinition(token)), ct);
+
+			var runHandler = services.GetRequiredService<RunSavedReportHandler>();
+			await runHandler.HandleAsync(saved.Id, ct);
+
+			var repositoryBeforeUpdate = services.GetRequiredService<ISavedReportRepository>();
+			var lastRunBeforeUpdate = (await repositoryBeforeUpdate.GetByIdAsync(saved.Id, ct))!.Report.LastRunAt;
+			lastRunBeforeUpdate.ShouldNotBeNull();
+
+			var updateHandler = services.GetRequiredService<UpdateSavedReportHandler>();
+			await updateHandler.HandleAsync(saved.Id, new SaveReportRequest($"{token} after", BuildDefinition($"{token}-changed")), ct);
+
+			var repository = services.GetRequiredService<ISavedReportRepository>();
+			var record = await repository.GetByIdAsync(saved.Id, ct);
+
+			record.ShouldNotBeNull();
+			record.Report.Name.ShouldBe($"{token} after");
+			record.Report.Definition.Filters.Single().Values.ShouldBe([$"{token}-changed"]);
+			record.Report.CreatedBy.ShouldBe(userId);
+			record.Report.LastRunAt.ShouldBe(lastRunBeforeUpdate);
+
+			return true;
+		}, ct);
+	}
+
+	[Fact]
+	[Trait("AC", "322UC3")]
+	public async Task DeleteSavedReportHandler_Creator_GetByIdAsyncReturnsNull()
+	{
+		var ct = TestContext.Current.CancellationToken;
+		var token = Guid.NewGuid().ToString("N");
+
+		await _fixture.ExecuteInScopeAsync(async services =>
+		{
+			await using var connection = _fixture.OpenConnection();
+			var userId = await IdentitySeeder.InsertUserAsync(connection, $"delete-{token}@test.com");
+			_fixture.UserContextMock.SetupGet(m => m.UserId).Returns(userId);
+			_fixture.UserContextMock.SetupGet(m => m.Email).Returns($"delete-{token}@test.com");
+
+			var saveHandler = services.GetRequiredService<SaveReportHandler>();
+			var saved = await saveHandler.HandleAsync(new SaveReportRequest($"{token} report", BuildDefinition(token)), ct);
+
+			var deleteHandler = services.GetRequiredService<DeleteSavedReportHandler>();
+			await deleteHandler.HandleAsync(saved.Id, ct);
+
+			var repository = services.GetRequiredService<ISavedReportRepository>();
+			var record = await repository.GetByIdAsync(saved.Id, ct);
+
+			record.ShouldBeNull();
+
+			return true;
+		}, ct);
+	}
+
+	[Fact]
+	[Trait("AC", "322UC4")]
+	public async Task DeleteSavedReportHandler_NonCreator_ThrowsAndTheRowStillReadsBack()
+	{
+		var ct = TestContext.Current.CancellationToken;
+		var token = Guid.NewGuid().ToString("N");
+
+		await _fixture.ExecuteInScopeAsync(async services =>
+		{
+			await using var connection = _fixture.OpenConnection();
+			var creatorId = await IdentitySeeder.InsertUserAsync(connection, $"owner-{token}@test.com");
+			var otherId = await IdentitySeeder.InsertUserAsync(connection, $"other-{token}@test.com");
+
+			_fixture.UserContextMock.SetupGet(m => m.UserId).Returns(creatorId);
+			_fixture.UserContextMock.SetupGet(m => m.Email).Returns($"owner-{token}@test.com");
+			var saveHandler = services.GetRequiredService<SaveReportHandler>();
+			var saved = await saveHandler.HandleAsync(new SaveReportRequest($"{token} report", BuildDefinition(token)), ct);
+
+			_fixture.UserContextMock.SetupGet(m => m.UserId).Returns(otherId);
+			_fixture.UserContextMock.SetupGet(m => m.Email).Returns($"other-{token}@test.com");
+			var deleteHandler = services.GetRequiredService<DeleteSavedReportHandler>();
+
+			await Should.ThrowAsync<ForbiddenException>(() => deleteHandler.HandleAsync(saved.Id, ct));
+
+			var repository = services.GetRequiredService<ISavedReportRepository>();
+			var record = await repository.GetByIdAsync(saved.Id, ct);
+
+			record.ShouldNotBeNull();
+			record.Report.Name.ShouldBe($"{token} report");
 
 			return true;
 		}, ct);

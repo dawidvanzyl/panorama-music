@@ -41,21 +41,39 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       width: 200px;
     }
-    .saved-reports-table__actions {
-      text-align: right;
+    .saved-reports-table__actions-wrap {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
     }
-    .saved-reports-table__run {
+    .saved-reports-table__run,
+    .saved-reports-table__edit,
+    .saved-reports-table__delete {
       display: inline-flex;
       align-items: center;
-      height: 28px;
-      padding: 0 12px;
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      border-radius: var(--pm-radius);
-      color: var(--pm-text);
-      font-size: 12px;
+      height: 38px;
+      padding: 0 20px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       font-family: inherit;
       cursor: pointer;
+    }
+    .saved-reports-table__run {
+      background: transparent;
+      border: 1px solid var(--pm-accent);
+      color: var(--pm-accent);
+    }
+    .saved-reports-table__edit {
+      background: transparent;
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text);
+    }
+    .saved-reports-table__delete {
+      background: var(--pm-danger, #e05252);
+      border: none;
+      color: #fff;
     }
   `);
 
@@ -124,7 +142,9 @@ export class PmSavedReportsTable extends HTMLElement {
       row.appendChild(lastRunCell);
 
       const actionsCell = document.createElement('td');
-      actionsCell.className = 'saved-reports-table__actions';
+      const actionsWrap = document.createElement('div');
+      actionsWrap.className = 'saved-reports-table__actions-wrap';
+      actionsCell.appendChild(actionsWrap);
       const runButton = document.createElement('button');
       runButton.type = 'button';
       runButton.className = 'saved-reports-table__run';
@@ -138,7 +158,40 @@ export class PmSavedReportsTable extends HTMLElement {
           }),
         );
       });
-      actionsCell.appendChild(runButton);
+      actionsWrap.appendChild(runButton);
+
+      if (report.isOwner) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'saved-reports-table__edit';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', () => {
+          this.dispatchEvent(
+            new CustomEvent('saved-report-edit-requested', {
+              bubbles: true,
+              composed: true,
+              detail: { id: report.id },
+            }),
+          );
+        });
+        actionsWrap.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'saved-reports-table__delete';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+          this.dispatchEvent(
+            new CustomEvent('saved-report-delete-requested', {
+              bubbles: true,
+              composed: true,
+              detail: { id: report.id, name: report.name },
+            }),
+          );
+        });
+        actionsWrap.appendChild(deleteButton);
+      }
+
       row.appendChild(actionsCell);
 
       this.rowsBody.appendChild(row);

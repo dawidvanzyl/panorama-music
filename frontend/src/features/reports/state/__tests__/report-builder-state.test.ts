@@ -393,12 +393,12 @@ describe('canSaveName', { tags: ['321UC1'] }, () => {
 describe('resultActions', { tags: ['321UC3'] }, () => {
   const identity: SavedReportIdentity = { id: '1', name: 'Grade 4 Contacts', createdBy: 'a@test.com', isOwner: false };
 
-  it('offers only Run again and Print for a saved report the viewer does not own', () => {
+  it('offers only Run again and Print for a saved report the viewer did not create', () => {
     expect(resultActions(identity)).toEqual(['runAgain', 'print']);
   });
 
-  it('offers only Run again and Print for a saved report the viewer owns too', () => {
-    expect(resultActions({ ...identity, isOwner: true })).toEqual(['runAgain', 'print']);
+  it('offers the full action set for a saved report the viewer owns', () => {
+    expect(resultActions({ ...identity, isOwner: true })).toEqual(['edit', 'runAgain', 'saveReport', 'print']);
   });
 
   it('offers the full action set for an unsaved report', () => {

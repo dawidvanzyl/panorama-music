@@ -67,4 +67,33 @@ public sealed class SavedReportRepository(IUnitOfWork unitOfWork, IDomainEventCo
 
 		domainEventCollector.Collect(report);
 	}
+
+	public async Task UpdateAsync(SavedReport report, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"reporting.update_saved_report",
+			new
+			{
+				p_saved_report_id = report.SavedReportId,
+				p_name = report.Name,
+				p_definition = report.Definition.ToJson(),
+			},
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(report);
+	}
+
+	public async Task DeleteAsync(SavedReport report, CancellationToken cancellationToken)
+	{
+		var command = CreateCommandDefinition(
+			"reporting.delete_saved_report_by_id",
+			new { p_saved_report_id = report.SavedReportId },
+			Transaction,
+			cancellationToken);
+		await Connection.ExecuteAsync(command);
+
+		domainEventCollector.Collect(report);
+	}
 }

@@ -176,13 +176,13 @@ export function canSaveName(name: string): boolean {
 export type ResultAction = 'edit' | 'runAgain' | 'saveReport' | 'print';
 
 /**
- * The results actions offered, as a pure function of whether the report is
- * saved. Every viewer of a saved report's results sees the same restricted
- * set — Edit report and Save report are never offered on an already-saved
- * report, for the creator or anyone else.
+ * The results actions offered, as a pure function of the report's saved
+ * state and ownership. An unsaved run, or a saved report the viewer created,
+ * offers the full set; a saved report someone else created offers only
+ * Run again and Print.
  */
 export function resultActions(saved: SavedReportIdentity | null): ResultAction[] {
-  return saved === null ? ['edit', 'runAgain', 'saveReport', 'print'] : ['runAgain', 'print'];
+  return saved === null || saved.isOwner ? ['edit', 'runAgain', 'saveReport', 'print'] : ['runAgain', 'print'];
 }
 
 /**
@@ -216,6 +216,7 @@ let _heldDefinition: ReportDefinitionModel | null = null;
 let _heldResult: ReportResultModel | null = null;
 let _heldFields: ReportFieldsModel | null = null;
 let _heldSavedReport: HeldSavedReport | null = null;
+let _heldEditingReport: SavedReportIdentity | null = null;
 
 /** Holds the builder's definition across the Run report -> results -> Edit report round trip. */
 export function holdDefinition(definition: ReportDefinitionModel): void {
@@ -257,11 +258,26 @@ export function takeHeldSavedReport(): HeldSavedReport | null {
   return _heldSavedReport;
 }
 
+/**
+ * Names the owned report an unsaved run's definition belongs to, across the
+ * edit builder -> results -> Edit report / Save report round trip. Cleared
+ * whenever the round trip is not about an owned report's edit, so a later
+ * load never inherits a stale editing context.
+ */
+export function holdEditingReport(saved: SavedReportIdentity | null): void {
+  _heldEditingReport = saved;
+}
+
+export function takeEditingReport(): SavedReportIdentity | null {
+  return _heldEditingReport;
+}
+
 export function clearBuilderState(): void {
   _heldDefinition = null;
   _heldResult = null;
   _heldFields = null;
   _heldSavedReport = null;
+  _heldEditingReport = null;
 }
 
 registerSessionCache(clearBuilderState);

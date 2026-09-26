@@ -41,6 +41,10 @@ export class ReportBuilderPage extends BasePage {
     await this.goto('/#/reports/new');
   }
 
+  async gotoEditReport(id: string): Promise<void> {
+    await this.goto(`/#/reports/${id}/edit`);
+  }
+
   async followReportsBreadcrumb(): Promise<void> {
     await this.breadcrumb.locator('#backLink').click();
   }
@@ -127,6 +131,27 @@ export class ReportBuilderPage extends BasePage {
   /** The `is` value select's own option labels, e.g. to inspect a Datasource's live options. */
   async filterValueOptions(index: number): Promise<string[]> {
     return this.filterRow(index).locator('select.filter-row__value option').allTextContents();
+  }
+
+  /** The attribute select's currently chosen option's own text, e.g. "Student · Grade". */
+  async selectedAttributeLabel(index: number): Promise<string> {
+    return this.filterRow(index)
+      .locator('#attribute')
+      .evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? '');
+  }
+
+  /** The operator select's currently chosen option's own text, e.g. "is". */
+  async selectedOperatorLabel(index: number): Promise<string> {
+    return this.operatorControl(index).evaluate(
+      (el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? ''
+    );
+  }
+
+  /** The `is`-style value select's currently chosen option's own text, e.g. "Grade 4". */
+  async selectedValueLabel(index: number): Promise<string> {
+    return this.filterRow(index)
+      .locator('select.filter-row__value')
+      .evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? '');
   }
 
   checklistToggle(index: number): Locator {

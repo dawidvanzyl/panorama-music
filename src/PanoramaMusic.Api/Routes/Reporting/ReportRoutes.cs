@@ -77,5 +77,32 @@ public static class ReportRoutes
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapPut("/{id:guid}", async (Guid id, SaveReportRequest request, UpdateSavedReportHandler handler, CancellationToken ct) =>
+			{
+				var result = await handler.HandleAsync(id, request, ct);
+				return Results.Ok(result);
+			})
+			.AddEndpointFilter<ValidationFilter<SaveReportRequest>>()
+			.MarkSensitiveResponse()
+			.WithName("UpdateSavedReport")
+			.Produces<SavedReportResult>(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
+
+		group
+			.MapDelete("/{id:guid}", async (Guid id, DeleteSavedReportHandler handler, CancellationToken ct) =>
+			{
+				await handler.HandleAsync(id, ct);
+				return Results.NoContent();
+			})
+			.WithName("DeleteSavedReport")
+			.Produces(StatusCodes.Status204NoContent)
+			.Produces(StatusCodes.Status401Unauthorized)
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status404NotFound);
 	}
 }

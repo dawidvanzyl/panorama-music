@@ -12,4 +12,8 @@ public interface ISavedReportRepository
 	Task<SavedReportRecord?> GetByIdAsync(Guid savedReportId, CancellationToken cancellationToken);
 
 	Task UpdateLastRunAsync(SavedReport report, CancellationToken cancellationToken);
+
+	Task UpdateAsync(SavedReport report, CancellationToken cancellationToken);
+
+	Task DeleteAsync(SavedReport report, CancellationToken cancellationToken);
 }

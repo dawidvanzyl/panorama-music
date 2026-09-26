@@ -9,6 +9,8 @@ import {
   listSavedReportsViaApi,
   getSavedReportViaApi,
   runSavedReportViaApi,
+  updateReportViaApi,
+  deleteReportViaApi,
   type RunReportBody,
 } from '../../fixtures/reports';
 import { switchToPrintMedia } from '../../fixtures/printMedia';
@@ -271,7 +273,12 @@ test.describe('Save report on unsaved results', { tag: ['@11IT21'] }, () => {
     await expect(results.title).toHaveText(`${token} Contacts`);
     await expect(results.breadcrumbName).toHaveText(`${token} Contacts`);
     await expect(results.subline).toContainText(`· Created by ${email}`);
-    expect(await results.offeredActions()).toEqual(['Run again', 'Print']);
+    expect(await results.offeredActions()).toEqual([
+      'Edit report',
+      'Run again',
+      'Save report',
+      'Print',
+    ]);
     await expect(results.headers()).toHaveText(headersBefore);
     await expect(results.allSections()).toHaveCount(sectionCountBefore);
   });
@@ -616,7 +623,9 @@ test.describe(
       expect(await results.offeredActions()).toEqual(['Run again', 'Print']);
     });
 
-    test('the creator also gets exactly Run again and Print', async ({ page }) => {
+    test('the creator also gets exactly Edit report, Run again, Save report, Print', async ({
+      page,
+    }) => {
       const token = uniqueToken();
       await loginAsRoles(page, ['Teacher']);
       const id = await apiSave(page, `${token} Mine`);
@@ -628,7 +637,12 @@ test.describe(
 
       const results = new ReportResultsPage(page);
       await expect(results.subline).toBeVisible();
-      expect(await results.offeredActions()).toEqual(['Run again', 'Print']);
+      expect(await results.offeredActions()).toEqual([
+        'Edit report',
+        'Run again',
+        'Save report',
+        'Print',
+      ]);
     });
   }
 );
@@ -682,10 +696,24 @@ test.describe(
       });
       expect(saveResult.status).toBe(403);
 
+      const updateResult = await updateReportViaApi(page, id, {
+        name: `${token} Hijacked`,
+        definition: MINIMAL_DEFINITION,
+      });
+      expect(updateResult.status).toBe(403);
+
+      const deleteResult = await deleteReportViaApi(page, id);
+      expect(deleteResult.status).toBe(403);
+
       await loginAsRoles(page, ['Teacher']);
       const list = await listSavedReportsViaApi(page);
       const rows = Array.isArray(list.body) ? list.body : [];
       expect(rows.some((r) => r.name === `${token} Intruder`)).toBe(false);
+      expect(rows.some((r) => r.name === `${token} Hijacked`)).toBe(false);
+
+      const read = await getSavedReportViaApi(page, id);
+      expect(read.status).toBe(200);
+      expect(read.body.name).toBe(`${token} Guarded2`);
     });
 
     test('control: a Teacher is allowed', async ({ page }) => {

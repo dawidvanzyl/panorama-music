@@ -8,5 +8,7 @@ public static class SavedReportMessages
 
 	public const string NotFound = "The saved report was not found.";
 
+	public const string NotCreator = "Only the creator of a saved report may change or delete it.";
+
 	public const string RemovedCreator = "(removed)";
 }

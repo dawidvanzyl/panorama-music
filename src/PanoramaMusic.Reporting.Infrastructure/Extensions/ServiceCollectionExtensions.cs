@@ -54,11 +54,15 @@ public static class ServiceCollectionExtensions
 		services.AddScoped<GetSavedReportsHandler>();
 		services.AddScoped<GetSavedReportHandler>();
 		services.AddScoped<RunSavedReportHandler>();
+		services.AddScoped<UpdateSavedReportHandler>();
+		services.AddScoped<DeleteSavedReportHandler>();
 
 		services.AddScoped<IValidator<RunReportRequest>, RunReportRequestValidator>();
 		services.AddScoped<IValidator<SaveReportRequest>, SaveReportRequestValidator>();
 
 		services.AddTransient<IAuditEventTranslator, SavedReportCreatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, SavedReportUpdatedTranslator>();
+		services.AddTransient<IAuditEventTranslator, SavedReportDeletedTranslator>();
 
 		return services;
 	}

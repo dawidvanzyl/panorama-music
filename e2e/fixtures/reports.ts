@@ -308,3 +308,60 @@ export async function runSavedReportViaApi(
     return { status: response.status, body };
   }, id) as Promise<RunSavedReportApiResult>;
 }
+
+export interface UpdateSavedReportApiResult {
+  status: number;
+  body: {
+    id?: string;
+    name?: string;
+    isOwner?: boolean;
+    definition?: {
+      filters: { field: string; operator: string; values: string[] }[];
+      columns: string[];
+    };
+    error?: string;
+  };
+}
+
+/** `PUT /api/reports/{id}`, from the signed-in session — for requests the UI's own controls can't produce. */
+export async function updateReportViaApi(
+  page: Page,
+  id: string,
+  body: SaveReportBody
+): Promise<UpdateSavedReportApiResult> {
+  return page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/reports/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const responseBody = await response.json().catch(() => ({}));
+      return { status: response.status, body: responseBody };
+    },
+    { id, body }
+  ) as Promise<UpdateSavedReportApiResult>;
+}
+
+export interface DeleteSavedReportApiResult {
+  status: number;
+  body: { error?: string };
+}
+
+/** `DELETE /api/reports/{id}`, from the signed-in session. */
+export async function deleteReportViaApi(
+  page: Page,
+  id: string
+): Promise<DeleteSavedReportApiResult> {
+  return page.evaluate(async (id) => {
+    const response = await fetch(`/api/reports/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }, id) as Promise<DeleteSavedReportApiResult>;
+}

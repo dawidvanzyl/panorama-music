@@ -4,7 +4,7 @@ import '../components/pm-save-report-modal';
 import type { PmReportFiltersPanel } from '../components/pm-report-filters-panel';
 import type { PmReportColumnsPanel } from '../components/pm-report-columns-panel';
 import type { PmSaveReportModal } from '../components/pm-save-report-modal';
-import { getFields, runReport, saveReport, ReportsError } from '../services/reports';
+import { getFields, getSavedReport, runReport, saveReport, updateReport, ReportsError } from '../services/reports';
 import {
   createDefinition,
   addFilter,
@@ -21,8 +21,10 @@ import {
   holdResult,
   holdFields,
   holdSavedReport,
+  holdEditingReport,
   takeHeldDefinition,
   takeHeldSavedReport,
+  takeEditingReport,
   sameDefinition,
 } from '../state/report-builder-state';
 import type { ReportDefinitionModel, ReportFieldsModel, SavedReportIdentity } from '../models/report';
@@ -152,6 +154,8 @@ export class PmReportBuilderPage extends HTMLElement {
   private _running = false;
   private _savedIdentity: SavedReportIdentity | null = null;
   private _savedDefinition: ReportDefinitionModel | null = null;
+  private _reportId: string | null = null;
+  private _editing: SavedReportIdentity | null = null;
 
   constructor() {
     super();
@@ -185,7 +189,9 @@ export class PmReportBuilderPage extends HTMLElement {
     this.shadowRoot!.addEventListener('filter-remove-requested', this.handleFilterRemove as EventListener);
     this.shadowRoot!.addEventListener('column-toggle-requested', this.handleColumnToggle as EventListener);
 
-    void this.load();
+    this._reportId = this.getAttribute('report-id');
+
+    void (this._reportId ? this.loadEditing(this._reportId) : this.load());
   }
 
   private async load(): Promise<void> {
@@ -217,6 +223,36 @@ export class PmReportBuilderPage extends HTMLElement {
     }
   }
 
+  /** A non-creator or a missing id is returned to Reports, not shown an inline error: the row offering Edit shouldn't have been there. */
+  private async loadEditing(reportId: string): Promise<void> {
+    try {
+      const [fields, detail] = await Promise.all([getFields(), getSavedReport(reportId)]);
+      if (!detail.identity.isOwner) {
+        window.location.hash = '#/reports';
+        return;
+      }
+
+      this._fields = fields;
+      const editingContext = takeEditingReport();
+      const held = takeHeldDefinition();
+      this._definition = editingContext?.id === reportId && held ? held : detail.definition;
+      this._editing = detail.identity;
+
+      this.errorBanner!.hidden = true;
+      this.body!.hidden = false;
+      this.render();
+    } catch (error: unknown) {
+      if (error instanceof ReportsError && error.status === 404) {
+        window.location.hash = '#/reports';
+        return;
+      }
+      this._fields = null;
+      this.body!.hidden = true;
+      if (this.runButton) this.runButton.disabled = true;
+      this.showError('Could not load report fields. Try again.', true);
+    }
+  }
+
   private showError(message: string, withRetry: boolean): void {
     if (!this.errorBanner) return;
     this.errorBanner.textContent = message;
@@ -225,7 +261,7 @@ export class PmReportBuilderPage extends HTMLElement {
       retry.type = 'button';
       retry.className = 'builder-page__retry';
       retry.textContent = 'Retry';
-      retry.addEventListener('click', () => void this.load());
+      retry.addEventListener('click', () => void (this._reportId ? this.loadEditing(this._reportId) : this.load()));
       this.errorBanner.appendChild(retry);
     }
     this.errorBanner.hidden = false;
@@ -252,9 +288,9 @@ export class PmReportBuilderPage extends HTMLElement {
 
     this.runButton.disabled = this._running || !this._fields || !canRun(this._definition);
 
-    this.saveButton.hidden = this._savedIdentity !== null;
+    this.saveButton.hidden = this._editing === null && this._savedIdentity !== null;
     this.saveButton.disabled = this._running;
-    this.breadcrumbName.textContent = this._savedIdentity?.name ?? 'New report';
+    this.breadcrumbName.textContent = this._editing?.name ?? this._savedIdentity?.name ?? 'New report';
   }
 
   /** Applies a definition change, dropping a held saved identity once the definition it was saved with has diverged. */
@@ -321,17 +357,25 @@ export class PmReportBuilderPage extends HTMLElement {
   };
 
   private handleOpenSaveModal = (): void => {
-    this.saveModal?.show();
+    this.saveModal?.show(this._editing?.name ?? '');
   };
 
   private handleSaveConfirmed = (event: CustomEvent<{ name: string }>): void => {
     this.saveModal?.setBusy(true);
 
-    saveReport(event.detail.name, this._definition)
+    const save = this._editing
+      ? updateReport(this._editing.id, event.detail.name, this._definition)
+      : saveReport(event.detail.name, this._definition);
+
+    save
       .then((identity) => {
-        this._savedIdentity = identity;
-        this._savedDefinition = this._definition;
-        holdSavedReport({ identity, definition: this._definition });
+        if (this._editing) {
+          this._editing = identity;
+        } else {
+          this._savedIdentity = identity;
+          this._savedDefinition = this._definition;
+          holdSavedReport({ identity, definition: this._definition });
+        }
         this.saveModal?.setBusy(false);
         this.saveModal?.close();
         this.render();
@@ -350,6 +394,30 @@ export class PmReportBuilderPage extends HTMLElement {
     if (this._running || !this._fields || !canRun(this._definition)) return;
     this._running = true;
     this.render();
+
+    if (this._editing) {
+      const editing = this._editing;
+      runReport(this._definition)
+        .then((result) => {
+          holdDefinition(this._definition);
+          holdResult(result);
+          holdFields(this._fields!);
+          holdEditingReport(editing);
+          window.location.hash = '#/reports/results';
+        })
+        .catch((error: unknown) => {
+          this._running = false;
+          const message =
+            error instanceof ReportsError && error.status >= 400 && error.status < 500
+              ? error.message
+              : 'Could not run the report. Try again.';
+          this.showError(message, false);
+          this.render();
+        });
+      return;
+    }
+
+    holdEditingReport(null);
 
     if (this._savedIdentity) {
       holdDefinition(this._definition);
