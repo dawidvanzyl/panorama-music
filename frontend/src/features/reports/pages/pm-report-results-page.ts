@@ -25,7 +25,12 @@ import {
   takeHeldResult,
   type ResultAction,
 } from '../state/report-builder-state';
-import type { ReportDefinitionModel, ReportFieldsModel, ReportResultModel, SavedReportIdentity } from '../models/report';
+import type {
+  ReportDefinitionModel,
+  ReportFieldsModel,
+  ReportResultModel,
+  SavedReportIdentity,
+} from '../models/report';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`

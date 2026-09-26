@@ -6,6 +6,8 @@ import {
   listSavedReports,
   saveReport,
   runSavedReport,
+  updateReport,
+  deleteReport,
   clearSavedReportsCache,
 } from '../reports';
 import type { ReportDefinitionModel } from '../../models/report';
@@ -231,5 +233,47 @@ describe('listSavedReports — session cache', { tags: ['321UC4'] }, () => {
     await listSavedReports();
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('updateReport and deleteReport', { tags: ['322UC13'] }, () => {
+  const apiUpdated = {
+    id: '2',
+    name: 'Renamed',
+    createdBy: 'a@test.com',
+    createdAt: '2026-09-21T10:00:00Z',
+    lastRunAt: null,
+    isOwner: true,
+  };
+
+  it('updateReport PUTs to /api/reports/{id} and clears the saved-reports list cache', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ id: '2', name: 'Renamed', createdBy: 'a@test.com', lastRunAt: null, isOwner: true }],
+    });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiUpdated });
+    const identity = await updateReport('2', 'Renamed', { filters: [], columns: ['student.name'] });
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/reports/2', expect.objectContaining({ method: 'PUT' }));
+    expect(identity).toEqual({ id: '2', name: 'Renamed', createdBy: 'a@test.com', isOwner: true });
+
+    await listSavedReports();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('deleteReport DELETEs /api/reports/{id} and clears the saved-reports list cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await deleteReport('2');
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/reports/2', expect.objectContaining({ method: 'DELETE' }));
+
+    await listSavedReports();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
