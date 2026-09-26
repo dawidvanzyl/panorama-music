@@ -1,4 +1,6 @@
 using PanoramaMusic.Reporting.Domain.Enums;
+using PanoramaMusic.Reporting.Domain.Registries;
+using PanoramaMusic.Reporting.Domain.ValueObjects;
 using PanoramaMusic.Reporting.Tests.Fixtures;
 using Shouldly;
 using Xunit;
@@ -8,6 +10,9 @@ namespace PanoramaMusic.Reporting.Tests.Infrastructure;
 public class CourseCollectionReaderTests : IClassFixture<ReportingDatabaseFixture>
 {
 	private readonly ReportingDatabaseFixture _fixture;
+	private readonly StudentFieldRegistry _registry = new();
+	private static readonly IReadOnlyDictionary<ReportDatasource, IReadOnlyList<FieldOption>> _noDatasourceOptions =
+		new Dictionary<ReportDatasource, IReadOnlyList<FieldOption>>();
 
 	public CourseCollectionReaderTests(ReportingDatabaseFixture fixture)
 	{
@@ -15,7 +20,7 @@ public class CourseCollectionReaderTests : IClassFixture<ReportingDatabaseFixtur
 	}
 
 	[Fact]
-	[Trait("AC", "318UC3")]
+	[Trait("AC", "329UC3")]
 	public async Task ReadAsync_StudentWithInstrumentAndTheoryCourses_ReturnsBothCourses()
 	{
 		var ct = TestContext.Current.CancellationToken;
@@ -100,5 +105,45 @@ public class CourseCollectionReaderTests : IClassFixture<ReportingDatabaseFixtur
 			() => inactive.Sources.GetBoolean("teacherExists").ShouldBeTrue(),
 			() => inactive.Sources.GetBoolean("teacherIsActive").ShouldBeFalse(),
 			() => orphan.Sources.GetBoolean("teacherExists").ShouldBeFalse());
+	}
+
+	[Fact]
+	[Trait("AC", "329UC2")]
+	public async Task ReadAsync_InstrumentTypeAndStepTypeFilters_ReturnsOnlyTheCourseMeetingBoth()
+	{
+		var ct = TestContext.Current.CancellationToken;
+		await using var connection = _fixture.OpenConnection();
+		var token = Guid.NewGuid().ToString("N")[..8];
+
+		var teacherId = await StudentSeeder.InsertTeacherAsync(connection, "T", token);
+		var courseAType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
+		var courseBType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
+		var courseCType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
+
+		var studentId = await StudentSeeder.InsertStudentAsync(connection, "S", token, new DateOnly(2015, 1, 1));
+
+		var courseAId = await StudentSeeder.InsertStudentCourseAsync(connection, studentId, courseAType, teacherId);
+		await StudentSeeder.InsertStudentInstrumentAsync(connection, courseAId, "Piano", "Step1A");
+
+		var courseBId = await StudentSeeder.InsertStudentCourseAsync(connection, studentId, courseBType, teacherId);
+		await StudentSeeder.InsertStudentInstrumentAsync(connection, courseBId, "Guitar", "Step1A");
+
+		var courseCId = await StudentSeeder.InsertStudentCourseAsync(connection, studentId, courseCType, teacherId);
+		await StudentSeeder.InsertStudentInstrumentAsync(connection, courseCId, "Piano", "Step2A");
+
+		var definition = ReportDefinition.Create(
+			[
+				new ReportFilterInput("course.instrumentType", "equals", ["Piano"]),
+				new ReportFilterInput("course.stepType", "equals", ["Step1A"]),
+			],
+			["student.name"],
+			_registry,
+			_noDatasourceOptions);
+
+		var records = await _fixture.ReadCollectionAsync(
+			ReportCollection.Course, [studentId], ct, definition.FiltersFor(ReportCollection.Course));
+
+		var record = records.ShouldHaveSingleItem();
+		record.Sources.GetGuid("studentCourseId").ShouldBe(courseAId);
 	}
 }
