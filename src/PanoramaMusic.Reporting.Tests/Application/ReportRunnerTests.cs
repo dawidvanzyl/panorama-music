@@ -46,7 +46,7 @@ public class ReportRunnerTests
 		ShouldlyHelpers.Satisfy(
 			() => layout.Sections.ShouldBeEmpty(),
 			() => collectionReaderMock.Verify(
-				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()),
 				Times.Never),
 			() => _siblingGroupReaderMock.Verify(
 				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
@@ -67,7 +67,7 @@ public class ReportRunnerTests
 		await runner.RunAsync(definition, TestContext.Current.CancellationToken);
 
 		collectionReaderMock.Verify(
-			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()),
 			Times.Never);
 	}
 
@@ -101,7 +101,7 @@ public class ReportRunnerTests
 
 		ShouldlyHelpers.Satisfy(
 			() => extraCurricularReaderMock.Verify(
-				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+				reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()),
 				Times.Never),
 			() => layout.Sections.ShouldAllBe(section => section.Rows.Count == 1));
 	}
@@ -118,19 +118,19 @@ public class ReportRunnerTests
 		var guardianReaderMock = new Mock<ICollectionReader>();
 		guardianReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.Guardian);
 		guardianReaderMock
-			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
 
 		var courseReaderMock = new Mock<ICollectionReader>();
 		courseReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.Course);
 		courseReaderMock
-			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
 
 		var extraCurricularReaderMock = new Mock<ICollectionReader>();
 		extraCurricularReaderMock.SetupGet(reader => reader.Collection).Returns(ReportCollection.ExtraCurricular);
 		extraCurricularReaderMock
-			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()))
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync((IReadOnlyList<CollectionRecord>)[]);
 
 		var definition = ReportDefinition.Create(
@@ -152,13 +152,14 @@ public class ReportRunnerTests
 			reader => reader.ReadAsync(
 				It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 50 && expectedIds.All(ids.Contains)),
 				It.IsAny<IReadOnlyList<ColumnAttribute>>(),
+				It.IsAny<IReadOnlyList<ReportFilter>>(),
 				It.IsAny<CancellationToken>()),
 			Times.Once);
 		courseReaderMock.Verify(
-			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()),
 			Times.Once);
 		extraCurricularReaderMock.Verify(
-			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<CancellationToken>()),
+			reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyList<ColumnAttribute>>(), It.IsAny<IReadOnlyList<ReportFilter>>(), It.IsAny<CancellationToken>()),
 			Times.Once);
 		_siblingGroupReaderMock.Verify(
 			reader => reader.ReadAsync(
