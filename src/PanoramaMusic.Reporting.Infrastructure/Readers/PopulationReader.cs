@@ -11,14 +11,14 @@ namespace PanoramaMusic.Reporting.Infrastructure.Readers;
 
 /// <summary>
 /// The issue's sanctioned exception to "repositories call PostgreSQL
-/// functions": composes the population SQL at run time, but every
-/// identifier, join and operator fragment comes only from
-/// <see cref="StudentSqlCatalog"/>, and every user-supplied value is bound
-/// through <see cref="DynamicParameters"/> — no request text is ever
-/// concatenated into the SQL. Resolves its connection and transaction only
-/// from <see cref="IUnitOfWork"/>; begins or commits nothing.
+/// functions": composes the population SQL at run time, but every fragment
+/// comes from <see cref="StudentSqlCatalog"/>, composed by
+/// <see cref="ReportPredicateComposer"/> over the collection scopes, and
+/// every value is bound through <see cref="DynamicParameters"/> — no request
+/// text is ever concatenated into the SQL. Resolves its connection and
+/// transaction only from <see cref="IUnitOfWork"/>; begins or commits nothing.
 /// </summary>
-public sealed class PopulationReader(IUnitOfWork unitOfWork, StudentSqlCatalog catalog) : IPopulationReader
+public sealed class PopulationReader(IUnitOfWork unitOfWork, StudentSqlCatalog catalog, ReportPredicateComposer composer) : IPopulationReader
 {
 	private const string _siblingStatsCte = """
 		WITH sibling_stats AS (
@@ -51,14 +51,8 @@ public sealed class PopulationReader(IUnitOfWork unitOfWork, StudentSqlCatalog c
 
 		var parameters = new DynamicParameters();
 		var whereClauses = new List<string>();
-		for (var i = 0; i < definition.Filters.Count; i++)
+		foreach (var fragment in composer.ComposePopulationPredicates(definition.Filters, parameters))
 		{
-			var filter = definition.Filters[i];
-			var builder = catalog.TryGetPredicateBuilder(filter.Field, filter.Operator)
-				?? throw new InvalidOperationException(
-					$"No predicate is registered for filter '{filter.Field}'/'{filter.Operator}'.");
-
-			var fragment = builder($"f{i}", parameters, filter.Values);
 			whereClauses.Add(fragment.Sql);
 			needsSiblingStats |= fragment.RequiresSiblingStats;
 		}

@@ -2,8 +2,9 @@ namespace PanoramaMusic.Reporting.Infrastructure.Sql;
 
 /// <summary>
 /// The Guardian collection's fixed, set-based query: every source the
-/// Guardian columns need, for the whole population in one call — no
-/// request-derived fragment.
+/// Guardian columns need, for the whole population in one call. The only
+/// addition <see cref="Compose"/> makes is a registry-composed record
+/// condition whose values are bound.
 /// </summary>
 internal static class GuardianCollectionSql
 {
@@ -15,6 +16,9 @@ internal static class GuardianCollectionSql
 		JOIN students.guardian_relationships gr ON gr.guardian_relationship_id = g.guardian_relationship_id
 		WHERE sg.student_id = ANY(@studentIds)
 		""";
+
+	public static string Compose(string? recordCondition) =>
+		recordCondition is null ? Query : $"{Query} AND {recordCondition}";
 
 	/// <summary>SQL column alias -> the logical source name it resolves to.</summary>
 	public static readonly IReadOnlyDictionary<string, string> Sources = new Dictionary<string, string>

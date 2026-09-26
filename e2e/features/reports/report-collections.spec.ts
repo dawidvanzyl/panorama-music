@@ -102,6 +102,14 @@ async function fatherRelationshipId(page: Page): Promise<string> {
   return guardianRelationshipIdByName(page, 'Father');
 }
 
+/** Looks up a cell by the column's own header text, so a scenario projecting a different column set each time never relies on a fixed cell position. */
+async function columnIndex(results: ReportResultsPage, headerText: string): Promise<number> {
+  const headerTexts = await results.headers().allTextContents();
+  const index = headerTexts.indexOf(headerText);
+  expect(index).toBeGreaterThanOrEqual(0);
+  return index;
+}
+
 // ---------------------------------------------------------------------------
 // 11IT8 — Course · Teacher filter
 // ---------------------------------------------------------------------------
@@ -639,18 +647,64 @@ test.describe(
 );
 
 // ---------------------------------------------------------------------------
-// 11IT33 — filter/project independence: Guardian · Married
+// 11IT33 — a collection's filters also narrow the records it projects
 // ---------------------------------------------------------------------------
 
 test.describe(
-  'Report Builder — a Guardian · Married filter includes the student once with every guardian listed',
+  'Report Builder — a Guardian · Married filter lists only the married guardian',
   { tag: ['@11IT33'] },
   () => {
-    test('S1 — one matching guardian includes the student once, with every guardian listed', async ({
+    test('S1 — only the married guardian is listed', async ({ page }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const target = await seedEnrollmentTarget(page);
+      const fatherId = await fatherRelationshipId(page);
+
+      const eveId = await seedReportStudent(page, target, { firstName: 'Eve', lastName: token });
+      const g1 = await addGuardianToStudent(page, eveId, {
+        firstName: 'G1',
+        surname: token,
+        married: true,
+        guardianRelationshipId: fatherId,
+      });
+      await addGuardianToStudent(page, eveId, {
+        firstName: 'G2',
+        surname: token,
+        married: false,
+        guardianRelationshipId: fatherId,
+      });
+
+      const fayId = await seedReportStudent(page, target, { firstName: 'Fay', lastName: token });
+      await addGuardianToStudent(page, fayId, { married: false, guardianRelationshipId: fatherId });
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Guardian · Married');
+      await builder.clickBooleanToggle(0, 'Yes');
+      await addNameFilter(builder, 1, token);
+      await builder.tickColumnByKey('guardian.name');
+
+      const results = await runAndGetResults(page, builder);
+
+      await expect(results.allSections()).toHaveCount(1);
+      await expect(results.sectionFor(`Eve ${token}`)).toHaveCount(1);
+      await expect(results.sectionFor(`Fay ${token}`)).toHaveCount(0);
+
+      const rows = results.sectionRows(`Eve ${token}`);
+      await expect(rows).toHaveCount(1);
+      const guardianColumn = await columnIndex(results, 'Guardian');
+      await expect(results.cells(rows.nth(0)).nth(guardianColumn)).toHaveText(
+        `${g1.fullName} · Father`
+      );
+      await expect(results.rows().filter({ hasText: 'G2' })).toHaveCount(0);
+      await expect(results.subline).toContainText(/^1 student/);
+    });
+
+    test('S2 — contrast: without the Married filter, both guardians are listed', async ({
       page,
     }) => {
       const token = uniqueToken();
-      const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
       const fatherId = await fatherRelationshipId(page);
 
@@ -668,37 +722,28 @@ test.describe(
         guardianRelationshipId: fatherId,
       });
 
-      const fayId = await seedReportStudent(page, target, { firstName: 'Fay', lastName: token });
-      await addGuardianToStudent(page, fayId, { married: false, guardianRelationshipId: fatherId });
-
-      await builder.addFilter();
-      await builder.chooseAttribute(0, 'Guardian · Married');
-      await builder.clickBooleanToggle(0, 'Yes');
-      await addNameFilter(builder, 1, token);
+      const builder = await openBuilderFrom(reportsPage, page);
+      await addNameFilter(builder, 0, token);
       await builder.tickColumnByKey('guardian.name');
 
       const results = await runAndGetResults(page, builder);
 
-      await expect(results.allSections()).toHaveCount(1);
-      await expect(results.sectionFor(`Eve ${token}`)).toHaveCount(1);
-      await expect(results.sectionFor(`Fay ${token}`)).toHaveCount(0);
-
       const rows = results.sectionRows(`Eve ${token}`);
       await expect(rows).toHaveCount(2);
+      const guardianColumn = await columnIndex(results, 'Guardian');
       const guardianCells = [
-        await results.cells(rows.nth(0)).nth(1).textContent(),
-        await results.cells(rows.nth(1)).nth(1).textContent(),
+        await results.cells(rows.nth(0)).nth(guardianColumn).textContent(),
+        await results.cells(rows.nth(1)).nth(guardianColumn).textContent(),
       ];
       expect(guardianCells.sort()).toEqual(
         [`${g1.fullName} · Father`, `${g2.fullName} · Father`].sort()
       );
-      await expect(results.subline).toContainText(/^1 student/);
     });
   }
 );
 
 // ---------------------------------------------------------------------------
-// 11IT34 — filter/project independence: Guardian and Course Type together
+// 11IT34 — unfiltered Guardian and Course records zip by position, never cross-multiplied
 // ---------------------------------------------------------------------------
 
 test.describe(
@@ -769,18 +814,16 @@ test.describe(
 );
 
 // ---------------------------------------------------------------------------
-// 11IT35 — filter/project independence: Course Type filter, Course Type projected
+// 11IT35 — a collection's filters also narrow the records it projects
 // ---------------------------------------------------------------------------
 
 test.describe(
-  'Report Builder — a Course Type filter includes the student once with every course listed',
+  'Report Builder — a Course Type filter lists only the matching course type',
   { tag: ['@11IT35'] },
   () => {
-    test('S1 — the filter selects the student; the projection lists all their courses', async ({
-      page,
-    }) => {
+    test('S1 — only the Theory course is listed', async ({ page }) => {
       const token = uniqueToken();
-      const builder = await openBuilder(page, ['Teacher', 'Coordinator']);
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
       const target = await seedEnrollmentTarget(page);
       const theoryCourseId = await seedTheoryCourse(page);
       const guitarCourseId = await seedInstrumentCourse(page, 'Hour');
@@ -812,6 +855,7 @@ test.describe(
         ],
       });
 
+      const builder = await openBuilderFrom(reportsPage, page);
       await builder.addFilter();
       await builder.chooseAttribute(0, 'Course · Course Type');
       await builder.selectListValue(0, 'Theory');
@@ -825,9 +869,52 @@ test.describe(
       await expect(results.sectionFor(`Ida ${token}`)).toHaveCount(0);
 
       const rows = results.sectionRows(`Hal ${token}`);
+      await expect(rows).toHaveCount(1);
+      const courseTypeColumn = await columnIndex(results, 'Course Type');
+      await expect(results.cells(rows.nth(0)).nth(courseTypeColumn)).toHaveText('Theory');
+      await expect(results.rows().filter({ hasText: 'Instrument' })).toHaveCount(0);
+    });
+
+    test('S2 — "is any of" keeps its meaning within the record', async ({ page }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const target = await seedEnrollmentTarget(page);
+      const theoryCourseId = await seedTheoryCourse(page);
+      const guitarCourseId = await seedInstrumentCourse(page, 'Hour');
+
+      await seedReportStudent(page, target, {
+        firstName: 'Hal',
+        lastName: token,
+        enrolments: [
+          { courseId: theoryCourseId, teacherId: target.teacherId, stepType: 'Step2A' },
+          {
+            courseId: guitarCourseId,
+            teacherId: target.teacherId,
+            instrumentType: 'Guitar',
+            stepType: 'Step2A',
+          },
+        ],
+      });
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Course · Course Type');
+      await builder.chooseOperator(0, 'is any of');
+      await builder.tickChecklistOptions(0, ['Theory', 'Instrument']);
+      await builder.closeChecklist();
+      await addNameFilter(builder, 1, token);
+      await builder.tickColumnByKey('course.courseType');
+
+      const results = await runAndGetResults(page, builder);
+
+      const rows = results.sectionRows(`Hal ${token}`);
       await expect(rows).toHaveCount(2);
-      await expect(results.cells(rows.nth(0)).nth(1)).toHaveText('Theory');
-      await expect(results.cells(rows.nth(1)).nth(1)).toHaveText('Instrument');
+      const courseTypeColumn = await columnIndex(results, 'Course Type');
+      const courseTypeCells = [
+        await results.cells(rows.nth(0)).nth(courseTypeColumn).textContent(),
+        await results.cells(rows.nth(1)).nth(courseTypeColumn).textContent(),
+      ];
+      expect(courseTypeCells.sort()).toEqual(['Instrument', 'Theory']);
     });
   }
 );
@@ -892,7 +979,7 @@ test.describe(
       await expect(results.subline).toContainText(/^2 students/);
     });
 
-    test('S2 — contrast: projecting the collection lists every activity, whatever the filter', async ({
+    test('S2 — projecting the filtered collection lists only the matching activity', async ({
       page,
     }) => {
       const token = uniqueToken();
@@ -910,16 +997,288 @@ test.describe(
       const results = await runAndGetResults(page, builder);
 
       const joRows = results.sectionRows(`Jo ${token}`);
-      await expect(joRows).toHaveCount(2);
-      const joActivities = [
-        await results.cells(joRows.nth(0)).last().textContent(),
-        await results.cells(joRows.nth(1)).last().textContent(),
-      ];
-      expect(joActivities).toEqual([`Art ${token}`, `Band ${token}`]);
+      await expect(joRows).toHaveCount(1);
+      await expect(results.cells(joRows.nth(0)).last()).toHaveText(`Band ${token}`);
+      await expect(results.sectionFor(`Jo ${token}`)).not.toContainText(`Art ${token}`);
 
       const kimRows = results.sectionRows(`Kim ${token}`);
       await expect(kimRows).toHaveCount(1);
       await expect(results.cells(kimRows.nth(0)).last()).toHaveText(`Band ${token}`);
+
+      await expect(results.sectionFor(`Lee ${token}`)).toHaveCount(0);
+      await expect(results.sectionFor(`Max ${token}`)).toHaveCount(0);
+    });
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 11IT44 — a student is excluded when two filters on one collection are met
+// only by different records
+// ---------------------------------------------------------------------------
+
+test.describe(
+  'Report Builder — two Guardian filters met only by different guardians exclude the student',
+  { tag: ['@11IT44'] },
+  () => {
+    async function seedSplitGuardiansFixture(page: Page, token: string, fatherId: string) {
+      const target = await seedEnrollmentTarget(page);
+
+      const annId = await seedReportStudent(page, target, { firstName: 'Ann', lastName: token });
+      await addGuardianToStudent(page, annId, {
+        firstName: 'G1',
+        surname: token,
+        receivesCorrespondence: true,
+        responsibleForPayment: false,
+        guardianRelationshipId: fatherId,
+      });
+      await addGuardianToStudent(page, annId, {
+        firstName: 'G2',
+        surname: token,
+        receivesCorrespondence: false,
+        responsibleForPayment: true,
+        guardianRelationshipId: fatherId,
+      });
+
+      return target;
+    }
+
+    test('S1 — two filters met only by different guardians exclude the student', async ({
+      page,
+    }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const fatherId = await fatherRelationshipId(page);
+      const target = await seedSplitGuardiansFixture(page, token, fatherId);
+
+      const benId = await seedReportStudent(page, target, { firstName: 'Ben', lastName: token });
+      await addGuardianToStudent(page, benId, {
+        receivesCorrespondence: true,
+        responsibleForPayment: true,
+        guardianRelationshipId: fatherId,
+      });
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Guardian · Receives Correspondence');
+      await builder.clickBooleanToggle(0, 'Yes');
+      await builder.addFilter();
+      await builder.chooseAttribute(1, 'Guardian · Responsible For Payment');
+      await builder.clickBooleanToggle(1, 'Yes');
+      await addNameFilter(builder, 2, token);
+
+      const results = await runAndGetResults(page, builder);
+
+      await expect(results.allSections()).toHaveCount(1);
+      await expect(results.sectionFor(`Ben ${token}`)).toHaveCount(1);
+      await expect(results.sectionFor(`Ann ${token}`)).toHaveCount(0);
+      await expect(results.subline).toContainText(/^1 student/);
+    });
+
+    test('S2 — boundary: each filter alone still includes Ann', async ({ page }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const fatherId = await fatherRelationshipId(page);
+      await seedSplitGuardiansFixture(page, token, fatherId);
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Guardian · Receives Correspondence');
+      await builder.clickBooleanToggle(0, 'Yes');
+      await addNameFilter(builder, 1, token);
+
+      const results = await runAndGetResults(page, builder);
+      await expect(results.sectionFor(`Ann ${token}`)).toHaveCount(1);
+
+      await results.editReport();
+      await builder.chooseAttribute(0, 'Guardian · Responsible For Payment');
+      await builder.clickBooleanToggle(0, 'Yes');
+
+      const resultsAgain = new ReportResultsPage(page);
+      await builder.runReport();
+      await expect(resultsAgain.subline).toBeVisible();
+      await expect(resultsAgain.sectionFor(`Ann ${token}`)).toHaveCount(1);
+    });
+
+    test('S3 — the excluded student is not rescued by projecting the Guardian column', async ({
+      page,
+    }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const fatherId = await fatherRelationshipId(page);
+      const target = await seedSplitGuardiansFixture(page, token, fatherId);
+
+      const benId = await seedReportStudent(page, target, { firstName: 'Ben', lastName: token });
+      const gBen = await addGuardianToStudent(page, benId, {
+        receivesCorrespondence: true,
+        responsibleForPayment: true,
+        guardianRelationshipId: fatherId,
+      });
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Guardian · Receives Correspondence');
+      await builder.clickBooleanToggle(0, 'Yes');
+      await builder.addFilter();
+      await builder.chooseAttribute(1, 'Guardian · Responsible For Payment');
+      await builder.clickBooleanToggle(1, 'Yes');
+      await addNameFilter(builder, 2, token);
+      await builder.tickColumnByKey('guardian.name');
+
+      const results = await runAndGetResults(page, builder);
+
+      await expect(results.allSections()).toHaveCount(1);
+      await expect(results.sectionFor(`Ann ${token}`)).toHaveCount(0);
+      const rows = results.sectionRows(`Ben ${token}`);
+      await expect(rows).toHaveCount(1);
+      const guardianColumn = await columnIndex(results, 'Guardian');
+      await expect(results.cells(rows.nth(0)).nth(guardianColumn)).toHaveText(
+        `${gBen.fullName} · Father`
+      );
+      await expect(results.rows().filter({ hasText: 'G1' })).toHaveCount(0);
+      await expect(results.rows().filter({ hasText: 'G2' })).toHaveCount(0);
+    });
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 11IT45 — filters on multiple collections narrow only their own collection
+// and never cross-multiply
+// ---------------------------------------------------------------------------
+
+test.describe(
+  'Report Builder — Course and Guardian filters each narrow only their own collection, zipped into one row',
+  { tag: ['@11IT45'] },
+  () => {
+    async function seedCalFixture(page: Page, token: string, fatherId: string) {
+      const target1 = await seedEnrollmentTarget(page);
+      const target2 = await seedEnrollmentTarget(page);
+      const pianoCourseId = await seedInstrumentCourse(page, 'HalfHour');
+      const theoryCourseId = await seedTheoryCourse(page);
+
+      const calId = await seedReportStudent(page, target1, {
+        firstName: 'Cal',
+        lastName: token,
+        enrolments: [
+          {
+            courseId: pianoCourseId,
+            teacherId: target1.teacherId,
+            instrumentType: 'Piano',
+            stepType: 'Step1A',
+          },
+          { courseId: theoryCourseId, teacherId: target2.teacherId, stepType: 'Step1A' },
+        ],
+      });
+
+      const gBoth = await addGuardianToStudent(page, calId, {
+        firstName: 'GBoth',
+        surname: token,
+        receivesCorrespondence: true,
+        responsibleForPayment: true,
+        guardianRelationshipId: fatherId,
+      });
+      await addGuardianToStudent(page, calId, {
+        firstName: 'GCorr',
+        surname: token,
+        receivesCorrespondence: true,
+        responsibleForPayment: false,
+        guardianRelationshipId: fatherId,
+      });
+      await addGuardianToStudent(page, calId, {
+        firstName: 'GPay',
+        surname: token,
+        receivesCorrespondence: false,
+        responsibleForPayment: true,
+        guardianRelationshipId: fatherId,
+      });
+
+      return { target1, target2, gBoth };
+    }
+
+    async function tickFiveColumns(builder: ReportBuilderPage): Promise<void> {
+      await builder.tickColumnByKey('guardian.name');
+      await builder.tickColumnByKey('guardian.receivesCorrespondence');
+      await builder.tickColumnByKey('guardian.responsibleForPayment');
+      await builder.tickColumnByKey('course.courseType');
+      await builder.tickColumnByKey('course.teacher');
+    }
+
+    test('S1 — one guardian and the Instrument course, in one row', async ({ page }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const fatherId = await fatherRelationshipId(page);
+      const { target1, gBoth } = await seedCalFixture(page, token, fatherId);
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Course · Course Type');
+      await builder.selectListValue(0, 'Instrument');
+      await builder.addFilter();
+      await builder.chooseAttribute(1, 'Guardian · Responsible For Payment');
+      await builder.clickBooleanToggle(1, 'Yes');
+      await builder.addFilter();
+      await builder.chooseAttribute(2, 'Guardian · Receives Correspondence');
+      await builder.clickBooleanToggle(2, 'Yes');
+      await addNameFilter(builder, 3, token);
+      await tickFiveColumns(builder);
+
+      const results = await runAndGetResults(page, builder);
+
+      await expect(results.allSections()).toHaveCount(1);
+      const rows = results.sectionRows(`Cal ${token}`);
+      await expect(rows).toHaveCount(1);
+      const cells = results.cells(rows.nth(0));
+
+      await expect(cells.nth(await columnIndex(results, 'Guardian'))).toHaveText(
+        `${gBoth.fullName} · Father`
+      );
+      await expect(cells.nth(await columnIndex(results, 'Receives Correspondence'))).toHaveText(
+        'Yes'
+      );
+      await expect(cells.nth(await columnIndex(results, 'Responsible For Payment'))).toHaveText(
+        'Yes'
+      );
+      await expect(cells.nth(await columnIndex(results, 'Course Type'))).toHaveText('Instrument');
+      await expect(cells.nth(await columnIndex(results, 'Teacher'))).toHaveText(
+        target1.teacherName
+      );
+
+      const sectionText = results.sectionFor(`Cal ${token}`);
+      await expect(sectionText).not.toContainText('GCorr');
+      await expect(sectionText).not.toContainText('GPay');
+      await expect(sectionText).not.toContainText('Theory');
+    });
+
+    test("S2 — filters on one collection don't narrow another: unfiltered Course lists both", async ({
+      page,
+    }) => {
+      const token = uniqueToken();
+      const reportsPage = await loginForReports(page, ['Teacher', 'Coordinator']);
+      const fatherId = await fatherRelationshipId(page);
+      const { gBoth } = await seedCalFixture(page, token, fatherId);
+
+      const builder = await openBuilderFrom(reportsPage, page);
+      await builder.addFilter();
+      await builder.chooseAttribute(0, 'Guardian · Responsible For Payment');
+      await builder.clickBooleanToggle(0, 'Yes');
+      await builder.addFilter();
+      await builder.chooseAttribute(1, 'Guardian · Receives Correspondence');
+      await builder.clickBooleanToggle(1, 'Yes');
+      await addNameFilter(builder, 2, token);
+      await tickFiveColumns(builder);
+
+      const results = await runAndGetResults(page, builder);
+
+      const rows = results.sectionRows(`Cal ${token}`);
+      await expect(rows).toHaveCount(2);
+      const courseTypeColumn = await columnIndex(results, 'Course Type');
+      const guardianColumn = await columnIndex(results, 'Guardian');
+
+      await expect(results.cells(rows.nth(0)).nth(courseTypeColumn)).toHaveText('Theory');
+      await expect(results.cells(rows.nth(1)).nth(courseTypeColumn)).toHaveText('Instrument');
+      await expect(results.cells(rows.nth(0)).nth(guardianColumn)).toHaveText(
+        `${gBoth.fullName} · Father`
+      );
+      await expect(results.cells(rows.nth(1)).nth(guardianColumn)).toHaveText('');
     });
   }
 );

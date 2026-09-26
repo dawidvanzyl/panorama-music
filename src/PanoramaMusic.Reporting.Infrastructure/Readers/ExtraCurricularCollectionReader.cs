@@ -9,21 +9,23 @@ using System.Data;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Readers;
 
-/// <summary>Reads every Extra-Curricular record of a whole population in one set-based query.</summary>
-public sealed class ExtraCurricularCollectionReader(IUnitOfWork unitOfWork) : ICollectionReader
+/// <summary>Reads the population's Extra-Curricular records that satisfy every Extra-Curricular filter, in one set-based query.</summary>
+public sealed class ExtraCurricularCollectionReader(IUnitOfWork unitOfWork, ReportPredicateComposer composer) : ICollectionReader
 {
 	public ReportCollection Collection => ReportCollection.ExtraCurricular;
 
 	public async Task<IReadOnlyList<CollectionRecord>> ReadAsync(
 		IReadOnlyCollection<Guid> studentIds,
 		IReadOnlyList<ColumnAttribute> columns,
+		IReadOnlyList<ReportFilter> filters,
 		CancellationToken cancellationToken)
 	{
 		var parameters = new DynamicParameters();
 		parameters.Add("studentIds", studentIds.ToArray());
+		var condition = composer.ComposeRecordCondition(Collection, filters, parameters);
 
 		var command = new CommandDefinition(
-			ExtraCurricularCollectionSql.Query, parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
+			ExtraCurricularCollectionSql.Compose(condition), parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
 		var rows = await unitOfWork.Connection.QueryAsync(command);
 
 		return [.. rows.Select(row => ((IDictionary<string, object>)row).ToCollectionRecord(ExtraCurricularCollectionSql.Sources))];

@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
 
 		services.AddSingleton(registry);
 		services.AddSingleton(catalog);
+		services.AddSingleton<ReportPredicateComposer>();
 		services.AddSingleton<ReportLayoutBuilder>();
 		services.AddSingleton<SiblingBadgeResolver>();
 
