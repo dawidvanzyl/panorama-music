@@ -182,7 +182,7 @@ test.describe(
       await expect(builder.breadcrumbName).toHaveText(`${token} Contacts`);
       await expect(builder.filterRows()).toHaveCount(2);
       expect(await builder.selectedAttributeLabel(0)).toBe('Student · Grade');
-      expect(await builder.selectedOperatorLabel(0)).toBe('equals');
+      expect(await builder.selectedOperatorLabel(0)).toBe('is');
       expect(await builder.selectedValueLabel(0)).toBe('Grade 4');
       expect(await builder.selectedAttributeLabel(1)).toBe('Student · Name');
       expect(await builder.selectedOperatorLabel(1)).toBe('contains');
@@ -532,7 +532,7 @@ test.describe(
       await loginAsRoles(page, ['Teacher']);
       const id = await apiSave(page, `${token} Owned`, {
         filters: [{ field: 'student.grade', operator: 'equals', values: ['Grade4'] }],
-        columns: ['student.name', 'course.name'],
+        columns: ['student.name', 'student.class'],
       });
       await loginAsRoles(page, ['Teacher']);
       return { token, id };
@@ -555,7 +555,7 @@ test.describe(
       expect(read.body.definition?.filters).toEqual([
         { field: 'student.grade', operator: 'equals', values: ['Grade4'] },
       ]);
-      expect(read.body.definition?.columns).toEqual(['student.name', 'course.name']);
+      expect(read.body.definition?.columns).toEqual(['student.name', 'student.class']);
 
       const list = await listSavedReportsViaApi(page);
       const rows = Array.isArray(list.body) ? list.body : [];
