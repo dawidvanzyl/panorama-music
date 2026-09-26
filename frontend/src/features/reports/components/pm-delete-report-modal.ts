@@ -44,12 +44,20 @@ styles.replaceSync(`
     .modal__actions {
       gap: 10px;
     }
+    .modal__btn {
+      box-sizing: border-box;
+      height: 48px;
+      padding: 0 24px;
+      font-family: inherit;
+      letter-spacing: -0.01em;
+      line-height: 1.4;
+    }
     .modal__btn--cancel {
       color: var(--pm-text);
     }
     .modal__btn--delete {
       background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      border: none;
       color: #fff;
     }
     .modal__btn--delete:hover:not(:disabled) {
