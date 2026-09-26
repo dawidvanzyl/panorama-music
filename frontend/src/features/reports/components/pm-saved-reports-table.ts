@@ -42,7 +42,9 @@ styles.replaceSync(`
       width: 200px;
     }
     .saved-reports-table__actions {
-      text-align: right;
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
     }
     .saved-reports-table__run,
     .saved-reports-table__edit,
@@ -51,21 +53,21 @@ styles.replaceSync(`
       align-items: center;
       height: 28px;
       padding: 0 12px;
-      background: transparent;
-      border: 1px solid var(--pm-border);
       border-radius: var(--pm-radius);
-      color: var(--pm-text);
       font-size: 12px;
       font-family: inherit;
       cursor: pointer;
-      margin-left: 8px;
     }
-    .saved-reports-table__run {
-      margin-left: 0;
+    .saved-reports-table__run,
+    .saved-reports-table__edit {
+      background: transparent;
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text);
     }
     .saved-reports-table__delete {
-      color: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
+      background: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger, #e05252);
+      color: #fff;
     }
   `);
 

@@ -272,13 +272,7 @@ export class PmReportResultsPage extends HTMLElement {
     return this._result?.savedReport?.name ?? this._editing?.name ?? 'New report';
   }
 
-  /**
-   * The owned report these results are about, if any: the saved report
-   * itself when the viewer created it, or the edit builder's unsaved run
-   * carrying an owned editing context. Null for a plain unsaved run or a
-   * saved report the viewer did not create — Edit report and Save report
-   * fall back to their create-new behaviour in that case.
-   */
+  /** Null falls Edit report and Save report back to their create-new behaviour. */
   private ownedTarget(): SavedReportIdentity | null {
     const saved = this._result?.savedReport ?? null;
     return saved?.isOwner ? saved : this._editing;

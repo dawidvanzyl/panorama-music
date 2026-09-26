@@ -253,7 +253,7 @@ export function clearSavedReportsCache(): void {
 
 registerSessionCache(clearSavedReportsCache);
 
-/** The Reports page's list, cached for the browser session. Cleared by saving or running a report, and on sign-in. */
+/** The Reports page's list, cached for the browser session. Cleared by saving, updating, deleting or running a report, and on sign-in. */
 export async function listSavedReports(): Promise<SavedReportSummary[]> {
   if (_savedReportsCache) return _savedReportsCache;
 

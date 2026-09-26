@@ -223,13 +223,7 @@ export class PmReportBuilderPage extends HTMLElement {
     }
   }
 
-  /**
-   * Edit mode: loads the saved report's own definition and identity rather
-   * than the new-builder defaults. A non-creator, or an id that no longer
-   * exists, is returned to the Reports page rather than shown an inline
-   * error — reaching this address at all means the row that would have
-   * offered Edit shouldn't have been there.
-   */
+  /** A non-creator or a missing id is returned to Reports, not shown an inline error: the row offering Edit shouldn't have been there. */
   private async loadEditing(reportId: string): Promise<void> {
     try {
       const [fields, detail] = await Promise.all([getFields(), getSavedReport(reportId)]);

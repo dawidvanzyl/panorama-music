@@ -8,6 +8,11 @@ styles.replaceSync(`
     }
     .modal__card {
       max-width: 440px;
+      padding: 32px;
+      border-radius: 12px;
+    }
+    .modal__header {
+      gap: 14px;
     }
     .modal__icon-circle {
       display: flex;
@@ -17,10 +22,19 @@ styles.replaceSync(`
       height: 44px;
       border-radius: 50%;
       background: color-mix(in srgb, var(--pm-danger, #e05252) 15%, transparent);
+      flex-shrink: 0;
     }
-    .modal__icon,
-    .modal__title {
+    .modal__icon {
       color: var(--pm-danger, #e05252);
+    }
+    .modal__title {
+      color: var(--pm-text);
+    }
+    .modal__body {
+      color: var(--pm-text);
+    }
+    .modal__btn--cancel {
+      color: var(--pm-text);
     }
     .modal__btn--delete {
       background: var(--pm-danger, #e05252);

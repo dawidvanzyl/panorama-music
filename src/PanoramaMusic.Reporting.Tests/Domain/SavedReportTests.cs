@@ -19,6 +19,9 @@ public class SavedReportTests
 	private static ReportDefinition CreateDefinition() =>
 		ReportDefinition.Create([], ["student.name"], _registry, _noDatasourceOptions);
 
+	private static ReportDefinition CreateOtherDefinition() =>
+		ReportDefinition.Create([], ["student.name", "student.class"], _registry, _noDatasourceOptions);
+
 	[Theory]
 	[Trait("AC", "321UC1")]
 	[InlineData("")]
@@ -117,12 +120,14 @@ public class SavedReportTests
 	public void Update_ByNonCreator_ThrowsForbiddenExceptionAndLeavesReportUnchanged()
 	{
 		var createdBy = Guid.NewGuid();
-		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", CreateDefinition(), createdBy, DateTime.UtcNow);
+		var originalDefinition = CreateDefinition();
+		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", originalDefinition, createdBy, DateTime.UtcNow);
 		report.DrainEvents();
 
-		Should.Throw<ForbiddenException>(() => report.Update(Guid.NewGuid(), "Hijacked", CreateDefinition()));
+		Should.Throw<ForbiddenException>(() => report.Update(Guid.NewGuid(), "Hijacked", CreateOtherDefinition()));
 
 		report.Name.ShouldBe("Grade 4 Contacts");
+		report.Definition.Columns.ShouldBe(StoredReportDefinition.From(originalDefinition).Columns);
 		report.DrainEvents().ShouldBeEmpty();
 	}
 
@@ -157,12 +162,14 @@ public class SavedReportTests
 	public void Update_BlankOrWhitespaceName_ThrowsInvalidSavedReportExceptionAndLeavesReportUnchanged(string name)
 	{
 		var createdBy = Guid.NewGuid();
-		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", CreateDefinition(), createdBy, DateTime.UtcNow);
+		var originalDefinition = CreateDefinition();
+		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", originalDefinition, createdBy, DateTime.UtcNow);
 		report.DrainEvents();
 
-		Should.Throw<InvalidSavedReportException>(() => report.Update(createdBy, name, CreateDefinition()));
+		Should.Throw<InvalidSavedReportException>(() => report.Update(createdBy, name, CreateOtherDefinition()));
 
 		report.Name.ShouldBe("Grade 4 Contacts");
+		report.Definition.Columns.ShouldBe(StoredReportDefinition.From(originalDefinition).Columns);
 	}
 
 	[Fact]
@@ -170,13 +177,15 @@ public class SavedReportTests
 	public void Update_NameLongerThan100Characters_ThrowsInvalidSavedReportExceptionAndLeavesReportUnchanged()
 	{
 		var createdBy = Guid.NewGuid();
-		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", CreateDefinition(), createdBy, DateTime.UtcNow);
+		var originalDefinition = CreateDefinition();
+		var report = SavedReport.Create(Guid.NewGuid(), "Grade 4 Contacts", originalDefinition, createdBy, DateTime.UtcNow);
 		report.DrainEvents();
 		var tooLong = new string('a', 101);
 
-		Should.Throw<InvalidSavedReportException>(() => report.Update(createdBy, tooLong, CreateDefinition()));
+		Should.Throw<InvalidSavedReportException>(() => report.Update(createdBy, tooLong, CreateOtherDefinition()));
 
 		report.Name.ShouldBe("Grade 4 Contacts");
+		report.Definition.Columns.ShouldBe(StoredReportDefinition.From(originalDefinition).Columns);
 	}
 
 	[Fact]
