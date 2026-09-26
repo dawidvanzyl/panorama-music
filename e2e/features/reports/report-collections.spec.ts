@@ -102,7 +102,7 @@ async function fatherRelationshipId(page: Page): Promise<string> {
   return guardianRelationshipIdByName(page, 'Father');
 }
 
-/** The index of the column whose header reads `headerText`, for reading a row's cell by its header rather than a hardcoded position. */
+/** Looks up a cell by the column's own header text, so a scenario projecting a different column set each time never relies on a fixed cell position. */
 async function columnIndex(results: ReportResultsPage, headerText: string): Promise<number> {
   const headerTexts = await results.headers().allTextContents();
   const index = headerTexts.indexOf(headerText);
@@ -647,7 +647,7 @@ test.describe(
 );
 
 // ---------------------------------------------------------------------------
-// 11IT33 — a collection's filters also narrow the records it projects (AC8)
+// 11IT33 — a collection's filters also narrow the records it projects
 // ---------------------------------------------------------------------------
 
 test.describe(
@@ -743,7 +743,7 @@ test.describe(
 );
 
 // ---------------------------------------------------------------------------
-// 11IT34 — filter/project independence: Guardian and Course Type together
+// 11IT34 — unfiltered Guardian and Course records zip by position, never cross-multiplied
 // ---------------------------------------------------------------------------
 
 test.describe(
@@ -814,7 +814,7 @@ test.describe(
 );
 
 // ---------------------------------------------------------------------------
-// 11IT35 — a collection's filters also narrow the records it projects (AC8)
+// 11IT35 — a collection's filters also narrow the records it projects
 // ---------------------------------------------------------------------------
 
 test.describe(
@@ -1013,7 +1013,7 @@ test.describe(
 
 // ---------------------------------------------------------------------------
 // 11IT44 — a student is excluded when two filters on one collection are met
-// only by different records (AC8)
+// only by different records
 // ---------------------------------------------------------------------------
 
 test.describe(
@@ -1142,7 +1142,7 @@ test.describe(
 
 // ---------------------------------------------------------------------------
 // 11IT45 — filters on multiple collections narrow only their own collection
-// and never cross-multiply (AC8)
+// and never cross-multiply
 // ---------------------------------------------------------------------------
 
 test.describe(
