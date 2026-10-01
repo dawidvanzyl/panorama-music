@@ -9,6 +9,7 @@ using PanoramaMusic.Persistence;
 using PanoramaMusic.Persistence.Extensions;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Reporting.Application.Interfaces;
+using PanoramaMusic.Reporting.Application.Services;
 using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
@@ -124,7 +125,10 @@ public sealed class ReportingDatabaseFixture : IAsyncLifetime
 	/// always rolls back.
 	/// </summary>
 	public async Task<IReadOnlyList<CollectionRecord>> ReadCollectionAsync(
-		ReportCollection collection, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+		ReportCollection collection,
+		IReadOnlyCollection<Guid> studentIds,
+		CancellationToken cancellationToken,
+		IReadOnlyList<ReportFilter>? filters = null)
 	{
 		await using var scope = _serviceProvider.CreateAsyncScope();
 		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -132,7 +136,28 @@ public sealed class ReportingDatabaseFixture : IAsyncLifetime
 		try
 		{
 			var reader = scope.ServiceProvider.GetServices<ICollectionReader>().Single(r => r.Collection == collection);
-			return await reader.ReadAsync(studentIds, [], cancellationToken);
+			return await reader.ReadAsync(studentIds, [], filters ?? [], cancellationToken);
+		}
+		finally
+		{
+			await unitOfWork.RollbackAsync(cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Runs <paramref name="definition"/> through the real, DI-resolved
+	/// <see cref="ReportRunner"/>, in its own scope and unit of work that
+	/// always rolls back.
+	/// </summary>
+	public async Task<ReportLayout> RunReportAsync(ReportDefinition definition, CancellationToken cancellationToken)
+	{
+		await using var scope = _serviceProvider.CreateAsyncScope();
+		var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+		await unitOfWork.BeginAsync(cancellationToken);
+		try
+		{
+			var runner = scope.ServiceProvider.GetRequiredService<ReportRunner>();
+			return await runner.RunAsync(definition, cancellationToken);
 		}
 		finally
 		{

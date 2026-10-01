@@ -33,7 +33,7 @@ public sealed class ReportRunner(
 					?? throw new InvalidOperationException($"No collection reader is registered for {collection}.");
 
 				var columns = definition.Columns.Where(column => column.Collection == collection).ToList();
-				collections[collection] = await reader.ReadAsync(studentIds, columns, cancellationToken);
+				collections[collection] = await reader.ReadAsync(studentIds, columns, definition.FiltersFor(collection), cancellationToken);
 			}
 
 			var memberships = await siblingGroupReader.ReadAsync(studentIds, cancellationToken);

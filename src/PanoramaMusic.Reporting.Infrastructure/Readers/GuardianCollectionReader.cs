@@ -9,21 +9,23 @@ using System.Data;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Readers;
 
-/// <summary>Reads every Guardian record of a whole population in one set-based query.</summary>
-public sealed class GuardianCollectionReader(IUnitOfWork unitOfWork) : ICollectionReader
+/// <summary>Reads the population's Guardian records that satisfy every Guardian filter, in one set-based query.</summary>
+public sealed class GuardianCollectionReader(IUnitOfWork unitOfWork, ReportPredicateComposer composer) : ICollectionReader
 {
 	public ReportCollection Collection => ReportCollection.Guardian;
 
 	public async Task<IReadOnlyList<CollectionRecord>> ReadAsync(
 		IReadOnlyCollection<Guid> studentIds,
 		IReadOnlyList<ColumnAttribute> columns,
+		IReadOnlyList<ReportFilter> filters,
 		CancellationToken cancellationToken)
 	{
 		var parameters = new DynamicParameters();
 		parameters.Add("studentIds", studentIds.ToArray());
+		var condition = composer.ComposeRecordCondition(Collection, filters, parameters);
 
 		var command = new CommandDefinition(
-			GuardianCollectionSql.Query, parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
+			GuardianCollectionSql.Compose(condition), parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
 		var rows = await unitOfWork.Connection.QueryAsync(command);
 
 		return [.. rows.Select(row => ((IDictionary<string, object>)row).ToCollectionRecord(GuardianCollectionSql.Sources))];

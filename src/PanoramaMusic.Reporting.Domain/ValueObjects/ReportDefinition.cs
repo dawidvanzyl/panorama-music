@@ -36,6 +36,10 @@ public sealed class ReportDefinition
 			.Distinct()
 			.OrderBy(collection => collection == ReportCollection.Student ? 0 : 1)];
 
+	/// <summary>Every filter on the given collection, in request order.</summary>
+	public IReadOnlyList<ReportFilter> FiltersFor(ReportCollection collection) =>
+		[.. Filters.Where(filter => filter.Collection == collection)];
+
 	public static ReportDefinition Create(
 		IReadOnlyList<ReportFilterInput> filters,
 		IReadOnlyList<string> columnKeys,
@@ -57,7 +61,7 @@ public sealed class ReportDefinition
 
 			var validatedValues = ValidateValues(attribute, op.Value, filter, datasourceOptions);
 
-			validatedFilters.Add(new ReportFilter(filter.Field, op.Value, validatedValues));
+			validatedFilters.Add(new ReportFilter(filter.Field, op.Value, validatedValues, attribute.Collection));
 		}
 
 		// Checked on the raw request before any key is resolved: a column list

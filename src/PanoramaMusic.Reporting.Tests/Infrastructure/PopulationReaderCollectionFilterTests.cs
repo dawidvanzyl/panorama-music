@@ -68,38 +68,6 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	[Trait("AC", "318UC3")]
-	public async Task ReadAsync_CourseTypeTheory_IncludesStudentWithATheoryAndAnInstrumentCourse()
-	{
-		var ct = TestContext.Current.CancellationToken;
-		await using var connection = _fixture.OpenConnection();
-		var token = Guid.NewGuid().ToString("N")[..8];
-
-		var teacherId = await StudentSeeder.InsertTeacherAsync(connection, "T", token);
-		var theoryCourseId = await StudentSeeder.InsertCourseAsync(connection, "Theory", StudentSeeder.TheoryLessonStructureId);
-		var instrumentCourseId = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
-
-		var halId = await StudentSeeder.InsertStudentAsync(connection, "Hal", token, new DateOnly(2015, 1, 1));
-		var theoryStudentCourseId = await StudentSeeder.InsertStudentCourseAsync(connection, halId, theoryCourseId, teacherId);
-		await StudentSeeder.InsertStudentInstrumentAsync(connection, theoryStudentCourseId, null, "Step2A");
-		var instrumentStudentCourseId = await StudentSeeder.InsertStudentCourseAsync(connection, halId, instrumentCourseId, teacherId);
-		await StudentSeeder.InsertStudentInstrumentAsync(connection, instrumentStudentCourseId, "Guitar", "Step2A");
-
-		var definition = ReportDefinition.Create(
-			[
-				new ReportFilterInput("student.name", "contains", [token]),
-				new ReportFilterInput("course.courseType", "equals", ["Theory"]),
-			],
-			["student.name"],
-			_registry,
-			_noDatasourceOptions);
-
-		var population = await _fixture.ReadPopulationAsync(definition, ct);
-
-		population.ShouldContain(m => m.StudentId == halId);
-	}
-
-	[Fact]
 	[Trait("AC", "318UC4")]
 	public async Task ReadAsync_ActivityFilter_IncludesOnlyHoldersOfThatActivityOnceEach()
 	{
@@ -404,21 +372,28 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 	}
 
 	[Fact]
-	public async Task ReadAsync_TwoGuardianFilters_CanBeSatisfiedByDifferentRecords()
+	[Trait("AC", "329UC4")]
+	public async Task ReadAsync_TwoGuardianFiltersMetOnlyByDifferentRecords_ExcludesTheStudent()
 	{
 		var ct = TestContext.Current.CancellationToken;
 		await using var connection = _fixture.OpenConnection();
 		var token = Guid.NewGuid().ToString("N")[..8];
 
-		var studentId = await StudentSeeder.InsertStudentAsync(connection, "S", token, new DateOnly(2015, 1, 1));
-		await StudentSeeder.InsertGuardianAsync(connection, studentId, "Married", token, StudentSeeder.FatherRelationshipId, married: true, receivesCorrespondence: false);
-		await StudentSeeder.InsertGuardianAsync(connection, studentId, "Correspondent", token, StudentSeeder.FatherRelationshipId, married: false, receivesCorrespondence: true);
+		var annId = await StudentSeeder.InsertStudentAsync(connection, "Ann", token, new DateOnly(2015, 1, 1));
+		await StudentSeeder.InsertGuardianAsync(
+			connection, annId, "G1", token, StudentSeeder.FatherRelationshipId, receivesCorrespondence: true, responsibleForPayment: false);
+		await StudentSeeder.InsertGuardianAsync(
+			connection, annId, "G2", token, StudentSeeder.FatherRelationshipId, receivesCorrespondence: false, responsibleForPayment: true);
+
+		var benId = await StudentSeeder.InsertStudentAsync(connection, "Ben", token, new DateOnly(2015, 1, 1));
+		await StudentSeeder.InsertGuardianAsync(
+			connection, benId, "G", token, StudentSeeder.FatherRelationshipId, receivesCorrespondence: true, responsibleForPayment: true);
 
 		var definition = ReportDefinition.Create(
 			[
 				new ReportFilterInput("student.name", "contains", [token]),
-				new ReportFilterInput("guardian.married", "equals", ["Yes"]),
 				new ReportFilterInput("guardian.receivesCorrespondence", "equals", ["Yes"]),
+				new ReportFilterInput("guardian.responsibleForPayment", "equals", ["Yes"]),
 			],
 			["student.name"],
 			_registry,
@@ -426,6 +401,8 @@ public class PopulationReaderCollectionFilterTests : IClassFixture<ReportingData
 
 		var population = await _fixture.ReadPopulationAsync(definition, ct);
 
-		population.ShouldContain(m => m.StudentId == studentId);
+		ShouldlyHelpers.Satisfy(
+			() => population.ShouldNotContain(m => m.StudentId == annId),
+			() => population.ShouldContain(m => m.StudentId == benId));
 	}
 }

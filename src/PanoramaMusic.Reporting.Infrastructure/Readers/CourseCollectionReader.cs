@@ -9,21 +9,23 @@ using System.Data;
 
 namespace PanoramaMusic.Reporting.Infrastructure.Readers;
 
-/// <summary>Reads every Course record of a whole population in one set-based query.</summary>
-public sealed class CourseCollectionReader(IUnitOfWork unitOfWork) : ICollectionReader
+/// <summary>Reads the population's Course records that satisfy every Course filter, in one set-based query.</summary>
+public sealed class CourseCollectionReader(IUnitOfWork unitOfWork, ReportPredicateComposer composer) : ICollectionReader
 {
 	public ReportCollection Collection => ReportCollection.Course;
 
 	public async Task<IReadOnlyList<CollectionRecord>> ReadAsync(
 		IReadOnlyCollection<Guid> studentIds,
 		IReadOnlyList<ColumnAttribute> columns,
+		IReadOnlyList<ReportFilter> filters,
 		CancellationToken cancellationToken)
 	{
 		var parameters = new DynamicParameters();
 		parameters.Add("studentIds", studentIds.ToArray());
+		var condition = composer.ComposeRecordCondition(Collection, filters, parameters);
 
 		var command = new CommandDefinition(
-			CourseCollectionSql.Query, parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
+			CourseCollectionSql.Compose(condition), parameters, unitOfWork.Transaction, commandType: CommandType.Text, cancellationToken: cancellationToken);
 		var rows = await unitOfWork.Connection.QueryAsync(command);
 
 		return [.. rows.Select(row => ((IDictionary<string, object>)row).ToCollectionRecord(CourseCollectionSql.Sources))];

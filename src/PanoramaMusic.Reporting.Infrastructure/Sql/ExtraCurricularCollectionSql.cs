@@ -23,6 +23,9 @@ internal static class ExtraCurricularCollectionSql
 		WHERE sec.student_id = ANY(@studentIds)
 		""";
 
+	public static string Compose(string? recordCondition) =>
+		recordCondition is null ? Query : $"{Query} AND {recordCondition}";
+
 	/// <summary>SQL column alias -> the logical source name it resolves to.</summary>
 	public static readonly IReadOnlyDictionary<string, string> Sources = new Dictionary<string, string>
 	{
