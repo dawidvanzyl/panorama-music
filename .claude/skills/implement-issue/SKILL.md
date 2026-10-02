@@ -91,8 +91,10 @@ waiting to be filed, so build to both. Both are **read-only** and frozen at plan
 approval; if either looks wrong (contradicts the issue, or asserts out-of-scope
 behaviour), raise it.
 
-If `plan_answers_file` is present, read it too. The plans already reflect each answer;
-the file tells you why, so never re-raise a question it answered. An `AUDIT:` line
+If `plan_answers_file` is present, read it too. The plans already reflect each answer,
+and requirement answers are also in the issue's `## Notes`; the file tells you why, so
+never re-raise a question it answered. An engineering answer that overrides a
+documented rule is binding — build what it says. An `AUDIT:` line
 marks a question the owner left open with "implement as is" — build the planner's
 reading it names.
 
@@ -200,7 +202,7 @@ any review finding that changed code, re-run the checks green before the next cy
 green gauntlet is the precondition of every verify call.
 
 Each cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this
-skill is running in, `cycle`, and from cycle 2: `prev_verify_sha` (previous
+skill is running in, `cycle`, `plan_answers_file` when you have one, and from cycle 2: `prev_verify_sha` (previous
 `VERIFIED_SHA`) and `prev_report` — the **path** to the previous
 `{journal_dir}/verify-{cycle}.md`, annotated with your disposition on every finding. It
 writes its report to the file and returns a verdict block.
@@ -220,10 +222,11 @@ Verdicts:
 - **`BLOCKED (n)`** — action or invalidate each blocker, then run the next cycle.
 - **`NEEDS_RULING (n)`** — raise the questions and disputed findings (in
   `subagent` mode the tech lead may answer from the epic, standards or an earlier
-  ruling). Record the outcome as `RESOLVED_BY: developer`, apply any fix, resume.
-  Settled items are never re-raised.
+  ruling). Record the outcome as `RESOLVED_BY: owner` or `RESOLVED_BY: tech lead`,
+  apply any fix, resume. Settled items are never re-raised.
 
-If cycle 3 is not `PASS`, stop and hand the outstanding report to the developer.
+If cycle 3 is not `PASS`, stop and hand the outstanding report up: to the user in
+`interactive` mode, as `BLOCKED (n)` to the tech lead in `subagent` mode.
 
 ### 6) Open PR
 

@@ -116,7 +116,7 @@ Every answered escalation is appended here and never edited:
 Asked by: {role}, story #{issue}
 Question: {as asked}
 Ruling: {the decision}
-Ruled by: {tech lead | developer (owner)}
+Ruled by: {tech lead | owner}
 Applies to: {this story, or any story touching X}
 ```
 

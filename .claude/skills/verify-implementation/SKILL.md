@@ -43,6 +43,7 @@ implementer's disposition of it are the artefact.
 - `prev_verify_sha`: the previous cycle's `VERIFIED_SHA`. Absent on cycle 1.
 - `prev_report`: the previous report, with the implementer's disposition on every
   finding.
+- `plan_answers_file`: optional. The owner's answers from the plan stage; see step 3.
 - `base_branch`: passed by the tech lead in `subagent` mode. Otherwise derive it:
   - On a `milestone/*` branch, use `master`.
   - If the story has a milestone, use `milestone/m{number}`, taken from the
@@ -79,7 +80,7 @@ Read `prev_report` and handle each finding, whatever its severity:
 
 | Disposition | Action |
 |---|---|
-| `RESOLVED_BY: developer` | Settled permanently. Never re-raise or re-assess it. |
+| `RESOLVED_BY: {owner \| tech lead}` | Settled permanently. Never re-raise or re-assess it. |
 | `ACTIONED: {what}` | Look for the fix in the delta. If found, drop the finding. If not, carry it forward with `NOT CONFIRMED`. |
 | `INVALID: {reason}` | Weigh the reason against the source you originally cited. If it holds, drop the finding and list it under Withdrawn. If it doesn't, keep the finding with `DISPUTED — {one-line rebuttal}`, which forces `NEEDS_RULING`. |
 | `DEFERRED: {reason}` | Keep it as a 💡 Suggestion, noting the reason. Never escalate it back to a Blocker or Warning. |
@@ -104,6 +105,10 @@ From issue `#{issue_number}`, extract:
 - `## Out of Scope`
 - `## Notes`, if present: edge cases, security considerations and deliberate
   deferrals
+
+If `plan_answers_file` is present, read it: an engineering answer that overrides a
+documented rule is authoritative, so code following it is not a finding. (Requirement
+answers are already in the issue's `## Notes`.)
 
 Then read `.claude/shared/review-severity.md`. It defines the severity levels, which
 standards docs to read, the security delegation and the report column rules. Read the

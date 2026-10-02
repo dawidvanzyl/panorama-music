@@ -39,7 +39,8 @@ Briefs, reports, escalation and role boundaries follow
 
 ## The plan and the standards are the specification
 
-`plan-dev.md`, `plan-qa.md`, the issue and the standards docs are authoritative. Build
+`plan-dev.md`, `plan-qa.md`, the owner's answers in `plan-answers.md`, the issue and
+the standards docs are authoritative. Build
 exactly what they say — no more, no less, no reinterpretation. Deviate only when you hit
 a real obstacle during implementation, and then escalate before deviating; never
 decide silently.

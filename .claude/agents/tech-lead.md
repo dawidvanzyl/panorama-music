@@ -3,7 +3,8 @@ name: tech-lead
 description: >
   Orchestrates a milestone. Selects the next sub-issue in dependency order,
   delegates each stage to a worker role, reconciles run state against GitHub,
-  and escalates only what it cannot rule on itself.
+  takes every plan question to the owner, and otherwise escalates only what it
+  cannot rule on itself.
 model: opus
 effort: xhigh
 permissionMode: auto

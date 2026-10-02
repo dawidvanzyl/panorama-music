@@ -52,7 +52,7 @@ Nothing else:
   record of what was wrong.
 - Never commit, push or check out. Git is limited to `fetch`, `diff` and `rev-list`.
 - **Never merge and never close the issue.** The tech lead decides the story is done,
-  from your approval, QA's sign-off and the owner's together. Your job is to make that
+  from your approval, QA's sign-off and the approved plans together. Your job is to make that
   decision safe to take.
 
 ## Inputs
@@ -64,6 +64,7 @@ Nothing else:
 - `journal_dir`: required in `subagent` mode. The absolute path to the story's journal.
 - `cycle`: required in `subagent` mode. The review pass number, supplied by the caller;
   it names the report file.
+- `plan_answers_file`: optional. The owner's answers from the plan stage; see step 2.
 - `mode`: `interactive` (default) or `subagent`.
 
 In `subagent` mode a missing input is `BLOCKED (1)`, naming it. Never ask a question
@@ -92,7 +93,11 @@ Extract these sections. They are the reference for correctness:
 - `## Domain & Data`
 - `## Context & Constraints`
 - `## Out of Scope`
-- `## Notes`, if present (edge cases, security considerations, deliberate deferrals)
+- `## Notes`, if present (edge cases, security considerations, deliberate deferrals,
+  and the owner's requirement answers from the plan stage)
+
+If `plan_answers_file` is present, read it: an engineering answer that overrides a
+documented rule is authoritative, so code following it is not a finding.
 
 ### 3) Fetch diff
 

@@ -85,14 +85,15 @@ a fresh spawn would burn tokens re-deriving. Start fresh agents only on the next
 sentence of intent, rulings cited by number — never a narrative, which drifts between
 retellings so a respawned worker silently gets a different task. Always include
 `issue_number`, `journal_dir` (absolute), `base_branch` (the milestone branch),
-`mode: subagent` and `outcome`, plus role inputs. `plan` and `plan-critique` have no
+`mode: subagent` and `outcome`, plus role inputs. `planner` and `plan-critique` have no
 shell, so first write `issue_body_file`, `epic_body_file`, `it_codes_file` and
 `test_intents_file` into the story's `journal_dir`; the `planner` writes the versioned
 plans and `plan-critique` writes `critique-v{n}.md`, all in that dir; the planner also
-gets `version`, `critique_file` and `answers_file`, and the critique gets `version` and
-`answers_file`; the developer gets `dev_plan_file` (and `plan_answers_file` whenever
+gets `version`, `critique_file` and `answers_file`, and the critique gets `version`,
+`dev_plan_file` and `qa_plan_file` (that version's files), `answers_file` and, on a
+second critique in a round, `prev_critique_file`; the developer gets `dev_plan_file` (and `plan_answers_file` whenever
 `plan-answers.md` exists), `qa-implement` gets `qa_plan_file`, and the reviewer gets
-`cycle` (the story's `attempts.review`).
+`cycle` (the story's `attempts.review`) and `plan_answers_file` when it exists.
 
 `qa-implement` in `phase: specify` gets `branch` (named per `docs/coding-standards.md`)
 and `dev_plan_file`; the developer then gets that `branch`. The developer's brief
@@ -114,16 +115,13 @@ doc is one a worker under turn pressure skips.
 **Read the verdict line only.** Open the report file only when the verdict doesn't tell
 you what to do next.
 
-**Autonomy.** The owner is usually away or asleep while this runs. Resolve every
-issue you can from the epic, the issue, the standards, the plans and `rulings.md`, and
-record the ruling. Stop for the owner only when you are thoroughly blocked: a plan
-question round (step 3a), a change to the definition of done, or a ceiling reached.
-Owner answers that arrive while other work runs are applied when they land, not
-waited for.
-
-**The plan stage is the exception.** There you rule on nothing: every open question —
-requirement or engineering, including a rule override — goes to the owner, and the
-milestone stops until it is answered.
+**Owner contact.** At the plan stage you rule on nothing: every open question —
+requirement or engineering, including a rule override — goes to the owner (step 3a).
+After the plans are approved, resolve each worker escalation you can from the epic,
+the issue, the standards, the approved plans, `plan-answers.md` and `rulings.md`, and
+record the ruling; go to the owner only for the cases in step 5. Whenever you wait on
+the owner, the milestone waits — one story and one stage at a time (`tech-lead.md`
+rule 1) means nothing else runs meanwhile.
 
 ### 3a) The planning loop and the plan approval
 
@@ -140,7 +138,8 @@ planner pass and `attempts.critique` before each critique.
    first critique, return to 2 with the new version. After the second, the new
    version is the round's final plan and is **not** re-critiqued: open
    `critique-v{n}.md`'s required changes and the new plan, and check each change
-   landed. One that didn't land becomes an engineering question.
+   landed. One that didn't land becomes an engineering question. Then go to
+   *Questions*.
 
 A required change the planner `DECLINED` is not spent on another revision: it becomes a
 question of the type the disputed reading belongs to (requirement for the issue, epic
@@ -193,7 +192,13 @@ to build. Ask only what blocks a correct plan; never re-ask an answered question
   version, in a new round.
 
 **Feed answers back.** Append the round's answers to `plan-answers.md` verbatim, each
-with its question number and type. If every answer confirms the current reading, the
+with its question number and type. Write every requirement answer back into the
+sub-issue — a "Confirmed" stated as the confirmed reading — under a `## Notes` section
+(add it at the end if absent): append to `issue_body_file` with `Edit`, then
+`gh issue edit {issue_number} --body-file {issue_body_file}`. The issue is what the
+developer, verify, the reviewer and `close-issue` read; an answer only the planner saw
+gets flagged as a defect later. Engineering answers stay in `plan-answers.md`, which
+every later role receives. If every answer confirms the current reading, the
 plan stands — go to *Approval*. Otherwise resume the `planner` by name with
 `answers_file`, reset `attempts.critique` to `0`, and start the next round at step 2.
 There is no cap on question rounds.
@@ -239,13 +244,13 @@ Workers message you mid-task. For each:
 
 1. Check `rulings.md` — questions recur across stories.
 2. Resolve it yourself from the epic, sub-issue, standards docs or journal if you can.
-3. Take it to the developer only for: a change to the definition of done (IT codes,
+3. Take it to the owner only for: a change to the definition of done (IT codes,
    acceptance criteria, scope); a conflict between sources of truth you can't
    adjudicate; a suspected CodeQL false positive; or repeated failure suggesting the
    specification, not the code, is wrong.
 
 **Record the ruling in `rulings.md` before replying** — a crash in between loses a
-decision the developer already spent attention on. Then `SendMessage` the worker by
+decision the owner already spent attention on. Then `SendMessage` the worker by
 name, which resumes it with context intact.
 
 ### 6) The merge gate
@@ -260,8 +265,9 @@ pre-interruption verdict proves nothing about the branch now:
 | `gate: reviewer-approved` | `reviewer` |
 
 The developer strips both labels before every push (`implement-issue` step 6); at the
-merge gate, confirm each label was applied after the head commit's push. The owner's judgement is not a merge label — it was spent in the plan question
-rounds (step 3a), and the plans' approval is recorded as `plans_approved: true`.
+merge gate, confirm each label was applied after the head commit's push. The owner's
+judgement is not a merge label — it was spent in the plan question rounds (step 3a),
+and the plans' approval is recorded as `plans_approved: true`.
 Confirm that flag is set before merging; a story that reached merge without it skipped
 the plan stage and must not proceed.
 
@@ -278,7 +284,7 @@ Then:
 - Invoke `close-issue` in `subagent` mode to verify acceptance criteria and close.
 - Record the merge in the manifest before moving on.
 
-Don't batch merges: the owner's label already puts a human decision before every
+Don't batch merges: the plan stage already put the owner's judgement before every
 story, so holding back adds latency, not a check.
 
 ### 7) Ending the milestone
