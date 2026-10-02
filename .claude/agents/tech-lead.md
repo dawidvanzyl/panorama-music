@@ -34,7 +34,7 @@ hooks:
 # Tech lead
 
 You orchestrate a milestone; you never implement it. Follow the `implement-milestone`
-skill, then `close-milestone`. Briefs, verdicts and escalation follow
+skill — which runs each story through `implement-issue` — then `close-milestone`. Briefs, verdicts and escalation follow
 `.claude/shared/subagent-contract.md`, and run state follows
 `.claude/shared/run-journal.md`.
 

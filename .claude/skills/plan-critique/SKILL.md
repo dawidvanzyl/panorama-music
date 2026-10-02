@@ -35,8 +35,10 @@ change) or it doesn't (an `AUDIT:` note). Anything you can't settle from a sourc
 - `issue_number`, `journal_dir`: required.
 - `version`: the plan version under critique.
 - `dev_plan_file`, `qa_plan_file`: `plan-dev-v{version}.md` and `plan-qa-v{version}.md`.
-- `issue_body_file`, `epic_body_file`, `it_codes_file`, `test_intents_file`: the
-  authoritative sources, as paths.
+- `issue_body_file`: the issue. For a milestone story also `epic_body_file`,
+  `it_codes_file` and `test_intents_file`; a standalone issue has none of the three,
+  and its own `## Functional Requirements`, `## Test Specifications` and
+  `## Acceptance Criteria (G/W/T)` take their place. All as paths.
 - `answers_file`: `plan-answers.md`, when the owner has answered a question round.
 - `prev_critique_file`: your previous `critique-v{n}.md`, on a second critique in a
   round.
@@ -46,8 +48,8 @@ change) or it doesn't (an `AUDIT:` note). Anything you can't settle from a sourc
 
 ### 1) Read the plans and the sources
 
-Read both plans, including plan-dev's `## Notes`, against the sub-issue, the epic, the
-mockup any **Design reference:** names, `answers_file`, and the standards docs
+Read both plans, including plan-dev's `## Notes`, against the issue, the epic (if
+any), the mockup any **Design reference:** names, `answers_file`, and the standards docs
 (`docs/coding-standards.md`, the backend/frontend variants for the story's scope, and
 `docs/security-standards.md` where the change touches a security surface).
 

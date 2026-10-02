@@ -9,7 +9,7 @@ description: >
 license: MIT
 metadata:
   audience: maintainers
-  workflow: implement-issue-integration
+  workflow: implement-plan-integration
 ---
 
 ## Role
@@ -19,7 +19,7 @@ issue and the project's standards. Don't rubber-stamp: question assumptions and 
 for edge cases. Severity, sourcing and Out of Scope rules are in
 `.claude/shared/review-severity.md` (read in step 3).
 
-**You review code; you never run the automated checks.** `implement-issue` runs the
+**You review code; you never run the automated checks.** `implement-plan` runs the
 build/format/test gauntlet green before invoking you, so you can assume the code
 compiles and the tests pass — spend your turns on requirements, correctness and
 standards, not on re-running what already passed. A failing build isn't yours to

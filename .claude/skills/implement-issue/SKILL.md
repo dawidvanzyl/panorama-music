@@ -2,275 +2,312 @@
 name: implement-issue
 description: >
   Load this skill when the user says "implement issue", "implement-issue", or
-  "/implement-issue". Implements a GitHub story issue end-to-end: prepares base
-  branch, creates feature branch, implements the requirements, verifies via the
-  verify-implementation skill, and opens a PR.
+  "/implement-issue", or when implement-milestone runs its next story. Orchestrates one
+  issue end to end as the lead: plan and critique with every open question to the
+  owner, QA's specs first, the developer, QA, review, rework and the merge gate. Runs
+  a milestone story for implement-milestone, or a standalone issue (no milestone)
+  against master on its own.
 license: MIT
 metadata:
   audience: maintainers
   workflow: github-issues-pr
 ---
 
+## Role
+
+You are the lead for one issue: you orchestrate, you do not implement. Delegate each
+stage to a worker role and escalate what you can't rule on — never edit `src/`,
+`frontend/` or `e2e/` yourself, whether or not a path guard stops you.
+
+**Run inline, never as a subagent.** This skill spawns the workers, and a subagent
+can't spawn subagents.
+
+The hard rules in `.claude/agents/tech-lead.md` apply here, except rule 2 (story order
+is `implement-milestone`'s). Briefs, verdicts and escalation follow
+`.claude/shared/subagent-contract.md`; run state follows
+`.claude/shared/run-journal.md`.
+
+Two rules run through every step:
+
+- **Update the manifest before acting, never after**, so a crash leaves it
+  understating rather than overstating what happened.
+- **Never invent an IT code or change a frozen artifact** — both are escalations.
+
 ## Inputs
 
-- `issue_number` (story), `parent_issue_number` (epic) — required.
-- `mode` — `interactive` (default) or `subagent`.
-- `subagent` only, required: `base_branch` (resolved by the caller), `journal_dir`
-  (absolute path to the story's journal), `dev_plan_file` (the frozen `plan-dev.md`,
-  your roadmap) and `qa_plan_file` (the frozen `plan-qa.md`, read-only — what QA will
-  assert).
-- `subagent`, required when QA wrote the specs first: `branch` — the feature branch
-  QA created and pushed with the story's failing Playwright specs. You build on it.
-- Optional (`subagent`): `plan_answers_file` — the owner's answers to the plan's
-  questions, and any questions left open by "implement as is".
-- Optional: repository owner/name if not inferable from the git remote.
-
-## Asking vs escalating
-
-Wherever this skill says **raise it**: in `interactive` mode ask the user; in
-`subagent` mode escalate to the tech lead — stating the question, the options you
-see and which you'd choose — then continue with anything that doesn't depend on the
-answer. Never ask a question in `subagent` mode: a background worker has no turn for
-the answer to land in, so a question is a hang, not a pause. Never resolve ambiguity
-by assumption in either mode.
+- `issue_number` — required; ask if not given.
+- From `implement-milestone` only: `milestone_number`, `run_dir` (the milestone's
+  `journal_root`), `journal_dir` (the story's directory) and `base_branch` (the
+  milestone branch). Their presence is what makes this a **milestone story**; without
+  them it is a **standalone issue**.
 
 ## Procedure
 
-### 0) Gather inputs
+### 0) Set up
 
-- `interactive` — ask for any missing `issue_number` / `parent_issue_number`, and
-  wait until both are confirmed.
-- `subagent` — a missing required input is `BLOCKED (1)` naming it.
+**Milestone story.** Everything is in the milestone's journal already: the story's
+manifest entry, `rulings.md`, `it-codes.json` and the story's `test-intents.json`. Go
+to step 1.
 
-### 0.5) Prepare base branch
+**Standalone issue.** Read `gh issue view {issue_number} --json title,body,labels,milestone,state`
+and stop, saying why, when any of these holds:
 
-Invoke `prepare-base` with `base_branch` and `mode`. In `interactive` mode, let it ask
-for the base branch if the user hasn't named one; in `subagent` mode pass yours — the
-derivation rule lives in one place so it cannot drift.
+| Refuse | Because |
+| --- | --- |
+| The title starts `[Backlog]` or it carries `epic: backlog` | a backlog epic isn't work |
+| It has a milestone (epic or story) | milestone work runs through `implement-milestone` |
+| It's closed | nothing to do |
+| `## Test Specifications` is missing, or empty without an explicit `N/A` | QA has no contract; the codes are written when the issue is created, never by this run |
+| It touches the UI (`layer: frontend` or a `## Page Architecture` section) with no **Design reference:** bullet | the mockup is authoritative and is never invented — ask for one in `.design/` and a Design reference on the issue |
+| A `Depends on #X` in `## Context & Constraints` is still open | it can't be built yet |
 
-If it returns `BLOCKED`, stop and pass it through. A dirty working tree is the common
-cause and may hold **your own uncommitted work from a run that died mid-story** —
-never resolve it yourself.
+Then set up the journal at `{HOME}/.claude/runs/panorama-music/issues/{issue_number}/`,
+resolving `{HOME}` once (*Standalone issues* in `run-journal.md`). That directory is
+both `run_dir` and `journal_dir`. `base_branch` is `master`.
 
-Afterwards `origin/{base_branch}` is fetched and current. The local branch may not be
-`base_branch` (another worktree may have it checked out); that is expected, since
-step 3 branches from the remote ref.
+### 1) Resume: replay, then reconcile
 
-### 1) Read and orient
+Follow *Resume: replay, then reconcile* in `run-journal.md`. For an issue caught
+mid-stage, read the interrupted worker's newest report (`plan-dev-v{n}.md` /
+`critique-v{n}.md`, `implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md`) to see how
+far it got. An issue at `awaiting-answers` resumes by re-posting the open round from
+`plan-questions.md`; one at `awaiting-merge` resumes at step 5. Never re-plan either.
 
-Read issue `#{issue_number}` in full (structure: `.github/ISSUE_TEMPLATE/sub-issue.md`),
-ignoring any `## Post-Implementation Summary`. Extract:
+Report where you are picking up in one line, then continue.
 
-- `issue_title`
-- `milestone_title` — from the assigned milestone, if any (`[Bug]` / `[Tech Debt]`
-  issues usually have none).
-- IT codes (`## Test Specifications`, e.g. `45IT1`) — what QA will prove against your
-  branch.
-- UC codes (`## Acceptance Criteria (G/W/T)`, e.g. `48UC1`).
-- `## Context & Constraints` — patterns and restrictions you may not deviate from
-  without raising it first.
-- `## Functional Requirements` — your implementation checklist.
-- `## Domain & Data` — entities, fields and business rules.
-- `## API / Interface Contract` — the agreed contract; do not alter it.
-- `## Out of Scope` — a hard boundary; implement nothing listed.
-- `## Notes`, if present, last — edge cases, security considerations and deliberate
-  deferrals that must not be overridden.
+### 2) Run the stages
 
-Also read, in full and before coding, `docs/coding-standards.md`, plus for backend
-scope `docs/coding-standards-backend.md` and `src/.editorconfig`, and for frontend
-scope `docs/coding-standards-frontend.md` and `frontend/.editorconfig`. They are
-binding, not background — in particular §5 (test codes) and §6 (comments).
+Each issue runs these stages in order. Set `stage` in the manifest **before** you
+spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 
-Then read `dev_plan_file` — your specification: the approach, the changes by layer,
-the test hooks, the UC codes and the deliverables checklist, written and critiqued
-before the build. **Follow it as written.** Deviate only on a real obstacle hit during
-implementation, and raise it before deviating. Then
-read `qa_plan_file`: the preconditions, actors, paths and outcomes QA will assert.
-Satisfying a requirement differently from what the QA plan expects is a bug report
-waiting to be filed, so build to both. Both are **read-only** and frozen at plan
-approval; if either looks wrong (contradicts the issue, or asserts out-of-scope
-behaviour), raise it.
+| Stage | Role | Skill | Produces |
+| --- | --- | --- | --- |
+| `planning` | `planner` | `plan-implementation` | `plan-dev-v{n}.md`, `plan-qa-v{n}.md` |
+| `critiquing` | `plan-critique` | `plan-critique` | `critique-v{n}.md` |
+| `awaiting-answers` | — (owner) | — | `plan-answers.md` |
+| `specifying` | `qa-implement` (`phase: specify`) | `qa-implement` | failing specs on the feature branch |
+| `implementing` | `developer` | `implement-plan` | the PR, every IT spec green locally |
+| `testing` | `qa-implement` (`phase: run`) | `qa-implement` | `gate: qa-complete` |
+| `reviewing` | `reviewer` | `review-pull-request` | `gate: reviewer-approved` |
+| `awaiting-merge` | — (owner) | — | standalone only: the owner's merge into `master` |
 
-If `plan_answers_file` is present, read it too. The plans already reflect each answer,
-and requirement answers are also in the issue's `## Notes`; the file tells you why, so
-never re-raise a question it answered. An engineering answer that overrides a
-documented rule is binding — build what it says. An `AUDIT:` line
-marks a question the owner left open with "implement as is" — build the planner's
-reading it names.
+**Always background:** only background subagents can `SendMessage` to `main`, and you
+couldn't read it while blocked anyway — a foreground worker turns every escalation into
+"give up and report".
 
-Raise any ambiguity or conflict between sections before coding.
+**One agent per role per issue, kept warm.** Spawn each role once. For every rework or
+revision — a critique sending the plan back, a bug or finding sending the developer
+back — resume the *same* agent by name with `SendMessage`; it already holds the context
+a fresh spawn would burn tokens re-deriving.
 
-### 1.5) Dependency gate (hard stop)
+**The brief** (per `subagent-contract.md`) is named inputs plus one sentence of
+intent, rulings cited by number — never a narrative, which drifts between retellings so
+a respawned worker silently gets a different task. Always include `issue_number`,
+`journal_dir` (absolute), `base_branch`, `mode: subagent` and `outcome`, plus role
+inputs. `planner` and `plan-critique` have no shell, so first write `issue_body_file`
+into `journal_dir` — and for a milestone story also `epic_body_file`, `it_codes_file`
+and `test_intents_file`; a standalone issue has none, and its own
+`## Test Specifications` and `## Acceptance Criteria (G/W/T)` are the codes. The
+`planner` writes the versioned plans and `plan-critique` writes `critique-v{n}.md`, all
+in that dir; the planner also gets `version`, `critique_file` and `answers_file`, and
+the critique gets `version`, `dev_plan_file` and `qa_plan_file` (that version's files),
+`answers_file` and, on a second critique in a round, `prev_critique_file`; the
+developer gets `dev_plan_file` (and `plan_answers_file` whenever `plan-answers.md`
+exists), `qa-implement` gets `qa_plan_file`, and the reviewer gets `cycle` (the
+manifest's `attempts.review`) and `plan_answers_file` when it exists.
 
-For every blocking reference in `## Context & Constraints` (`Depends on #X` or
-similar), check the issue's state. If any is not closed, stop with "Blocked
-dependency detected: #X is not closed. Implementation cannot proceed." — no branch,
-code or verification.
+`qa-implement` in `phase: specify` gets `branch` (named per `docs/coding-standards.md`)
+and `dev_plan_file`; the developer then gets that `branch`. The developer's brief
+always restates the definition of done in one line: every plan-dev checklist item
+ticked, every UC and IT code green locally, the whole-solution gauntlet green, and
+coding-standards §5 and §6 honoured.
 
-### 2) Orient in the codebase
+End every brief with the same two lines: create your report file before starting work,
+and commit as you go.
 
-Before writing code, map each requirement to where it will land: find the directories
-for each layer named in the constraints, read 2–3 representative files for the
-patterns to follow, and for `layer: frontend` stories match `## Page Architecture` to
-existing component patterns. If the structure is unclear or nothing analogous exists,
-state your understanding and raise it for confirmation.
+**Check the developer before QA.** A `PR_OPEN` or `FIXED` goes to `testing` only
+after you grep its `implement-{n}.md` for: an unticked checklist item, an IT code
+without a local pass, a backend test command narrower than the solution, and a
+checklist item whose named test does not exist on the branch (grep its name or AC tag;
+an item whose proof is "done", "reviewed" or a missing test is a hit). Any hit goes
+straight back to the developer — it never costs a QA run. They are in the contract
+too, but a rule stated only in a shared doc is one a worker under turn pressure skips.
 
-### 3) Create feature branch
+**Read the verdict line only.** Open the report file only when the verdict doesn't tell
+you what to do next.
 
-**If `branch` was given** (QA wrote the specs first), don't create one: check it out
-with `git fetch origin && git checkout -B {branch} origin/{branch}` and build on it.
-Its failing specs are your target. Otherwise:
+**Owner contact.** At the plan stage you rule on nothing: every open question —
+requirement or engineering, including a rule override — goes to the owner (step 2a).
+After the plans are approved, resolve each worker escalation you can from the epic (if
+any), the issue, the standards, the approved plans, `plan-answers.md` and
+`rulings.md`, and record the ruling; go to the owner only for the cases in step 4.
+Whenever you wait on the owner, everything waits — one issue and one stage at a time
+(`tech-lead.md` rule 1) means nothing else runs meanwhile.
 
-Prefix from labels: `type: feature` → `feature/`, `type: bug` → `bug/`,
-`type: tech-debt` → `tech-debt/`. Slug per `docs/coding-standards.md` (kebab-case from
-the title, max 5 words, no milestone number).
+### 2a) The planning loop and the plan approval
 
-```
-git checkout -b {prefix}/{issue_number}-{slug} origin/{base_branch}
-```
+**Plan and critique.** Per question round: at most three plans and two critiques, in
+the order plan, critique, plan, critique, plan. Increment `plan_version` before each
+planner pass and `attempts.critique` before each critique.
 
-Always branch from `origin/{base_branch}`, never HEAD — a local copy may be stale or
-absent.
+1. Spawn `planner` → `PLANNED`, writing `plan-dev-v{n}.md` and `plan-qa-v{n}.md`.
+2. Set `stage: critiquing`; spawn `plan-critique` against that version (resume it by
+   name on later critiques). A critique always gets a fresh look at the plan, never
+   your summary of it.
+3. `APPROVE` → go to *Questions*.
+4. `REVISE (n)` → resume the `planner` by name with `critique_file`. After the round's
+   first critique, return to 2 with the new version. After the second, the new
+   version is the round's final plan and is **not** re-critiqued: open
+   `critique-v{n}.md`'s required changes and the new plan, and check each change
+   landed. One that didn't land becomes an engineering question. Then go to
+   *Questions*.
 
-### 4) Implement
+A required change the planner `DECLINED` is not spent on another revision: it becomes a
+question of the type the disputed reading belongs to (requirement for the issue, epic
+or mockup; engineering for the code or a standard), quoting the critic's reading and
+the planner's.
 
-Create `{journal_dir}/implement-{attempt}.md` with a `## Progress` heading before
-writing code, and append a line after each unit of work. Record what you built, verify
-cycles and dispositions, and every decision the issue didn't settle — a later attempt,
-possibly a fresh agent after this session dies, reads it to avoid repeating a failed
-approach.
+**Questions.** Classify every open item from the latest plan's `## Notes` and the
+latest critique:
 
-**Commit after each layer** — domain, application, infrastructure, API, frontend,
-tests (conventions in `docs/coding-standards.md`). Uncommitted work in a dead session
-is redone from scratch, and the PR is squash-merged, so a granular trail costs
-nothing.
+- *Requirement* — every requirement `ASSUMPTION` not marked `RESOLVED:`; every
+  critique `QUESTION` labelled requirement; every declined change disputing a reading
+  of the issue, epic or mockup.
+- *Engineering* — every `CONFLICT` from the planner or the critique; every critique
+  `QUESTION` labelled engineering; every declined change disputing a reading of the
+  code or a standard; every required change that didn't land; every engineering
+  `ASSUMPTION` not marked `RESOLVED:`.
 
-- Implement every functional requirement within the constraints, contract and
-  scope boundary, and every item of the plan's deliverables checklist. Copy the
-  checklist into `implement-{attempt}.md` and tick each item with the file and test
-  that prove it as it lands.
-- **Comments: default to none** (`docs/coding-standards.md` §6). Never write a story,
-  issue, ruling, decision (`D4`) or review reference, or a description of temporary
-  state, into code, test names or suppression justifications — including labels you
-  read in the plan or the journal.
-- **Fix the class, not the instance.** On any bug or finding, search for the same
-  mistake elsewhere in the branch and fix every occurrence.
-- One test per UC code, tagged with exactly that code, named for the G/W/T behaviour
-  it verifies. A test added in rework takes the next free `{issue_number}UC{n}`:
-  - backend — xUnit, `[Trait("AC", "{code}")]` with the exact code (e.g. `48UC1`)
-  - frontend — vitest service tests (mock fetch, no DOM) in
-    `frontend/src/services/__tests__/`; install vitest if absent
-    (`npm install -D vitest`); register any new tag (name + description) in the
-    `tags` array of `frontend/vitest.config.ts`.
-- An empty `## Acceptance Criteria (G/W/T)` means no unit tests — a valid state; IT
-  coverage is independent and QA's to prove.
-- **No tests for IT codes, and never tag a unit test with one.** IT codes are proven
-  only by QA's Playwright specs. A unit test with an IT trait makes a code look
-  covered to `close-issue` and `close-milestone` while proving something narrower —
-  a false green, worse than no coverage. The path guard refuses writes in `e2e/`;
-  that is the boundary. If an IT code describes behaviour the story cannot deliver,
-  raise it.
-- Update `README.md` if behaviour, setup or usage changed.
-- Run and fix until clean **the full set in `.claude/shared/automated-checks.md`** for
-  the scopes you touched — backend build, format and tests, and frontend lint,
-  format:check, typecheck, build and test. Read the commands from that file, not from
-  memory; it matches `ci.yml`, so a local pass means what a CI pass means. Backend
-  tests run on the **whole solution** (`src/PanoramaMusic.slnx`), never a single
-  project — cross-cutting tests live in other projects. This is the one place the
-  gauntlet runs in the automated flow. Also run its *Comment labels* check and fix
-  every hit before reporting done.
-- **Mockup fidelity.** For a story with a Design reference, record a property table
-  in `implement-{attempt}.md` built from the rendered mockup's `getComputedStyle`
-  against the shipped component's — never from the mockup's source values.
-- **Run the story's IT specs locally until every one passes**, when QA wrote them
-  first: a fresh QA stack (`qa-implement` step 3), then
-  `cd e2e && npx playwright test --grep "@{IT_CODE}"` once per code, then tear it
-  down. You may not edit a spec; a spec you believe is wrong is a raise. Record each
-  code's result in `implement-{attempt}.md`. Never open the PR or report `FIXED`
-  with an IT code red.
-
-### 5) Verify (gauntlet loop, max 3 cycles)
-
-Commit, then run up to three cycles **in this session** — invoke `verify-implementation`
-inline with the Skill tool, never as a sub-agent. Running it in your own session saves
-a spawn, a context load and a full report round-trip, and you already hold everything it
-needs. `implement-issue` owns the count; `verify-implementation` is stateless.
-
-**Verify reviews code; it does not run the checks.** So the automated checks from step 4
-must be green before you call it — never invoke verify on a red build, and after fixing
-any review finding that changed code, re-run the checks green before the next cycle. A
-green gauntlet is the precondition of every verify call.
-
-Each cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this
-skill is running in, `cycle`, `plan_answers_file` when you have one, and from cycle 2: `prev_verify_sha` (previous
-`VERIFIED_SHA`) and `prev_report` — the **path** to the previous
-`{journal_dir}/verify-{cycle}.md`, annotated with your disposition on every finding. It
-writes its report to the file and returns a verdict block.
-
-**Every finding gets a disposition** — blockers, warnings, suggestions and questions
-alike. "Advisory" means the verdict doesn't gate on it, not that it can be skipped:
-
-- `ACTIONED: {what you did}` — fixed and committed.
-- `INVALID: {reason}` — citing the issue, codebase or a standards doc; verify
-  adjudicates next cycle. Never mark something invalid to avoid work.
-- `DEFERRED: {reason}` — non-blockers only, valid but genuinely out of scope; raise
-  it at step 6. Do not open a tracking issue.
-
-Verdicts:
-
-- **`PASS`** — once every finding is dispositioned, go to step 6.
-- **`BLOCKED (n)`** — action or invalidate each blocker, then run the next cycle.
-- **`NEEDS_RULING (n)`** — raise the questions and disputed findings (in
-  `subagent` mode the tech lead may answer from the epic, standards or an earlier
-  ruling). Record the outcome as `RESOLVED_BY: owner` or `RESOLVED_BY: tech lead`,
-  apply any fix, resume. Settled items are never re-raised.
-
-If cycle 3 is not `PASS`, stop and hand the outstanding report up: to the user in
-`interactive` mode, as `BLOCKED (n)` to the tech lead in `subagent` mode.
-
-### 6) Open PR
-
-- `interactive` — ask "Are you ready to post a pull request?" and wait for yes.
-- `subagent` — proceed: the PR is the assigned outcome, not a commitment to merge;
-  the two worker gate labels, the approved plans and the lead's judgement still stand
-  before the milestone branch.
-
-**Re-entering after rework** (a PR already exists): before pushing, strip the worker
-gates:
-
-```bash
-gh pr edit {pr_number} --remove-label "gate: qa-complete" --remove-label "gate: reviewer-approved"
-```
-
-They describe code that stops existing when you push; leaving one would let the story
-merge on a sign-off given against different code. There is no owner label to preserve —
-the owner's judgement was spent in the plan question rounds, before the code existed.
-
-Push, then `gh pr create` per `docs/coding-standards.md`, setting everything at
-creation (don't rely on later edits):
-
-- `--base {base_branch}`
-- `--title "{issue_title} (#{issue_number})"`
-- `--milestone "{milestone_title}"` — omit entirely if none; never invent one
-- `--body` — brief overview, `Closes #{issue_number}`, and the milestone name as a
-  readable line if assigned
-
-## Guardrails
-
-- No force push, history rewriting or amending unless explicitly requested.
-- Preserve unrelated local changes in the working tree.
-- Never assume missing information — raise it.
-- Keep communication concise and actionable.
-
-## Reporting (`subagent` mode)
-
-Per `.claude/shared/subagent-contract.md`, reply with only:
+If both lists are empty, go to *Approval*. Otherwise set `stage: awaiting-answers`,
+increment `plan_round`, append the round to `plan-questions.md`, and post it to the
+owner as one message — through `AskUserQuestion` when there are four questions or fewer,
+one question per entry, otherwise as plain text:
 
 ```
-VERDICT: {PR_OPEN | BLOCKED (n) | NEEDS_RULING (n)}
-REPORT: {journal_dir}/implement-{attempt}.md
-PR: {pr_number}
-SHA: {sha}
+Round {r} questions for #{issue_number}
+Requirement questions:
+1. {question} (current assumption: {x})
+Engineering questions:
+2. {question} (current assumption: {x})
+Reply with the number and your answer. "Confirmed" on a number accepts the assumption.
 ```
 
-Never paste a diff, verify report or test output into the reply.
+Number questions across both lists. A requirement question states the assumption, why
+it is uncertain, and what a good answer looks like. A conflict question carries the
+requirement, the rule and where it lives, and the compliant alternative, and asks which
+to build. Ask only what blocks a correct plan; never re-ask an answered question.
+
+**Waiting.** Everything stops; nothing else runs, and there is no timeout.
+
+- Map each reply to its question number; a reply with no number and one open
+  question maps to it. A reply that isn't an answer (a scope change, a command) is not
+  acted on — say what is still open and wait.
+- Never proceed on an unanswered question. There are no default answers, and you rule
+  on none of them.
+- The one exception: the owner says **"implement as is"**. Proceed on the latest plan,
+  record each open question in `plan-answers.md` as `AUDIT: Q{n} open when the owner
+  instructed implement-as-is, proceeded on {planner's reading}`, and set
+  `plan_as_is: true`.
+- **Pause** when the owner says pause or stop, or an answer says the issue is being
+  re-scoped or blocked. A resume after a re-scope re-plans from scratch as the next
+  version, in a new round.
+
+**Feed answers back.** Append the round's answers to `plan-answers.md` verbatim, each
+with its question number and type. Write every requirement answer back into the
+issue — a "Confirmed" stated as the confirmed reading — under a `## Notes` section
+(add it at the end if absent): append to `issue_body_file` with `Edit`, then
+`gh issue edit {issue_number} --body-file {issue_body_file}`. The issue is what the
+developer, verify, the reviewer and `close-issue` read; an answer only the planner saw
+gets flagged as a defect later. Engineering answers stay in `plan-answers.md`, which
+every later role receives. If every answer confirms the current reading, the plan
+stands — go to *Approval*. Otherwise resume the `planner` by name with `answers_file`,
+reset `attempts.critique` to `0`, and start the next round at step 2. There is no cap
+on question rounds.
+
+**Approval.** You approve the plans — there is no separate owner go — when the latest
+version was approved by the critique or verified by you after a second `REVISE`, and
+no question is open (or the owner said "implement as is"). Copy that version to
+`plan-dev.md` and `plan-qa.md` and set `plans_approved: true`.
+
+The plans freeze the moment `plans_approved` is set; nobody revises them after — not a
+worker, not you. The owner's judgement is spent in the question rounds, before the code
+exists, where it is cheapest.
+
+### 3) Rework
+
+`BUGS (n)` from `qa-implement` or `FINDINGS (n)` from `reviewer` sends the issue back
+to `implementing`. **Resume the same developer by name** with `SendMessage` — it
+already knows why the code is shaped as it is; a fresh spawn re-reads everything to
+get there.
+
+If you verify that the diff since QA's sign-off changes only comments, test names or
+trait/tag strings, QA re-applies `gate: qa-complete` from the diff without a stack
+run; CI's E2E run is the behavioural proof.
+
+Otherwise, after rework, always go through `testing` again before `reviewing`: the push
+strips `gate: qa-complete`, and re-running existing specs is cheap and the only proof
+the fix didn't break a previously green one.
+
+**Ceilings** — counted per thing, not per round (three different bugs fixed is
+healthy; one bug surviving twice is a signal). Stop and escalate when:
+
+- the same IT code still fails after 2 developer attempts, or the same review finding
+  survives 2 rounds — the developer's model of what is wanted disagrees with the
+  specification, and more attempts won't resolve it;
+- an issue reaches 3 full rework cycles, even with different findings each time — an
+  issue that won't converge is information.
+
+A ceiling isn't failure; it's where more agent turns stop being the answer.
+
+### 4) Escalations
+
+Workers message you mid-task. For each:
+
+1. Check `rulings.md` — questions recur.
+2. Resolve it yourself from the epic (if any), the issue, standards docs or journal if
+   you can.
+3. Take it to the owner only for: a change to the definition of done (IT codes,
+   acceptance criteria, scope); a conflict between sources of truth you can't
+   adjudicate; a suspected CodeQL false positive; or repeated failure suggesting the
+   specification, not the code, is wrong.
+
+**Record the ruling in `rulings.md` before replying** — a crash in between loses a
+decision the owner already spent attention on. Then `SendMessage` the worker by
+name, which resumes it with context intact.
+
+### 5) The merge gate
+
+The pull request is ready only when it carries both labels **and** the plans were
+approved — read the labels off the PR every time, including after a resume; a
+pre-interruption verdict proves nothing about the branch now:
+
+| Label | Applied by |
+| --- | --- |
+| `gate: qa-complete` | `qa-implement` |
+| `gate: reviewer-approved` | `reviewer` |
+
+The developer strips both labels before every push (`implement-plan` step 6); at the
+merge gate, confirm each label was applied after the head commit's push. The owner's
+judgement is not a merge label — it was spent in the plan question rounds (step 2a),
+and the plans' approval is recorded as `plans_approved: true`. Confirm that flag is set;
+an issue that reached the gate without it skipped the plan stage and must not proceed.
+
+**Both labels plus approved plans is necessary, not sufficient.** QA speaks to test
+coverage, the reviewer to PR cleanliness, the plan answers to the owner's intent. Look
+for what only you can see: a stated requirement nothing exercised, or a change
+contradicting `rulings.md` or the frozen `plan-dev.md`. That is why the decision sits
+with you rather than a label count.
+
+Then:
+
+- **Milestone story** — squash-merge into the milestone branch (never `master`, which
+  only a milestone branch reaches), record the merge in the manifest, and return to
+  `implement-milestone`.
+- **Standalone issue** — set `stage: awaiting-merge` and tell the owner in one line
+  that PR #{pr_number} is ready to merge into `master`. **The owner merges; you never
+  do.** Wait for their reply, then confirm with `gh pr view {pr_number} --json state`
+  that it is `MERGED` — anything else, say so and keep waiting. Record the merge in the
+  manifest.
+
+Either way, invoke `close-issue` in `subagent` mode to verify acceptance criteria and
+close, and set `stage: closed` on `CLOSED`.

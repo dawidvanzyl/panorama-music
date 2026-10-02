@@ -18,7 +18,7 @@ it exists at this point in the milestone sequence.
 
 ## Epic Reference
 
-- Epic: #issue-number
+- Epic: #issue-number — or "N/A — standalone" for an issue with no milestone
 - Work Areas:
   - [ ] Exact checkbox text copied from epic
 
@@ -27,9 +27,14 @@ it exists at this point in the milestone sequence.
 ## Test Specifications
 
 > QA's input contract: the end-to-end behaviours the Playwright suite must prove, decomposed
-> by scenario design. `plan-milestone` derives these from the epic's acceptance criteria and
-> this story's interface contract, and freezes them; never author them by hand. IT codes carry
-> the **owning epic's** issue number (e.g. epic #45 → `45IT1`), not this sub-issue's.
+> by scenario design. For a milestone story, `plan-milestone` derives these from the epic's
+> acceptance criteria and this story's interface contract, and freezes them; never author them
+> by hand. IT codes carry the **owning epic's** issue number (e.g. epic #45 → `45IT1`), not this
+> sub-issue's.
+>
+> A **standalone** issue (no milestone, so no epic) owns its own codes (`{issue_number}IT{n}`,
+> e.g. `341IT1`), written when the issue is created — or "N/A" where nothing end-to-end
+> changes. `implement-issue` refuses a standalone issue whose section is empty.
 
 - [ ] `[IT_CODE]` GIVEN … WHEN … THEN …
 
