@@ -104,7 +104,9 @@ and commit as you go.
 
 **Check the developer before QA.** A `PR_OPEN` or `FIXED` goes to `testing` only
 after you grep its `implement-{n}.md` for: an unticked checklist item, an IT code
-without a local pass, and a backend test command narrower than the solution. Any
+without a local pass, a backend test command narrower than the solution, and a
+checklist item whose named test does not exist on the branch (grep its name or AC tag;
+an item whose proof is "done", "reviewed" or a missing test is a hit). Any
 hit goes straight back to the developer — it never costs a QA run. They are in the contract too, but a rule stated only in a shared
 doc is one a worker under turn pressure skips.
 
@@ -152,7 +154,11 @@ to `implementing`. **Resume the same developer by name** with `SendMessage` — 
 already knows why the code is shaped as it is; a fresh spawn re-reads everything to
 get there.
 
-After rework, always go through `testing` again before `reviewing`: the push strips
+If you verify that the diff since QA's sign-off changes only comments, test names or
+trait/tag strings, QA re-applies `gate: qa-complete` from the diff without a stack
+run; CI's E2E run is the behavioural proof.
+
+Otherwise, after rework, always go through `testing` again before `reviewing`: the push strips
 `gate: qa-complete`, and re-running existing specs is cheap and the only proof the
 fix didn't break a previously green one.
 
@@ -193,8 +199,8 @@ pre-interruption verdict proves nothing about the branch now:
 | `gate: qa-complete` | `qa-implement` |
 | `gate: reviewer-approved` | `reviewer` |
 
-Pushes strip both worker labels automatically, so a present label always postdates the
-last commit. The owner's judgement is not a merge label — it was spent at the plan gate
+The developer strips both labels before every push (`implement-issue` step 6); at the
+merge gate, confirm each label was applied after the head commit's push. The owner's judgement is not a merge label — it was spent at the plan gate
 (step 3a), recorded as `plans_approved: true`. Confirm that flag is set before merging;
 a story that reached merge without it skipped the gate and must not proceed.
 

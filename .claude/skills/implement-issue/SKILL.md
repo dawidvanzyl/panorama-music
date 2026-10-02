@@ -177,7 +177,11 @@ nothing.
   memory; it matches `ci.yml`, so a local pass means what a CI pass means. Backend
   tests run on the **whole solution** (`src/PanoramaMusic.slnx`), never a single
   project — cross-cutting tests live in other projects. This is the one place the
-  gauntlet runs in the automated flow.
+  gauntlet runs in the automated flow. Also run its *Comment labels* check and fix
+  every hit before reporting done.
+- **Mockup fidelity.** For a story with a Design reference, record a property table
+  in `implement-{attempt}.md` built from the rendered mockup's `getComputedStyle`
+  against the shipped component's — never from the mockup's source values.
 - **Run the story's IT specs locally until every one passes**, when QA wrote them
   first: a fresh QA stack (`qa-implement` step 3), then
   `cd e2e && npx playwright test --grep "@{IT_CODE}"` once per code, then tear it

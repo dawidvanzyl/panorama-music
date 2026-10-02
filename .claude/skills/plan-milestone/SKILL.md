@@ -101,7 +101,11 @@ Plan the sub-issues that fully deliver the criteria:
   and carries both its API and its screen. No backend-only/frontend-only split, no
   separate "test" sub-issues (testing AWAs in the epic are informational). Layer-based
   stories only when the epic is pure technical scaffolding.
-* **Dependencies** — which stories must land before others.
+* **Dependencies** — which stories must land before others. Also account for test
+  reachability: for each IT code ask whether the story can reach the GIVEN state on its
+  own. If the state needs another story's fields, controls or column count, either add
+  that story to `depends_on` or move the IT code to it, and record which in the
+  skeleton.
 * **Does the gap still exist?** Grep the codebase before a criterion or finding
   becomes planned work; earlier milestones sometimes deliver part of an epic. If it
   exists, report file and line and let the user decide what the criterion now means.
@@ -128,7 +132,13 @@ The only definition of a sub-issue's unit-testable behaviour:
 * **UC criteria** — one or more per epic AC the sub-issue contributes to, coded
   `{ISSUE}UC{n}` (`{ISSUE}` resolves in Step 4), each with GIVEN / WHEN / THEN and
   mapped to exactly one verifiable behaviour. Grouped `backend` / `frontend` when the
-  story spans both; empty if flagged in 2.1.
+  story spans both; empty if flagged in 2.1. Number UC codes once per issue across
+  both `### Backend` and `### Frontend`; Frontend continues after the last Backend
+  code. A number never appears twice in one issue.
+* **Worked example** — for any epic AC that defines how filters, projection or
+  aggregation combine, record a small worked example: input records, the report
+  definition, and the expected rows. The draft carries it and the owner approves it
+  with the AC.
 * **`covers_acs`** — the `AC{n}` identifiers this sub-issue contributes to. This is
   the join §3.4 uses to attach IT codes to stories. It may be non-empty even when the
   criteria set is empty (scaffolding can contribute without unit-testable behaviour).
@@ -224,7 +234,9 @@ burns context the later phases need.
 
 1. Write the draft file before saying anything about it.
 2. Give its absolute path and ask: "Does this look correct, or do you have changes?"
-3. Add at most a few lines: what the story covers in one sentence, and any judgement
+3. Before presenting, check that no UC number repeats within the draft across
+   `### Backend` and `### Frontend`.
+4. Add at most a few lines: what the story covers in one sentence, and any judgement
    call worth attention (an assumption where inputs were silent, a conflict with the
    current source, a mockup/brief disagreement). No recap. Never render the body or
    excerpts; answer questions about it directly.

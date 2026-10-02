@@ -121,6 +121,9 @@ gh pr view {pr_number} --json commits --jq '.commits[-1].oid'
   PR at all (a standalone `interactive` review), note that CI can't be confirmed and
   review the code without a check verdict.
 
+Run the *Comment labels* grep from `.claude/shared/automated-checks.md` over the diff
+(a text search, not one of the checks CI covers); any hit is a finding.
+
 ### 5) Branch sync
 
 After `git fetch origin {base_branch}`, run
@@ -137,6 +140,9 @@ is missing, wrong or inconsistent:
 - A deviation from the API contract is a ❌ Blocker.
 - A violation of Context & Constraints is a ❌ Blocker.
 - Look for evidence that the Notes were read and acted on.
+- For a story with a Design reference, spot-check mockup fidelity by rendering the
+  mockup and the shipped component and comparing computed styles. Any deviation from
+  an authoritative mockup is a ❌ Blocker on the first cycle.
 - If the diff implements anything listed in Out of Scope, raise a ❌ Blocker: "Diff
   implements work explicitly excluded in Out of Scope: {item}."
 
