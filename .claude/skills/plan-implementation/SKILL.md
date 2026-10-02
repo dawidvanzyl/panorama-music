@@ -43,12 +43,14 @@ because you're planning a change to it.
 - `issue_number`: required. In `interactive` mode, ask for it if missing.
 - `journal_dir`: required. The absolute path to the story's journal.
 - `mode`: `interactive` (default) or `subagent`.
-- `subagent` only, as file paths: `issue_body_file` (the sub-issue), `epic_body_file`,
-  `it_codes_file` (`it-codes.json`) and `test_intents_file` (`test-intents.json`). A
-  missing input is escalated, never guessed.
+- `subagent` only, as file paths: `issue_body_file` (the issue), and for a milestone
+  story also `epic_body_file`, `it_codes_file` (`it-codes.json`) and
+  `test_intents_file` (`test-intents.json`). A standalone issue (no milestone) has no
+  epic and none of the three; its own sections are the source (step 1). A missing
+  input is escalated, never guessed.
 - In `interactive` mode, fetch the issue yourself with
-  `gh issue view {issue_number} --json title,body`, plus the epic, `it-codes.json` and
-  `test-intents.json`.
+  `gh issue view {issue_number} --json title,body,milestone`, plus — for a milestone
+  story — the epic, `it-codes.json` and `test-intents.json`.
 - `version`: `1` on first pass. Every pass writes `plan-dev-v{version}.md` and
   `plan-qa-v{version}.md` as new files; never overwrite an earlier version.
 - `critique_file` (revisions): the latest `critique-v{n}.md`.
@@ -76,15 +78,19 @@ re-derive from scratch.
 
 ### 1) Read the story
 
-**From the sub-issue:** `## Functional Requirements`, `## Domain & Data` (the business
+**From the issue:** `## Functional Requirements`, `## Domain & Data` (the business
 rules the negative cases come from), `## API / Interface Contract`,
 `## Page Architecture` (frontend only), `## Test Specifications` (the authoritative IT
-codes), `## Out of Scope`, and any **Design reference:** bullet — the named `.design/`
-file is authoritative for what the screen does.
+codes), `## Acceptance Criteria (G/W/T)` (the UC codes), `## Out of Scope`, `## Notes`
+(the owner's answers, once there are any), and any **Design reference:** bullet — the
+named `.design/` file is authoritative for what the screen does. A tech-debt issue has
+no `## Domain & Data` or `## Page Architecture`; read its `## Motivation & Risk`
+instead. Treat any section the issue's template lacks as absent, not as a gap.
 
-**From the epic:** the `AC{n}` criterion each IT code serves (mapped in
-`it-codes.json`) and the UC codes (`test-intents.json`). A plan that meets a code's
-wording but misses the criterion's intent has failed.
+**The intent each code serves.** For a milestone story: from the epic, the `AC{n}`
+criterion each IT code serves (mapped in `it-codes.json`) and the UC codes
+(`test-intents.json`). For a standalone issue: its own `## Functional Requirements`.
+A plan that meets a code's wording but misses the intent behind it has failed.
 
 **From the codebase (dev plan):** the routes, handlers, domain types, migrations and
 frontend components this story changes. Plan against the patterns that exist — an
@@ -111,7 +117,7 @@ Write it **as you go** — a session can hit its turn or quota limit without war
 ```markdown
 # Development plan — #{issue_number} {title} — v{version}
 
-Sources: sub-issue #{issue_number}, epic #{epic}, test-intents.json{, plan-answers.md}
+Sources: issue #{issue_number}{, epic #{epic}, test-intents.json}{, plan-answers.md}
 Status: FROZEN once the tech lead approves
 
 ## Approach
@@ -185,12 +191,12 @@ exists), and **persistence** (anything claimed recorded survives a reload).
 ```markdown
 # QA plan — #{issue_number} {title} — v{version}
 
-Sources: sub-issue #{issue_number}, epic #{epic}, it-codes.json{, plan-answers.md}
+Sources: issue #{issue_number}{, epic #{epic}, it-codes.json}{, plan-answers.md}
 Status: FROZEN once the tech lead approves
 
-## `{IT_CODE}` — serves AC{n}
+## `{IT_CODE}` — serves {AC{n} | the functional requirement}
 
-> {the epic criterion text, verbatim}
+> {the epic criterion text, verbatim — or, standalone, the functional requirement it proves}
 > {the IT code's GIVEN/WHEN/THEN, verbatim}
 
 ### S1 — {short name}

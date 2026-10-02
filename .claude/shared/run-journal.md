@@ -1,7 +1,8 @@
 # Run journal
 
-The durable state of one milestone, from planning to the merge into `master`.
-`plan-milestone` writes it first, then the tech lead and its workers. The agent
+The durable state of one milestone, from planning to the merge into `master` — or of
+one standalone issue (see *Standalone issues*). `plan-milestone` writes a milestone's
+journal first, then the tech lead and its workers. The agent
 definitions and every skill that writes to `journal_dir` refer to this file, so edit
 it here and never inline a copy.
 
@@ -98,7 +99,8 @@ the per-story files, so it doesn't land in the lead's context on every read.
 ```
 
 `stage` is one of `pending`, `planning`, `critiquing`, `awaiting-answers`,
-`specifying`, `implementing`, `testing`, `reviewing`, `merged` or `closed`. It records what the lead
+`specifying`, `implementing`, `testing`, `reviewing`, `awaiting-merge` (standalone
+only), `merged` or `closed`. It records what the lead
 last **did**; it is not a claim about the world. `plans_approved` gates implementing;
 `plan_version` is the latest plan version, `plan_round` the latest owner question
 round, and `plan_as_is` records that the owner said "implement as is" with questions
@@ -106,6 +108,35 @@ still open.
 `attempts` supplies each worker's `cycle` number: the reviewer's `cycle` is
 `attempts.review`, and `attempts.critique` counts the critiques in the current question
 round (max 2).
+
+## Standalone issues
+
+An issue with no milestone, run by `implement-issue` on its own, gets its own journal:
+
+```
+{HOME}/.claude/runs/panorama-music/issues/{issue_number}/
+├── manifest.json              lead-only; one entry
+├── rulings.md                 answered escalations, this issue only
+└── plan-*.md, critique-*.md, implement-*.md, qa-*.md, …   as in a story dir
+```
+
+The directory is both the run dir and `journal_dir`: the story files sit directly in it.
+Resolve `{HOME}` once, when `implement-issue` creates it, and record it as
+`journal_root`. The manifest holds that one issue in the same shape as a story entry,
+with `base_branch: "master"` in place of the milestone fields and no `dir` or
+`depends_on`:
+
+```json
+{
+  "journal_root": "C:/Users/dawid/.claude/runs/panorama-music/issues/341",
+  "base_branch": "master",
+  "issue": { "issue_number": 341, "title": "[Tech Debt] …", "stage": "planning", … }
+}
+```
+
+There is no `00-skeleton.md`, `it-codes.json` or `test-intents.json` — the issue's own
+`## Test Specifications` and `## Acceptance Criteria (G/W/T)` hold its codes — and no
+retrospective.
 
 ## rulings.md
 
@@ -159,7 +190,8 @@ Two states call for suspicion rather than trust:
 
 - **`stage` past `awaiting-answers` but `plans_approved` not `true`.** The plan
   approval was skipped — a story must not reach `implementing` without it. Re-run the
-  plan stage from the latest version (step 3a) before trusting the stage.
+  plan stage from the latest version (`implement-issue` step 2a) before trusting the
+  stage.
 - **A dirty working tree.** It may hold the previous run's unfinished work. Read the
   story's latest `implement-{n}.md` to see how far it got, and if that doesn't settle
   it, ask before keeping or discarding anything.

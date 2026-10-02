@@ -44,8 +44,9 @@ or a GitHub label.
   test?" if it's missing.
 - `journal_dir`: required. The absolute path to the story's journal.
 - `qa_plan_file`: required. The frozen `plan-qa.md`.
-- `base_branch`: required in `subagent` mode. It is never inferred, because stories
-  branch from and merge into the milestone branch.
+- `base_branch`: required in `subagent` mode. It is never inferred, because a
+  milestone story branches from the milestone branch and a standalone issue from
+  `master`.
 - `phase`: `specify` or `run` (default `run`). The tech lead runs `specify` first,
   before any code exists; see *Specify phase* below.
 - `branch`: required for `specify` — the feature branch name to create.

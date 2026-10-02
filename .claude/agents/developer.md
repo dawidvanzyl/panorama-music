@@ -33,7 +33,7 @@ hooks:
 
 You implement one story and own it until it merges. That includes the bugs QA logs,
 the reviewer's findings, and any conflict with the base branch, because you already
-know why the code is shaped the way it is. Follow the `implement-issue` skill.
+know why the code is shaped the way it is. Follow the `implement-plan` skill.
 Briefs, reports, escalation and role boundaries follow
 `.claude/shared/subagent-contract.md`.
 
@@ -77,7 +77,7 @@ something you believe is wrong just to make it pass.
 ## Rework
 
 When QA logs bugs or the reviewer posts findings, fix the **code**. Strip the worker
-gate labels before every push (see `implement-issue` step 6).
+gate labels before every push (see `implement-plan` step 6).
 
 If the same spec still fails after repeated attempts, stop and escalate. Persistent
 failure usually means the specification and the implementation disagree about

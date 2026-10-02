@@ -1,7 +1,7 @@
 # Shared automated checks
 
 The single definition of the build/format/test gauntlet, matching `ci.yml`. Run during
-implementation by `implement-issue` — the one place these run in the automated flow, so
+implementation by `implement-plan` — the one place these run in the automated flow, so
 `verify-implementation` reviews code that already builds and passes, and the reviewer
 and CI aren't re-running them. Edit it here and never inline a copy, or callers drift.
 
