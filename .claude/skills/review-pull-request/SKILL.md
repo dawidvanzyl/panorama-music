@@ -52,7 +52,7 @@ Nothing else:
   record of what was wrong.
 - Never commit, push or check out. Git is limited to `fetch`, `diff` and `rev-list`.
 - **Never merge and never close the issue.** The tech lead decides the story is done,
-  from your approval, QA's sign-off and the owner's together. Your job is to make that
+  from your approval, QA's sign-off and the approved plans together. Your job is to make that
   decision safe to take.
 
 ## Inputs
@@ -64,6 +64,7 @@ Nothing else:
 - `journal_dir`: required in `subagent` mode. The absolute path to the story's journal.
 - `cycle`: required in `subagent` mode. The review pass number, supplied by the caller;
   it names the report file.
+- `plan_answers_file`: optional. The owner's answers from the plan stage; see step 2.
 - `mode`: `interactive` (default) or `subagent`.
 
 In `subagent` mode a missing input is `BLOCKED (1)`, naming it. Never ask a question
@@ -92,7 +93,11 @@ Extract these sections. They are the reference for correctness:
 - `## Domain & Data`
 - `## Context & Constraints`
 - `## Out of Scope`
-- `## Notes`, if present (edge cases, security considerations, deliberate deferrals)
+- `## Notes`, if present (edge cases, security considerations, deliberate deferrals,
+  and the owner's requirement answers from the plan stage)
+
+If `plan_answers_file` is present, read it: an engineering answer that overrides a
+documented rule is authoritative, so code following it is not a finding.
 
 ### 3) Fetch diff
 
@@ -121,6 +126,9 @@ gh pr view {pr_number} --json commits --jq '.commits[-1].oid'
   PR at all (a standalone `interactive` review), note that CI can't be confirmed and
   review the code without a check verdict.
 
+Run the *Comment labels* grep from `.claude/shared/automated-checks.md` over the diff
+(a text search, not one of the checks CI covers); any hit is a finding.
+
 ### 5) Branch sync
 
 After `git fetch origin {base_branch}`, run
@@ -137,6 +145,9 @@ is missing, wrong or inconsistent:
 - A deviation from the API contract is a ❌ Blocker.
 - A violation of Context & Constraints is a ❌ Blocker.
 - Look for evidence that the Notes were read and acted on.
+- For a story with a Design reference, spot-check mockup fidelity by rendering the
+  mockup and the shipped component and comparing computed styles. Any deviation from
+  an authoritative mockup is a ❌ Blocker on the first cycle.
 - If the diff implements anything listed in Out of Scope, raise a ❌ Blocker: "Diff
   implements work explicitly excluded in Out of Scope: {item}."
 

@@ -122,7 +122,7 @@ and review, so CI is the only thing still watching it.
 
 **Never dismiss or suppress a finding**, yourself or by telling a developer to, and
 that includes inline suppression annotations. Whether something is a false positive
-is a security decision that belongs to the developer. Escalate it, and record the
+is a security decision that belongs to the owner. Escalate it, and record the
 ruling in the run journal so the next milestone doesn't reopen it.
 
 ### 6) Hand off

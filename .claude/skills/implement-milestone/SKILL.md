@@ -40,10 +40,10 @@ Two rules run through every step:
 ### 1) Resume: replay, then reconcile
 
 Follow *Resume: replay, then reconcile* in `.claude/shared/run-journal.md`. For a
-story caught mid-stage, read the interrupted worker's newest report (`plan-dev.md` /
-`plan-open-issues.md`, `implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md`) to see
-how far it got. A story at `awaiting-plan-approval` with `plans_approved` unset resumes
-at the plan gate, not the planner.
+story caught mid-stage, read the interrupted worker's newest report (`plan-dev-v{n}.md`
+/ `critique-v{n}.md`, `implement-{n}.md`, `qa-run-{n}.md` or `review-{n}.md`) to see
+how far it got. A story at `awaiting-answers` resumes by re-posting the open round from
+`plan-questions.md`, not by re-planning.
 
 Report where you are picking up in one line, then continue.
 
@@ -64,9 +64,9 @@ spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 
 | Stage | Role | Skill | Produces |
 | --- | --- | --- | --- |
-| `planning` | `planner` | `plan-implementation` | `plan-dev.md`, `plan-qa.md` |
-| `critiquing` | `plan-critique` | `plan-critique` | `plan-open-issues.md` |
-| `awaiting-plan-approval` | — (owner) | — | `plans_approved` |
+| `planning` | `planner` | `plan-implementation` | `plan-dev-v{n}.md`, `plan-qa-v{n}.md` |
+| `critiquing` | `plan-critique` | `plan-critique` | `critique-v{n}.md` |
+| `awaiting-answers` | — (owner) | — | `plan-answers.md` |
 | `specifying` | `qa-implement` (`phase: specify`) | `qa-implement` | failing specs on the feature branch |
 | `implementing` | `developer` | `implement-issue` | the PR, every IT spec green locally |
 | `testing` | `qa-implement` (`phase: run`) | `qa-implement` | `gate: qa-complete` |
@@ -85,13 +85,15 @@ a fresh spawn would burn tokens re-deriving. Start fresh agents only on the next
 sentence of intent, rulings cited by number — never a narrative, which drifts between
 retellings so a respawned worker silently gets a different task. Always include
 `issue_number`, `journal_dir` (absolute), `base_branch` (the milestone branch),
-`mode: subagent` and `outcome`, plus role inputs. `plan` and `plan-critique` have no
+`mode: subagent` and `outcome`, plus role inputs. `planner` and `plan-critique` have no
 shell, so first write `issue_body_file`, `epic_body_file`, `it_codes_file` and
-`test_intents_file` into the story's `journal_dir`; the `planner` writes both plans and
-`plan-critique` writes `plan-open-issues.md`, all in that dir; the developer gets
-`dev_plan_file` (and `plan_open_issues_file` whenever open non-blocker findings remain,
-to honour or disposition), `qa-implement` gets `qa_plan_file`, and the reviewer gets
-`cycle` (the story's `attempts.review`).
+`test_intents_file` into the story's `journal_dir`; the `planner` writes the versioned
+plans and `plan-critique` writes `critique-v{n}.md`, all in that dir; the planner also
+gets `version`, `critique_file` and `answers_file`, and the critique gets `version`,
+`dev_plan_file` and `qa_plan_file` (that version's files), `answers_file` and, on a
+second critique in a round, `prev_critique_file`; the developer gets `dev_plan_file` (and `plan_answers_file` whenever
+`plan-answers.md` exists), `qa-implement` gets `qa_plan_file`, and the reviewer gets
+`cycle` (the story's `attempts.review`) and `plan_answers_file` when it exists.
 
 `qa-implement` in `phase: specify` gets `branch` (named per `docs/coding-standards.md`)
 and `dev_plan_file`; the developer then gets that `branch`. The developer's brief
@@ -104,46 +106,111 @@ and commit as you go.
 
 **Check the developer before QA.** A `PR_OPEN` or `FIXED` goes to `testing` only
 after you grep its `implement-{n}.md` for: an unticked checklist item, an IT code
-without a local pass, and a backend test command narrower than the solution. Any
+without a local pass, a backend test command narrower than the solution, and a
+checklist item whose named test does not exist on the branch (grep its name or AC tag;
+an item whose proof is "done", "reviewed" or a missing test is a hit). Any
 hit goes straight back to the developer — it never costs a QA run. They are in the contract too, but a rule stated only in a shared
 doc is one a worker under turn pressure skips.
 
 **Read the verdict line only.** Open the report file only when the verdict doesn't tell
 you what to do next.
 
-**Autonomy.** The owner is usually away or asleep while this runs. Resolve every
-issue you can from the epic, the issue, the standards, the plans and `rulings.md`, and
-record the ruling. Stop for the owner only when you are thoroughly blocked: the plan
-gate with open Blockers, a change to the definition of done, or a ceiling reached.
-Owner answers that arrive while other work runs are applied when they land, not
-waited for.
+**Owner contact.** At the plan stage you rule on nothing: every open question —
+requirement or engineering, including a rule override — goes to the owner (step 3a).
+After the plans are approved, resolve each worker escalation you can from the epic,
+the issue, the standards, the approved plans, `plan-answers.md` and `rulings.md`, and
+record the ruling; go to the owner only for the cases in step 5. Whenever you wait on
+the owner, the milestone waits — one story and one stage at a time (`tech-lead.md`
+rule 1) means nothing else runs meanwhile.
 
-### 3a) The planning loop and the plan gate
+### 3a) The planning loop and the plan approval
 
-Planning is one `planner` spawn, then at most **two** `plan-critique` turns, then the
-owner gate:
+**Plan and critique.** Per question round: at most three plans and two critiques, in
+the order plan, critique, plan, critique, plan. Increment `plan_version` before each
+planner pass and `attempts.critique` before each critique.
 
-1. Spawn `planner` → `PLANNED`, producing `plan-dev.md` and `plan-qa.md`.
-2. Set `stage: critiquing`; spawn `plan-critique` with `turn: 1`. While any finding is
-   open (`OPEN (n>0)`), resume the `planner` agent by name to revise, then resume
-   `plan-critique` by name with `turn: 2`. **Stop after turn 2 regardless** — the
-   ceiling is two turns, not convergence.
-3. **The plan gate** — the critique reports in the reviewer's severity language, and the
-   gate keys on **Blockers** (`review-severity.md`). Set `stage: awaiting-plan-approval`,
-   then:
-   - `BLOCKERS: 0` → **auto-approve**: set `plans_approved: true` and
-     `plan_auto_approved: true` in the manifest, and proceed. No owner pause. Any open
-     Warnings/Questions/Suggestions travel to the developer as `plan_open_issues_file`.
-   - `BLOCKERS (n>0)` after turn 2 → take `plan-dev.md`, `plan-qa.md` and
-     `plan-open-issues.md` to the owner and **wait**. The owner approves as-is or
-     resolves the blockers (their resolution wins — note it in `plan-open-issues.md`).
-     On their yes, set `plans_approved: true` (and `plan_auto_approved: false`) and
-     proceed.
+1. Spawn `planner` → `PLANNED`, writing `plan-dev-v{n}.md` and `plan-qa-v{n}.md`.
+2. Set `stage: critiquing`; spawn `plan-critique` against that version (resume it by
+   name on later critiques). A critique always gets a fresh look at the plan, never
+   your summary of it.
+3. `APPROVE` → go to *Questions*.
+4. `REVISE (n)` → resume the `planner` by name with `critique_file`. After the round's
+   first critique, return to 2 with the new version. After the second, the new
+   version is the round's final plan and is **not** re-critiqued: open
+   `critique-v{n}.md`'s required changes and the new plan, and check each change
+   landed. One that didn't land becomes an engineering question. Then go to
+   *Questions*.
+
+A required change the planner `DECLINED` is not spent on another revision: it becomes a
+question of the type the disputed reading belongs to (requirement for the issue, epic
+or mockup; engineering for the code or a standard), quoting the critic's reading and
+the planner's.
+
+**Questions.** Classify every open item from the latest plan's `## Notes` and the
+latest critique:
+
+- *Requirement* — every requirement `ASSUMPTION` not marked `RESOLVED:`; every
+  critique `QUESTION` labelled requirement; every declined change disputing a reading
+  of the issue, epic or mockup.
+- *Engineering* — every `CONFLICT` from the planner or the critique; every critique
+  `QUESTION` labelled engineering; every declined change disputing a reading of the
+  code or a standard; every required change that didn't land; every engineering
+  `ASSUMPTION` not marked `RESOLVED:`.
+
+If both lists are empty, go to *Approval*. Otherwise set `stage: awaiting-answers`,
+increment `plan_round`, append the round to `plan-questions.md`, and post it to the
+owner as one message — through `AskUserQuestion` when there are four questions or fewer,
+one question per entry, otherwise as plain text:
+
+```
+Round {r} questions for #{issue_number}
+Requirement questions:
+1. {question} (current assumption: {x})
+Engineering questions:
+2. {question} (current assumption: {x})
+Reply with the number and your answer. "Confirmed" on a number accepts the assumption.
+```
+
+Number questions across both lists. A requirement question states the assumption, why
+it is uncertain, and what a good answer looks like. A conflict question carries the
+requirement, the rule and where it lives, and the compliant alternative, and asks which
+to build. Ask only what blocks a correct plan; never re-ask an answered question.
+
+**Waiting.** The milestone stops; nothing else runs, and there is no timeout.
+
+- Map each reply to its question number; a reply with no number and one open
+  question maps to it. A reply that isn't an answer (a scope change, a command) is not
+  acted on — say what is still open and wait.
+- Never proceed on an unanswered question. There are no default answers, and you rule
+  on none of them.
+- The one exception: the owner says **"implement as is"**. Proceed on the latest plan,
+  record each open question in `plan-answers.md` as `AUDIT: Q{n} open when the owner
+  instructed implement-as-is, proceeded on {planner's reading}`, and set
+  `plan_as_is: true`.
+- **Pause** when the owner says pause or stop, or an answer says the story is being
+  re-scoped or blocked. A resume after a re-scope re-plans from scratch as the next
+  version, in a new round.
+
+**Feed answers back.** Append the round's answers to `plan-answers.md` verbatim, each
+with its question number and type. Write every requirement answer back into the
+sub-issue — a "Confirmed" stated as the confirmed reading — under a `## Notes` section
+(add it at the end if absent): append to `issue_body_file` with `Edit`, then
+`gh issue edit {issue_number} --body-file {issue_body_file}`. The issue is what the
+developer, verify, the reviewer and `close-issue` read; an answer only the planner saw
+gets flagged as a defect later. Engineering answers stay in `plan-answers.md`, which
+every later role receives. If every answer confirms the current reading, the
+plan stands — go to *Approval*. Otherwise resume the `planner` by name with
+`answers_file`, reset `attempts.critique` to `0`, and start the next round at step 2.
+There is no cap on question rounds.
+
+**Approval.** You approve the plans — there is no separate owner go — when the latest
+version was approved by the critique or verified by you after a second `REVISE`, and
+no question is open (or the owner said "implement as is"). Copy that version to
+`plan-dev.md` and `plan-qa.md` and set `plans_approved: true`.
 
 The plans freeze the moment `plans_approved` is set; nobody revises them after — not a
-worker, not you. **This owner gate replaces `gate: owner-approved` at merge**: the human
-judgement now sits before the code exists, where it is cheapest, and every
-auto-approval is logged in the manifest for post-hoc spot-check.
+worker, not you. The owner's judgement is spent in the question rounds, before the code
+exists, where it is cheapest.
 
 ### 4) Rework
 
@@ -152,7 +219,11 @@ to `implementing`. **Resume the same developer by name** with `SendMessage` — 
 already knows why the code is shaped as it is; a fresh spawn re-reads everything to
 get there.
 
-After rework, always go through `testing` again before `reviewing`: the push strips
+If you verify that the diff since QA's sign-off changes only comments, test names or
+trait/tag strings, QA re-applies `gate: qa-complete` from the diff without a stack
+run; CI's E2E run is the behavioural proof.
+
+Otherwise, after rework, always go through `testing` again before `reviewing`: the push strips
 `gate: qa-complete`, and re-running existing specs is cheap and the only proof the
 fix didn't break a previously green one.
 
@@ -173,13 +244,13 @@ Workers message you mid-task. For each:
 
 1. Check `rulings.md` — questions recur across stories.
 2. Resolve it yourself from the epic, sub-issue, standards docs or journal if you can.
-3. Take it to the developer only for: a change to the definition of done (IT codes,
+3. Take it to the owner only for: a change to the definition of done (IT codes,
    acceptance criteria, scope); a conflict between sources of truth you can't
    adjudicate; a suspected CodeQL false positive; or repeated failure suggesting the
    specification, not the code, is wrong.
 
 **Record the ruling in `rulings.md` before replying** — a crash in between loses a
-decision the developer already spent attention on. Then `SendMessage` the worker by
+decision the owner already spent attention on. Then `SendMessage` the worker by
 name, which resumes it with context intact.
 
 ### 6) The merge gate
@@ -193,13 +264,15 @@ pre-interruption verdict proves nothing about the branch now:
 | `gate: qa-complete` | `qa-implement` |
 | `gate: reviewer-approved` | `reviewer` |
 
-Pushes strip both worker labels automatically, so a present label always postdates the
-last commit. The owner's judgement is not a merge label — it was spent at the plan gate
-(step 3a), recorded as `plans_approved: true`. Confirm that flag is set before merging;
-a story that reached merge without it skipped the gate and must not proceed.
+The developer strips both labels before every push (`implement-issue` step 6); at the
+merge gate, confirm each label was applied after the head commit's push. The owner's
+judgement is not a merge label — it was spent in the plan question rounds (step 3a),
+and the plans' approval is recorded as `plans_approved: true`.
+Confirm that flag is set before merging; a story that reached merge without it skipped
+the plan stage and must not proceed.
 
 **Both labels plus approved plans is necessary, not sufficient.** QA speaks to test
-coverage, the reviewer to PR cleanliness, the plan gate to the owner's intent. Before
+coverage, the reviewer to PR cleanliness, the plan answers to the owner's intent. Before
 merging, look for what only you can see: a stated requirement nothing exercised, or a
 change contradicting `rulings.md` or the frozen `plan-dev.md`. That is why the decision
 sits with you rather than a label count.
@@ -211,7 +284,7 @@ Then:
 - Invoke `close-issue` in `subagent` mode to verify acceptance criteria and close.
 - Record the merge in the manifest before moving on.
 
-Don't batch merges: the owner's label already puts a human decision before every
+Don't batch merges: the plan stage already put the owner's judgement before every
 story, so holding back adds latency, not a check.
 
 ### 7) Ending the milestone

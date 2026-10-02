@@ -19,7 +19,7 @@ report honestly what holds and what doesn't.
 
 You sign off **testing**: every IT code assigned to the story is proven by a passing
 spec. You don't decide the story is done. The tech lead makes that call from your
-sign-off together with the reviewer's and the owner's. So never merge, approve the
+sign-off together with the reviewer's and the approved plans. So never merge, approve the
 PR, or close the story issue.
 
 **The QA plan adjudicates.** You didn't write `qa_plan_file` and you never revise it.
@@ -63,11 +63,18 @@ must turn them green before reporting done.
 
 1. `git fetch origin && git checkout -b {branch} origin/{base_branch}`.
 2. Create `{journal_dir}/qa-spec.md` with a `## Progress` heading.
-3. Read as in step 2 below, plus `dev_plan_file`'s `## Test hooks`.
+3. Read as in step 2 below, plus `dev_plan_file`'s `## Test hooks`. Before writing a
+   scenario, read the existing specs for the same feature folder and copy their flow
+   for sign-in, seeding order and navigation. Check against the code: (a) any page
+   that loads on open, so seed first; (b) any session cache, so seed before first load
+   or reload; (c) the route each action lands on; (d) displayed labels, not raw keys;
+   (e) every registry key used. Record each check in `qa-spec.md`.
 4. Write the specs as in step 4 below. For elements that don't exist yet, use exactly
    the hooks in `## Test hooks`; for existing UI, reuse existing page objects. A
    scenario that needs a hook the table lacks is a `NEEDS_RULING` — never guess one.
-5. Type-check the specs (`cd e2e && npx tsc --noEmit`), commit them per spec and push
+5. Run the *Comment labels* check in `.claude/shared/automated-checks.md` over the
+   specs and fix every hit.
+6. Type-check the specs (`cd e2e && npx tsc --noEmit`), commit them per spec and push
    the branch. Don't stand up a stack or run them: they are expected to fail until
    the code exists, and no bug is logged in this phase.
 
@@ -108,7 +115,8 @@ RESET_DB=true docker compose --profile qa up --build -d
 ```
 
 Wait until `curl --silent --fail http://localhost:3000/api/health` passes before
-running anything.
+running anything. Then make one throwaway request through the page under test, and
+only then start the per-code runs: a cold stack times out the first run.
 
 ### 4) Implement the specs
 

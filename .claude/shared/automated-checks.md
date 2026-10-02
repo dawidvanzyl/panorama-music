@@ -36,6 +36,20 @@ Check `frontend/package.json` and run each of these scripts that exists: `lint`,
 `npx vitest run --reporter=verbose` instead. If nothing at all is configured, report
 "No frontend checks configured".
 
+## Comment labels
+
+Run on the diff's added lines only, case-sensitive, over `src`, `frontend/src` and
+`e2e`:
+
+```bash
+git diff origin/{base_branch}... -- src frontend/src e2e
+```
+
+Pattern: `plan|ruling|this story|later story|\bAC\d+\b|\bR\d+\b|\bD\d+\b|\d+UC\d+|#\d{3}|review-\d`
+
+Every hit on a comment, test name or justification string is fixed before reporting
+done. A UC trait value is not a hit.
+
 ## Report
 
 List the results under **Automated checks:**, omitting lines for checks that didn't

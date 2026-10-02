@@ -26,8 +26,9 @@ Every brief carries:
   milestone branch itself and for standalone work. A worker that has to derive it
   uses the **story's assigned milestone**, never the branch name.
 - `outcome`: what must be true when the work is done.
-- Role inputs, always as paths: `dev_plan_file`, `qa_plan_file`,
-  `plan_open_issues_file`, `prev_report`, `findings_file`, `pr_number`, `cycle`.
+- Role inputs, always as paths: `dev_plan_file`, `qa_plan_file`, `critique_file`,
+  `answers_file` / `plan_answers_file`, `prev_report`, `findings_file`, `pr_number`,
+  `cycle`.
 
 If a required input is missing, don't guess it and don't proceed. Escalate.
 
@@ -66,7 +67,7 @@ paste a diff, findings table, test log or design into the reply.
 | Role | Succeeded | Did not succeed | Cannot proceed |
 | --- | --- | --- | --- |
 | `planner` | `PLANNED` | — | `NEEDS_RULING (n)` |
-| `plan-critique` | `CRITIQUED` | — | `NEEDS_RULING (n)` |
+| `plan-critique` | `APPROVE` | `REVISE (n)` | `NEEDS_RULING (n)` |
 | `developer` | `PR_OPEN` / `FIXED` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
 | `verify-implementation` | `PASS` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
 | `qa-implement` | `SPECIFIED` / `SIGNED_OFF` | `BUGS (n)` | `NEEDS_RULING (n)` |
@@ -123,5 +124,5 @@ A worker reports; it doesn't conclude. `qa-implement` signs off testing, and
 `reviewer` approves the PR. Neither decides the story is done. No worker merges,
 closes a story issue (except `close-issue` after the lead's merge), or moves on to
 the next story. The tech lead decides a story is done, from QA's sign-off and the
-reviewer's approval, against the plans the owner approved at the plan gate. That
-decision is never delegated.
+reviewer's approval, against the approved plans and the owner's answers. That decision
+is never delegated.

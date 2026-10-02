@@ -3,8 +3,9 @@ name: plan-critique
 description: >
   Load this skill when the user says "plan critique", "plan-critique",
   "/plan-critique", or when the tech lead assigns plan critique for a story.
-  Critiques the development and QA plans before the story is built, at most twice, and
-  records unresolved objections to plan-open-issues.md for the owner. Writes no plan.
+  Critiques a version of the development and QA plans before the story is built, at
+  most twice per question round, and returns APPROVE or REVISE with tagged notes the
+  tech lead turns into owner questions. Writes no plan.
 license: MIT
 metadata:
   audience: maintainers
@@ -13,66 +14,80 @@ metadata:
 
 ## Goal
 
-Judge whether `plan-dev.md` and `plan-qa.md` are sound enough to build against, and
-name what isn't — in the **same severity language the reviewer uses**, so the plan gate
-is a genuine stand-in for the review. You do this at most twice per story. You write
-only `plan-open-issues.md`; you never edit the plans — the `planner` agent revises them
-from your objections.
+Judge whether `plan-dev-v{n}.md` and `plan-qa-v{n}.md` are sound enough to build
+against, and say exactly what must change if they aren't. You write only
+`critique-v{n}.md`; you never edit the plans — the `planner` agent revises them from
+your required changes.
 
 Work **adversarially**: soundness is not the default. Assume each plan is flawed until
 it survives scrutiny, and actively try to break it — the requirement no step delivers,
 the domain rule the approach violates, the IT code with no scenario, the failure,
-negative or permission case the plan waves past. The burden is on the plan to prove it
-holds, not on you to prove it doesn't. This is rigour in *finding*; grading stays
-disciplined (below).
+negative or permission case the plan waves past. Then turn the same scrutiny on your
+own objections (step 4): an objection you can't source is a misread, and a misread
+sent to the planner costs a revision.
 
-Findings follow `.claude/shared/review-severity.md`: the same severity levels
-(❌ Blocker, ⚠️ Warning, ❓ Question, 💡 Suggestion), the same rule that **every finding
-cites a source**, and the same standards-doc list. The one adaptation is the anchor —
-you have no diff, so each finding points at a plan section, a requirement or a
-standard-doc rule rather than `file:line`.
-
-The owner reads `plan-open-issues.md` at the plan gate. The gate keys on **Blockers**:
-if none is open after your last turn, the tech lead auto-approves and the story proceeds
-with no owner pause; any open Blocker sends the plans to the owner. Warnings, Questions
-and Suggestions never gate — they travel to the developer as inputs to honour or
-disposition — but none is optional padding. So spend a Blocker only on something that
-must change before the build, and raise the softer levels honestly.
+You don't grade severity. A gap either **must change before the build** (a required
+change) or it doesn't (an `AUDIT:` note). Anything you can't settle from a source is a
+`QUESTION:` for the owner — never a guess, and never a softened required change.
 
 ## Inputs
 
 - `issue_number`, `journal_dir`: required.
-- `dev_plan_file`, `qa_plan_file`: the plans to critique.
+- `version`: the plan version under critique.
+- `dev_plan_file`, `qa_plan_file`: `plan-dev-v{version}.md` and `plan-qa-v{version}.md`.
 - `issue_body_file`, `epic_body_file`, `it_codes_file`, `test_intents_file`: the
   authoritative sources, as paths.
-- `turn`: `1` or `2`. Turn 2 re-judges the revised plans against your own turn-1
-  objections.
+- `answers_file`: `plan-answers.md`, when the owner has answered a question round.
+- `prev_critique_file`: your previous `critique-v{n}.md`, on a second critique in a
+  round.
 - `mode`: `interactive` (default) or `subagent`.
 
-## What to look for
+## Procedure
 
-Read both plans against the story, the epic, the codebase and the standards docs
+### 1) Read the plans and the sources
+
+Read both plans, including plan-dev's `## Notes`, against the sub-issue, the epic, the
+mockup any **Design reference:** names, `answers_file`, and the standards docs
 (`docs/coding-standards.md`, the backend/frontend variants for the story's scope, and
-`docs/security-standards.md` where the change touches a security surface). A finding is
-a concrete gap between what the plan says and what the story or a standard requires —
-not a stylistic preference.
+`docs/security-standards.md` where the change touches a security surface).
 
-**In `plan-dev.md`:**
-- A `## Functional Requirements` item or `AC{n}` criterion no step delivers.
+An owner answer is authoritative: a requirement answer settles what is required, an
+engineering answer settles how it is built and may override a documented rule. Never
+raise again what an answer settled.
+
+### 2) Verify against source, don't re-explore
+
+Open **only** the files the plans' claims hinge on and confirm them. If the plan says
+"extend the existing handler and reuse fixture X", open that handler and that fixture
+and confirm both exist and the shape fits. You are verifying load-bearing claims, not
+re-planning.
+
+On a second critique, re-examine only what changed since `prev_critique_file`, and
+check each of your earlier required changes was applied or `DECLINED` with a reason.
+
+### 3) Evaluate
+
+**In `plan-dev`:**
+- **Comprehension** — a misread of a `## Functional Requirements` item, an `AC{n}`
+  criterion, the mockup or an owner answer; or existing code that already does this
+  and the plan missed it.
+- A requirement or criterion no step delivers.
 - A `## Domain & Data` rule the approach ignores or contradicts.
 - A documented standard the approach violates — a `docs/coding-standards*.md` rule, a
   recurring trap the `## Standards` section should have named and didn't (e.g. per-row
   repository calls inside a loop, which are a joining query), or a `docs/security-
   standards.md` control the change should honour (authorization on a new endpoint,
-  input validation, no data over-exposure). A standards violation caught here is a
-  review cycle saved; caught at review, it's rework.
+  input validation, no data over-exposure).
 - An approach that fights an existing pattern in the codebase, where a cheaper one
   exists (grep for how the current code does the comparable thing before asserting
   this).
 - A UC code with no coverage row, or a row that wouldn't actually prove the intent.
 - Work planned that the sub-issue puts `## Out of Scope`.
+- **Notes** — an ambiguity the plan resolved silently instead of tagging an
+  `ASSUMPTION` or `DECISION`; a `DECISION` whose chosen reading the sources don't
+  support.
 
-**In `plan-qa.md`:**
+**In `plan-qa`:**
 - An IT code with no scenario and no honest `## Uncovered` row.
 - A missing negative, permission, boundary or persistence case the domain rules imply.
 - A scenario asserting behaviour outside the story, or one pinned to a selector or
@@ -80,61 +95,57 @@ not a stylistic preference.
 - A precondition no fixture in `e2e/fixtures/` can produce.
 - A scenario that can't fail — it costs a spec and CI time and proves nothing.
 
-Severity, per the shared rules: a requirement, contract, domain rule or documented
-standard the plan violates or fails to deliver is a **Blocker** — it must change before
-the build. A soft concern (a missing safeguard, a questionable-but-workable approach) is
-a **Warning**. Genuine ambiguity you can't judge without the owner is a **Question**. An
-out-of-scope observation or an undocumented preference is a **Suggestion**. Implementing
-something the sub-issue lists `## Out of Scope` is the exception — that is a Blocker.
+**Requirement conflicts** — a requirement (an issue section, a mockup element or an
+owner answer) that can only be met by breaking a documented rule. This is not the
+planner's fault and a `REVISE` can't fix it: emit it as a `CONFLICT:` note. An
+engineering answer that overrode the rule settles it; don't raise it again.
 
-Grading stays disciplined even as you search hard: adversarial raises how hard you
-*look*, never the severity you assign. Don't pad trivia into a Blocker — a critique of
-ten trivia buries the one gap that matters. But never soften a genuine Blocker to keep
-the plan gate quiet: a real defect found before the build is worth the owner's pause,
-and the 2-turn ceiling, not your restraint, is what bounds the loop.
+### 4) Challenge your own objections
 
-## Write `plan-open-issues.md`
+Before writing anything, take each objection and try to refute it: re-read the source
+it rests on, and drop it if the plan's reading holds. Keep only what survives, each
+tied to the requirement, standard or source line it enforces.
 
-One findings table, in the reviewer's column shape adapted for a plan (no `file:line`,
-plus a `Status` column for the revision loop). On turn 2, update each turn-1 finding's
-status in place rather than duplicating it — the file's final state is what the owner
-reads.
+### 5) Write `critique-v{version}.md`
 
 ```markdown
-# Plan open issues — #{issue_number} {title}
+# Plan critique — #{issue_number} {title} — v{version}
 
-Turns run: {1 | 2}
+VERDICT: {APPROVE | REVISE (n)}
 
-| # | Severity | Anchor | Category | Detail (gap · source · suggested fix) | Status |
-|---|---|---|---|---|---|
-| 1 | ❌ | plan-dev §API | Standards | Handler loops a repo call per row — `coding-standards-backend.md` §N+1 requires a joining query. Plan the joining function. | open |
-| 2 | ⚠️ | 280IT4 / plan-qa S2 | Requirements | No negative case for the withdrawn-student path the domain rules imply. Add a scenario. | resolved rev 2 |
+## Required changes
+1. {plan section or code} — {what must change} — because {requirement / standard /
+   source line}
+
+## Notes
+- CONFLICT K{n}: "{requirement, verbatim}" — breaks {rule} ({doc §}) — compliant
+  alternative: {what you'd build}
+- RESOLVED: A{n} — {what you verified, and where}
+- QUESTION Q{n} ({requirement | engineering}): {question} — current assumption: {x}
+- AUDIT: {what you checked; objections you raised or dropped, and why}
 ```
 
-- **Severity**: ❌ Blocker · ⚠️ Warning · ❓ Question · 💡 Suggestion.
-- **Anchor**: the plan section (`plan-dev §Approach`), IT/AC/UC code, or standards-doc
-  rule — never a `file:line`, which doesn't exist yet.
-- **Category**: Standards, Requirements, Correctness, Contract, Security or Design, as
-  in `review-severity.md`.
-- **Status**: `open` · `resolved rev {n}` · `won't-fix ({reason})`.
+- **`APPROVE`** — the plans are sound to build. Minor points go in as `AUDIT:`; they
+  don't block.
+- **`REVISE (n)`** — `n` required changes. Keep it to what genuinely must change.
+- A `CONFLICT` or `QUESTION` doesn't by itself force `REVISE`: the owner settles those.
+- **`RESOLVED:`** — when a source read settles a planner `ASSUMPTION`. The planner
+  drops it and the owner isn't asked.
+- **`QUESTION:`** — anything you couldn't verify from source that a person must
+  answer. This is the only form a question may take; never raise one in prose.
 
-If you find nothing — first turn or second — write the file with `Turns run:` and a
-single line: `No findings. Both plans are sound to build against.` An empty table is a
-real, common, good outcome; never invent a finding to look thorough.
+Omit empty sections.
 
 ## Report
 
 Per `.claude/shared/subagent-contract.md`:
 
 ```
-VERDICT: CRITIQUED
-REPORT: {journal_dir}/plan-open-issues.md
-BLOCKERS: {n}
-OPEN: {n}
+VERDICT: APPROVE | REVISE (n)
+REPORT: {journal_dir}/critique-v{version}.md
+QUESTIONS: {n}
+CONFLICTS: {n}
+RESOLVED: {n}
 ```
 
-`BLOCKERS` drives the gate; `OPEN` is every still-open finding of any severity.
-`BLOCKERS: 0` tells the tech lead it can auto-approve (the open Warnings/Questions/
-Suggestions travel to the developer). `BLOCKERS: {n>0}` after turn 2 tells it to take
-the plans and the open findings to the owner. Never paste the plans or the table into
-the reply.
+Never paste the plans or the critique into the reply.

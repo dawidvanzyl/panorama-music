@@ -42,9 +42,13 @@ m8/
         ├── ui.md              .design/ refs + Page Arch, frontend (planning)
         ├── draft-v1.md        versioned snapshots                (planning)
         ├── final.md           approved issue body                (planning)
-        ├── plan-dev.md        frozen development plan            (planner)
-        ├── plan-qa.md         frozen QA plan                     (planner)
-        ├── plan-open-issues.md critique objections, owner-gated  (plan-critique)
+        ├── plan-dev-v1.md     development plan, per version      (planner)
+        ├── plan-qa-v1.md      QA plan, per version               (planner)
+        ├── critique-v1.md     verdict + tagged notes, per version (plan-critique)
+        ├── plan-questions.md  owner question rounds              (lead)
+        ├── plan-answers.md    owner answers, verbatim            (lead)
+        ├── plan-dev.md        frozen copy of the approved version (lead)
+        ├── plan-qa.md         frozen copy of the approved version (lead)
         ├── qa-spec.md         specs written before the code      (qa-implement)
         ├── implement-1.md     what was built, and why            (developer)
         ├── verify-1.md        gauntlet cycle report              (developer, inline)
@@ -79,8 +83,10 @@ the per-story files, so it doesn't land in the lead's context on every read.
       "depends_on": [268],
       "it_codes": ["280IT4", "280IT5"],
       "stage": "reviewing",
+      "plan_version": 3,
+      "plan_round": 1,
       "plans_approved": true,
-      "plan_auto_approved": false,
+      "plan_as_is": false,
       "branch": "feature/269-enrol-student-in-course",
       "pr_number": 271,
       "attempts": { "critique": 2, "implement": 2, "verify": 3, "qa": 1, "review": 1 },
@@ -91,14 +97,15 @@ the per-story files, so it doesn't land in the lead's context on every read.
 }
 ```
 
-`stage` is one of `pending`, `planning`, `critiquing`, `awaiting-plan-approval`,
+`stage` is one of `pending`, `planning`, `critiquing`, `awaiting-answers`,
 `specifying`, `implementing`, `testing`, `reviewing`, `merged` or `closed`. It records what the lead
 last **did**; it is not a claim about the world. `plans_approved` gates implementing;
-`plan_auto_approved` records whether the owner was consulted (false = owner approved,
-true = auto-approved on no open Blockers in `plan-open-issues.md`) for post-hoc
-spot-check.
+`plan_version` is the latest plan version, `plan_round` the latest owner question
+round, and `plan_as_is` records that the owner said "implement as is" with questions
+still open.
 `attempts` supplies each worker's `cycle` number: the reviewer's `cycle` is
-`attempts.review`, and `attempts.critique` counts the plan-critique turns (max 2).
+`attempts.review`, and `attempts.critique` counts the critiques in the current question
+round (max 2).
 
 ## rulings.md
 
@@ -109,7 +116,7 @@ Every answered escalation is appended here and never edited:
 Asked by: {role}, story #{issue}
 Question: {as asked}
 Ruling: {the decision}
-Ruled by: {tech lead | developer (owner)}
+Ruled by: {tech lead | owner}
 Applies to: {this story, or any story touching X}
 ```
 
@@ -150,9 +157,9 @@ goes on.
 
 Two states call for suspicion rather than trust:
 
-- **`stage` past `awaiting-plan-approval` but `plans_approved` not `true`.** The plan
-  gate was skipped — a story must not reach `implementing` without it. Re-run the gate
-  (step 3a) before trusting the stage.
+- **`stage` past `awaiting-answers` but `plans_approved` not `true`.** The plan
+  approval was skipped — a story must not reach `implementing` without it. Re-run the
+  plan stage from the latest version (step 3a) before trusting the stage.
 - **A dirty working tree.** It may hold the previous run's unfinished work. Read the
   story's latest `implement-{n}.md` to see how far it got, and if that doesn't settle
   it, ask before keeping or discarding anything.

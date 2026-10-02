@@ -26,6 +26,7 @@ At the start of execution, always post a visible message to the user:
 - `journal_dir`: required in `subagent` mode. Absolute path to this story's journal
   directory.
 - `mode`: `interactive` (default) or `subagent`.
+- `plan_answers_file`: optional. The owner's answers from the plan stage; see step 1.
 
 If neither number is available in `interactive` mode, ask: "What is the PR number,
 and what is the issue number?"
@@ -61,8 +62,12 @@ the reference for judging whether review feedback is valid.
   deviate from this are invalid unless the contract itself was wrong.
 - **`## Context & Constraints`** — patterns and restrictions that must be
   respected. Comments contradicting a stated constraint are invalid.
-- **`## Notes`** — deliberate deferrals and known edge cases. Comments raising
-  something explicitly deferred in Notes are invalid for this issue.
+- **`## Notes`** — deliberate deferrals, known edge cases and the owner's requirement
+  answers. Comments raising something explicitly deferred or answered in Notes are
+  invalid for this issue.
+
+If `plan_answers_file` is present, read it too: a comment asking you to undo what an
+engineering answer decided — including a sanctioned rule override — is invalid.
 
 ### 2) Fetch all unresolved comments
 
@@ -128,8 +133,8 @@ by which this pipeline could ship something nobody checked. Removing them is not
 admission of failure; it is what makes rework safe, and QA and the reviewer will
 re-apply them once they have looked again.
 
-There is no owner gate label to leave alone — the owner's judgement is spent at the
-plan gate, before the code exists, not as a label on the PR.
+There is no owner gate label to leave alone — the owner's judgement is spent in the
+plan question rounds, before the code exists, not as a label on the PR.
 
 - Push once.
 
