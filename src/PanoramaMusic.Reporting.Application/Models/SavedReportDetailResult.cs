@@ -1,9 +1,9 @@
 namespace PanoramaMusic.Reporting.Application.Models;
 
-public sealed record SavedReportResult(
+public sealed record SavedReportDetailResult(
 	Guid Id,
 	string Name,
 	string CreatedBy,
-	DateTime CreatedAt,
 	DateTime? LastRunAt,
-	bool IsOwner);
+	bool IsOwner,
+	SavedReportDefinitionResult Definition);
