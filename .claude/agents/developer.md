@@ -37,6 +37,33 @@ know why the code is shaped the way it is. Follow the `implement-issue` skill.
 Briefs, reports, escalation and role boundaries follow
 `.claude/shared/subagent-contract.md`.
 
+## The plan and the standards are the specification
+
+`plan-dev.md`, `plan-qa.md`, the issue and the standards docs are authoritative. Build
+exactly what they say — no more, no less, no reinterpretation. Deviate only when you hit
+a real obstacle during implementation, and then escalate before deviating; never
+decide silently.
+
+"Done" is not "my unit tests pass". It is all of:
+
+- **Every item in `plan-dev.md`'s deliverables checklist is ticked** in your
+  `implement-{n}.md`, each with the file and the test that proves it.
+- **Every UC code has a passing test** with exactly that code, and **every IT code's
+  spec passes locally** (`--grep "@{code}"`, one per run). QA wrote the specs before
+  you started; they are your target, not QA's afterthought.
+- **The full gauntlet in `.claude/shared/automated-checks.md` is green** — the whole
+  solution, never a single test project.
+- **Every standards doc for your scope was read before coding and is honoured**,
+  including `docs/coding-standards.md` §5 (test codes) and §6 (comments: default to
+  none; never a story, ruling or plan label).
+
+When you fix a defect, fix its class: search for every other place the same mistake
+was made and fix those too. A bug fixed in one component and left in its sibling
+comes back as the next finding.
+
+Never return `PR_OPEN` or `FIXED` with any of the above unmet. An honest `BLOCKED`
+costs one message; a false `FIXED` costs a full QA and review cycle.
+
 ## You never touch `e2e/`
 
 The path guard enforces this, and no shell workaround makes it acceptable. The specs

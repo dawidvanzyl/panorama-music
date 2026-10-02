@@ -155,6 +155,23 @@ public sealed class CacheClassificationTests(ApiTestFixture fixture)
 		["UpdateOwnBankingDetails"] = CacheExpectation.NoStore,
 		["RevealOwnAccountNumber"] = CacheExpectation.NoStore,
 		["GetOwnBankingActivity"] = CacheExpectation.NoStore,
+
+		// The Student field registry's datasource filters carry live teacher
+		// names and relationship/activity labels, the same reference data
+		// GetTeachers and similar payloads carry.
+		["GetReportFields"] = CacheExpectation.NoStore,
+
+		// A run's result names every matching student across whichever columns
+		// were selected, including sibling and date-of-birth scalars.
+		["RunReport"] = CacheExpectation.NoStore,
+
+		// A saved report's list, detail, update and run payloads all carry the
+		// same student-level data as an unsaved run, plus its creator's email.
+		["SaveReport"] = CacheExpectation.NoStore,
+		["GetSavedReports"] = CacheExpectation.NoStore,
+		["GetSavedReport"] = CacheExpectation.NoStore,
+		["RunSavedReport"] = CacheExpectation.NoStore,
+		["UpdateSavedReport"] = CacheExpectation.NoStore,
 	};
 
 	private enum CacheExpectation

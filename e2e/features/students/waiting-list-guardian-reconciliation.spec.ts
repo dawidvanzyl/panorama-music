@@ -109,9 +109,9 @@ test.describe(
       });
       await linkSiblings(page, entry.studentId, enrolled.studentId);
 
-      // Added from the Coordinator-only session, after the link exists: the
-      // withholding this story repairs, produced by the mechanism that produces
-      // it in the school.
+      // Added from the Coordinator-only session, after the link exists: this
+      // reproduces the withholding this suite guards against, produced by
+      // the same mechanism that produces it in the school.
       const coordinator = await signInAsCoordinator(browser);
       const guardian = await addGuardianToStudent(coordinator.page, entry.studentId, {
         firstName: 'Withheld',

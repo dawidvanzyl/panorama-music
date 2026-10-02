@@ -39,11 +39,11 @@ export default defineConfig({
       // first — a `dependencies: ['chromium']` wiring was tried and dropped:
       // it forces the *entire* chromium project to re-run as a prerequisite
       // even for a single-code `--grep` invocation, which is both far more
-      // expensive than this story's QA loop can afford and, by re-running
+      // expensive than the QA loop can afford and, by re-running
       // already-passed specs, mutates the very table these tests need clean.
       // Running the whole suite in one shot (no --grep) can still interleave
       // the two projects' workers; running each IT code through its own
-      // `--grep` invocation, as this story's QA process does, does not.
+      // `--grep` invocation, as the QA process does, does not.
       fullyParallel: false,
     },
   ],

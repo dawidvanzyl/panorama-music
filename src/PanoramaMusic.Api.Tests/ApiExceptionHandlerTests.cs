@@ -6,6 +6,7 @@ using PanoramaMusic.Identity.Domain.Exceptions;
 using Shouldly;
 using System.Text.Json;
 using Xunit;
+using ReportingExceptions = PanoramaMusic.Reporting.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Tests;
 
@@ -69,6 +70,35 @@ public sealed class ApiExceptionHandlerTests
 
 		var body = JsonDocument.Parse(responseBody);
 		body.RootElement.GetProperty("error").GetString().ShouldBe("An unexpected error occurred.");
+		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
+	}
+
+	[Fact]
+	public async Task TryHandleAsync_ReportingEntityNotFoundException_Returns404()
+	{
+		var httpContext = CreateHttpContext();
+		var exception = new ReportingExceptions.EntityNotFoundException("The saved report was not found.");
+
+		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
+
+		handled.ShouldBeTrue();
+		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status404NotFound);
+		var body = JsonDocument.Parse(ReadBody(httpContext));
+		body.RootElement.GetProperty("error").GetString().ShouldBe("The saved report was not found.");
+	}
+
+	[Fact]
+	public async Task TryHandleAsync_ReportingForbiddenException_Returns403WithErrorAndCorrelationId()
+	{
+		var httpContext = CreateHttpContext();
+		var exception = new ReportingExceptions.ForbiddenException("Only the creator of a saved report may change or delete it.");
+
+		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
+
+		handled.ShouldBeTrue();
+		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
+		var body = JsonDocument.Parse(ReadBody(httpContext));
+		body.RootElement.GetProperty("error").GetString().ShouldBe("Only the creator of a saved report may change or delete it.");
 		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
 	}
 

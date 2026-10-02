@@ -16,6 +16,8 @@ using PanoramaMusic.Identity.Infrastructure.Repositories;
 using PanoramaMusic.Persistence.Extensions;
 using PanoramaMusic.Persistence.Tests.DomainEvents;
 using PanoramaMusic.Persistence.Tests.Repository;
+using PanoramaMusic.Reporting.Infrastructure.Extensions;
+using PanoramaMusic.Reporting.Infrastructure.Persistence;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Persistence;
 using PanoramaMusic.Teachers.Infrastructure.Extensions;
@@ -63,6 +65,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		IdentityMigrator.Run(MigrationConnectionString);
 		StudentMigrator.Run(MigrationConnectionString);
 		TeacherMigrator.Run(MigrationConnectionString);
+		ReportingMigrator.Run(MigrationConnectionString);
 	}
 
 	public UnitOfWorkDatabaseContext CreateContext()
@@ -102,6 +105,12 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 			// domain events are collected, so the tests drive it rather than a stand-in.
 			services.AddTeachersInfrastructure();
 
+			// Same reasoning again: the real SavedReportRepository is where a
+			// saved report's domain events are collected, and the real
+			// translator is what this harness proves is registered and writes
+			// in the save's transaction.
+			services.AddReportingInfrastructure();
+
 			RegisterOptions(services, context);
 			RegisterContexts(services, context);
 			RegisterHandlers(services);
@@ -125,6 +134,7 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 		services.AddScoped(sp => context.Contexts.IdentityIUserContextMock.Object);
 		services.AddScoped(sp => context.Contexts.StudentUserContextMock.Object);
 		services.AddScoped(sp => context.Contexts.TeacherUserContextMock.Object);
+		services.AddScoped(sp => context.Contexts.ReportingUserContextMock.Object);
 
 		context.Contexts.AuditContextMock.SetupGet(m => m.SourceIp).Returns("127.0.0.1");
 		context.Contexts.AuditContextMock.SetupGet(m => m.UserAgent).Returns("xunit");

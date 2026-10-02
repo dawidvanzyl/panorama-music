@@ -20,6 +20,7 @@
     <ProjectReference Include="..\PanoramaMusic.Identity.Infrastructure\PanoramaMusic.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj" />
     <ProjectReference Include="..\PanoramaMusic.Teachers.Infrastructure\PanoramaMusic.Teachers.Infrastructure.csproj" />
+    <ProjectReference Include="..\PanoramaMusic.Reporting.Infrastructure\PanoramaMusic.Reporting.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

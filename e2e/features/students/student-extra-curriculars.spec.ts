@@ -39,8 +39,8 @@ interface SeededActivity {
   slot: PracticeSlot;
   /**
    * The Add Activity panel's option label — the activity's description alone,
-   * per #278's R11 display correction, superseding the older
-   * "{description} — {day} {startTime}" label this suite used before it.
+   * superseding the older "{description} — {day} {startTime}" label this
+   * suite used before it.
    */
   optionLabel: string;
   extraCurricularId: string;
@@ -440,7 +440,7 @@ test.describe(
       // The route answers 200, not the newer Student-assignment group's 204 —
       // this is #276's own, previously shipped and proven contract
       // (`RemoveExtraCurricularPracticeTime` returns `Results.Ok()`, pinned by
-      // `ExtraCurricularRoutesTests`), not something this story changes.
+      // `ExtraCurricularRoutesTests`), left as-is here.
       expect(removePracticeTimeStatus).toBe(200);
 
       const listStatus = await apiStatus(page, 'GET', `/api/students/${studentId}/extra-curriculars`);

@@ -1,0 +1,9 @@
+namespace PanoramaMusic.Reporting.Domain.ValueObjects;
+
+/// <summary>
+/// The run's finished output: the columns in display order and one section per
+/// matching student, in population order. A section holds as many rows as
+/// the largest record count among the selected non-Student collections, at
+/// least one.
+/// </summary>
+public sealed record ReportLayout(IReadOnlyList<ColumnAttribute> Columns, IReadOnlyList<ReportLayoutSection> Sections);

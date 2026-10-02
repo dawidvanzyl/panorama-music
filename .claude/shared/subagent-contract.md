@@ -69,7 +69,7 @@ paste a diff, findings table, test log or design into the reply.
 | `plan-critique` | `CRITIQUED` | — | `NEEDS_RULING (n)` |
 | `developer` | `PR_OPEN` / `FIXED` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
 | `verify-implementation` | `PASS` | `BLOCKED (n)` | `NEEDS_RULING (n)` |
-| `qa-implement` | `SIGNED_OFF` | `BUGS (n)` | `NEEDS_RULING (n)` |
+| `qa-implement` | `SPECIFIED` / `SIGNED_OFF` | `BUGS (n)` | `NEEDS_RULING (n)` |
 | `reviewer` | `APPROVED` | `FINDINGS (n)` | `NEEDS_RULING (n)` |
 | `close-issue` | `CLOSED` | `BLOCKED (n)` | — |
 | `prepare-base` | `PREPARED` | `BLOCKED (n)` | — |

@@ -1,0 +1,279 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  getFields,
+  runReport,
+  ReportsError,
+  listSavedReports,
+  saveReport,
+  runSavedReport,
+  updateReport,
+  deleteReport,
+  clearSavedReportsCache,
+} from '../reports';
+import type { ReportDefinitionModel } from '../../models/report';
+
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
+
+beforeEach(() => {
+  mockFetch.mockReset();
+  localStorage.clear();
+  clearSavedReportsCache();
+});
+
+const apiFields = {
+  filters: [
+    {
+      key: 'student.name',
+      collection: 'Student',
+      label: 'Name',
+      dataType: 'Text',
+      operators: ['equals', 'contains'],
+      options: [],
+    },
+  ],
+  columns: [
+    {
+      key: 'student.name',
+      collection: 'Student',
+      header: 'Student',
+      displayOrder: 1,
+      dependsOn: null,
+      locked: true,
+    },
+  ],
+};
+
+describe('getFields', () => {
+  it('maps the registry', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiFields });
+
+    const result = await getFields();
+
+    expect(result.filters[0].key).toBe('student.name');
+    expect(result.columns[0].locked).toBe(true);
+  });
+
+  it('is never cached — a second call fetches again, so live datasource options stay current', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiFields });
+
+    await getFields();
+    await getFields();
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects with ReportsError on a failed call', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'boom' }) });
+
+    await expect(getFields()).rejects.toThrow(ReportsError);
+  });
+});
+
+describe('runReport', { tags: ['317UC7'] }, () => {
+  it('maps a stubbed response to ordered columns, sections with rows, the count and a ranAt Date', async () => {
+    const apiResult = {
+      ranAt: '2026-09-21T10:15:00Z',
+      studentCount: 2,
+      columns: [
+        { key: 'student.name', header: 'Student' },
+        { key: 'student.class', header: 'Class' },
+      ],
+      sections: [
+        { studentId: 's1', rows: [['Amy van Zyl', '4A2']], siblingBadge: '1.2' },
+        { studentId: 's2', rows: [['Ben Smith', 'Private']], siblingBadge: null },
+      ],
+    };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name', 'student.class'] };
+    const result = await runReport(definition);
+
+    expect(result.ranAt).toBeInstanceOf(Date);
+    expect(result.ranAt.toISOString()).toBe('2026-09-21T10:15:00.000Z');
+    expect(result.studentCount).toBe(2);
+    expect(result.columns).toEqual(apiResult.columns);
+    expect(result.sections).toEqual(apiResult.sections);
+  });
+
+  it('is never cached — a second call fetches again', async () => {
+    const apiResult = { ranAt: '2026-09-21T10:15:00Z', studentCount: 0, columns: [], sections: [] };
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiResult });
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
+    await runReport(definition);
+    await runReport(definition);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('wraps a 400 response in ReportsError carrying the server message', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "Unknown filter field 'student.unknown'." }),
+    });
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
+
+    await expect(runReport(definition)).rejects.toThrow("Unknown filter field 'student.unknown'.");
+  });
+
+  it('wraps a network failure in ReportsError', async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
+
+    await expect(runReport(definition)).rejects.toThrow(ReportsError);
+  });
+});
+
+describe('siblingBadge mapping', { tags: ['319UC7'] }, () => {
+  it('maps a badged and an unmarked section through runReport', async () => {
+    const apiResult = {
+      ranAt: '2026-09-21T10:15:00Z',
+      studentCount: 2,
+      columns: [{ key: 'student.name', header: 'Student' }],
+      sections: [
+        { studentId: 's1', rows: [['Amy van Zyl']], siblingBadge: '1.2' },
+        { studentId: 's2', rows: [['Ben Smith']], siblingBadge: null },
+      ],
+    };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
+
+    const definition: ReportDefinitionModel = { filters: [], columns: ['student.name'] };
+    const result = await runReport(definition);
+
+    expect(result.sections[0].siblingBadge).toBe('1.2');
+    expect(result.sections[1].siblingBadge).toBeNull();
+  });
+
+  it('maps a badged and an unmarked section through runSavedReport', async () => {
+    const apiResult = {
+      reportId: 'r1',
+      name: 'Siblings',
+      createdBy: 'a@test.com',
+      isOwner: true,
+      ranAt: '2026-09-21T10:15:00Z',
+      studentCount: 2,
+      columns: [{ key: 'student.name', header: 'Student' }],
+      sections: [
+        { studentId: 's1', rows: [['Cal Z']], siblingBadge: '1.1' },
+        { studentId: 's2', rows: [['Dee Z']], siblingBadge: null },
+      ],
+    };
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiResult });
+
+    const result = await runSavedReport('r1');
+
+    expect(result.sections[0].siblingBadge).toBe('1.1');
+    expect(result.sections[1].siblingBadge).toBeNull();
+  });
+});
+
+describe('listSavedReports — session cache', { tags: ['321UC4'] }, () => {
+  const apiList = [{ id: '1', name: 'Grade 4 Contacts', createdBy: 'a@test.com', lastRunAt: null, isOwner: true }];
+  const apiSaved = {
+    id: '2',
+    name: 'New',
+    createdBy: 'a@test.com',
+    createdAt: '2026-09-21T10:00:00Z',
+    lastRunAt: null,
+    isOwner: true,
+  };
+  const apiRun = {
+    reportId: '1',
+    name: 'Grade 4 Contacts',
+    createdBy: 'a@test.com',
+    isOwner: true,
+    ranAt: '2026-09-21T10:15:00Z',
+    studentCount: 0,
+    columns: [],
+    sections: [],
+  };
+
+  it('fetches once across two calls', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+
+    await listSavedReports();
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches again after saveReport invalidates the cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 201, json: async () => apiSaved });
+    await saveReport('New', { filters: [], columns: ['student.name'] });
+
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('fetches again after runSavedReport invalidates the cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiRun });
+    await runSavedReport('1');
+
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not cache a failed call', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'boom' }) });
+    await expect(listSavedReports()).rejects.toThrow(ReportsError);
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiList });
+    await listSavedReports();
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('updateReport and deleteReport', { tags: ['322UC13'] }, () => {
+  const apiUpdated = {
+    id: '2',
+    name: 'Renamed',
+    createdBy: 'a@test.com',
+    createdAt: '2026-09-21T10:00:00Z',
+    lastRunAt: null,
+    isOwner: true,
+  };
+
+  it('updateReport PUTs to /api/reports/{id} and clears the saved-reports list cache', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ id: '2', name: 'Renamed', createdBy: 'a@test.com', lastRunAt: null, isOwner: true }],
+    });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => apiUpdated });
+    const identity = await updateReport('2', 'Renamed', { filters: [], columns: ['student.name'] });
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/reports/2', expect.objectContaining({ method: 'PUT' }));
+    expect(identity).toEqual({ id: '2', name: 'Renamed', createdBy: 'a@test.com', isOwner: true });
+
+    await listSavedReports();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('deleteReport DELETEs /api/reports/{id} and clears the saved-reports list cache', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await listSavedReports();
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await deleteReport('2');
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/reports/2', expect.objectContaining({ method: 'DELETE' }));
+
+    await listSavedReports();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+});

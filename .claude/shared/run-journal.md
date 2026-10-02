@@ -45,6 +45,7 @@ m8/
         ├── plan-dev.md        frozen development plan            (planner)
         ├── plan-qa.md         frozen QA plan                     (planner)
         ├── plan-open-issues.md critique objections, owner-gated  (plan-critique)
+        ├── qa-spec.md         specs written before the code      (qa-implement)
         ├── implement-1.md     what was built, and why            (developer)
         ├── verify-1.md        gauntlet cycle report              (developer, inline)
         ├── qa-run-1.md        spec run + triage decisions        (qa-implement)
@@ -91,7 +92,7 @@ the per-story files, so it doesn't land in the lead's context on every read.
 ```
 
 `stage` is one of `pending`, `planning`, `critiquing`, `awaiting-plan-approval`,
-`implementing`, `testing`, `reviewing`, `merged` or `closed`. It records what the lead
+`specifying`, `implementing`, `testing`, `reviewing`, `merged` or `closed`. It records what the lead
 last **did**; it is not a claim about the world. `plans_approved` gates implementing;
 `plan_auto_approved` records whether the owner was consulted (false = owner approved,
 true = auto-approved on no open Blockers in `plan-open-issues.md`) for post-hoc

@@ -67,8 +67,9 @@ spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 | `planning` | `planner` | `plan-implementation` | `plan-dev.md`, `plan-qa.md` |
 | `critiquing` | `plan-critique` | `plan-critique` | `plan-open-issues.md` |
 | `awaiting-plan-approval` | — (owner) | — | `plans_approved` |
-| `implementing` | `developer` | `implement-issue` | the PR |
-| `testing` | `qa-implement` | `qa-implement` | `gate: qa-complete` |
+| `specifying` | `qa-implement` (`phase: specify`) | `qa-implement` | failing specs on the feature branch |
+| `implementing` | `developer` | `implement-issue` | the PR, every IT spec green locally |
+| `testing` | `qa-implement` (`phase: run`) | `qa-implement` | `gate: qa-complete` |
 | `reviewing` | `reviewer` | `review-pull-request` | `gate: reviewer-approved` |
 
 **Always background:** only background subagents can `SendMessage` to `main`, and you
@@ -92,12 +93,30 @@ shell, so first write `issue_body_file`, `epic_body_file`, `it_codes_file` and
 to honour or disposition), `qa-implement` gets `qa_plan_file`, and the reviewer gets
 `cycle` (the story's `attempts.review`).
 
+`qa-implement` in `phase: specify` gets `branch` (named per `docs/coding-standards.md`)
+and `dev_plan_file`; the developer then gets that `branch`. The developer's brief
+always restates the definition of done in one line: every plan-dev checklist item
+ticked, every UC and IT code green locally, the whole-solution gauntlet green, and
+coding-standards §5 and §6 honoured.
+
 End every brief with the same two lines: create your report file before starting work,
-and commit as you go. They are in the contract too, but a rule stated only in a shared
+and commit as you go.
+
+**Check the developer before QA.** A `PR_OPEN` or `FIXED` goes to `testing` only
+after you grep its `implement-{n}.md` for: an unticked checklist item, an IT code
+without a local pass, and a backend test command narrower than the solution. Any
+hit goes straight back to the developer — it never costs a QA run. They are in the contract too, but a rule stated only in a shared
 doc is one a worker under turn pressure skips.
 
 **Read the verdict line only.** Open the report file only when the verdict doesn't tell
 you what to do next.
+
+**Autonomy.** The owner is usually away or asleep while this runs. Resolve every
+issue you can from the epic, the issue, the standards, the plans and `rulings.md`, and
+record the ruling. Stop for the owner only when you are thoroughly blocked: the plan
+gate with open Blockers, a change to the definition of done, or a ceiling reached.
+Owner answers that arrive while other work runs are applied when they land, not
+waited for.
 
 ### 3a) The planning loop and the plan gate
 

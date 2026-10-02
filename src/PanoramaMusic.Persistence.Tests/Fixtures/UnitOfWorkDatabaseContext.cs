@@ -5,6 +5,7 @@ using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Identity.Infrastructure.Configurations;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using IdentityIUserContext = PanoramaMusic.Identity.Application.Interfaces.IUserContext;
+using ReportingIUserContext = PanoramaMusic.Reporting.Application.Interfaces.IUserContext;
 using StudentIUserContext = PanoramaMusic.Students.Application.Interfaces.IUserContext;
 using TeacherIUserContext = PanoramaMusic.Teachers.Application.Interfaces.IUserContext;
 
@@ -36,6 +37,7 @@ public sealed class UnitOfWorkDatabaseContext
 		internal Mock<IdentityIUserContext> IdentityIUserContextMock { get; } = new Mock<IdentityIUserContext>();
 		internal Mock<StudentIUserContext> StudentUserContextMock { get; } = new Mock<StudentIUserContext>();
 		internal Mock<TeacherIUserContext> TeacherUserContextMock { get; } = new Mock<TeacherIUserContext>();
+		internal Mock<ReportingIUserContext> ReportingUserContextMock { get; } = new Mock<ReportingIUserContext>();
 		internal Mock<IClientContext> ClientContextMock { get; } = new Mock<IClientContext>();
 		internal Mock<IAuditContext> AuditContextMock { get; } = new Mock<IAuditContext>();
 	}

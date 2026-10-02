@@ -77,6 +77,7 @@ public static class DatabaseMigrator
             DROP SCHEMA IF EXISTS identity CASCADE;
             DROP SCHEMA IF EXISTS students CASCADE;
             DROP SCHEMA IF EXISTS teachers CASCADE;
+            DROP SCHEMA IF EXISTS reporting CASCADE;
             DROP SCHEMA public CASCADE;
             CREATE SCHEMA public;
             GRANT ALL ON SCHEMA public TO PUBLIC;

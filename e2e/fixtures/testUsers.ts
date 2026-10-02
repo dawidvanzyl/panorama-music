@@ -10,6 +10,7 @@ import { TeachersPage } from '../pages/teachers/TeachersPage';
 import { CourseManagementPage } from '../pages/courses/CourseManagementPage';
 import { ExtraCurricularsPage } from '../pages/extra-curriculars/ExtraCurricularsPage';
 import { WaitingListPage } from '../pages/students/WaitingListPage';
+import { ReportsPage } from '../pages/reports/ReportsPage';
 import { landingUrl } from './navigation';
 import { seedEnrollmentTarget } from './enrollment';
 
@@ -59,7 +60,7 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
  * the role that actually maintains it — so every navigation helper below
  * signs in as a purpose-built account instead of the seeded Admin.
  */
-export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void> {
+export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<string> {
   const email = uniqueTestEmail(roles.join('-').toLowerCase());
   const password = 'RolesPass123!';
   await createRegisteredUser(page, email, password, roles);
@@ -68,6 +69,7 @@ export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<void>
   await loginPage.gotoLogin();
   await loginPage.login(email, password);
   await expect(page).toHaveURL(landingUrl(...roles));
+  return email;
 }
 
 /**
@@ -91,7 +93,9 @@ export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
   return studentsPage;
 }
 
-export async function goToGuardianRelationshipsPage(page: Page): Promise<GuardianRelationshipsPage> {
+export async function goToGuardianRelationshipsPage(
+  page: Page
+): Promise<GuardianRelationshipsPage> {
   await loginAsRoles(page, ['Coordinator']);
 
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
@@ -111,7 +115,9 @@ export async function goToCourseManagementPage(page: Page): Promise<CourseManage
  * Extra-curriculars are a Coordinator-owned area, so this one pays for an
  * invite-and-register round trip before it can open the screen at all.
  */
-export async function goToExtraCurricularsPageAsCoordinator(page: Page): Promise<ExtraCurricularsPage> {
+export async function goToExtraCurricularsPageAsCoordinator(
+  page: Page
+): Promise<ExtraCurricularsPage> {
   await loginAsRoles(page, ['Coordinator']);
 
   const extraCurricularsPage = new ExtraCurricularsPage(page);
@@ -126,6 +132,22 @@ export async function goToWaitingListPage(page: Page, roles: UserRole[]): Promis
   const waitingListPage = new WaitingListPage(page);
   await waitingListPage.gotoWaitingList();
   return waitingListPage;
+}
+
+/**
+ * Signs in holding Teacher (+Coordinator, for scenarios that go on to seed a
+ * course and students) and opens the Reports list, which is Teacher's own
+ * landing page.
+ */
+export async function goToReportsPage(
+  page: Page,
+  roles: UserRole[] = ['Teacher']
+): Promise<ReportsPage & { email: string }> {
+  const email = await loginAsRoles(page, roles);
+
+  const reportsPage = new ReportsPage(page);
+  await reportsPage.gotoReports();
+  return Object.assign(reportsPage, { email });
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
@@ -144,13 +166,21 @@ export async function goToTeachersPageAsBankingCoordinator(page: Page): Promise<
   return teachersPage;
 }
 
-export async function inviteUser(page: Page, email: string, roles: UserRole[] = ['Teacher']): Promise<string> {
+export async function inviteUser(
+  page: Page,
+  email: string,
+  roles: UserRole[] = ['Teacher']
+): Promise<string> {
   const adminUsersPage = await goToAdminUsersPage(page);
   const inviteUrl = await adminUsersPage.createUser(email, roles);
   return extractTokenFromUrl(inviteUrl);
 }
 
-export async function registerUser(page: Page, inviteToken: string, password: string): Promise<void> {
+export async function registerUser(
+  page: Page,
+  inviteToken: string,
+  password: string
+): Promise<void> {
   const registrationPage = new RegistrationPage(page);
   await registrationPage.gotoRegister(inviteToken);
   await registrationPage.register(password, password);
@@ -161,7 +191,7 @@ export async function createRegisteredUser(
   page: Page,
   email: string,
   password: string,
-  roles: UserRole[] = ['Teacher'],
+  roles: UserRole[] = ['Teacher']
 ): Promise<void> {
   const inviteToken = await inviteUser(page, email, roles);
   await registerUser(page, inviteToken, password);

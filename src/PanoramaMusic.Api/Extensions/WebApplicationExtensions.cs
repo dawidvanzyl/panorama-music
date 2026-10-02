@@ -2,6 +2,7 @@ using PanoramaMusic.Audit.Infrastructure.Persistence;
 using PanoramaMusic.DataProtection.Persistence;
 using PanoramaMusic.Identity.Infrastructure.Persistence;
 using PanoramaMusic.Persistence;
+using PanoramaMusic.Reporting.Infrastructure.Persistence;
 using PanoramaMusic.Students.Infrastructure.Persistence;
 using PanoramaMusic.Teachers.Infrastructure.Persistence;
 
@@ -30,7 +31,7 @@ public static class WebApplicationExtensions
 		DatabaseMigrator.Run(migrationConnectionString, ensureDatabase: app.Environment.IsDevelopment());
 		DatabaseMigrator.EnsureApplicationRole(migrationConnectionString, applicationConnectionString);
 
-		// Context migrators execute in a fixed order: Audit → Identity → Students → Teachers.
+		// Context migrators execute in a fixed order: Audit → Identity → Students → Teachers → Reporting.
 		// DataProtection runs first since it has no dependency on any other context and its keyring must exist before anything else could protect a value.
 		// Maintain this order as new contexts are added.
 		DataProtectionMigrator.Run(migrationConnectionString);
@@ -38,5 +39,6 @@ public static class WebApplicationExtensions
 		IdentityMigrator.Run(migrationConnectionString);
 		StudentMigrator.Run(migrationConnectionString);
 		TeacherMigrator.Run(migrationConnectionString);
+		ReportingMigrator.Run(migrationConnectionString);
 	}
 }

@@ -79,7 +79,7 @@ async function expectWaitingListTabOffersOnlyTheAnchor(waitingListPage: WaitingL
 
 async function expectEnrolModalOffersOnlyTheAnchor(waitingListPage: WaitingListPage): Promise<void> {
   // Which occurrence type the offered set is being read under — fixed by the
-  // entry, and unchanged by this story.
+  // entry.
   await expect(waitingListPage.enrolOccurrenceType()).toHaveText('After School');
 
   expect(
@@ -166,9 +166,9 @@ test.describe(
       const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_READ_ROLES]);
       const courseFree = await fetchStructureWithoutInstrumentCourse(page);
       await offerTheAnchor(page);
-      // A real state: entries predate this story, and a course can be deleted
-      // out from under one. The row is inserted directly, which is how the
-      // state is reachable at all now that the capture endpoint refuses it.
+      // A real state: an entry can predate a course being deleted out from
+      // under it. The row is inserted directly, which is how the state is
+      // reachable at all now that the capture endpoint refuses it.
       const entry = await seedWaitingListEntry(page, {
         occurrenceType: courseFree.occurrenceType,
         lessonType: courseFree.lessonType,
@@ -181,7 +181,7 @@ test.describe(
 
       // Nothing is asserted about what is pre-selected: re-presenting an entry
       // captured against a combination the school no longer runs is out of
-      // scope for this story, and pinning it here would invent a requirement.
+      // scope here, and pinning it down would invent a requirement.
       await expectWaitingListTabOffersOnlyTheAnchor(waitingListPage);
     });
   },
@@ -238,8 +238,9 @@ test.describe(
       const waitingListPage = await goToWaitingListPage(page, [...SEED_AND_READ_ROLES]);
       // Read on all three surfaces in one run against one seeded course. Three
       // separate positives would each pass on a surface that offers
-      // everything, which is exactly the behaviour this story corrects — so
-      // the course-free combination is the counterweight on every one of them.
+      // everything, which is exactly the false positive this test guards
+      // against — so the course-free combination is the counterweight on
+      // every one of them.
       await fetchStructureWithoutInstrumentCourse(page);
       await offerTheAnchor(page);
       await page.reload();

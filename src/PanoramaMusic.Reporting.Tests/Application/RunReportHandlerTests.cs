@@ -1,0 +1,102 @@
+using Moq;
+using PanoramaMusic.Reporting.Application.Handlers;
+using PanoramaMusic.Reporting.Application.Requests;
+using PanoramaMusic.Reporting.Application.Services;
+using PanoramaMusic.Reporting.Domain.Enums;
+using PanoramaMusic.Reporting.Domain.Exceptions;
+using PanoramaMusic.Reporting.Domain.Interfaces;
+using PanoramaMusic.Reporting.Domain.Registries;
+using PanoramaMusic.Reporting.Domain.Services;
+using PanoramaMusic.Reporting.Domain.ValueObjects;
+using Shouldly;
+using Xunit;
+
+namespace PanoramaMusic.Reporting.Tests.Application;
+
+public class RunReportHandlerTests
+{
+	private readonly Mock<IPopulationReader> _populationReaderMock = new();
+	private readonly Mock<IDatasourceOptionReader> _datasourceOptionReaderMock = new();
+	private readonly Mock<ISiblingGroupReader> _siblingGroupReaderMock = new();
+	private readonly StudentFieldRegistry _registry = new();
+
+	public RunReportHandlerTests()
+	{
+		_siblingGroupReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((IReadOnlyList<SiblingGroupMembership>)[]);
+	}
+
+	private RunReportHandler CreateHandler()
+	{
+		var runner = new ReportRunner(
+			_populationReaderMock.Object, [], new ReportLayoutBuilder(), _siblingGroupReaderMock.Object, new SiblingBadgeResolver());
+		var factory = new ReportDefinitionFactory(_registry, _datasourceOptionReaderMock.Object);
+		return new RunReportHandler(factory, runner, TimeProvider.System);
+	}
+
+	[Fact]
+	[Trait("AC", "317UC1")]
+	public async Task HandleAsync_UnknownFilterField_ThrowsAndNeverReadsThePopulation()
+	{
+		var handler = CreateHandler();
+		var request = new RunReportRequest(
+			[new ReportFilterRequest("student.unknown", "equals", ["x"])],
+			["student.name"]);
+
+		await Should.ThrowAsync<InvalidReportDefinitionException>(() => handler.HandleAsync(request, TestContext.Current.CancellationToken));
+
+		_populationReaderMock.Verify(
+			reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()),
+			Times.Never);
+	}
+
+	[Fact]
+	public async Task HandleAsync_ValidDefinition_MapsTheRunResult()
+	{
+		var studentId = Guid.NewGuid();
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync([new PopulationMember(studentId, new SourceValues(new Dictionary<string, object?>
+			{
+				["firstName"] = "Amy",
+				["lastName"] = "van Zyl",
+			}))]);
+
+		var handler = CreateHandler();
+		var request = new RunReportRequest([], ["student.name"]);
+
+		var result = await handler.HandleAsync(request, TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.StudentCount.ShouldBe(1),
+			() => result.Columns.Single().Key.ShouldBe("student.name"),
+			() => result.Sections.Single().StudentId.ShouldBe(studentId),
+			() => result.Sections.Single().Rows.Single().Single().ShouldBe("Amy van Zyl"));
+	}
+
+	[Fact]
+	[Trait("AC", "318UC14")]
+	public async Task HandleAsync_FiltersReferenceOneDatasource_ReadsOnlyThatDatasourceOnce()
+	{
+		var teacherId = Guid.NewGuid();
+		_datasourceOptionReaderMock
+			.Setup(reader => reader.ReadAsync(ReportDatasource.Teacher, It.IsAny<CancellationToken>()))
+			.ReturnsAsync([new FieldOption(teacherId.ToString(), "Amy Jacobs")]);
+		_populationReaderMock
+			.Setup(reader => reader.ReadAsync(It.IsAny<ReportDefinition>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync([]);
+
+		var handler = CreateHandler();
+		var request = new RunReportRequest(
+			[new ReportFilterRequest("course.teacher", "equals", [teacherId.ToString()])],
+			["student.name"]);
+
+		await handler.HandleAsync(request, TestContext.Current.CancellationToken);
+
+		_datasourceOptionReaderMock.Verify(
+			reader => reader.ReadAsync(ReportDatasource.Teacher, It.IsAny<CancellationToken>()), Times.Once);
+		_datasourceOptionReaderMock.Verify(
+			reader => reader.ReadAsync(ReportDatasource.GuardianRelationship, It.IsAny<CancellationToken>()), Times.Never);
+	}
+}
