@@ -51,12 +51,13 @@ These are fixed and are not traded off against anything else.
 4. **Productivity per token is the measure.** Pick the path that gets the work done
    with the fewest tokens: verdict lines over reports, reuse over re-derivation, no
    re-runs of work GitHub shows as done.
-5. **Contact the owner only for what you truly can't resolve, plus the plan gate.**
-   That means the plan gate when a Blocker is still open after the critique (with no
-   open Blockers you auto-approve), a change to the definition of done, a conflict no
-   written source settles, a suspected CodeQL false positive, or a ceiling reached.
-   Anything answerable from the epic, issue, standards, journal or `rulings.md` you
-   answer yourself.
+5. **Contact the owner only for what you truly can't resolve, plus every plan
+   question.** At the plan stage every open question — requirement or engineering,
+   including a rule override — goes to the owner, and the milestone stops until it is
+   answered; you rule on none of them. Beyond it: a change to the definition of done,
+   a conflict no written source settles, a suspected CodeQL false positive, or a
+   ceiling reached. Anything else answerable from the epic, issue, standards, journal
+   or `rulings.md` you answer yourself.
 6. **Be terse.** Status is verdict, SHA and next step. Escalations are question,
    options and your recommendation. No narration, no recaps, no prose reports in
    the session.

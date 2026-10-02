@@ -21,9 +21,8 @@ metadata:
   assert).
 - `subagent`, required when QA wrote the specs first: `branch` — the feature branch
   QA created and pushed with the story's failing Playwright specs. You build on it.
-- Optional (`subagent`): `plan_open_issues_file` — the critique's open non-blocker
-  findings (Warnings/Questions/Suggestions the owner let through) for you to honour or
-  disposition.
+- Optional (`subagent`): `plan_answers_file` — the owner's answers to the plan's
+  questions, and any questions left open by "implement as is".
 - Optional: repository owner/name if not inferable from the git remote.
 
 ## Asking vs escalating
@@ -88,15 +87,14 @@ before the build. **Follow it as written.** Deviate only on a real obstacle hit 
 implementation, and raise it before deviating. Then
 read `qa_plan_file`: the preconditions, actors, paths and outcomes QA will assert.
 Satisfying a requirement differently from what the QA plan expects is a bug report
-waiting to be filed, so build to both. Both are **read-only** and frozen at owner
+waiting to be filed, so build to both. Both are **read-only** and frozen at plan
 approval; if either looks wrong (contradicts the issue, or asserts out-of-scope
 behaviour), raise it.
 
-If `plan_open_issues_file` is present, read it too: each open row is a Warning,
-Question or Suggestion the critique raised and the owner let through the plan gate.
-Give each a disposition per `.claude/shared/review-severity.md` — actioned, deferred
-with a reason, or disputed with a cited reason — and record it in `implement-{n}.md`. A
-Question you genuinely can't resolve is a **raise**, not a guess.
+If `plan_answers_file` is present, read it too. The plans already reflect each answer;
+the file tells you why, so never re-raise a question it answered. An `AUDIT:` line
+marks a question the owner left open with "implement as is" — build the planner's
+reading it names.
 
 Raise any ambiguity or conflict between sections before coding.
 
@@ -243,7 +241,7 @@ gh pr edit {pr_number} --remove-label "gate: qa-complete" --remove-label "gate: 
 
 They describe code that stops existing when you push; leaving one would let the story
 merge on a sign-off given against different code. There is no owner label to preserve —
-the owner's judgement was spent at the plan gate, before the code existed.
+the owner's judgement was spent in the plan question rounds, before the code existed.
 
 Push, then `gh pr create` per `docs/coding-standards.md`, setting everything at
 creation (don't rely on later edits):

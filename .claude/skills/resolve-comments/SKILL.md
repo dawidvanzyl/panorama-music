@@ -128,8 +128,8 @@ by which this pipeline could ship something nobody checked. Removing them is not
 admission of failure; it is what makes rework safe, and QA and the reviewer will
 re-apply them once they have looked again.
 
-There is no owner gate label to leave alone — the owner's judgement is spent at the
-plan gate, before the code exists, not as a label on the PR.
+There is no owner gate label to leave alone — the owner's judgement is spent in the
+plan question rounds, before the code exists, not as a label on the PR.
 
 - Push once.
 
