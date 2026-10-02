@@ -59,6 +59,9 @@ responsibility folder applies, organise by domain concept, aggregate, feature, o
 **Prohibited catch-all folders:** `Common/`, `Helpers/`, `Utilities/`, `Misc/`, `Shared/`. Every
 artefact has a clearly defined responsibility and location.
 
+**One top-level type per file.** Each class, record, struct, interface or enum lives in its own file,
+named after the type. A private nested type stays inside the type that uses it.
+
 **Interfaces** placed in a different layer from their implementation go in an `Interfaces/` folder
 within the layer that defines them; an interface and implementation in the same layer live together
 in the same responsibility folder. Interfaces live where they are consumed, not centralised
