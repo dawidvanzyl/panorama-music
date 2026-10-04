@@ -20,7 +20,7 @@ public static class CourseMessages
 	private static string Label(CourseType courseType) => courseType switch
 	{
 		CourseType.Theory => "Theory",
-		CourseType.GREnrichment => "GR Enrichment",
+		CourseType.GREEnrichment => "GR Enrichment",
 		CourseType.G1Enrichment => "Grade 1 Enrichment",
 		CourseType.G2Recorder => "Grade 2 Recorder",
 		CourseType.Instrument => "Instrument",
