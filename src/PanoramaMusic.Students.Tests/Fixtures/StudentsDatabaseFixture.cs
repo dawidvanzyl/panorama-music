@@ -54,6 +54,34 @@ public sealed class StudentsDatabaseFixture : IAsyncLifetime
 	/// </summary>
 	public void RerunMigrations() => StudentMigrator.Run(_migrationConnectionString);
 
+	/// <summary>
+	/// The course for a type and structure, created when none exists yet. A course
+	/// type and a structure identify one course, so tests that need a course on a
+	/// pair another test already used share it instead of inserting a second.
+	/// </summary>
+	public async Task<Guid> EnsureCourseAsync(string courseType, Guid lessonStructureId)
+	{
+		await using var command = Connection.CreateCommand();
+		command.CommandText =
+			"""
+			WITH inserted AS (
+			    INSERT INTO students.courses (course_id, course_type, cost, lesson_structure_id)
+			    VALUES (@p_course_id, @p_course_type, 450.00, @p_lesson_structure_id)
+			    ON CONFLICT (course_type, lesson_structure_id) DO NOTHING
+			    RETURNING course_id)
+			SELECT course_id FROM inserted
+			UNION ALL
+			SELECT course_id FROM students.courses
+			WHERE course_type = @p_course_type AND lesson_structure_id = @p_lesson_structure_id
+			LIMIT 1;
+			""";
+		command.Parameters.Add(new NpgsqlParameter("p_course_id", Guid.NewGuid()));
+		command.Parameters.Add(new NpgsqlParameter("p_course_type", courseType));
+		command.Parameters.Add(new NpgsqlParameter("p_lesson_structure_id", lessonStructureId));
+
+		return (Guid)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
+	}
+
 	public async ValueTask DisposeAsync()
 	{
 		await Connection.CloseAsync();

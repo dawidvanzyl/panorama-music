@@ -174,14 +174,7 @@ public class GuardianReconciliationFunctionTests : IClassFixture<StudentsDatabas
 	private async Task<Guid> GivenEnrolledStudentAsync()
 	{
 		var studentId = await GivenStudentAsync();
-		var courseId = Guid.NewGuid();
-
-		await CallAsync(
-			"SELECT students.create_course(@p_course_id, @p_course_type, @p_cost, @p_lesson_structure_id);",
-			("p_course_id", courseId),
-			("p_course_type", "Instrument"),
-			("p_cost", 450.00m),
-			("p_lesson_structure_id", _lessonStructureId));
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _lessonStructureId);
 
 		await CallAsync(
 			"SELECT students.create_student_course(@p_student_course_id, @p_student_id, @p_course_id, @p_teacher_id, @p_enrolled_date);",

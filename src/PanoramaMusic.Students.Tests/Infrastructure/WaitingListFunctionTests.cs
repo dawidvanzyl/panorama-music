@@ -57,7 +57,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		// screens with no way back through the UI.
 		var both = await GivenStudentAsync("Both", $"Student {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(both, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 		await GivenEnrollmentAsync(both, courseId);
 
 		var studentIds = await ReadStudentIdsAsync();
@@ -91,7 +91,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		var stillWaitingStudent = await GivenStudentAsync("StillWaiting", $"Student {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(enrolledStudent, _duringSchoolLessonStructureId);
 		await GivenWaitingListEntryAsync(stillWaitingStudent, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 		await GivenEnrollmentAsync(enrolledStudent, courseId);
 
 		var waitingListStudentIds = await ReadWaitingListStudentIdsAsync();
@@ -114,7 +114,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		// the by-student read below is the whole point of both tests.
 		var student = await GivenStudentAsync("Enrolled", $"Maintained {Guid.NewGuid()}");
 		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 		await GivenEnrollmentAsync(student, courseId);
 
 		var byId = await ReadEntryStudentIdAsync(
@@ -137,7 +137,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		// prove it.
 		var enrolled = await GivenStudentAsync("Enrolled", $"Stale {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(enrolled, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 		await GivenEnrollmentAsync(enrolled, courseId);
 
 		var stillWaiting = await GivenStudentAsync("StillWaiting", $"Live {Guid.NewGuid()}");
@@ -205,7 +205,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		// roster's exclusion is written in SQL against the waiting_list row.
 		var student = await GivenStudentAsync("Enrolled Off", $"Student {Guid.NewGuid()}");
 		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 
 		await GivenEnrollmentAsync(student, courseId);
 		await CallAsync("SELECT students.delete_waiting_list_entry(@p_id);", ("p_id", entryId));
@@ -223,7 +223,7 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 		var entryId = await GivenWaitingListEntryReturningIdAsync(student, _duringSchoolLessonStructureId);
 		var stillWaiting = await GivenStudentAsync("StillWaiting", $"Student {Guid.NewGuid()}");
 		await GivenWaitingListEntryAsync(stillWaiting, _duringSchoolLessonStructureId);
-		var courseId = await GivenCourseAsync(_duringSchoolLessonStructureId);
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _duringSchoolLessonStructureId);
 
 		await GivenEnrollmentAsync(student, courseId);
 		await CallAsync("SELECT students.delete_waiting_list_entry(@p_id);", ("p_id", entryId));
@@ -300,20 +300,6 @@ public class WaitingListFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			("p_waiting_list_entry_id", Guid.NewGuid()),
 			("p_student_id", studentId),
 			("p_lesson_structure_id", lessonStructureId));
-
-	private async Task<Guid> GivenCourseAsync(Guid lessonStructureId)
-	{
-		var courseId = Guid.NewGuid();
-
-		await CallAsync(
-			"SELECT students.create_course(@p_course_id, @p_course_type, @p_cost, @p_lesson_structure_id);",
-			("p_course_id", courseId),
-			("p_course_type", "Instrument"),
-			("p_cost", 450.00m),
-			("p_lesson_structure_id", lessonStructureId));
-
-		return courseId;
-	}
 
 	private Task GivenEnrollmentAsync(Guid studentId, Guid courseId) =>
 		CallAsync(

@@ -15,6 +15,9 @@ namespace PanoramaMusic.Students.Tests.Infrastructure;
 /// </summary>
 public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 {
+	// Individual · HalfHour · DuringSchool, from seed_lesson_structures.sql.
+	private static readonly Guid _lessonStructureId = Guid.Parse("0e6ecae2-b60a-483d-8abd-907a94e6a364");
+
 	private readonly StudentsDatabaseFixture _fixture;
 
 	public StudentCourseFunctionTests(StudentsDatabaseFixture fixture)
@@ -27,7 +30,7 @@ public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	public async Task DeleteStudentCourse_EnrollmentRecordingAnInstrumentAndStep_RemovesBothWithIt()
 	{
 		var studentId = await GivenStudentAsync();
-		var courseId = await GivenCourseAsync("Instrument");
+		var courseId = await _fixture.EnsureCourseAsync("Instrument", _lessonStructureId);
 		var enrollmentId = await GivenEnrollmentAsync(studentId, courseId, "Piano", "Step2A");
 
 		await CallAsync(
@@ -48,9 +51,9 @@ public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	{
 		var studentId = await GivenStudentAsync();
 		var withdrawnId = await GivenEnrollmentAsync(
-			studentId, await GivenCourseAsync("Instrument"), "Piano", "Step2A");
+			studentId, await _fixture.EnsureCourseAsync("Instrument", _lessonStructureId), "Piano", "Step2A");
 		var keptId = await GivenEnrollmentAsync(
-			studentId, await GivenCourseAsync("Theory"), instrumentType: null, "Step4B");
+			studentId, await _fixture.EnsureCourseAsync("Theory", _lessonStructureId), instrumentType: null, "Step4B");
 
 		await CallAsync(
 			"SELECT students.delete_student_course(@p_student_course_id);",
@@ -70,7 +73,7 @@ public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	{
 		var studentId = await GivenStudentAsync();
 		var enrollmentId = await GivenEnrollmentAsync(
-			studentId, await GivenCourseAsync("Instrument"), "Piano", "Step2A");
+			studentId, await _fixture.EnsureCourseAsync("Instrument", _lessonStructureId), "Piano", "Step2A");
 		var newTeacherId = Guid.NewGuid();
 
 		// The two writes the repository's update makes, in the order it makes
@@ -105,7 +108,7 @@ public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 	{
 		var studentId = await GivenStudentAsync();
 		var enrollmentId = await GivenEnrollmentAsync(
-			studentId, await GivenCourseAsync("G2Recorder"), instrumentType: null, stepType: null);
+			studentId, await _fixture.EnsureCourseAsync("G2Recorder", _lessonStructureId), instrumentType: null, stepType: null);
 
 		// The update path calls this unconditionally, so it has to be a no-op for
 		// a course type that recorded nothing to begin with.
@@ -133,24 +136,6 @@ public class StudentCourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			("student_id", studentId));
 
 		return studentId;
-	}
-
-	private async Task<Guid> GivenCourseAsync(string courseType)
-	{
-		var courseId = Guid.NewGuid();
-
-		await CallAsync(
-			"""
-			INSERT INTO students.courses (course_id, course_type, cost, lesson_structure_id)
-			SELECT @course_id, @course_type, 100.00, lesson_structure_id
-			FROM students.lesson_structures
-			ORDER BY lesson_structure_id
-			LIMIT 1;
-			""",
-			("course_id", courseId),
-			("course_type", courseType));
-
-		return courseId;
 	}
 
 	/// <summary>
