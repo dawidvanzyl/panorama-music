@@ -406,7 +406,7 @@ export async function ensureCourseOfType(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
       };
-      type Listed = { courseId: string; courseType: string; cost: number; lessonStructureId: string };
+      type Listed = { courseId: string; courseType: string; cost: number | string; lessonStructureId: string };
       const find = async (): Promise<Listed | undefined> => {
         const courses = (await (await fetch('/api/courses', { headers })).json()) as Listed[];
         return courses.find((c) => c.courseType === courseType && c.lessonStructureId === lessonStructureId);
@@ -434,7 +434,7 @@ export async function ensureCourseOfType(
   );
 
   expect([200, 201]).toContain(course.status);
-  return { courseId: course.courseId, cost: course.cost.toFixed(2) };
+  return { courseId: course.courseId, cost: Number(course.cost).toFixed(2) };
 }
 
 /**
