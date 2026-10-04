@@ -318,6 +318,7 @@ export default defineConfig({
       { name: '322UC11', description: 'The saved reports table offers Edit and Delete only on the owned row, after Run' },
       { name: '322UC12', description: 'The edit builder loads a saved report holding its filters, columns and name in the breadcrumb' },
       { name: '322UC13', description: 'Save in the edit builder pre-fills the modal with the report name and updates it rather than creating another' },
+      { name: '308UC6', description: 'A create refused because the course type and lesson structure are taken shows the reason on the form and adds no row' },
     ],
   },
 })

@@ -322,6 +322,32 @@ describe('pm-course-management-page — surfaces a rejected create on the form',
   });
 });
 
+describe(
+  'pm-course-management-page — reports a course type and structure that are already taken',
+  { tags: ['308UC6'] },
+  () => {
+    let el: HTMLElement;
+
+    afterEach(() => document.body.removeChild(el));
+
+    it('shows the refusal on the form, keeps the entered values and adds no row', async () => {
+      const refusal = 'A Grade 2 Recorder course already exists for Group · Half Hour · During School.';
+      vi.mocked(createCourse).mockRejectedValue(new CoursesError(refusal, 400));
+      el = await mountPage();
+      const readsBefore = mockGetCourses.mock.calls.length;
+
+      await submitCreateForm(el, 'G2Recorder', '300.00', 'ls1');
+
+      expect(formErrorOf(el).textContent).toContain(refusal);
+      expect(selectIn(el, 'courseType').value).toBe('G2Recorder');
+      expect(costInputOf(el).value).toBe('300.00');
+      expect(selectIn(el, 'lessonStructure').value).toBe('ls1');
+      expect(mockGetCourses.mock.calls.length).toBe(readsBefore);
+      expect(rowTextsOf(el)).toHaveLength(2);
+    });
+  },
+);
+
 describe('pm-course-management-page — narrows the list by the filter selections', { tags: ['257UC16'] }, () => {
   let el: HTMLElement;
 
