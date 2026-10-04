@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test';
 import { expect } from './base';
+import { ensureCourseOfType, fetchLessonStructureId } from './waitingList';
 
 export interface SeededEnrollmentTarget {
   courseId: string;
   courseLabel: string;
-  /** The course's cost, which is what tells this run's course apart on Course Management. */
+  /** The course's actual cost, which is what identifies it on Course Management. */
   courseCost: string;
   teacherId: string;
   teacherName: string;
@@ -18,8 +19,12 @@ export interface SeededEnrollmentTarget {
  *
  * The course type is Grade 2 Recorder, which records neither an instrument nor a
  * step, so a caller that only needs *a* course to enroll into has the least to
- * fill in. Both records are unique per call, so parallel workers never contend
- * for the same row.
+ * fill in. The teacher is unique per call. The course is not: a course type and
+ * a lesson structure identify at most one course, so every call returns the one
+ * course that pair already has, creating it only if it is absent. Callers need
+ * the returned `courseCost`, never one of their own, and two calls give the same
+ * course. A caller that needs two distinct courses must use a different pair for
+ * the second.
  *
  * <p>
  * **Before seeding a course anywhere in this suite, read
@@ -52,48 +57,26 @@ export async function seedEnrollmentTarget(page: Page): Promise<SeededEnrollment
       surname: string;
     };
 
-    const structuresResponse = await fetch('/api/lesson-structures', { headers });
-    const structures = (await structuresResponse.json()) as {
-      lessonStructureId: string;
-      lessonType: string;
-      durationType: string;
-      occurrenceType: string;
-    }[];
-    const structure = structures.find(
-      (s) => s.lessonType === 'Group' && s.durationType === 'HalfHour' && s.occurrenceType === 'DuringSchool',
-    )!;
-
-    // The cost is what tells this run's course apart from another's, the same
-    // way the course-management spec identifies one.
-    const cost = `${Date.now() % 100_000_000}.00`;
-    const courseResponse = await fetch('/api/courses', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        courseType: 'G2Recorder',
-        cost,
-        lessonStructureId: structure.lessonStructureId,
-      }),
-    });
-    const course = (await courseResponse.json()) as { courseId: string };
-
     return {
       teacherStatus: teacherResponse.status,
-      courseStatus: courseResponse.status,
-      courseId: course.courseId,
-      courseCost: cost,
       teacherId: teacher.teacherId,
       teacherName: `${teacher.firstName} ${teacher.surname}`,
     };
   }, surname);
 
   expect(seeded.teacherStatus).toBe(201);
-  expect(seeded.courseStatus).toBe(201);
+
+  const structureId = await fetchLessonStructureId(page, {
+    occurrenceType: 'DuringSchool',
+    lessonType: 'Group',
+    durationType: 'HalfHour',
+  });
+  const course = await ensureCourseOfType(page, structureId, 'G2Recorder');
 
   return {
-    courseId: seeded.courseId,
+    courseId: course.courseId,
     courseLabel: 'Grade 2 Recorder · Group · Half Hour · During School',
-    courseCost: seeded.courseCost,
+    courseCost: course.cost,
     teacherId: seeded.teacherId,
     teacherName: seeded.teacherName,
   };

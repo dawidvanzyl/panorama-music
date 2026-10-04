@@ -379,27 +379,62 @@ export const COURSE_FREE_LESSON_STRUCTURE = {
  * </p>
  */
 export async function seedCourseOfType(page: Page, lessonStructureId: string, courseType: string): Promise<string> {
-  const cost = `${Date.now() % 100_000_000}.00`;
+  return (await ensureCourseOfType(page, lessonStructureId, courseType)).courseId;
+}
 
-  const created = await page.evaluate(
-    async ({ lessonStructureId, courseType, cost }) => {
+/**
+ * A course type and a lesson structure identify at most one course in the whole
+ * QA database, so a course is shared state: this returns the course that already
+ * exists for the pair, or creates it, and hands back its actual id and cost. A
+ * caller that identifies the course on screen by its cost must use the cost
+ * returned here, never one it chose. Two calls on one pair give one course; a
+ * caller that needs two distinct courses must use two pairs.
+ *
+ * <p>
+ * Two workers may both find the pair absent. The loser's create is refused, and
+ * it then reads the winner's course back instead of failing.
+ * </p>
+ */
+export async function ensureCourseOfType(
+  page: Page,
+  lessonStructureId: string,
+  courseType: string,
+): Promise<{ courseId: string; cost: string }> {
+  const course = await page.evaluate(
+    async ({ lessonStructureId, courseType }) => {
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
       };
+      type Listed = { courseId: string; courseType: string; cost: number; lessonStructureId: string };
+      const find = async (): Promise<Listed | undefined> => {
+        const courses = (await (await fetch('/api/courses', { headers })).json()) as Listed[];
+        return courses.find((c) => c.courseType === courseType && c.lessonStructureId === lessonStructureId);
+      };
+
+      const existing = await find();
+      if (existing) return { status: 200, courseId: existing.courseId, cost: existing.cost };
+
+      const cost = `${Date.now() % 100_000_000}.00`;
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers,
         body: JSON.stringify({ courseType, cost, lessonStructureId }),
       });
-      const course = (await response.json()) as { courseId: string };
-      return { status: response.status, courseId: course.courseId };
+      if (response.status === 201) {
+        const created = (await response.json()) as { courseId: string };
+        return { status: 201, courseId: created.courseId, cost: Number(cost) };
+      }
+
+      const winner = await find();
+      if (winner) return { status: 200, courseId: winner.courseId, cost: winner.cost };
+      return { status: response.status, courseId: '', cost: 0 };
     },
-    { lessonStructureId, courseType, cost },
+    { lessonStructureId, courseType },
   );
 
-  expect(created.status).toBe(201);
-  return created.courseId;
+  expect([200, 201]).toContain(course.status);
+  return { courseId: course.courseId, cost: course.cost.toFixed(2) };
 }
 
 /**

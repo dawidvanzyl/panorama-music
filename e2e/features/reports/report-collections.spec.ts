@@ -122,8 +122,21 @@ test.describe('Report Builder — filtering by Course · Teacher', { tag: ['@11I
     await seedReportStudent(page, target1, { firstName: 'Ann', lastName: token });
     await seedReportStudent(page, target2, { firstName: 'Ben', lastName: token });
     const caraId = await seedReportStudent(page, target1, { firstName: 'Cara', lastName: token });
+    // Both targets share one course, since a course type and a lesson structure
+    // identify one course, and a student cannot be enrolled in a course twice. Cara's
+    // second enrolment therefore goes to a Grade 2 Recorder course on another pair,
+    // under the second teacher.
+    const secondCourseId = await seedCourseOfType(
+      page,
+      await fetchLessonStructureId(page, {
+        occurrenceType: 'AfterSchool',
+        lessonType: 'Group',
+        durationType: 'HalfHour',
+      }),
+      'G2Recorder',
+    );
     await enrollExistingStudent(page, caraId, {
-      courseId: target2.courseId,
+      courseId: secondCourseId,
       teacherId: target2.teacherId,
     });
 

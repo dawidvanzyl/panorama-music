@@ -2,6 +2,13 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
 import { loginAsRoles } from '../../fixtures/testUsers';
 import { seedEnrollmentTarget, studentIdBySurname } from '../../fixtures/enrollment';
+import {
+  ensureCourseOfType,
+  fetchLessonStructureId,
+  type DurationType,
+  type LessonType,
+  type OccurrenceType,
+} from '../../fixtures/waitingList';
 import { StudentsPage } from '../../pages/students/StudentsPage';
 
 /**
@@ -54,10 +61,9 @@ async function seedTheoryCourse(page: Page): Promise<string> {
 }
 
 /**
- * Issued from inside the page so the request carries the signed-in caller's
- * bearer token. A course of the same type and structure may already exist from
- * an earlier run — that is fine, since the enroll form offers whichever one it
- * finds under that label.
+ * A course type and a lesson structure identify at most one course, so this
+ * ensures the course for the pair rather than creating one: an earlier test or
+ * run may already have made it, and the enroll form offers it under the same label.
  *
  * <p>
  * One structure is off limits for `Instrument` courses: After School · Group ·
@@ -69,40 +75,12 @@ async function seedTheoryCourse(page: Page): Promise<string> {
 async function seedCourse(
   page: Page,
   courseType: string,
-  lessonType: string,
-  durationType: string,
-  occurrenceType: string,
+  lessonType: LessonType,
+  durationType: DurationType,
+  occurrenceType: OccurrenceType,
 ): Promise<void> {
-  const status = await page.evaluate(
-    async ({ courseType, lessonType, durationType, occurrenceType }) => {
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
-      };
-      const structures = (await (await fetch('/api/lesson-structures', { headers })).json()) as {
-        lessonStructureId: string;
-        lessonType: string;
-        durationType: string;
-        occurrenceType: string;
-      }[];
-      const structure = structures.find(
-        (s) => s.lessonType === lessonType && s.durationType === durationType && s.occurrenceType === occurrenceType,
-      )!;
-      const response = await fetch('/api/courses', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          courseType,
-          cost: `${Date.now() % 100_000_000}.00`,
-          lessonStructureId: structure.lessonStructureId,
-        }),
-      });
-      return response.status;
-    },
-    { courseType, lessonType, durationType, occurrenceType },
-  );
-
-  expect(status).toBe(201);
+  const lessonStructureId = await fetchLessonStructureId(page, { occurrenceType, lessonType, durationType });
+  await ensureCourseOfType(page, lessonStructureId, courseType);
 }
 
 test.describe('Enrollment — a student can hold several enrollments at once', { tag: ['@9IT1'] }, () => {
