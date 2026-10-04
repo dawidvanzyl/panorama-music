@@ -117,8 +117,8 @@ public class CourseCollectionReaderTests : IClassFixture<ReportingDatabaseFixtur
 
 		var teacherId = await StudentSeeder.InsertTeacherAsync(connection, "T", token);
 		var courseAType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
-		var courseBType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
-		var courseCType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourLessonStructureId);
+		var courseBType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHalfHourLessonStructureId);
+		var courseCType = await StudentSeeder.InsertCourseAsync(connection, "Instrument", StudentSeeder.InstrumentHourAfterSchoolLessonStructureId);
 
 		var studentId = await StudentSeeder.InsertStudentAsync(connection, "S", token, new DateOnly(2015, 1, 1));
 
