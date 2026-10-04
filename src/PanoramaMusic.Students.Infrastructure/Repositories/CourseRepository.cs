@@ -1,9 +1,12 @@
 using Dapper;
+using Npgsql;
 using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
@@ -13,6 +16,9 @@ namespace PanoramaMusic.Students.Infrastructure.Repositories;
 public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector domainEventCollector)
 	: RepositoryBase(unitOfWork), ICourseRepository
 {
+	private const string _uniqueViolationSqlState = "23505";
+	private const string _courseTypeLessonStructureUniqueIndex = "ix_courses_course_type_lesson_structure";
+
 	public async Task<IList<Course>> GetAllAsync(CancellationToken cancellationToken)
 	{
 		// The function joins the lesson structures itself, so the whole list
@@ -68,7 +74,7 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 			Transaction,
 			cancellationToken);
 
-		await Connection.ExecuteAsync(command);
+		await ExecuteTranslatingDuplicateCourseAsync(command, course);
 
 		domainEventCollector.Collect(course);
 	}
@@ -102,4 +108,26 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 
 		domainEventCollector.Collect(course);
 	}
+
+	/// <summary>
+	/// Two requests can both pass the use case's read before either writes; the
+	/// unique index over course type and lesson structure is what actually settles
+	/// it. Translating that into the same refusal the read would have produced keeps
+	/// the loser of the race on the 400 path instead of an unexplained 500.
+	/// </summary>
+	private async Task ExecuteTranslatingDuplicateCourseAsync(CommandDefinition command, Course course)
+	{
+		try
+		{
+			await Connection.ExecuteAsync(command);
+		}
+		catch (PostgresException ex) when (IsDuplicateCourse(ex))
+		{
+			throw new DomainException(CourseMessages.AlreadyExists(course.CourseType, course.LessonStructure));
+		}
+	}
+
+	private static bool IsDuplicateCourse(PostgresException exception) =>
+		exception.SqlState == _uniqueViolationSqlState
+		&& exception.ConstraintName == _courseTypeLessonStructureUniqueIndex;
 }
