@@ -77,7 +77,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		var individualHalfAfter = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
 		var theory = await CreateCourseAsync(client, CourseType.Theory, 120.00m, groupHourDuring.LessonStructureId);
-		var instrument = await CreateCourseAsync(client, CourseType.Instrument, 850.00m, individualHalfAfter.LessonStructureId);
+		var instrument = await CreateCourseAsync(client, CourseType.G1Enrichment, 850.00m, individualHalfAfter.LessonStructureId);
 
 		var (listed, _) = await GetCoursesAsync(client);
 
@@ -93,6 +93,29 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 			() => listed.Single(c => c.CourseId == instrument.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
 	}
 
+	[Fact]
+	[Trait("AC", "308UC1")]
+	public async Task CreateCourse_CourseTypeAndStructureAlreadyHeld_IsRefusedWithTheDomainMessageAndNothingIsAdded()
+	{
+		var client = await SignInAsync("courses-duplicate-admin", Role.Coordinator, "10.0.70.30");
+		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.DuringSchool);
+		await CreateCourseAsync(client, CourseType.G2Recorder, 200.00m, structure.LessonStructureId);
+		var (before, _) = await GetCoursesAsync(client);
+
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				"/api/courses",
+				new CreateCourseRequest(CourseType.G2Recorder, 350.00m, structure.LessonStructureId)),
+			TestContext.Current.CancellationToken);
+		using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+		var (after, _) = await GetCoursesAsync(client);
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
+			() => body.RootElement.GetProperty("error").GetString()
+				.ShouldBe("A Grade 2 Recorder course already exists for Group · Half Hour · During School."),
+			() => after.Count.ShouldBe(before.Count));
+	}
 	[Fact]
 	[Trait("AC", "257UC9")]
 	[Trait("AC", "273UC3")]
