@@ -63,6 +63,24 @@ export class CourseManagementPage extends BasePage {
     await this.courseForm.locator('#createBtn').click();
   }
 
+  /** The refusal the create form shows inside itself, apart from the page-level banner. */
+  formError(): Locator {
+    return this.courseForm.locator('#error');
+  }
+
+  /** What the create form currently holds, as the screen displays it. */
+  formCourseType(): Locator {
+    return this.courseForm.locator('#courseType option:checked');
+  }
+
+  formCost(): Locator {
+    return this.courseForm.locator('#cost');
+  }
+
+  formLessonStructure(): Locator {
+    return this.courseForm.locator('#lessonStructure option:checked');
+  }
+
   async filterByCourseType(label: string): Promise<void> {
     await this.filterBar.locator('#courseType').selectOption({ label });
   }
