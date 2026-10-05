@@ -89,7 +89,7 @@ public sealed class ApiExceptionHandlerTests
 	}
 
 	[Fact]
-	[Trait("AC", "308UC7")]
+	[Trait("AC", "308UC1")]
 	public async Task TryHandleAsync_StudentsEntityAlreadyExistsException_Returns409WithErrorAndCorrelationId()
 	{
 		var httpContext = CreateHttpContext();
