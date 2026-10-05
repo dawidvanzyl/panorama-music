@@ -8,10 +8,10 @@ namespace PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 /// <summary>
 /// The activities offered to a phase, or to every phase when none is given — which
 /// is what a Private-grade student, who has no phase, is offered. It serves a
-/// student who does not exist yet. The
-/// create wizard stages its assignments before the student is saved, so it has no
-/// identifier to ask the student-scoped read with — and it cannot fall back to the
-/// catalogue endpoint, which this area's callers are not all admitted to.
+/// student who does not exist yet. The create wizard stages its assignments before
+/// the student is saved, so it has no identifier to ask the student-scoped read
+/// with — and it cannot fall back to the catalogue endpoint, which this area's
+/// callers are not all admitted to.
 /// <para>
 /// There is nothing to exclude here: a student who does not exist takes part in
 /// nothing. What the wizard has already staged is its own to leave out of the

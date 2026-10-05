@@ -40,8 +40,8 @@ public static class StudentExtraCurricularRoutes
 
 		// Both narrowings the picker needs — the student's own phase (every phase
 		// for a Private-grade student), and what they do not already take part in —
-		// are the query's, so this answers with the
-		// list the panel offers rather than something the screen has to filter.
+		// are the query's, so this answers with the list the panel offers rather
+		// than something the screen has to filter.
 		group
 			.MapGet("/{studentId:guid}/extra-curriculars/assignable", async (Guid studentId, GetAssignableExtraCurricularsHandler handler, CancellationToken ct) =>
 			{

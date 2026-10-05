@@ -1,12 +1,12 @@
 import {
   NO_ACTIVITIES_ASSIGNED,
   PHASE_LABELS,
-  PHASE_ORDER,
   PHASE_RESTRICTION_NOTE,
   activityOptionLabel,
   practiceTimesText,
 } from './extra-curricular-options';
 import { COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE } from './course-or-extra-curricular';
+import { PHASES } from './student-options';
 import type { PhaseType, StudentExtraCurricular } from '../services/student-extra-curriculars';
 
 type Mode = 'inactive' | 'create' | 'edit';
@@ -85,10 +85,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       font-size: 14px;
       font-family: inherit;
-    }
-    .ec-step__control:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
     }
     .ec-step__note {
       margin: 10px 0 0;
@@ -365,7 +361,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
     // so the server's alphabetical order holds within each phase.
     this._assignable = value
       .filter((activity) => !held.has(activity.extraCurricularId))
-      .sort((a, b) => PHASE_ORDER.indexOf(a.phase) - PHASE_ORDER.indexOf(b.phase));
+      .sort((a, b) => PHASES.indexOf(a.phase) - PHASES.indexOf(b.phase));
     this.renderAssignable();
   }
 

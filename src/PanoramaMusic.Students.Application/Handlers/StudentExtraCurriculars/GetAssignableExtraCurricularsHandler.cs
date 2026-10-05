@@ -8,9 +8,8 @@ namespace PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 /// <summary>
 /// The activities the student may be assigned to that they do not already take
 /// part in: those offered to their own phase, or every phase for a Private-grade
-/// student. Both narrowings are the query's,
-/// so the whole answer arrives in one read rather than the catalogue being pulled
-/// back and filtered here.
+/// student. Both narrowings are the query's, so the whole answer arrives in one
+/// read rather than the catalogue being pulled back and filtered here.
 /// </summary>
 public sealed class GetAssignableExtraCurricularsHandler(
 	IStudentRepository studentRepository,

@@ -41,9 +41,6 @@ export function practiceTimesText(extraCurricular: StudentExtraCurricular): stri
   return extraCurricular.practiceTimes.map(practiceTimeText).join(' · ');
 }
 
-/** The order the picker lists phases in when it offers more than one. */
-export const PHASE_ORDER: PhaseType[] = ['Junior', 'Senior'];
-
 /**
  * How the picker labels an option: the activity's description and its phase. The
  * phase is named because a Private-grade student is offered both phases in one
