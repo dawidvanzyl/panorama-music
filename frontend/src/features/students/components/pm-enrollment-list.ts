@@ -284,8 +284,8 @@ export class PmEnrollmentList extends HTMLElement {
       editBtn.addEventListener('click', () => this.handleChangeClicked(enrollment));
       actionsCell.appendChild(editBtn);
 
-      // Withdrawing the student's last remaining enrollment is refused, but the
-      // action is still offered — choosing it states the requirement instead of
+      // Withdrawing the last course of a student with no extra-curricular is
+      // refused, but the action is still offered — choosing it states the requirement instead of
       // confirming, which the Courses step decides rather than this list.
       const withdrawBtn = document.createElement('button');
       withdrawBtn.type = 'button';

@@ -67,9 +67,9 @@ public static class StudentCourseRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		// Refused while it is the student's last remaining enrollment. The
-		// interface does not offer the confirmation until then, but this endpoint
-		// is where the rule is actually enforced.
+		// Refused when it would leave the student with neither a course nor an
+		// extra-curricular. The interface does not offer the confirmation then, but
+		// this endpoint is where the rule is actually enforced.
 		group
 			.MapDelete("/{studentId:guid}/courses/{studentCourseId:guid}", async (Guid studentId, Guid studentCourseId, WithdrawEnrollmentHandler handler, CancellationToken ct) =>
 			{
