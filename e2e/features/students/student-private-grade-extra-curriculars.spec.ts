@@ -179,7 +179,7 @@ test.describe('Students — a Private-grade student is offered every phase', { t
     const junior = await seedOneActivity(page, `${token}-J`, 'Junior');
     const senior = await seedOneActivity(page, `${token}-S`, 'Senior');
     const target = await seedEnrollmentTarget(page);
-    const surname = uniqueSurname('PrivateEdit');
+    const surname = uniqueSurname('PrvEdit');
     await seedPrivateCourseStudent(page, target, surname);
     const studentsPage = await openStudents(page);
 
@@ -201,7 +201,7 @@ test.describe('Students — a Private-grade student is offered every phase', { t
     const senior = await seedOneActivity(page, `${token}-S`, 'Senior');
     const studentsPage = await openStudents(page);
 
-    await studentsPage.startCreatingStudent({ firstName: 'Palesa', lastName: uniqueSurname('PrivateCreate'), ...privateStudent });
+    await studentsPage.startCreatingStudent({ firstName: 'Palesa', lastName: uniqueSurname('PrvCreate'), ...privateStudent });
     await studentsPage.advanceToExtraCurriculars();
     await studentsPage.openAddActivityPanel();
 
@@ -215,7 +215,7 @@ test.describe('Students — a Private-grade student is offered every phase', { t
     const heldSenior = await seedOneActivity(page, `${token}-S1`, 'Senior');
     const otherSenior = await seedOneActivity(page, `${token}-S2`, 'Senior');
     const junior = await seedOneActivity(page, `${token}-J`, 'Junior');
-    const surname = uniqueSurname('PrivateHeld');
+    const surname = uniqueSurname('PrvHeld');
     await seedPrivateActivityOnlyStudent(page, [heldSenior.extraCurricularId], surname);
     const studentsPage = await openStudents(page);
 
@@ -236,7 +236,7 @@ test.describe('Students — a Private-grade student is saved holding activities 
     const junior = await seedOneActivity(page, `${token}-J`, 'Junior');
     const senior = await seedOneActivity(page, `${token}-S`, 'Senior');
     const studentsPage = await openStudents(page);
-    const surname = uniqueSurname('PrivateNoCourse');
+    const surname = uniqueSurname('PrvNoCourse');
 
     await studentsPage.startCreatingStudent({ firstName: 'Lindiwe', lastName: surname, ...privateStudent });
     await studentsPage.advanceToExtraCurriculars();
@@ -268,7 +268,7 @@ test.describe('Students — a Private-grade student is saved holding activities 
   test('S2 negative: nothing staged is still refused', async ({ page }) => {
     await signIn(page);
     const studentsPage = await openStudents(page);
-    const surname = uniqueSurname('PrivateNothing');
+    const surname = uniqueSurname('PrvNothing');
 
     await studentsPage.startCreatingStudent({ firstName: 'Palesa', lastName: surname, ...privateStudent });
     await studentsPage.advanceToExtraCurriculars();
@@ -295,7 +295,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
     const senior = await seedOneActivity(page, uniqueDescription('340IT39-S1'), 'Senior');
     const target = await seedEnrollmentTarget(page);
     const studentsPage = await openStudents(page);
-    const surname = uniqueSurname('PrivateFinal');
+    const surname = uniqueSurname('PrvFinal');
 
     await studentsPage.startCreatingStudent({ firstName: 'Thabo', lastName: surname, ...privateStudent });
     await expect(studentsPage.visibleTabs()).toHaveText(TABS);
@@ -339,7 +339,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
     await signIn(page);
     const junior = await seedOneActivity(page, uniqueDescription('340IT39-S2'), 'Junior');
     const target = await seedEnrollmentTarget(page);
-    const surname = uniqueSurname('PrivateAssign');
+    const surname = uniqueSurname('PrvAssign');
     const studentId = await seedPrivateCourseStudent(page, target, surname);
     const studentsPage = await openStudents(page);
 
@@ -362,7 +362,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
     await signIn(page);
     const junior = await seedOneActivity(page, uniqueDescription('340IT39-S3'), 'Junior');
     const target = await seedEnrollmentTarget(page);
-    const surname = uniqueSurname('PrivateRemove');
+    const surname = uniqueSurname('PrvRemove');
     const studentId = await seedPrivateCourseStudent(page, target, surname);
     await assignActivity(page, studentId, junior.extraCurricularId);
     const studentsPage = await openStudents(page);
@@ -385,7 +385,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
   test('S4 negative: a Private student with no course cannot remove their last activity', async ({ page }) => {
     await signIn(page);
     const junior = await seedOneActivity(page, uniqueDescription('340IT39-S4'), 'Junior');
-    const surname = uniqueSurname('PrivateLast');
+    const surname = uniqueSurname('PrvLast');
     await seedPrivateActivityOnlyStudent(page, [junior.extraCurricularId], surname);
     const studentsPage = await openStudents(page);
     const deletes = recordDeletes(page);
@@ -406,7 +406,7 @@ test.describe('Students — a Private-grade student\'s extended view shows their
     const token = uniqueDescription('340IT40-S1');
     const junior = await seedOneActivity(page, `${token}-J`, 'Junior', { day: 'Monday', startTime: '15:00' });
     const senior = await seedOneActivity(page, `${token}-S`, 'Senior', { day: 'Tuesday', startTime: '16:00' });
-    const surname = uniqueSurname('PrivateExpanded');
+    const surname = uniqueSurname('PrvExpanded');
     await seedPrivateActivityOnlyStudent(page, [junior.extraCurricularId, senior.extraCurricularId], surname);
     const studentsPage = await openStudents(page);
 
@@ -434,7 +434,7 @@ test.describe('Students — a Private-grade student\'s extended view shows their
   test('S2 boundary: empty state for a Private student holding no activity', async ({ page }) => {
     await signIn(page);
     const target = await seedEnrollmentTarget(page);
-    const surname = uniqueSurname('PrivateEmpty');
+    const surname = uniqueSurname('PrvEmpty');
     await seedPrivateCourseStudent(page, target, surname);
     const studentsPage = await openStudents(page);
 
@@ -522,7 +522,7 @@ test.describe('Students — the API refuses a Senior activity for a Junior stude
     await signIn(page);
     const senior = await seedOneActivity(page, uniqueDescription('340IT42-S3'), 'Senior');
     const target = await seedEnrollmentTarget(page);
-    const studentId = await seedPrivateCourseStudent(page, target, uniqueSurname('PrivateApi'));
+    const studentId = await seedPrivateCourseStudent(page, target, uniqueSurname('PrvApi'));
 
     const result = await apiSend(page, 'POST', `/api/students/${studentId}/extra-curriculars`, {
       extraCurricularId: senior.extraCurricularId,
@@ -552,7 +552,7 @@ async function seedGradedStudentHoldingTwo(
 
 test.describe('Students — changing a graded student to Private keeps their activities', { tag: ['@340IT43'] }, () => {
   test('S1 through the wizard', async ({ page }) => {
-    const surname = uniqueSurname('ToPrivate');
+    const surname = uniqueSurname('ToPrv');
     const { studentId, j1, j2 } = await seedGradedStudentHoldingTwo(page, '340IT43-S1', surname);
     const studentsPage = await openStudents(page);
 
@@ -585,7 +585,7 @@ test.describe('Students — changing a graded student to Private keeps their act
   });
 
   test('S2 through the API', async ({ page }) => {
-    const surname = uniqueSurname('ToPrivateApi');
+    const surname = uniqueSurname('ToPrvApi');
     const { studentId, j1, j2 } = await seedGradedStudentHoldingTwo(page, '340IT43-S2', surname);
 
     const result = await apiSend(page, 'PUT', `/api/students/${studentId}`, {
@@ -605,7 +605,7 @@ test.describe('Students — changing a graded student to Private keeps their act
   });
 
   test('S3 boundary: cancelling an edit that switched to Private changes nothing', async ({ page }) => {
-    const surname = uniqueSurname('ToPrivateCancel');
+    const surname = uniqueSurname('ToPrvCancel');
     const { j1, j2 } = await seedGradedStudentHoldingTwo(page, '340IT43-S3', surname);
     const studentsPage = await openStudents(page);
     const deletes = recordDeletes(page);
@@ -645,7 +645,7 @@ test.describe('Students — activities staged in the create wizard survive a cha
     const j1 = await seedOneActivity(page, `${token}-J1`, 'Junior');
     const j2 = await seedOneActivity(page, `${token}-J2`, 'Junior');
     const studentsPage = await openStudents(page);
-    const surname = uniqueSurname('StagedToPrivate');
+    const surname = uniqueSurname('StagedToPrv');
 
     await startGradedAndStage(studentsPage, surname, [j1, j2]);
     await expect(studentsPage.assignedActivityRow(j1.description)).toBeVisible();
@@ -727,7 +727,7 @@ test.describe('Students — the Add Activity panel names each activity with its 
     const orchestra = await seedOneActivity(page, `${uniqueDescription('340IT51-S2')} Orchestra`, 'Senior');
     const studentsPage = await openStudents(page);
 
-    await studentsPage.startCreatingStudent({ firstName: 'Sipho', lastName: uniqueSurname('LabelPrivate'), ...privateStudent });
+    await studentsPage.startCreatingStudent({ firstName: 'Sipho', lastName: uniqueSurname('LabelPrv'), ...privateStudent });
     await studentsPage.advanceToExtraCurriculars();
     await studentsPage.openAddActivityPanel();
 
