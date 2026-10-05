@@ -77,20 +77,20 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		var individualHalfAfter = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
 		var theory = await CreateCourseAsync(client, CourseType.Theory, 120.00m, groupHourDuring.LessonStructureId);
-		var instrument = await CreateCourseAsync(client, CourseType.G1Enrichment, 850.00m, individualHalfAfter.LessonStructureId);
+		var enrichment = await CreateCourseAsync(client, CourseType.G1Enrichment, 850.00m, individualHalfAfter.LessonStructureId);
 
 		var (listed, _) = await GetCoursesAsync(client);
 
 		ShouldlyHelpers.Satisfy(
 			() => listed.ShouldContain(c => c.CourseId == theory.CourseId),
-			() => listed.ShouldContain(c => c.CourseId == instrument.CourseId),
+			() => listed.ShouldContain(c => c.CourseId == enrichment.CourseId),
 			// The lesson structure detail travels with each row, not just its id.
 			() => listed.Single(c => c.CourseId == theory.CourseId).LessonType.ShouldBe(LessonType.Group),
 			() => listed.Single(c => c.CourseId == theory.CourseId).DurationType.ShouldBe(DurationType.Hour),
 			() => listed.Single(c => c.CourseId == theory.CourseId).OccurrenceType.ShouldBe(OccurrenceType.DuringSchool),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).LessonType.ShouldBe(LessonType.Individual),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).DurationType.ShouldBe(DurationType.HalfHour),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).LessonType.ShouldBe(LessonType.Individual),
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).DurationType.ShouldBe(DurationType.HalfHour),
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
 	}
 
 	[Fact]
@@ -116,6 +116,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 				.ShouldBe("A Grade 2 Recorder course already exists for Group · Half Hour · During School."),
 			() => after.Count.ShouldBe(before.Count));
 	}
+
 	[Fact]
 	[Trait("AC", "257UC9")]
 	[Trait("AC", "273UC3")]
