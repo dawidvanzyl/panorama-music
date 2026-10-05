@@ -6,7 +6,7 @@ import type { CourseManagementPage } from '../../pages/courses/CourseManagementP
 
 const COURSE_TYPE = 'Grade 2 Recorder';
 const LESSON_STRUCTURE = 'Group · Half Hour · During School';
-const REFUSAL = 'A Grade 2 Recorder course already exists for Group · Half Hour · During School.';
+const REFUSAL = 'Course already exists';
 
 /**
  * A cost no other run has used and that differs from the existing course's. The
