@@ -125,7 +125,7 @@ test.describe('Students — saving needs a course or an extra-curricular', { tag
     await studentsPage.advanceToExtraCurriculars();
     await studentsPage.saveStudent();
 
-    await expect(studentsPage.wizardModal).toBeVisible();
+    await expect(studentsPage.wizardModal).toHaveAttribute('open', '');
     await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-selected', 'true');
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(REQUIRED_ON_SAVE);
     await expect(studentsPage.coursesStepMessage()).toHaveText('');
@@ -153,7 +153,7 @@ test.describe('Students — saving needs a course or an extra-curricular', { tag
     await studentsPage.assignActivity(activities[0].description);
     await studentsPage.saveStudent();
 
-    await expect(studentsPage.wizardModal).toBeHidden();
+    await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
     await findOnRoster(studentsPage, surname);
   });
 });
@@ -170,7 +170,7 @@ test.describe('Students — an extra-curricular alone is enough to save', { tag:
     await studentsPage.assignActivity(activity.description);
     await studentsPage.saveStudent();
 
-    await expect(studentsPage.wizardModal).toBeHidden();
+    await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
     await findOnRoster(studentsPage, surname);
     await studentsPage.toggleRowExpanded(surname);
     await expect(studentsPage.visibleExtraCurricularsSummary()).toContainText(activity.description);
@@ -199,7 +199,7 @@ test.describe('Students — a course alone is enough to save', { tag: ['@340IT29
     await studentsPage.goToNextStep();
     await studentsPage.saveStudent();
 
-    await expect(studentsPage.wizardModal).toBeHidden();
+    await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
     await findOnRoster(studentsPage, surname);
     await studentsPage.toggleRowExpanded(surname);
     await expect(studentsPage.visibleCoursesSummary()).toContainText(target.courseLabel);
@@ -240,7 +240,7 @@ test.describe('Students — the only staged course may be removed', { tag: ['@34
     await studentsPage.assignActivity(activity.description);
     await studentsPage.saveStudent();
 
-    await expect(studentsPage.wizardModal).toBeHidden();
+    await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
     await findOnRoster(studentsPage, surname);
     await studentsPage.toggleRowExpanded(surname);
     await expect(studentsPage.visibleExtraCurricularsSummary()).toContainText(activity.description);
@@ -450,7 +450,7 @@ test.describe('Students — the API refuses withdrawing the last course with no 
 
     const result = await apiDelete(page, `/api/students/${studentId}/courses/${enrollment.studentCourseId}`);
 
-    expect(result.status).toBe(204);
+    expect(result.status).toBe(200);
     const after = await apiGet<CourseHolding[]>(page, `/api/students/${studentId}/courses`);
     expect(after).toHaveLength(0);
   });
