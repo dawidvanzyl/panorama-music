@@ -77,20 +77,44 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		var individualHalfAfter = await GetStructureAsync(client, LessonType.Individual, DurationType.HalfHour, OccurrenceType.AfterSchool);
 
 		var theory = await CreateCourseAsync(client, CourseType.Theory, 120.00m, groupHourDuring.LessonStructureId);
-		var instrument = await CreateCourseAsync(client, CourseType.Instrument, 850.00m, individualHalfAfter.LessonStructureId);
+		var enrichment = await CreateCourseAsync(client, CourseType.G1Enrichment, 850.00m, individualHalfAfter.LessonStructureId);
 
 		var (listed, _) = await GetCoursesAsync(client);
 
 		ShouldlyHelpers.Satisfy(
 			() => listed.ShouldContain(c => c.CourseId == theory.CourseId),
-			() => listed.ShouldContain(c => c.CourseId == instrument.CourseId),
+			() => listed.ShouldContain(c => c.CourseId == enrichment.CourseId),
 			// The lesson structure detail travels with each row, not just its id.
 			() => listed.Single(c => c.CourseId == theory.CourseId).LessonType.ShouldBe(LessonType.Group),
 			() => listed.Single(c => c.CourseId == theory.CourseId).DurationType.ShouldBe(DurationType.Hour),
 			() => listed.Single(c => c.CourseId == theory.CourseId).OccurrenceType.ShouldBe(OccurrenceType.DuringSchool),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).LessonType.ShouldBe(LessonType.Individual),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).DurationType.ShouldBe(DurationType.HalfHour),
-			() => listed.Single(c => c.CourseId == instrument.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).LessonType.ShouldBe(LessonType.Individual),
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).DurationType.ShouldBe(DurationType.HalfHour),
+			() => listed.Single(c => c.CourseId == enrichment.CourseId).OccurrenceType.ShouldBe(OccurrenceType.AfterSchool));
+	}
+
+	[Fact]
+	[Trait("AC", "308UC1")]
+	public async Task CreateCourse_CourseTypeAndStructureAlreadyHeld_IsRefusedAsAConflictAndNothingIsAdded()
+	{
+		var client = await SignInAsync("courses-duplicate-admin", Role.Coordinator, "10.0.70.30");
+		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.DuringSchool);
+		await CreateCourseAsync(client, CourseType.G2Recorder, 200.00m, structure.LessonStructureId);
+		var (before, _) = await GetCoursesAsync(client);
+
+		var response = await client.Client.SendAsync(
+			client.AuthorizedPostRequest(
+				"/api/courses",
+				new CreateCourseRequest(CourseType.G2Recorder, 350.00m, structure.LessonStructureId)),
+			TestContext.Current.CancellationToken);
+		using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+		var (after, _) = await GetCoursesAsync(client);
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.Conflict),
+			() => body.RootElement.GetProperty("error").GetString()
+				.ShouldBe("Course already exists"),
+			() => after.Count.ShouldBe(before.Count));
 	}
 
 	[Fact]

@@ -16,10 +16,14 @@ public static class StudentSeeder
 	public static readonly Guid LessonStructureId = Guid.Parse("805c3cfd-7d2e-4376-b93b-4b4e2547f5e8");
 
 	// Individual · Hour · DuringSchool and Individual · HalfHour · DuringSchool,
-	// from seed_lesson_structures.sql — the two structures Instrument courses go
+	// from seed_lesson_structures.sql — the structures Instrument courses go
 	// on in this suite.
 	public static readonly Guid InstrumentHourLessonStructureId = Guid.Parse("e9ac58cc-d6a5-406e-b6a2-55076a0a3565");
 	public static readonly Guid InstrumentHalfHourLessonStructureId = Guid.Parse("0e6ecae2-b60a-483d-8abd-907a94e6a364");
+
+	// Individual · Hour · AfterSchool, from seed_lesson_structures.sql — the third
+	// structure, for a test that needs three Instrument courses.
+	public static readonly Guid InstrumentHourAfterSchoolLessonStructureId = Guid.Parse("42e1c54f-aa5d-4dd0-ab1a-aced05dd3c54");
 
 	// Group · Hour · DuringSchool, from seed_lesson_structures.sql — the
 	// structure Theory courses go on in this suite.
@@ -129,22 +133,32 @@ public static class StudentSeeder
 		return guardianId;
 	}
 
+	/// <summary>
+	/// The course for a type and structure, created when none exists yet. A course
+	/// type and a structure identify one course, so a second request for the same
+	/// pair returns the first course.
+	/// </summary>
 	public static async Task<Guid> InsertCourseAsync(NpgsqlConnection connection, string courseType, Guid lessonStructureId)
 	{
-		var courseId = Guid.NewGuid();
-
 		await using var command = connection.CreateCommand();
 		command.CommandText = """
-			INSERT INTO students.courses (course_id, course_type, cost, lesson_structure_id)
-			VALUES (@course_id, @course_type, @cost, @lesson_structure_id);
+			WITH inserted AS (
+			    INSERT INTO students.courses (course_id, course_type, cost, lesson_structure_id)
+			    VALUES (@course_id, @course_type, @cost, @lesson_structure_id)
+			    ON CONFLICT (course_type, lesson_structure_id) DO NOTHING
+			    RETURNING course_id)
+			SELECT course_id FROM inserted
+			UNION ALL
+			SELECT course_id FROM students.courses
+			WHERE course_type = @course_type AND lesson_structure_id = @lesson_structure_id
+			LIMIT 1;
 			""";
-		command.Parameters.AddWithValue("course_id", courseId);
+		command.Parameters.AddWithValue("course_id", Guid.NewGuid());
 		command.Parameters.AddWithValue("course_type", courseType);
 		command.Parameters.AddWithValue("cost", 100.00m);
 		command.Parameters.AddWithValue("lesson_structure_id", lessonStructureId);
-		await command.ExecuteNonQueryAsync();
 
-		return courseId;
+		return (Guid)(await command.ExecuteScalarAsync())!;
 	}
 
 	public static async Task<Guid> InsertTeacherAsync(

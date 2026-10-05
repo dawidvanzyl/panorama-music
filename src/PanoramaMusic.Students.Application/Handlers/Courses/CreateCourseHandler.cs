@@ -4,6 +4,7 @@ using PanoramaMusic.Students.Application.Models;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.Messages;
 
 namespace PanoramaMusic.Students.Application.Handlers.Courses;
 
@@ -21,7 +22,15 @@ public sealed class CreateCourseHandler(
 		var lessonStructure = await lessonStructureRepository.GetByIdAsync(lessonStructureId, cancellationToken)
 			?? throw new DomainException($"Lesson structure '{lessonStructureId}' does not exist.");
 
-		var course = Course.Create(Guid.NewGuid(), request.CourseType!.Value, request.Cost!.Value, lessonStructure);
+		var courseType = request.CourseType!.Value;
+
+		var existing = await courseRepository.GetByTypeAndStructureAsync(courseType, lessonStructureId, cancellationToken);
+		if (existing is not null)
+		{
+			throw new EntityAlreadyExistsException(CourseMessages.AlreadyExists);
+		}
+
+		var course = Course.Create(Guid.NewGuid(), courseType, request.Cost!.Value, lessonStructure);
 
 		await courseRepository.CreateAsync(course, cancellationToken);
 

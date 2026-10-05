@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
 import {
   createRegisteredUser,
@@ -6,6 +7,12 @@ import {
   uniqueTestEmail,
 } from '../../fixtures/testUsers';
 import { seedEnrolledStudent, seedEnrollmentTarget } from '../../fixtures/enrollment';
+import {
+  fetchLessonStructureId,
+  type DurationType,
+  type LessonType,
+  type OccurrenceType,
+} from '../../fixtures/waitingList';
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { CourseManagementPage } from '../../pages/courses/CourseManagementPage';
 import { landingUrl } from '../../fixtures/navigation';
@@ -25,10 +32,117 @@ function uniqueCost(): string {
   return `${whole}.${cents}`;
 }
 
+interface ReservedPair {
+  courseType: 'Theory' | 'GREEnrichment' | 'G1Enrichment' | 'G2Recorder' | 'Instrument';
+  occurrenceType: OccurrenceType;
+  lessonType: LessonType;
+  durationType: DurationType;
+}
+
+/**
+ * A course type and a lesson structure identify at most one course, so a scenario
+ * whose subject is creating a course holds its pair alone: no fixture ensures it
+ * and no other scenario touches it. A retry meets the course its earlier attempt
+ * left behind, so the pair is cleared before the scenario creates on it. Only a
+ * scenario's own reserved pair may ever be cleared, never a pair a fixture ensures.
+ *
+ * Reserved pairs, each held by one scenario in this file:
+ *   Grade 2 Recorder / Group · Hour · During School         @8IT1 creates and lists
+ *   Grade 2 Recorder / Individual · Hour · During School    @8IT1 deletes
+ *   Theory / Group · Half Hour · After School               @8IT4 filter
+ *   Instrument / Group · Hour · During School               @8IT4 filter
+ *   Theory / Individual · Hour · After School               @8IT3 corrects cost
+ *   Grade 1 Enrichment / Group · Half Hour · After School   @8IT3 over-precise cost
+ *   Grade 1 Enrichment / Group · Half Hour · During School  @8IT5 read-only Teacher
+ *   GR Enrichment / Individual · Half Hour · During School  @8IT2 cost never moves structure
+ *   GR Enrichment / Group · Half Hour · During School       @8IT5 maintenance refused
+ */
+const G2_GROUP_HOUR_DURING: ReservedPair = {
+  courseType: 'G2Recorder',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Group',
+  durationType: 'Hour',
+};
+const G2_INDIVIDUAL_HOUR_DURING: ReservedPair = {
+  courseType: 'G2Recorder',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Individual',
+  durationType: 'Hour',
+};
+const THEORY_GROUP_HALF_AFTER: ReservedPair = {
+  courseType: 'Theory',
+  occurrenceType: 'AfterSchool',
+  lessonType: 'Group',
+  durationType: 'HalfHour',
+};
+const INSTRUMENT_GROUP_HOUR_DURING: ReservedPair = {
+  courseType: 'Instrument',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Group',
+  durationType: 'Hour',
+};
+const THEORY_INDIVIDUAL_HOUR_AFTER: ReservedPair = {
+  courseType: 'Theory',
+  occurrenceType: 'AfterSchool',
+  lessonType: 'Individual',
+  durationType: 'Hour',
+};
+const G1_GROUP_HALF_AFTER: ReservedPair = {
+  courseType: 'G1Enrichment',
+  occurrenceType: 'AfterSchool',
+  lessonType: 'Group',
+  durationType: 'HalfHour',
+};
+const G1_GROUP_HALF_DURING: ReservedPair = {
+  courseType: 'G1Enrichment',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Group',
+  durationType: 'HalfHour',
+};
+const GRE_INDIVIDUAL_HALF_DURING: ReservedPair = {
+  courseType: 'GREEnrichment',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Individual',
+  durationType: 'HalfHour',
+};
+const GRE_GROUP_HALF_DURING: ReservedPair = {
+  courseType: 'GREEnrichment',
+  occurrenceType: 'DuringSchool',
+  lessonType: 'Group',
+  durationType: 'HalfHour',
+};
+
+/** Opens Course Management as a Coordinator with the given reserved pairs cleared of any leftover course. */
+async function openWithReservedPairs(page: Page, pairs: ReservedPair[]): Promise<CourseManagementPage> {
+  const coursesPage = await goToCourseManagementPage(page);
+  for (const pair of pairs) {
+    const lessonStructureId = await fetchLessonStructureId(page, pair);
+    await page.evaluate(
+      async ({ lessonStructureId, courseType }) => {
+        const headers = { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` };
+        const courses = (await (await fetch('/api/courses', { headers })).json()) as {
+          courseId: string;
+          courseType: string;
+          lessonStructureId: string;
+        }[];
+        for (const course of courses.filter(
+          (c) => c.courseType === courseType && c.lessonStructureId === lessonStructureId,
+        )) {
+          await fetch(`/api/courses/${course.courseId}`, { method: 'DELETE', headers });
+        }
+      },
+      { lessonStructureId, courseType: pair.courseType },
+    );
+  }
+  // The catalogue is read once per session, so it must be re-read after the clearing.
+  await coursesPage.reloadCourses();
+  return coursesPage;
+}
+
 test.describe('Course Management — creating and reading courses', { tag: ['@8IT1'] }, () => {
   test('creates a course that is listed and still there after a reload', async ({ page }) => {
     const cost = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [G2_GROUP_HOUR_DURING]);
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Grade 2 Recorder',
@@ -51,19 +165,19 @@ test.describe('Course Management — filtering by course type', { tag: ['@8IT4']
   test('shows only courses of the selected type', async ({ page }) => {
     const theoryCost = uniqueCost();
     const instrumentCost = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [THEORY_GROUP_HALF_AFTER, INSTRUMENT_GROUP_HOUR_DURING]);
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Theory',
       cost: theoryCost,
-      lessonStructureLabel: 'Group · Hour · During School',
+      lessonStructureLabel: 'Group · Half Hour · After School',
     });
     await expect(coursesPage.row('Theory', `R ${theoryCost}`)).toBeVisible();
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Instrument',
       cost: instrumentCost,
-      lessonStructureLabel: 'Individual · Half Hour · After School',
+      lessonStructureLabel: 'Group · Hour · During School',
     });
     await expect(coursesPage.row('Instrument', `R ${instrumentCost}`)).toBeVisible();
 
@@ -77,7 +191,7 @@ test.describe('Course Management — filtering by course type', { tag: ['@8IT4']
 test.describe('Course Management — a non-maintainer reads but cannot create', { tag: ['@8IT5'] }, () => {
   test('offers a Teacher the list with no create form, filter bar or actions column', async ({ page }) => {
     const cost = uniqueCost();
-    const maintainerPage = await goToCourseManagementPage(page);
+    const maintainerPage = await openWithReservedPairs(page, [G1_GROUP_HALF_DURING]);
     await maintainerPage.createCourse({
       courseTypeLabel: 'Grade 1 Enrichment',
       cost,
@@ -133,7 +247,7 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
   test('persists the corrected cost as the exact amount entered', async ({ page }) => {
     const cost = uniqueCost();
     const corrected = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [THEORY_INDIVIDUAL_HOUR_AFTER]);
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Theory',
@@ -157,7 +271,7 @@ test.describe('Course Management — correcting a course cost', { tag: ['@8IT3']
 
   test('refuses an over-precise cost inline and leaves the stored cost as it was', async ({ page }) => {
     const cost = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [G1_GROUP_HALF_AFTER]);
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Grade 1 Enrichment',
@@ -181,21 +295,21 @@ test.describe('Course Management — a cost change never moves the lesson struct
   test('leaves the course still linked to the structure it was created under', async ({ page }) => {
     const cost = uniqueCost();
     const corrected = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [GRE_INDIVIDUAL_HALF_DURING]);
 
     await coursesPage.createCourse({
-      courseTypeLabel: 'Instrument',
+      courseTypeLabel: 'GR Enrichment',
       cost,
       lessonStructureLabel: 'Individual · Half Hour · During School',
     });
-    const row = coursesPage.row('Instrument', `R ${cost}`);
+    const row = coursesPage.row('GR Enrichment', `R ${cost}`);
     await expect(row).toBeVisible();
 
     await coursesPage.startCostEdit(row);
     await coursesPage.enterCost(corrected);
     await coursesPage.saveCost();
 
-    const updated = coursesPage.row('Instrument', `R ${corrected}`);
+    const updated = coursesPage.row('GR Enrichment', `R ${corrected}`);
     await expect(updated).toBeVisible();
     await expect(updated).toContainText('Individual · Half Hour');
     await expect(updated).toContainText('During School');
@@ -205,19 +319,19 @@ test.describe('Course Management — a cost change never moves the lesson struct
 test.describe('Course Management — removing a course', { tag: ['@8IT1'] }, () => {
   test('deletes the course from the catalogue once the confirmation is accepted', async ({ page }) => {
     const cost = uniqueCost();
-    const coursesPage = await goToCourseManagementPage(page);
+    const coursesPage = await openWithReservedPairs(page, [G2_INDIVIDUAL_HOUR_DURING]);
 
     await coursesPage.createCourse({
       courseTypeLabel: 'Grade 2 Recorder',
       cost,
-      lessonStructureLabel: 'Group · Hour · After School',
+      lessonStructureLabel: 'Individual · Hour · During School',
     });
     const row = coursesPage.row('Grade 2 Recorder', `R ${cost}`);
     await expect(row).toBeVisible();
 
     await coursesPage.startDelete(row);
     await expect(coursesPage.deleteModal).toContainText('Delete Course');
-    await expect(coursesPage.deleteModal).toContainText('Grade 2 Recorder · Group · Hour · After School');
+    await expect(coursesPage.deleteModal).toContainText('Grade 2 Recorder · Individual · Hour · During School');
     await expect(coursesPage.deleteModal).toContainText('permanently removed');
 
     // Cancelling leaves the course exactly where it was.
@@ -267,7 +381,7 @@ test.describe('Course Management — a course a student is enrolled in cannot be
 test.describe('Course Management — maintenance is refused to everyone else', { tag: ['@8IT5'] }, () => {
   test('refuses a Teacher and an anonymous caller the update and delete endpoints', async ({ page, browser }) => {
     const cost = uniqueCost();
-    const maintainerPage = await goToCourseManagementPage(page);
+    const maintainerPage = await openWithReservedPairs(page, [GRE_GROUP_HALF_DURING]);
     await maintainerPage.createCourse({
       courseTypeLabel: 'GR Enrichment',
       cost,
