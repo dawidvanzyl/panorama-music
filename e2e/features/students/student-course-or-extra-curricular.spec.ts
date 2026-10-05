@@ -37,7 +37,7 @@ const studentDefaults = {
 
 interface Seeded {
   target: SeededEnrollmentTarget;
-  activities: { description: string; extraCurricularId: string }[];
+  activities: { description: string; optionLabel: string; extraCurricularId: string }[];
 }
 
 /**
@@ -56,7 +56,7 @@ async function signInAndSeed(page: Page, label: string, activityCount: number): 
       phase: 'Junior',
       practiceTimes: [{ day: 'Monday', startTime: '15:00' }],
     });
-    activities.push({ description, extraCurricularId });
+    activities.push({ description, optionLabel: `${description} (Junior)`, extraCurricularId });
   }
   return { target, activities };
 }
@@ -150,7 +150,7 @@ test.describe('Students — saving needs a course or an extra-curricular', { tag
     await studentsPage.saveStudent();
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(REQUIRED_ON_SAVE);
 
-    await studentsPage.assignActivity(activities[0].description);
+    await studentsPage.assignActivity(activities[0].optionLabel);
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
@@ -167,7 +167,7 @@ test.describe('Students — an extra-curricular alone is enough to save', { tag:
 
     await studentsPage.startCreatingStudent({ firstName: 'Lindiwe', lastName: surname, ...studentDefaults });
     await studentsPage.advanceToExtraCurriculars();
-    await studentsPage.assignActivity(activity.description);
+    await studentsPage.assignActivity(activity.optionLabel);
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
@@ -237,7 +237,7 @@ test.describe('Students — the only staged course may be removed', { tag: ['@34
     await expect(studentsPage.coursesStepMessage()).toHaveText('');
 
     await studentsPage.goToNextStep();
-    await studentsPage.assignActivity(activity.description);
+    await studentsPage.assignActivity(activity.optionLabel);
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).not.toHaveAttribute('open');
@@ -322,7 +322,7 @@ test.describe('Students — the last course cannot be withdrawn with no extra-cu
     await expect(studentsPage.coursesStepMessage()).toHaveText(ADD_BEFORE_WITHDRAWING);
 
     await studentsPage.wizardModal.locator('#tabExtraCurriculars').click();
-    await studentsPage.assignActivity(activities[0].description);
+    await studentsPage.assignActivity(activities[0].optionLabel);
     await expect(studentsPage.assignedActivityRow(activities[0].description)).toBeVisible();
 
     await studentsPage.wizardModal.locator('#tabCourses').click();
