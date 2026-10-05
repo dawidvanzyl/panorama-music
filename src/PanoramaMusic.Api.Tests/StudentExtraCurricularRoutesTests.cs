@@ -96,6 +96,8 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 		var coordinator = await SignInAsync("student-ec-teacher-coordinator", Role.Coordinator, "10.0.73.4");
 		var student = await CreateStudentAsync(setupTeacher, "Sipho", "Ndlovu", PhaseType.Senior);
 		var activity = await CreateActivityAsync(coordinator, $"Senior Band {Guid.NewGuid()}", PhaseType.Senior);
+		var other = await CreateActivityAsync(coordinator, $"Senior Choir {Guid.NewGuid()}", PhaseType.Senior);
+		await AssignAsync(setupTeacher, student.StudentId, other.ExtraCurricularId);
 
 		// A Teacher already maintains student records elsewhere, and this endpoint
 		// carries that same boundary — the mirror image of the practice-time
@@ -115,9 +117,10 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 
 		ShouldlyHelpers.Satisfy(
 			() => assignResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
-			() => afterAssign.Select(entry => entry.ExtraCurricularId).ShouldBe([activity.ExtraCurricularId]),
+			() => afterAssign.Select(entry => entry.ExtraCurricularId).ShouldBe(
+				[other.ExtraCurricularId, activity.ExtraCurricularId], ignoreOrder: true),
 			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent),
-			() => afterRemove.ShouldBeEmpty());
+			() => afterRemove.Select(entry => entry.ExtraCurricularId).ShouldBe([other.ExtraCurricularId]));
 	}
 
 	[Fact]

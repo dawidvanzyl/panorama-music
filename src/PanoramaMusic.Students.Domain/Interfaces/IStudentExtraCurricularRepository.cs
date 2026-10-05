@@ -35,6 +35,13 @@ public interface IStudentExtraCurricularRepository
 	/// </summary>
 	Task<int> CountByExtraCurricularIdAsync(Guid extraCurricularId, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// How many activities the student takes part in — the assignment half of the
+	/// condition that blocks removing their last holding. A count rather than a
+	/// read of every row, since the caller only needs the number.
+	/// </summary>
+	Task<int> CountByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
+
 	Task CreateAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
 
 	Task DeleteAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);

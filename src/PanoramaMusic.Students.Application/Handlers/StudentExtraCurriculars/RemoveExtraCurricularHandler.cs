@@ -1,16 +1,20 @@
 using PanoramaMusic.Students.Application.Commands.StudentExtraCurriculars;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.ValueObjects;
 
 namespace PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
 
 /// <summary>
 /// Removes one of the student's assignments. Only the link goes — the student and
 /// the activity both remain, and the student's other assignments are untouched.
+/// Refused when it would leave the student with neither a course nor an
+/// extra-curricular.
 /// </summary>
 public sealed class RemoveExtraCurricularHandler(
 	IStudentRepository studentRepository,
-	IStudentExtraCurricularRepository studentExtraCurricularRepository)
+	IStudentExtraCurricularRepository studentExtraCurricularRepository,
+	IStudentCourseRepository studentCourseRepository)
 {
 	public async Task HandleAsync(RemoveExtraCurricularCommand command, CancellationToken cancellationToken)
 	{
@@ -25,6 +29,9 @@ public sealed class RemoveExtraCurricularHandler(
 		var assignment = assignments.SingleOrDefault(a => a.ExtraCurricular.ExtraCurricularId == command.ExtraCurricularId)
 			?? throw new EntityNotFoundException(
 				$"Student {command.StudentId} does not take part in extra-curricular {command.ExtraCurricularId}.");
+
+		var enrollments = await studentCourseRepository.CountByStudentIdAsync(command.StudentId, cancellationToken);
+		new StudentHoldings(enrollments, assignments.Count).EnsureAssignmentCanBeRemoved();
 
 		assignment.MarkRemoved(student);
 
