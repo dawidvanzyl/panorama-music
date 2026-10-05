@@ -38,8 +38,9 @@ public static class StudentExtraCurricularRoutes
 			.Produces(StatusCodes.Status403Forbidden)
 			.Produces(StatusCodes.Status404NotFound);
 
-		// Both narrowings the picker needs — the student's own phase, and what they
-		// do not already take part in — are the query's, so this answers with the
+		// Both narrowings the picker needs — the student's own phase (every phase
+		// for a Private-grade student), and what they do not already take part in —
+		// are the query's, so this answers with the
 		// list the panel offers rather than something the screen has to filter.
 		group
 			.MapGet("/{studentId:guid}/extra-curriculars/assignable", async (Guid studentId, GetAssignableExtraCurricularsHandler handler, CancellationToken ct) =>
@@ -59,10 +60,11 @@ public static class StudentExtraCurricularRoutes
 		// identifier to ask the route above with. It cannot fall back to the
 		// catalogue endpoint either — that one is closed to Admin, who is one of
 		// the callers this area admits, and widening it is #273's decision. Phase
-		// alone is the whole narrowing; a student who does not exist takes part in
-		// nothing, and what the wizard has staged is its own to leave out.
+		// alone is the whole narrowing, and leaving it out offers every phase, for a
+		// Private-grade student who has none; a student who does not exist takes
+		// part in nothing, and what the wizard has staged is its own to leave out.
 		group
-			.MapGet("/extra-curriculars/assignable", async (PhaseType phase, GetAssignableExtraCurricularsByPhaseHandler handler, CancellationToken ct) =>
+			.MapGet("/extra-curriculars/assignable", async (PhaseType? phase, GetAssignableExtraCurricularsByPhaseHandler handler, CancellationToken ct) =>
 			{
 				var result = await handler.HandleAsync(phase, ct);
 				return Results.Ok(result);
