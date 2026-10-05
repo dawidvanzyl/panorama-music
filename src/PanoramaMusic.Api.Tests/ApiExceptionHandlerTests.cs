@@ -96,12 +96,13 @@ public sealed class ApiExceptionHandlerTests
 		var exception = new StudentsExceptions.EntityAlreadyExistsException("Course already exists");
 
 		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
-
-		handled.ShouldBeTrue();
-		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status409Conflict);
 		var body = JsonDocument.Parse(ReadBody(httpContext));
-		body.RootElement.GetProperty("error").GetString().ShouldBe("Course already exists");
-		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
+
+		ShouldlyHelpers.Satisfy(
+			() => handled.ShouldBeTrue(),
+			() => httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status409Conflict),
+			() => body.RootElement.GetProperty("error").GetString().ShouldBe("Course already exists"),
+			() => body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId));
 	}
 
 	[Fact]

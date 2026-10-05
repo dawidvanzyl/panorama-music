@@ -46,7 +46,8 @@ public static class CourseRoutes
 			.Produces<CourseResult>(StatusCodes.Status201Created)
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status401Unauthorized)
-			.Produces(StatusCodes.Status403Forbidden);
+			.Produces(StatusCodes.Status403Forbidden)
+			.Produces(StatusCodes.Status409Conflict);
 
 		// Cost is the whole of a course's mutable state, so the update is a PUT
 		// carrying a full representation of it rather than a partial one.

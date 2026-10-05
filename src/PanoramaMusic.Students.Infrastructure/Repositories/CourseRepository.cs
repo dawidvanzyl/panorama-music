@@ -113,7 +113,7 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 	/// Two requests can both pass the use case's read before either writes; the
 	/// unique index over course type and lesson structure is what actually settles
 	/// it. Translating that into the same refusal the read would have produced keeps
-	/// the loser of the race on the 400 path instead of an unexplained 500.
+	/// the loser of the race on the 409 path instead of an unexplained 500.
 	/// </summary>
 	private async Task ExecuteTranslatingDuplicateCourseAsync(CommandDefinition command)
 	{
