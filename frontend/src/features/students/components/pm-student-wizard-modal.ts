@@ -5,7 +5,7 @@ import './pm-courses-step';
 import './pm-extra-curriculars-step';
 import './pm-waiting-list-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
-import { AT_LEAST_ONE_COURSE_TO_SAVE } from './pm-courses-step';
+import { COURSE_OR_EXTRA_CURRICULAR_TO_SAVE } from './course-or-extra-curricular';
 import type { SiblingStudentResult, StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
@@ -28,9 +28,9 @@ type Step = 'student' | 'siblings' | 'guardians' | 'courses' | 'extraCurriculars
 /**
  * Which tabs the wizard presents. 'enrolled' is the Students screen's own
  * modal, unchanged — Courses and Extra-Curriculars, with the "at least one
- * course" rule intact. 'waitingList' is the Waiting List page's capture mode —
- * Waiting List in their place, and no course rule at all (a waiting-list
- * student holds no course).
+ * course or extra-curricular" rule intact. 'waitingList' is the Waiting List
+ * page's capture mode — Waiting List in their place, and no such rule at all (a
+ * waiting-list student holds neither).
  */
 type WizardMode = 'enrolled' | 'waitingList';
 
@@ -284,10 +284,12 @@ export class PmStudentWizardModal extends HTMLElement {
    * `wizardMode` decides which tabs this open presents: 'enrolled' (the
    * Students screen's own modal, default) keeps Courses and
    * Extra-Curriculars; 'waitingList' (the Waiting List page's capture)
-   * presents Waiting List in their place — no course rule, since a
-   * waiting-list student holds no course.
+   * presents Waiting List in their place — no course-or-extra-curricular rule,
+   * since a waiting-list student holds neither.
    */
   openForCreate(candidates: SiblingStudentResult[], wizardMode: WizardMode = 'enrolled'): void {
+    this.enrollments = [];
+    this.extraCurriculars = [];
     this._mode = 'create';
     this._wizardMode = wizardMode;
     this._studentId = null;
@@ -313,6 +315,8 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   openForEdit(student: StudentResult): void {
+    this.enrollments = [];
+    this.extraCurriculars = [];
     this._mode = 'edit';
     this._wizardMode = 'enrolled';
     this._waitingListEntryId = null;
@@ -444,6 +448,7 @@ export class PmStudentWizardModal extends HTMLElement {
 
   set enrollments(value: EnrollmentResult[]) {
     this.coursesStep!.enrollments = value;
+    this.extraCurricularsStep!.holdsCourse = value.length > 0;
   }
 
   set enrollableCourses(value: EnrollableCourse[]) {
@@ -457,6 +462,7 @@ export class PmStudentWizardModal extends HTMLElement {
   /** The activities the student takes part in (edit mode). */
   set extraCurriculars(value: StudentExtraCurricular[]) {
     this.extraCurricularsStep!.assigned = value;
+    this.coursesStep!.holdsExtraCurricular = value.length > 0;
   }
 
   /** The Add Activity picker's options, fetched when the panel is opened. */
@@ -563,8 +569,8 @@ export class PmStudentWizardModal extends HTMLElement {
 
   /**
    * The last step of the create wizard, which is the one that carries Save. In
-   * waiting-list mode that is always Waiting List — there is no course rule to
-   * route around. In enrolled mode a student with no phase has no
+   * waiting-list mode that is always Waiting List — there is no holdings rule
+   * to route around. In enrolled mode a student with no phase has no
    * Extra-Curriculars step, so Courses is theirs — which is how a
    * Private-grade student gets Save on Courses, their grade having cleared
    * the phase field.
@@ -806,13 +812,19 @@ export class PmStudentWizardModal extends HTMLElement {
       return;
     }
 
-    // A student must be enrolled in at least one course, so the create flow
-    // cannot save one with nothing staged — stated on the Courses tab rather
-    // than failing silently. Waiting-list mode carries no such rule, hence the
-    // early return above never reaches here for it.
-    if (this._mode === 'create' && !this.coursesStep!.hasPendingEnrollments) {
-      this.goToStep('courses');
-      this.coursesStep!.showError(AT_LEAST_ONE_COURSE_TO_SAVE);
+    // A student must hold a course or an extra-curricular, so the create flow
+    // cannot save one with neither staged — stated on the step that carries Save
+    // rather than failing silently. Waiting-list mode carries no such rule, hence
+    // the early return above never reaches here for it.
+    if (
+      this._mode === 'create' &&
+      !this.coursesStep!.hasPendingEnrollments &&
+      !this.extraCurricularsStep!.hasPendingExtraCurriculars
+    ) {
+      const finalStep = this.finalStep;
+      this.goToStep(finalStep);
+      const step = finalStep === 'extraCurriculars' ? this.extraCurricularsStep! : this.coursesStep!;
+      step.showError(COURSE_OR_EXTRA_CURRICULAR_TO_SAVE);
       return;
     }
 

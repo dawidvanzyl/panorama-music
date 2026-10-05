@@ -37,10 +37,10 @@ test.describe(
 );
 
 test.describe(
-  'Saving a Students-screen student with no course selected is refused',
+  'Saving a Students-screen student with no course or extra-curricular is refused',
   { tag: '@272IT3' },
   () => {
-    test('the save is refused, the at-least-one-course requirement is stated, and no student is created', async ({
+    test('the save is refused, the course-or-extra-curricular requirement is stated, and no student is created', async ({
       page,
     }) => {
       const studentsPage = await goToStudentsPage(page);
@@ -53,12 +53,10 @@ test.describe(
       await studentsPage.goToNextStep(); // Courses -> Extra-Curriculars (final step, carries Save)
       await studentsPage.saveStudent();
 
-      // Save refuses and returns the wizard to Courses, where the
-      // at-least-one-course requirement is stated — the same rule
-      // course-enrollment.spec.ts's @9IT8 proves for withdrawal, exercised
-      // here at creation instead.
-      await expect(studentsPage.coursesStepMessage()).toContainText(
-        'A student must be enrolled in at least one course before they can be saved.',
+      // Save refuses and stays on Extra-Curriculars, where the
+      // course-or-extra-curricular requirement is stated.
+      await expect(studentsPage.extraCurricularsStepMessage()).toContainText(
+        'A student must have at least one course or one extra-curricular before they can be saved.',
       );
       await studentsPage.filterByName(surname);
       await expect(studentsPage.row(surname)).toHaveCount(0);

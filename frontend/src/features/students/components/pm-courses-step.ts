@@ -9,18 +9,9 @@ import type {
 } from '../services/enrollments';
 import type { PmEnrollmentForm } from './pm-enrollment-form';
 import type { PmEnrollmentList } from './pm-enrollment-list';
+import { COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW } from './course-or-extra-curricular';
 
 type Mode = 'inactive' | 'create' | 'edit';
-
-/** Stated rather than failing silently — the create wizard cannot save without one. */
-export const AT_LEAST_ONE_COURSE_TO_SAVE =
-  'A student must be enrolled in at least one course before they can be saved.';
-
-export const AT_LEAST_ONE_COURSE = 'A student must be enrolled in at least one course.';
-
-/** Why the student's sole remaining enrollment cannot be withdrawn, and what to do first. */
-export const AT_LEAST_ONE_COURSE_TO_WITHDRAW =
-  'A student must remain enrolled in at least one course. Enroll in another course before withdrawing this one.';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -126,6 +117,7 @@ export class PmCoursesStep extends HTMLElement {
   private _teachers: AssignableTeacher[] = [];
   private _pendingEnrollments: EnrollmentResult[] = [];
   private _pendingCounter = 0;
+  private _holdsExtraCurricular = false;
 
   constructor() {
     super();
@@ -220,12 +212,17 @@ export class PmCoursesStep extends HTMLElement {
     this.enrollmentList!.enrollments = value;
   }
 
+  /** Whether the student takes part in any extra-curricular, which decides if their last course may be withdrawn. */
+  set holdsExtraCurricular(value: boolean) {
+    this._holdsExtraCurricular = value;
+  }
+
   /** Enrollments staged during create mode, to be created once the student is saved. */
   get pendingEnrollments(): EnrollmentInput[] {
     return this._pendingEnrollments.map((enrollment) => this.toInput(enrollment));
   }
 
-  /** Whether the create wizard has the one enrollment a student must be saved with. */
+  /** Whether the create wizard has any enrollment staged. */
   get hasPendingEnrollments(): boolean {
     return this._pendingEnrollments.length > 0;
   }
@@ -338,15 +335,15 @@ export class PmCoursesStep extends HTMLElement {
   };
 
   /**
-   * The student's sole remaining enrollment cannot be withdrawn, so no
-   * confirmation is offered for it — the requirement is stated instead, and
-   * nothing is submitted.
+   * The student's sole remaining enrollment cannot be withdrawn while they take
+   * part in no extra-curricular, so no confirmation is offered for it — the
+   * requirement is stated instead, and nothing is submitted.
    */
   private handleWithdrawClicked = (event: Event): void => {
     const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
 
-    if (this.enrollmentList!.enrollments.length <= 1) {
-      this.showError(AT_LEAST_ONE_COURSE_TO_WITHDRAW);
+    if (this.enrollmentList!.enrollments.length <= 1 && !this._holdsExtraCurricular) {
+      this.showError(COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW);
       return;
     }
 
@@ -360,17 +357,8 @@ export class PmCoursesStep extends HTMLElement {
     );
   };
 
-  /**
-   * The only staged enrollment is not removable — dropping it would leave a
-   * student that cannot be saved, so the requirement is stated instead.
-   */
   private handleRemoveClicked = (event: Event): void => {
     const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
-
-    if (this._pendingEnrollments.length <= 1) {
-      this.showError(AT_LEAST_ONE_COURSE);
-      return;
-    }
 
     this._pendingEnrollments = this._pendingEnrollments.filter(
       (staged) => staged.studentCourseId !== enrollment.studentCourseId,

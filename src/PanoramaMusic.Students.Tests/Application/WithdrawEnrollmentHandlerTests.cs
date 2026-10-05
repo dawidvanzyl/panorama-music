@@ -61,19 +61,67 @@ public class WithdrawEnrollmentHandlerTests : IClassFixture<StudentsTestFixture>
 
 	[Fact]
 	[Trait("AC", "269UC8")]
+	[Trait("AC", "343UC2")]
 	public async Task HandleAsync_StudentHoldingASingleEnrollment_ThrowsDomainExceptionAndRemovesNothing()
 	{
 		var student = StudentFactory.Create();
 		var enrollment = StudentCourseFactory.Create(
 			studentId: student.StudentId,
 			course: CourseFactory.Create(courseType: CourseType.G2Recorder));
-		GivenStudentHolding(student, enrollments: 1, enrollment);
+		GivenStudentHolding(student, enrollments: 1, enrollment, assignments: 0);
 
-		await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+		var thrown = await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
 			new WithdrawEnrollmentCommand(student.StudentId, enrollment.StudentCourseId),
 			TestContext.Current.CancellationToken));
 
+		ShouldlyHelpers.Satisfy(
+			() => thrown.Message.ShouldBe("A student must have at least one course or one extra-curricular."),
+			() => enrollment.DrainEvents().OfType<StudentWithdrawn>().ShouldBeEmpty());
 		VerifyNothingRemoved();
+	}
+
+	[Fact]
+	[Trait("AC", "343UC1")]
+	public async Task HandleAsync_SingleEnrollmentAndAnExtraCurricular_WithdrawsTheEnrollment()
+	{
+		var student = StudentFactory.Create();
+		var enrollment = StudentCourseFactory.Create(
+			studentId: student.StudentId,
+			course: CourseFactory.Create(courseType: CourseType.G2Recorder));
+		GivenStudentHolding(student, enrollments: 1, enrollment, assignments: 1);
+
+		await _handler.HandleAsync(
+			new WithdrawEnrollmentCommand(student.StudentId, enrollment.StudentCourseId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentCourseRepositoryMock.Verify(
+				r => r.DeleteAsync(
+					It.Is<StudentCourse>(e => e.StudentCourseId == enrollment.StudentCourseId),
+					It.IsAny<CancellationToken>()),
+				Times.Once),
+			() => enrollment.DrainEvents().OfType<StudentWithdrawn>().ShouldHaveSingleItem());
+	}
+
+	[Fact]
+	[Trait("AC", "343UC5")]
+	public async Task HandleAsync_TwoEnrollmentsAndNoExtraCurriculars_WithdrawsOne()
+	{
+		var student = StudentFactory.Create();
+		var enrollment = StudentCourseFactory.Create(
+			studentId: student.StudentId,
+			course: CourseFactory.Create(courseType: CourseType.G2Recorder));
+		GivenStudentHolding(student, enrollments: 2, enrollment, assignments: 0);
+
+		await _handler.HandleAsync(
+			new WithdrawEnrollmentCommand(student.StudentId, enrollment.StudentCourseId),
+			TestContext.Current.CancellationToken);
+
+		_context.Repositories.StudentCourseRepositoryMock.Verify(
+			r => r.DeleteAsync(
+				It.Is<StudentCourse>(e => e.StudentCourseId == enrollment.StudentCourseId),
+				It.IsAny<CancellationToken>()),
+			Times.Once);
 	}
 
 	[Fact]
@@ -116,10 +164,14 @@ public class WithdrawEnrollmentHandlerTests : IClassFixture<StudentsTestFixture>
 	/// <summary>
 	/// Wires the reads a withdrawal makes: the enrollment as the route addresses
 	/// it, the student it belongs to, and how many courses that student is
-	/// enrolled in — the count being what the at-least-one rule turns on.
+	/// enrolled in and how many extra-curriculars they take part in — the two
+	/// counts the at-least-one rule turns on.
 	/// </summary>
-	private void GivenStudentHolding(Student student, int enrollments, StudentCourse enrollment)
+	private void GivenStudentHolding(Student student, int enrollments, StudentCourse enrollment, int assignments = 0)
 	{
+		_context.Repositories.StudentExtraCurricularRepositoryMock
+			.Setup(r => r.CountByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(assignments);
 		_context.Repositories.StudentCourseRepositoryMock
 			.Setup(r => r.GetByIdAsync(student.StudentId, enrollment.StudentCourseId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(enrollment);

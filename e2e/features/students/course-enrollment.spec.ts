@@ -217,8 +217,8 @@ test.describe('Enrollment — withdrawal removes the enrollment record', { tag: 
     );
     await expect(studentsPage.row(surname)).toBeVisible();
 
-    // A second enrollment, because a student must remain enrolled in at least
-    // one course and their last one cannot be withdrawn.
+    // A second enrollment, because a student holding no extra-curricular
+    // cannot withdraw their last course.
     await studentsPage.openCoursesTab(surname);
     await studentsPage.enrollInCourse({
       courseLabel: instrument,
@@ -241,7 +241,7 @@ test.describe('Enrollment — withdrawal removes the enrollment record', { tag: 
 
 });
 
-test.describe('Enrollment — a student must remain enrolled in at least one course', { tag: ['@9IT8'] }, () => {
+test.describe('Enrollment — a student with no extra-curricular cannot withdraw their last course', { tag: ['@9IT8'] }, () => {
   test('refuses to withdraw the student last remaining enrollment', async ({ page }) => {
     const { studentsPage, target } = await openStudentsWithCourses(page);
     const surname = uniqueSurname('LastOne');
@@ -257,7 +257,7 @@ test.describe('Enrollment — a student must remain enrolled in at least one cou
 
     await expect(studentsPage.withdrawEnrollmentModal).not.toHaveAttribute('open', '');
     await expect(studentsPage.coursesStepMessage()).toContainText(
-      'A student must remain enrolled in at least one course.',
+      'A student must have at least one course or one extra-curricular. Add an extra-curricular before withdrawing this course.',
     );
     await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
   });
