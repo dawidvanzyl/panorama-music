@@ -50,9 +50,9 @@ describe('pm-student-courses-summary enrollment blocks', { tags: ['268UC26'] }, 
     expect(items).toHaveLength(2);
 
     expect(items[0].querySelector('.summary__item-heading')!.textContent).toBe(
-      'Instrument · Individual · Half Hour · During School',
+      'Piano · Individual · Half Hour · During School',
     );
-    expect(items[0].querySelector('.summary__item-assignment')!.textContent).toBe('Thabo Nkosi · Piano · Step 2A');
+    expect(items[0].querySelector('.summary__item-assignment')!.textContent).toBe('Thabo Nkosi · Step 2A');
     expect(items[0].querySelector('.summary__item-enrolled')!.textContent).toBe('Enrolled 2026-01-19');
 
     // A theory course records a step alone, so the instrument is simply absent
@@ -72,6 +72,56 @@ describe('pm-student-courses-summary enrollment blocks', { tags: ['268UC26'] }, 
       'Grade 2 Recorder · Group · Half Hour · During School',
     );
     expect(summary.shadowRoot!.querySelector('.summary__item-assignment')!.textContent).toBe('Thabo Nkosi');
+
+    document.body.removeChild(summary);
+  });
+});
+
+describe('pm-student-courses-summary instrument heading', { tags: ['342UC1'] }, () => {
+  it('heads an instrument course by its instrument type in place of Instrument', () => {
+    const summary = mount([enrollment(), enrollment({ studentCourseId: 'sc2', instrumentType: 'Guitar' })]);
+
+    const headings = [...summary.shadowRoot!.querySelectorAll('.summary__item-heading')].map((h) => h.textContent);
+    expect(headings).toEqual([
+      'Piano · Individual · Half Hour · During School',
+      'Guitar · Individual · Half Hour · During School',
+    ]);
+
+    document.body.removeChild(summary);
+  });
+});
+
+describe('pm-student-courses-summary instrument assignment line', { tags: ['342UC2'] }, () => {
+  it('reads the teacher and step with no instrument beneath an instrument course', () => {
+    const summary = mount([
+      enrollment({ teacherFirstName: 'Anna', teacherSurname: 'Venter', instrumentType: 'Piano', stepType: 'Step3A' }),
+    ]);
+
+    expect(summary.shadowRoot!.querySelector('.summary__item-assignment')!.textContent).toBe('Anna Venter · Step 3A');
+
+    document.body.removeChild(summary);
+  });
+});
+
+describe('pm-student-courses-summary theory course', { tags: ['342UC3'] }, () => {
+  it('keeps the course type heading and the teacher and step line for a Theory course', () => {
+    const summary = mount([
+      enrollment({
+        courseType: 'Theory',
+        lessonType: 'Group',
+        durationType: 'Hour',
+        occurrenceType: 'AfterSchool',
+        teacherFirstName: 'Ravi',
+        teacherSurname: 'Naidoo',
+        instrumentType: null,
+        stepType: 'Step2A',
+      }),
+    ]);
+
+    expect(summary.shadowRoot!.querySelector('.summary__item-heading')!.textContent).toBe(
+      'Theory · Group · Hour · After School',
+    );
+    expect(summary.shadowRoot!.querySelector('.summary__item-assignment')!.textContent).toBe('Ravi Naidoo · Step 2A');
 
     document.body.removeChild(summary);
   });
