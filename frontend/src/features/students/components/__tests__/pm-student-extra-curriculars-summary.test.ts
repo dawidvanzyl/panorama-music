@@ -80,18 +80,18 @@ describe('pm-student-extra-curriculars-summary — empty state', { tags: ['278UC
   });
 });
 
-describe('pm-students-table — a Private-grade student', { tags: ['278UC22'] }, () => {
-  it('shows no extra-curriculars section at all, not an empty one', () => {
+describe('pm-students-table — a Private-grade student', { tags: ['278UC22', '344UC6'] }, () => {
+  it('shows the extra-curriculars section like any other student, populated', () => {
     const graded = mountTableWith('Grade4');
     expect(graded.shadowRoot!.querySelector('pm-student-extra-curriculars-summary')).not.toBeNull();
     document.body.removeChild(graded);
 
     const table = mountTableWith('Private');
+    table.setExtraCurricularsSummary('s1', [choir]);
 
-    // Absent rather than empty: an empty state would suggest a Private student
-    // could hold activities, which they cannot.
-    expect(table.shadowRoot!.querySelector('pm-student-extra-curriculars-summary')).toBeNull();
-    // The sections that do apply to them are still there.
+    const summary = table.shadowRoot!.querySelector('pm-student-extra-curriculars-summary') as HTMLElement;
+    expect(summary).not.toBeNull();
+    expect(summary.shadowRoot!.querySelector('.summary__item-heading')!.textContent).toBe('Choir');
     expect(table.shadowRoot!.querySelector('pm-student-courses-summary')).not.toBeNull();
 
     document.body.removeChild(table);

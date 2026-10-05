@@ -1,10 +1,11 @@
 -- get_assignable_extra_curriculars
--- The activities a student may be assigned to: those offered to the student's
--- own phase that they do not already take part in. Both narrowings are done
--- here, against the student's stored phase, so the caller neither pulls back the
--- whole catalogue to filter it nor has to state the phase it is asking about.
--- A student whose phase is not recorded matches no activity and so may be
--- assigned to none — the equality below answers that without a special case.
+-- The activities a student may be assigned to that they do not already take
+-- part in: those offered to the student's own phase, or every phase for a
+-- Private-grade student. Both narrowings are done here, against the student's
+-- stored grade and phase, so the caller neither pulls back the whole catalogue
+-- to filter it nor has to state the phase it is asking about.
+-- A graded student whose phase is not recorded matches no activity and so may be
+-- assigned to none — the join below answers that without a special case.
 -- Joined to the practice times as get_student_extra_curriculars is, and ordered
 -- the same way, for the same reasons.
 
@@ -27,7 +28,7 @@ BEGIN
            pt.practice_time_id, pt.day, pt.start_time
     FROM students.students s
     JOIN students.extra_curriculars ec
-        ON ec.phase = s.phase
+        ON (s.grade = 'Private' OR ec.phase = s.phase)
     JOIN students.extra_curricular_practice_times pt
         ON pt.extra_curricular_id = ec.extra_curricular_id
     WHERE s.student_id = p_student_id

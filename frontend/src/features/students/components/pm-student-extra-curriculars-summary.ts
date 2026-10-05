@@ -64,10 +64,6 @@ template.innerHTML = `
  * — built like the courses summary it sits beside. One entry per activity
  * carrying all of its practice times, never one entry per slot: a student is
  * assigned to an activity, not to one of its meetings.
- *
- * A Private-grade student is given no summary at all rather than an empty one,
- * which is the table's decision — see `pm-students-table`. They take no part in
- * extra-curriculars, and an empty state would suggest they could.
  */
 export class PmStudentExtraCurricularsSummary extends HTMLElement {
   private list: HTMLElement | null = null;

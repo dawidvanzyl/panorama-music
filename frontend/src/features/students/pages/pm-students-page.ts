@@ -392,16 +392,12 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    // A Private-grade student takes no part in extra-curriculars and is given no
-    // summary to populate, so their activities are not read at all rather than
-    // read and discarded.
-    const takesPartInActivities = this._allStudents.find((s) => s.studentId === studentId)?.grade !== 'Private';
     try {
       const [siblings, guardians, enrollments, extraCurriculars] = await Promise.all([
         getSiblings(studentId),
         getGuardians(studentId),
         getStudentCourses(studentId),
-        takesPartInActivities ? getStudentExtraCurriculars(studentId) : Promise.resolve([]),
+        getStudentExtraCurriculars(studentId),
       ]);
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
@@ -672,14 +668,14 @@ export class PmStudentsPage extends HTMLElement {
    * modes read by the phase the form currently holds, never by the stored
    * student: an unsaved phase is the whole point — editing a Private-grade
    * student into a graded one has to offer that phase's activities before
-   * anything is saved. Leaving out what the student already holds is the step's,
-   * since a phase-scoped read knows nothing about them.
+   * anything is saved. No phase means a Private-grade student, who is offered
+   * every phase. Leaving out what the student already holds is the step's, since
+   * a phase-scoped read knows nothing about them.
    */
   private handleAssignableRequested = async (event: Event): Promise<void> => {
     const { phase } = (event as CustomEvent<{ phase: PhaseType | null }>).detail;
     try {
-      // No phase means no step at all, so there is nothing to offer.
-      this.wizardModal!.assignableExtraCurriculars = phase ? await getAssignableExtraCurricularsByPhase(phase) : [];
+      this.wizardModal!.assignableExtraCurriculars = await getAssignableExtraCurricularsByPhase(phase);
     } catch (err) {
       this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
     }

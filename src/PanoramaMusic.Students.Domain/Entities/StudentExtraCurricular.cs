@@ -31,23 +31,15 @@ public sealed class StudentExtraCurricular : AggregateRoot
 	public ExtraCurricular ExtraCurricular { get; }
 
 	/// <summary>
-	/// Assigns the student to the activity. A Private-grade student is not part of
-	/// the school and takes part in nothing; every other student takes part only in
-	/// activities offered to their own phase. Neither is something the request can
-	/// carry, so both are answered here rather than by a request validator — and
-	/// the interface hiding the step is not what enforces the first, so any caller
-	/// meets it.
+	/// Assigns the student to the activity. A Private-grade student takes part in
+	/// activities of any phase; every other student takes part only in activities
+	/// offered to their own phase. The request cannot carry the student's phase, so
+	/// the rule is answered here rather than by a request validator.
 	/// </summary>
-	/// <exception cref="DomainException">The student is Private-grade, or the activity is not offered to their phase.</exception>
+	/// <exception cref="DomainException">The student is graded and the activity is not offered to their phase.</exception>
 	public static StudentExtraCurricular Assign(Student student, ExtraCurricular extraCurricular)
 	{
-		// Asked before the phase, and separately from it. Grade and phase are
-		// biconditional, so a Private-grade student would fail the phase rule too —
-		// but "no phase matches" is not the reason, and is not what to tell anyone.
-		if (student.Grade == GradeType.Private)
-			throw new DomainException(StudentExtraCurricularMessages.PrivateGradeExcluded);
-
-		if (student.Phase != extraCurricular.Phase)
+		if (student.Grade != GradeType.Private && student.Phase != extraCurricular.Phase)
 			throw new DomainException(StudentExtraCurricularMessages.PhaseMismatch);
 
 		var assignment = new StudentExtraCurricular(student.StudentId, extraCurricular);

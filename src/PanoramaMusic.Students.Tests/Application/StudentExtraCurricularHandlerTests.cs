@@ -215,23 +215,41 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 
 	[Fact]
 	[Trait("AC", "277UC23")]
-	public async Task HandleAsync_PrivateGradeStudent_IsRefusedForTheGradeAndPersistsNothing()
+	[Trait("AC", "344UC1")]
+	public async Task HandleAsync_PrivateGradeStudent_IsAssignedActivitiesOfEveryPhase()
 	{
-		// Private-grade, so no phase — the two are biconditional. The refusal has to
-		// name the grade all the same: "no phase matches" is not the reason, and the
-		// endpoint states the rule for any caller, not only the screen that hides
-		// the step.
 		var student = GivenStudent(GradeType.Private, phase: null);
-		var activity = GivenActivity("Choir", PhaseType.Junior);
+		var junior = GivenActivity("Choir", PhaseType.Junior);
+		var senior = GivenActivity("Senior Band", PhaseType.Senior);
+		GivenAssigned(student, []);
+		var writes = CaptureWrites();
+
+		await _assignHandler.HandleAsync(
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(junior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+		await _assignHandler.HandleAsync(
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(senior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+
+		writes.Created.Select(assignment => assignment.ExtraCurricular.ExtraCurricularId)
+			.ShouldBe([junior.ExtraCurricularId, senior.ExtraCurricularId]);
+	}
+
+	[Fact]
+	[Trait("AC", "344UC2")]
+	public async Task HandleAsync_GradedStudentAndActivityOfTheOtherPhase_IsRefusedWithThePhaseMessageAndPersistsNothing()
+	{
+		var student = GivenStudent(GradeType.Grade5, PhaseType.Junior);
+		var senior = GivenActivity("Senior Band", PhaseType.Senior);
 		GivenAssigned(student, []);
 		var writes = CaptureWrites();
 
 		var thrown = await Should.ThrowAsync<DomainException>(() => _assignHandler.HandleAsync(
-			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(senior.ExtraCurricularId)),
 			TestContext.Current.CancellationToken));
 
 		ShouldlyHelpers.Satisfy(
-			() => thrown.Message.ShouldBe("A Private-grade student does not take part in extra-curricular activities."),
+			() => thrown.Message.ShouldBe("A student can only be assigned to an activity offered to their own phase."),
 			() => writes.Created.ShouldBeEmpty());
 	}
 

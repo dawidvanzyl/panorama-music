@@ -58,6 +58,24 @@ public class StudentExtraCurricularFunctionTests : IClassFixture<StudentsDatabas
 	}
 
 	[Fact]
+	[Trait("AC", "344UC3")]
+	public async Task GetAssignableExtraCurriculars_PrivateGradeStudent_IsOfferedEveryPhaseExceptWhatTheyHold()
+	{
+		var studentId = await GivenStudentAsync(phase: null, grade: "Private");
+		var junior = await GivenActivityWithSlotAsync($"Junior Drumline {Guid.NewGuid()}", "Junior");
+		var senior = await GivenActivityWithSlotAsync($"Senior Drumline {Guid.NewGuid()}", "Senior");
+		var held = await GivenActivityWithSlotAsync($"Choir {Guid.NewGuid()}", "Junior");
+		await GivenAssignedAsync(studentId, held);
+
+		var assignable = await ReadAssignableAsync(studentId);
+
+		ShouldlyHelpers.Satisfy(
+			() => assignable.ShouldContain(junior),
+			() => assignable.ShouldContain(senior),
+			() => assignable.ShouldNotContain(held));
+	}
+
+	[Fact]
 	[Trait("AC", "277UC9")]
 	public async Task DeleteStudent_StudentWithAssignments_RemovesThemLeavingTheActivitiesStanding()
 	{
@@ -124,16 +142,18 @@ public class StudentExtraCurricularFunctionTests : IClassFixture<StudentsDatabas
 		return (bool)(await select.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
 	}
 
-	private async Task<Guid> GivenStudentAsync(string? phase)
+	private async Task<Guid> GivenStudentAsync(string? phase, string grade = "Grade4")
 	{
 		var studentId = Guid.NewGuid();
 
 		await CallAsync(
 			"""
 			INSERT INTO students.students (student_id, first_name, last_name, date_of_birth, grade, class, phase, language)
-			VALUES (@student_id, 'Thandi', 'Nkosi', DATE '2014-05-12', 'Grade4', 'A1', @phase, 'English');
+			VALUES (@student_id, 'Thandi', 'Nkosi', DATE '2014-05-12', @grade, @class, @phase, 'English');
 			""",
 			("student_id", studentId),
+			("grade", grade),
+			("class", grade == "Private" ? null : "A1"),
 			("phase", phase));
 
 		return studentId;
