@@ -14,8 +14,10 @@ public static class CourseMessages
 	/// A Grade 2 Recorder course already exists for Group · Half Hour · During School.
 	/// </summary>
 	public static string AlreadyExists(CourseType courseType, LessonStructure lessonStructure) =>
-		$"A {Label(courseType)} course already exists for "
+		$"{Article(courseType)} {Label(courseType)} course already exists for "
 		+ $"{Label(lessonStructure.LessonType)} · {Label(lessonStructure.DurationType)} · {Label(lessonStructure.OccurrenceType)}.";
+
+	private static string Article(CourseType courseType) => courseType == CourseType.Instrument ? "An" : "A";
 
 	private static string Label(CourseType courseType) => courseType switch
 	{

@@ -19,7 +19,7 @@ public class CourseMessagesTests
 	[InlineData(CourseType.G2Recorder, LessonType.Group, DurationType.HalfHour, OccurrenceType.DuringSchool,
 		"A Grade 2 Recorder course already exists for Group · Half Hour · During School.")]
 	[InlineData(CourseType.Instrument, LessonType.Group, DurationType.Hour, OccurrenceType.DuringSchool,
-		"A Instrument course already exists for Group · Hour · During School.")]
+		"An Instrument course already exists for Group · Hour · During School.")]
 	public void AlreadyExists_AnyCourseTypeAndStructure_NamesThemWithTheScreenLabels(
 		CourseType courseType,
 		LessonType lessonType,
