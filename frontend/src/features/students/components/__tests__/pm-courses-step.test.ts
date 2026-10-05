@@ -249,7 +249,7 @@ describe('pm-courses-step refuses to withdraw the only enrollment', { tags: ['26
   });
 });
 
-describe('pm-courses-step lists the student existing enrollments', { tags: ['268UC14'] }, () => {
+describe('pm-courses-step lists the student existing enrollments', { tags: ['268UC14', '342UC4'] }, () => {
   it('shows course, teacher, instrument, step and enrolled date, with an em dash for what the course type omits', () => {
     step.activate('s1');
     step.enrollments = [

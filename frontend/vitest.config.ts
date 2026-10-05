@@ -333,6 +333,10 @@ export default defineConfig({
       { name: '344UC10', description: 'An activity Choir in the Junior phase is named Choir (Junior) in the Activity list' },
       { name: '344UC11', description: 'The Add Activity panel shows the Activity list and no Phase field' },
       { name: '344UC12', description: 'A Private-grade student Activity list shows every Junior activity before every Senior activity' },
+      { name: '342UC1', description: 'An instrument course in the extended view is headed by its instrument type in place of Instrument' },
+      { name: '342UC2', description: 'The line beneath an instrument course in the extended view reads the teacher and step with no instrument' },
+      { name: '342UC3', description: 'A Theory course in the extended view keeps its course type heading and its teacher and step line' },
+      { name: '342UC4', description: 'The wizard Courses tab, enroll form and withdraw confirmation still name an instrument course Instrument' },
     ],
   },
 })

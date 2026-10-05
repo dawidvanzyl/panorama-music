@@ -1258,7 +1258,7 @@ describe('pm-students-page — corrects an enrollment from the Courses tab', { t
   });
 });
 
-describe('pm-students-page — withdraws a student from a course', { tags: ['269UC16'] }, () => {
+describe('pm-students-page — withdraws a student from a course', { tags: ['269UC16', '342UC4'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
