@@ -32,7 +32,7 @@ async function openWithExistingCourse(page: Page) {
 }
 
 async function expectOnlyTheExistingCourse(coursesPage: CourseManagementPage, existingCost: string) {
-  await expect(coursesPage.row(COURSE_TYPE, LESSON_STRUCTURE, `R ${existingCost}`)).toHaveCount(1);
+  await expect(coursesPage.row(COURSE_TYPE, 'Group · Half Hour', 'During School', `R ${existingCost}`)).toHaveCount(1);
   await expect(coursesPage.row(COURSE_TYPE, 'Group · Half Hour', 'During School')).toHaveCount(1);
 }
 
