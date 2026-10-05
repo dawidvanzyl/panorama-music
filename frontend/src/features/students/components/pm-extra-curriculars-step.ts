@@ -305,9 +305,10 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.upgradeProperty('phase');
     this.upgradeProperty('assigned');
     this.upgradeProperty('assignable');
+    this.upgradeProperty('holdsCourse');
   }
 
-  private upgradeProperty(name: 'phase' | 'assigned' | 'assignable'): void {
+  private upgradeProperty(name: 'phase' | 'assigned' | 'assignable' | 'holdsCourse'): void {
     if (!Object.hasOwn(this, name)) return;
 
     const value = this[name] as never;
