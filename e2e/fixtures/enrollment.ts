@@ -12,8 +12,9 @@ export interface SeededEnrollmentTarget {
 }
 
 /**
- * A student must be enrolled in at least one course, so every student created in
- * a run needs a course and a teacher to exist first. Seeded through the API from
+ * A student must hold at least one course or one extra-curricular, and most
+ * students in a run hold a course, so they need a course and a teacher to exist
+ * first. Seeded through the API from
  * inside the signed-in page, so the requests carry the caller's bearer token —
  * `page.request` would send none.
  *
@@ -165,4 +166,57 @@ export async function studentIdBySurname(page: Page, surname: string): Promise<s
     const students = (await response.json()) as { studentId: string; lastName: string }[];
     return students.find((s) => s.lastName === lastName)!.studentId;
   }, surname);
+}
+
+/**
+ * Creates a student holding one extra-curricular and no course, through the API.
+ * Creation is not gated, so the student is created first and the activity is
+ * assigned afterwards; no enrollment is ever made. Returns the student's id.
+ */
+export async function seedActivityOnlyStudent(
+  page: Page,
+  extraCurricularId: string,
+  lastName: string,
+): Promise<string> {
+  const seeded = await page.evaluate(
+    async ({ surname, extraCurricularId }) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      };
+
+      const studentResponse = await fetch('/api/students', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          firstName: 'Amara',
+          lastName: surname,
+          dateOfBirth: '2014-05-12',
+          grade: 'Grade4',
+          class: 'A1',
+          phase: 'Junior',
+          language: 'English',
+        }),
+      });
+      const student = (await studentResponse.json()) as { studentId: string };
+
+      const assignResponse = await fetch(`/api/students/${student.studentId}/extra-curriculars`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ extraCurricularId }),
+      });
+
+      return {
+        studentStatus: studentResponse.status,
+        assignStatus: assignResponse.status,
+        studentId: student.studentId,
+      };
+    },
+    { surname: lastName, extraCurricularId },
+  );
+
+  expect(seeded.studentStatus).toBe(201);
+  expect(seeded.assignStatus).toBe(201);
+
+  return seeded.studentId;
 }

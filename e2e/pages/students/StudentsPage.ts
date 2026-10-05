@@ -88,8 +88,8 @@ export class StudentsPage extends BasePage {
    * Next clicks happen and `activityOptionLabels` is meaningless for them —
    * passing any is a caller error, not something this silently tolerates.
    *
-   * A student must be enrolled in at least one course, so the Courses tab
-   * always stages one. Callers that do not care which pass no `enrollment` and
+   * A student must hold at least one course or one extra-curricular, so this
+   * helper always stages a course on the Courses tab. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
    *
    * `activityOptionLabels` stages zero or more activities on the
@@ -140,6 +140,21 @@ export class StudentsPage extends BasePage {
   /** Advances the create wizard by one Next click. */
   async goToNextStep(): Promise<void> {
     await this.wizardModal.locator('#nextBtn').click();
+  }
+
+  /**
+   * Steps the create wizard from the Student step to Extra-Curriculars without
+   * staging anything on the way, for a scenario that stages no course.
+   */
+  async advanceToExtraCurriculars(): Promise<void> {
+    for (let step = 0; step < 4; step++) {
+      await this.goToNextStep();
+    }
+  }
+
+  /** Removes a staged (create-mode) enrollment from the Courses list, without a confirmation. */
+  async removeStagedEnrollment(courseLabel: string): Promise<void> {
+    await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--remove').click();
   }
 
   /** Presses Save on the create wizard's final step (Extra-Curriculars). */
@@ -386,8 +401,8 @@ export class StudentsPage extends BasePage {
 
   /**
    * Withdraws the student from the named course. Confirmation is offered only
-   * while the student holds another enrollment; on their last one the tab states
-   * the requirement instead, so callers testing that path pass `confirm: false`.
+   * while the student holds another enrollment or an extra-curricular; otherwise
+   * the tab states the requirement instead, so callers testing that path pass `confirm: false`.
    */
   async withdrawEnrollment(courseLabel: string, confirm = true): Promise<void> {
     await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--withdraw').click();
@@ -400,7 +415,7 @@ export class StudentsPage extends BasePage {
     return this.page.locator('#withdrawEnrollmentModal');
   }
 
-  /** The Courses step's own message area, where the at-least-one-course requirement is stated. */
+  /** The Courses step's own message area, where the course-or-extra-curricular requirement is stated. */
   coursesStepMessage(): Locator {
     return this.wizardModal.locator('#coursesStep').locator('#message');
   }
