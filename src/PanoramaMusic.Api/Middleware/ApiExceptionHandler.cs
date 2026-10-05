@@ -90,6 +90,13 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
+		if (exception is StudentsExceptions.EntityAlreadyExistsException)
+		{
+			LogHandled(exception, StatusCodes.Status409Conflict, correlationId);
+			await WriteAsync(httpContext, StatusCodes.Status409Conflict, new { error = exception.Message, correlationId }, cancellationToken);
+			return true;
+		}
+
 		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException or TeachersExceptions.DomainException or ReportingExceptions.DomainException)
 		{
 			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);

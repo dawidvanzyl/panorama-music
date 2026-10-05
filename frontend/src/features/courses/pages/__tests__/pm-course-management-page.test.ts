@@ -331,8 +331,8 @@ describe(
     afterEach(() => document.body.removeChild(el));
 
     it('shows the refusal on the form, keeps the entered values and adds no row', async () => {
-      const refusal = 'A Grade 2 Recorder course already exists for Group · Half Hour · During School.';
-      vi.mocked(createCourse).mockRejectedValue(new CoursesError(refusal, 400));
+      const refusal = 'Course already exists';
+      vi.mocked(createCourse).mockRejectedValue(new CoursesError(refusal, 409));
       el = await mountPage();
       const readsBefore = mockGetCourses.mock.calls.length;
 

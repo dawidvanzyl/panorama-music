@@ -109,11 +109,11 @@ public class CourseFunctionTests : IClassFixture<StudentsDatabaseFixture>
 			CourseFactory.Create(courseType: CourseType.Theory, lessonStructure: structure),
 			TestContext.Current.CancellationToken);
 
-		var exception = await Should.ThrowAsync<DomainException>(async () => await repository.CreateAsync(
+		var exception = await Should.ThrowAsync<EntityAlreadyExistsException>(async () => await repository.CreateAsync(
 			CourseFactory.Create(courseType: CourseType.Theory, lessonStructure: structure),
 			TestContext.Current.CancellationToken));
 
-		exception.Message.ShouldBe(CourseMessages.AlreadyExists(CourseType.Theory, structure));
+		exception.Message.ShouldBe(CourseMessages.AlreadyExists);
 
 		await transaction.RollbackAsync(TestContext.Current.CancellationToken);
 	}

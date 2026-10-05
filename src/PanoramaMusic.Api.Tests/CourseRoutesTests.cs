@@ -95,7 +95,7 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 
 	[Fact]
 	[Trait("AC", "308UC1")]
-	public async Task CreateCourse_CourseTypeAndStructureAlreadyHeld_IsRefusedWithTheDomainMessageAndNothingIsAdded()
+	public async Task CreateCourse_CourseTypeAndStructureAlreadyHeld_IsRefusedAsAConflictAndNothingIsAdded()
 	{
 		var client = await SignInAsync("courses-duplicate-admin", Role.Coordinator, "10.0.70.30");
 		var structure = await GetStructureAsync(client, LessonType.Group, DurationType.HalfHour, OccurrenceType.DuringSchool);
@@ -111,9 +111,9 @@ public sealed class CourseRoutesTests(ApiTestFixture fixture)
 		var (after, _) = await GetCoursesAsync(client);
 
 		ShouldlyHelpers.Satisfy(
-			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
+			() => response.StatusCode.ShouldBe(HttpStatusCode.Conflict),
 			() => body.RootElement.GetProperty("error").GetString()
-				.ShouldBe("A Grade 2 Recorder course already exists for Group · Half Hour · During School."),
+				.ShouldBe("Course already exists"),
 			() => after.Count.ShouldBe(before.Count));
 	}
 

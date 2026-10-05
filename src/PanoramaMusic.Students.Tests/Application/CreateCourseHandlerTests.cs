@@ -91,11 +91,11 @@ public class CreateCourseHandlerTests : IClassFixture<StudentsTestFixture>
 			.ReturnsAsync(existing);
 
 		var request = new CreateCourseRequest(CourseType.G2Recorder, 300.00m, structure.LessonStructureId);
-		var exception = await Should.ThrowAsync<DomainException>(
+		var exception = await Should.ThrowAsync<EntityAlreadyExistsException>(
 			() => _handler.HandleAsync(new CreateCourseCommand(request), TestContext.Current.CancellationToken));
 
 		ShouldlyHelpers.Satisfy(
-			() => exception.Message.ShouldBe(CourseMessages.AlreadyExists(CourseType.G2Recorder, structure)),
+			() => exception.Message.ShouldBe(CourseMessages.AlreadyExists),
 			() => _context.Repositories.CourseRepositoryMock.Verify(
 				r => r.CreateAsync(It.IsAny<Course>(), It.IsAny<CancellationToken>()),
 				Times.Never));

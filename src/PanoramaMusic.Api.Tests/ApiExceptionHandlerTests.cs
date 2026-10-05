@@ -7,6 +7,7 @@ using Shouldly;
 using System.Text.Json;
 using Xunit;
 using ReportingExceptions = PanoramaMusic.Reporting.Domain.Exceptions;
+using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Tests;
 
@@ -85,6 +86,22 @@ public sealed class ApiExceptionHandlerTests
 		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status404NotFound);
 		var body = JsonDocument.Parse(ReadBody(httpContext));
 		body.RootElement.GetProperty("error").GetString().ShouldBe("The saved report was not found.");
+	}
+
+	[Fact]
+	[Trait("AC", "308UC7")]
+	public async Task TryHandleAsync_StudentsEntityAlreadyExistsException_Returns409WithErrorAndCorrelationId()
+	{
+		var httpContext = CreateHttpContext();
+		var exception = new StudentsExceptions.EntityAlreadyExistsException("Course already exists");
+
+		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
+
+		handled.ShouldBeTrue();
+		httpContext.Response.StatusCode.ShouldBe(StatusCodes.Status409Conflict);
+		var body = JsonDocument.Parse(ReadBody(httpContext));
+		body.RootElement.GetProperty("error").GetString().ShouldBe("Course already exists");
+		body.RootElement.GetProperty("correlationId").GetString().ShouldBe(_correlationId);
 	}
 
 	[Fact]

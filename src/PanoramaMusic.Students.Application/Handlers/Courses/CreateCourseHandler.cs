@@ -27,7 +27,7 @@ public sealed class CreateCourseHandler(
 		var existing = await courseRepository.GetByTypeAndStructureAsync(courseType, lessonStructureId, cancellationToken);
 		if (existing is not null)
 		{
-			throw new DomainException(CourseMessages.AlreadyExists(existing.CourseType, existing.LessonStructure));
+			throw new EntityAlreadyExistsException(CourseMessages.AlreadyExists);
 		}
 
 		var course = Course.Create(Guid.NewGuid(), courseType, request.Cost!.Value, lessonStructure);

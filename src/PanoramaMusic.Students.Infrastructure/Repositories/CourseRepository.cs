@@ -74,7 +74,7 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 			Transaction,
 			cancellationToken);
 
-		await ExecuteTranslatingDuplicateCourseAsync(command, course);
+		await ExecuteTranslatingDuplicateCourseAsync(command);
 
 		domainEventCollector.Collect(course);
 	}
@@ -115,7 +115,7 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 	/// it. Translating that into the same refusal the read would have produced keeps
 	/// the loser of the race on the 400 path instead of an unexplained 500.
 	/// </summary>
-	private async Task ExecuteTranslatingDuplicateCourseAsync(CommandDefinition command, Course course)
+	private async Task ExecuteTranslatingDuplicateCourseAsync(CommandDefinition command)
 	{
 		try
 		{
@@ -123,7 +123,7 @@ public class CourseRepository(IUnitOfWork unitOfWork, IDomainEventCollector doma
 		}
 		catch (PostgresException ex) when (IsDuplicateCourse(ex))
 		{
-			throw new DomainException(CourseMessages.AlreadyExists(course.CourseType, course.LessonStructure));
+			throw new EntityAlreadyExistsException(CourseMessages.AlreadyExists);
 		}
 	}
 
