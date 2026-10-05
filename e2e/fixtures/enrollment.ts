@@ -154,6 +154,7 @@ export async function seedEnrolledStudent(
   expect(seeded.studentStatus).toBe(201);
   expect(seeded.enrollStatus).toBe(201);
 
+  await waitForSeededEntry(page, `/api/students/${seeded.studentId}/courses`, 'studentCourseId');
   return seeded.studentId;
 }
 
@@ -218,5 +219,37 @@ export async function seedActivityOnlyStudent(
   expect(seeded.studentStatus).toBe(201);
   expect(seeded.assignStatus).toBe(201);
 
+  await waitForSeededEntry(page, `/api/students/${seeded.studentId}/extra-curriculars`, 'extraCurricularId', extraCurricularId);
   return seeded.studentId;
+}
+
+/**
+ * A write's response can reach the caller before its transaction commits, so a
+ * request sent straight after a seeding call may not see what it seeded. Waits
+ * until a read of `path` returns an entry whose `key` equals `value` (or any
+ * entry, when `value` is omitted).
+ */
+export async function waitForSeededEntry(
+  page: Page,
+  path: string,
+  key: string,
+  value?: string,
+): Promise<void> {
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(
+          async ({ path, key, value }) => {
+            const response = await fetch(path, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('pm_access_token')}` },
+            });
+            if (!response.ok) return false;
+            const entries = (await response.json()) as Record<string, unknown>[];
+            return entries.some((entry) => value === undefined || entry[key] === value);
+          },
+          { path, key, value },
+        ),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
 }

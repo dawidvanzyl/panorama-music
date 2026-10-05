@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect } from './base';
+import { waitForSeededEntry } from './enrollment';
 
 export interface SeedActivityOptions {
   description: string;
@@ -62,4 +63,5 @@ export async function assignActivity(
   );
 
   expect(status).toBe(201);
+  await waitForSeededEntry(page, `/api/students/${studentId}/extra-curriculars`, 'extraCurricularId', extraCurricularId);
 }
