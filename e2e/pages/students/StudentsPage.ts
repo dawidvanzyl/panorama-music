@@ -83,18 +83,13 @@ export class StudentsPage extends BasePage {
    * it carries Save, and Courses only offers Next — so all four Next clicks
    * are required.
    *
-   * A Private-grade student has no Extra-Curriculars step at all:
-   * Courses is their final step and carries Save directly, so only three
-   * Next clicks happen and `activityOptionLabels` is meaningless for them —
-   * passing any is a caller error, not something this silently tolerates.
-   *
    * A student must hold at least one course or one extra-curricular, so this
    * helper always stages a course on the Courses tab. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
    *
    * `activityOptionLabels` stages zero or more activities on the
    * Extra-Curriculars step before Save — each one is the picker's option
-   * label, which is the activity's description alone. Staging in create mode
+   * label, `{description} ({phase})`. Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
    * through identical UI mechanics.
@@ -104,21 +99,12 @@ export class StudentsPage extends BasePage {
     enrollment?: EnrollmentInput,
     activityOptionLabels: string[] = [],
   ): Promise<void> {
-    const isPrivate = input.grade === 'Private';
-    if (isPrivate && activityOptionLabels.length > 0) {
-      throw new Error('A Private-grade student has no Extra-Curriculars step to stage activities on.');
-    }
-
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.enrollInCourse(enrollment);
-    if (isPrivate) {
-      await this.wizardModal.locator('#saveBtn').click();
-      return;
-    }
     await this.wizardModal.locator('#nextBtn').click();
     for (const optionLabel of activityOptionLabels) {
       await this.assignActivity(optionLabel);
@@ -140,6 +126,16 @@ export class StudentsPage extends BasePage {
   /** Advances the create wizard by one Next click. */
   async goToNextStep(): Promise<void> {
     await this.wizardModal.locator('#nextBtn').click();
+  }
+
+  /** Steps the create wizard back by one Previous click. */
+  async goToPreviousStep(): Promise<void> {
+    await this.wizardModal.locator('#previousBtn').click();
+  }
+
+  /** Changes the grade on the Student step, leaving the rest of the form as it is. */
+  async setGrade(grade: Grade): Promise<void> {
+    await this.wizardModal.locator('#studentStep').locator('#grade').selectOption(grade);
   }
 
   /**
@@ -427,8 +423,8 @@ export class StudentsPage extends BasePage {
 
   /**
    * Read-only extra-curriculars summary for the currently-expanded row (same
-   * scoping rule as siblings). Absent entirely for a Private-grade student
-   * (#278's addendum) — it is never rendered for them, not merely empty.
+   * scoping rule as siblings). Rendered for a Private-grade student exactly as
+   * for a graded one.
    */
   visibleExtraCurricularsSummary(): Locator {
     return this.page.locator('pm-student-extra-curriculars-summary:visible');
@@ -645,17 +641,28 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * The Add Activity panel's picker. Options read the activity's description
-   * alone — a student is assigned to an activity, never to one of its
-   * practice times, so no slot is named.
+   * The Add Activity panel's picker. Options read `{description} ({phase})` —
+   * a student is assigned to an activity, never to one of its practice
+   * times, so no slot is named.
    */
   activityPicker(): Locator {
     return this.extraCurricularsStep().locator('#activitySelect');
   }
 
-  /** The panel's disabled, non-editable field showing the student's own phase. */
-  activityPanelPhaseField(): Locator {
-    return this.extraCurricularsStep().locator('#phaseField');
+  /** The phase note shown while the picker is limited to the student's own phase. */
+  activityPhaseNote(): Locator {
+    return this.extraCurricularsStep().locator('#note');
+  }
+
+  /** The text of every option the picker currently offers. */
+  async activityOptionTexts(): Promise<string[]> {
+    const texts = await this.activityPicker().locator('option').allTextContents();
+    return texts.map((text) => text.trim());
+  }
+
+  /** Any control or label in the Add Activity panel named "Phase". */
+  activityPanelPhaseControl(): Locator {
+    return this.extraCurricularsStep().locator('#panel').getByLabel('Phase', { exact: true });
   }
 
   /**

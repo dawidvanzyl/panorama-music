@@ -224,6 +224,63 @@ export async function seedActivityOnlyStudent(
 }
 
 /**
+ * Creates a Private-grade student holding the given extra-curriculars and no
+ * course, through the API. A Private-grade student has no class or phase, so
+ * any activity may be assigned. Each assignment is polled for before the id is
+ * returned. Returns the student's id.
+ */
+export async function seedPrivateActivityOnlyStudent(
+  page: Page,
+  extraCurricularIds: string[],
+  lastName: string,
+): Promise<string> {
+  const seeded = await page.evaluate(
+    async ({ surname, extraCurricularIds }) => {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+      };
+
+      const studentResponse = await fetch('/api/students', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          firstName: 'Amara',
+          lastName: surname,
+          dateOfBirth: '2014-05-12',
+          grade: 'Private',
+          class: null,
+          phase: null,
+          language: 'English',
+        }),
+      });
+      const student = (await studentResponse.json()) as { studentId: string };
+
+      const assignStatuses: number[] = [];
+      for (const extraCurricularId of extraCurricularIds) {
+        const assignResponse = await fetch(`/api/students/${student.studentId}/extra-curriculars`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ extraCurricularId }),
+        });
+        assignStatuses.push(assignResponse.status);
+      }
+
+      return { studentStatus: studentResponse.status, assignStatuses, studentId: student.studentId };
+    },
+    { surname: lastName, extraCurricularIds },
+  );
+
+  expect(seeded.studentStatus).toBe(201);
+  expect(seeded.assignStatuses).toEqual(extraCurricularIds.map(() => 201));
+
+  for (const extraCurricularId of extraCurricularIds) {
+    await waitForSeededEntry(page, `/api/students/${seeded.studentId}/extra-curriculars`, 'extraCurricularId', extraCurricularId);
+  }
+  return seeded.studentId;
+}
+
+/**
  * A write's response can reach the caller before its transaction commits, so a
  * request sent straight after a seeding call may not see what it seeded. Waits
  * until a read of `path` returns an entry whose `key` equals `value` (or any
