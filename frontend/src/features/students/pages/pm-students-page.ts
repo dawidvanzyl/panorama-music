@@ -569,7 +569,7 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleCoursesTabActivated = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    await this.refreshWizardEnrollments(studentId);
+    await this.refreshWizardHoldings(studentId, 'courses');
   };
 
   private handleEnrollmentAddRequested = async (event: Event): Promise<void> => {
@@ -639,7 +639,32 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleExtraCurricularsTabActivated = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    await this.refreshWizardExtraCurriculars(studentId);
+    await this.refreshWizardHoldings(studentId, 'extraCurriculars');
+  };
+
+  /**
+   * Both lists are read before either is shown, so the rule each step applies
+   * to its own Withdraw or Remove never meets a count of the other kind that is
+   * older than the list beside it. A failure is reported on the tab that was
+   * activated and leaves both lists as they were.
+   */
+  private refreshWizardHoldings = async (studentId: string, tab: 'courses' | 'extraCurriculars'): Promise<void> => {
+    try {
+      const [enrollments, extraCurriculars] = await Promise.all([
+        getStudentCourses(studentId),
+        getStudentExtraCurriculars(studentId),
+      ]);
+      this.wizardModal!.enrollments = enrollments;
+      this.wizardModal!.extraCurriculars = extraCurriculars;
+    } catch (err) {
+      if (tab === 'courses') {
+        this.wizardModal!.showCoursesError(
+          err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+        );
+      } else {
+        this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+      }
+    }
   };
 
   /**

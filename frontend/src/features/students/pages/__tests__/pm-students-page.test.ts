@@ -106,6 +106,11 @@ import {
 } from '../../services/student-extra-curriculars';
 
 import '../pm-students-page';
+import {
+  COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE,
+  COURSE_OR_EXTRA_CURRICULAR_TO_SAVE,
+  COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW,
+} from '../../components/course-or-extra-curricular';
 import { populationDescription } from '../../components/student-population';
 import type { PmStudentsTable } from '../../components/pm-students-table';
 import type { PmStudentWizardModal } from '../../components/pm-student-wizard-modal';
@@ -466,8 +471,8 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
     aliceResult.click();
     (searchSelectShadow.getElementById('addBtn') as HTMLButtonElement).click();
 
-    // A student cannot be saved without at least one course, so the create flow
-    // stages one before Save is offered.
+    // A student cannot be saved with neither a course nor an extra-curricular, so
+    // the create flow stages a course before Save is offered.
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
     enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
@@ -1341,7 +1346,120 @@ describe('pm-students-page — cancelling a withdrawal keeps the enrollment', { 
   });
 });
 
-describe('pm-students-page — a student cannot be saved with no course', { tags: ['268UC22'] }, () => {
+describe(
+  'pm-students-page — a student cannot be saved with neither a course nor an extra-curricular',
+  { tags: ['268UC22', '343UC6'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('refuses the save, states the requirement on the Extra-Curriculars tab, and creates nothing', async () => {
+      (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+
+      const wizard = wizardModalOf(el);
+      const wizardShadow = wizard.shadowRoot!;
+      fillStudentStep(wizard);
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+      (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+
+      (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+      await flush();
+
+      expect(vi.mocked(createStudent)).not.toHaveBeenCalled();
+      expect(wizard.hasAttribute('open')).toBe(true);
+      expect(wizardShadow.getElementById('tabExtraCurriculars')!.getAttribute('aria-selected')).toBe('true');
+      expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
+        COURSE_OR_EXTRA_CURRICULAR_TO_SAVE,
+      );
+    });
+  },
+);
+
+describe('pm-students-page — creates a student holding only an extra-curricular', { tags: ['343UC7'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir, orchestra]);
+    vi.mocked(assignExtraCurricular).mockReset();
+    vi.mocked(assignExtraCurricular).mockResolvedValue(choir);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('creates the student, then assigns the activity, and enrolls in nothing', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
+
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    for (let i = 0; i < 4; i += 1) (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    await assignViaPanel(wizard, 'ec1');
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+    await flush();
+
+    expect(vi.mocked(createStudent)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(assignExtraCurricular)).toHaveBeenCalledWith('s3', 'ec1');
+    expect(vi.mocked(enrollStudent)).not.toHaveBeenCalled();
+  });
+});
+
+describe('pm-students-page — creates a student holding only a course', { tags: ['343UC8'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(assignExtraCurricular).mockReset();
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('creates the student, then enrolls, assigns nothing and shows no message', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian, created]));
+
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    for (let i = 0; i < 3; i += 1) (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
+
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+    await flush();
+
+    expect(vi.mocked(createStudent)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enrollStudent)).toHaveBeenCalledWith(
+      's3',
+      expect.objectContaining({ courseId: recorderCourse.courseId }),
+    );
+    expect(vi.mocked(assignExtraCurricular)).not.toHaveBeenCalled();
+    expect((coursesStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe('');
+    expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe('');
+  });
+});
+
+describe('pm-students-page — the last course is kept while the student holds no activity', { tags: ['343UC9'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -1352,26 +1470,121 @@ describe('pm-students-page — a student cannot be saved with no course', { tags
     document.body.removeChild(el);
   });
 
-  it('refuses the save, states the requirement on the Courses tab, and creates nothing', async () => {
-    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+  it('opens no confirmation, withdraws nothing and states the requirement on the Courses tab', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
 
-    const wizard = wizardModalOf(el);
-    const wizardShadow = wizard.shadowRoot!;
-    fillStudentStep(wizard);
-    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
-    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
-    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
 
-    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
-    await flush();
-
-    expect(vi.mocked(createStudent)).not.toHaveBeenCalled();
-    expect(wizard.hasAttribute('open')).toBe(true);
+    expect(withdrawEnrollmentModalOf(el).hasAttribute('open')).toBe(false);
+    expect(vi.mocked(withdrawEnrollment)).not.toHaveBeenCalled();
     expect((coursesStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
-      'A student must be enrolled in at least one course before they can be saved.',
+      COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW,
     );
   });
 });
+
+describe('pm-students-page — the last course may go while the student holds an activity', { tags: ['343UC10'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir, orchestra]);
+    vi.mocked(assignExtraCurricular).mockReset();
+    vi.mocked(assignExtraCurricular).mockResolvedValue(choir);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('opens the withdraw confirmation once both reads have resolved', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
+
+    expect(withdrawEnrollmentModalOf(el).hasAttribute('open')).toBe(true);
+  });
+
+  it('shows no course to withdraw until the activities read has resolved too', async () => {
+    let resolveActivities: (value: StudentExtraCurricular[]) => void = () => undefined;
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    vi.mocked(getStudentExtraCurriculars).mockReturnValue(
+      new Promise<StudentExtraCurricular[]>((resolve) => {
+        resolveActivities = resolve;
+      }),
+    );
+
+    const wizard = await openCoursesTab(el);
+    expect(enrollmentRowsOf(wizard)).toHaveLength(0);
+
+    resolveActivities([choir]);
+    await flush();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
+
+    expect(withdrawEnrollmentModalOf(el).hasAttribute('open')).toBe(true);
+    expect((coursesStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe('');
+  });
+
+  it('accepts a withdrawal straight after an activity was assigned on the other tab', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+
+    const wizard = await openCoursesTab(el);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+    await assignViaPanel(wizard, 'ec1');
+
+    (wizardShadow.getElementById('tabCourses') as HTMLButtonElement).click();
+    await flush();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
+
+    expect(withdrawEnrollmentModalOf(el).hasAttribute('open')).toBe(true);
+    expect((coursesStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe('');
+  });
+});
+
+describe(
+  'pm-students-page — the last activity is kept while the student holds no course',
+  { tags: ['343UC11'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      vi.mocked(removeExtraCurricular).mockReset();
+      vi.mocked(removeExtraCurricular).mockResolvedValue(undefined);
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('removes nothing, keeps the row and states the requirement on the Extra-Curriculars tab', async () => {
+      vi.mocked(getStudentCourses).mockResolvedValue([]);
+      vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+      await flush();
+      (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+      await flush();
+
+      expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+      expect(extraCurricularRowsOf(wizard)).toHaveLength(1);
+      expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
+        COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE,
+      );
+    });
+  },
+);
 
 describe('pm-students-page — creates the staged enrollments once the student exists', { tags: ['268UC23'] }, () => {
   let el: HTMLElement;

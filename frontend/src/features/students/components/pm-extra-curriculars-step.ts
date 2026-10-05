@@ -5,6 +5,7 @@ import {
   activityOptionLabel,
   practiceTimesText,
 } from './extra-curricular-options';
+import { COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE } from './course-or-extra-curricular';
 import type { PhaseType, StudentExtraCurricular } from '../services/student-extra-curriculars';
 
 type Mode = 'inactive' | 'create' | 'edit';
@@ -265,6 +266,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
   private _phase: PhaseType | null = null;
   private _assigned: StudentExtraCurricular[] = [];
   private _assignable: StudentExtraCurricular[] = [];
+  private _holdsCourse = false;
 
   constructor() {
     super();
@@ -373,9 +375,19 @@ export class PmExtraCurricularsStep extends HTMLElement {
     if (this.phaseField) this.phaseField.value = value ? PHASE_LABELS[value] : '';
   }
 
+  /** Whether the student is enrolled in any course, which decides if their last activity may be removed. */
+  set holdsCourse(value: boolean) {
+    this._holdsCourse = value;
+  }
+
   /** Activities staged during create mode, to be assigned once the student is saved. */
   get pendingExtraCurricularIds(): string[] {
     return this._assigned.map((activity) => activity.extraCurricularId);
+  }
+
+  /** Whether the create wizard has any activity staged. */
+  get hasPendingExtraCurriculars(): boolean {
+    return this._assigned.length > 0;
   }
 
   /**
@@ -473,6 +485,12 @@ export class PmExtraCurricularsStep extends HTMLElement {
       return;
     }
 
+    if (this._assigned.length <= 1 && !this._holdsCourse) {
+      this.showError(COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE);
+      return;
+    }
+
+    this.clearError();
     this.dispatchEvent(
       new CustomEvent('extra-curricular-remove-requested', {
         bubbles: true,
