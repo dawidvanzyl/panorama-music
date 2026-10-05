@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
 import { loginAsRoles } from '../../fixtures/testUsers';
-import { seedEnrollmentTarget } from '../../fixtures/enrollment';
+import { seedEnrollmentTarget, studentIdBySurname, waitForSeededEntry } from '../../fixtures/enrollment';
 import {
   ensureCourseOfType,
   fetchLessonStructureId,
@@ -54,6 +54,22 @@ async function openStudentsWithCourses(page: Page) {
   return { studentsPage, target };
 }
 
+/**
+ * The wizard saves the student and then its enrollments, and a write's response
+ * can arrive before it commits, so a read straight after Save may miss the
+ * enrollment. Waits until the record holds it before the page is asked to show it.
+ */
+async function waitForEnrollment(page: Page, surname: string): Promise<void> {
+  let studentId = '';
+  await expect
+    .poll(async () => {
+      studentId = await studentIdBySurname(page, surname).catch(() => '');
+      return studentId;
+    })
+    .not.toBe('');
+  await waitForSeededEntry(page, `/api/students/${studentId}/courses`, 'studentCourseId');
+}
+
 function cards(studentsPage: StudentsPage) {
   return studentsPage.visibleCoursesSummary().locator('.summary__item');
 }
@@ -82,6 +98,7 @@ test.describe('Extended view — an instrument course is named by its instrument
       },
     );
     await expect(studentsPage.row(surname)).toBeVisible();
+    await waitForEnrollment(page, surname);
 
     await studentsPage.toggleRowExpanded(surname);
 
@@ -109,6 +126,7 @@ test.describe('Extended view — an instrument course is named by its instrument
       },
     );
     await expect(studentsPage.row(surname)).toBeVisible();
+    await waitForEnrollment(page, surname);
 
     await studentsPage.openCoursesTab(surname);
     await studentsPage.editEnrollment(INSTRUMENT_COURSE, { instrumentLabel: 'Guitar' });
@@ -136,6 +154,7 @@ test.describe('Extended view — other course types keep their course-type name'
       { courseLabel: THEORY_COURSE, teacherName: target.teacherName, stepLabel: '3B' },
     );
     await expect(studentsPage.row(surname)).toBeVisible();
+    await waitForEnrollment(page, surname);
 
     await studentsPage.toggleRowExpanded(surname);
 
@@ -159,6 +178,7 @@ test.describe('Extended view — other course types keep their course-type name'
       },
     );
     await expect(studentsPage.row(surname)).toBeVisible();
+    await waitForEnrollment(page, surname);
 
     await studentsPage.openCoursesTab(surname);
     await studentsPage.enrollInCourse({
@@ -193,6 +213,7 @@ test.describe('Extended view — other course types keep their course-type name'
       { courseLabel: target.courseLabel, teacherName: target.teacherName },
     );
     await expect(studentsPage.row(surname)).toBeVisible();
+    await waitForEnrollment(page, surname);
 
     await studentsPage.toggleRowExpanded(surname);
 
