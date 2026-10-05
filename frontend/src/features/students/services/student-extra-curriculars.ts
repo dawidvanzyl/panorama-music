@@ -72,11 +72,12 @@ export async function getStudentExtraCurriculars(studentId: string): Promise<Stu
 }
 
 /**
- * What the add panel's picker offers: the activities of a phase. Both the create
- * and the edit wizard read through this one, driven by the phase the Student
- * step's field currently holds rather than by any stored student — an unsaved
- * phase change has to be reflected, and a student-scoped read resolves the phase
- * from the stored row, which cannot see one.
+ * What the add panel's picker offers: the activities of a phase, or of every
+ * phase when the phase is null, which is what a Private-grade student is offered.
+ * Both the create and the edit wizard read through this one, driven by the phase
+ * the Student step's field currently holds rather than by any stored student — an
+ * unsaved phase change has to be reflected, and a student-scoped read resolves the
+ * phase from the stored row, which cannot see one.
  *
  * It narrows by phase only, so leaving out what the student already takes part in
  * is the step's own filter — the same one it applies to staged activities.
@@ -84,8 +85,9 @@ export async function getStudentExtraCurriculars(studentId: string): Promise<Stu
  * The student-scoped `GET /api/students/{id}/extra-curriculars/assignable` still
  * exists and is still tested; nothing in the interface reads through it now.
  */
-export async function getAssignableExtraCurricularsByPhase(phase: PhaseType): Promise<StudentExtraCurricular[]> {
-  const response = await fetch(`${STUDENTS_BASE}/extra-curriculars/assignable?phase=${encodeURIComponent(phase)}`, {
+export async function getAssignableExtraCurricularsByPhase(phase: PhaseType | null): Promise<StudentExtraCurricular[]> {
+  const query = phase ? `?phase=${encodeURIComponent(phase)}` : '';
+  const response = await fetch(`${STUDENTS_BASE}/extra-curriculars/assignable${query}`, {
     headers: authHeaders(),
   });
   return handleResponse<StudentExtraCurricular[]>(response);

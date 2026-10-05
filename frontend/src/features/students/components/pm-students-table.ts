@@ -211,11 +211,6 @@ export class PmStudentsTable extends HTMLElement {
     if (component) component.guardians = guardians;
   }
 
-  /**
-   * A Private-grade student has no summary component at all, so this is a no-op
-   * for them — the cache entry is still kept, which costs nothing and keeps the
-   * caller from having to know the rule.
-   */
   setExtraCurricularsSummary(studentId: string, extraCurriculars: StudentExtraCurricular[]): void {
     this._extraCurricularsCache.set(studentId, extraCurriculars);
     const component = this._extraCurricularsSummaryComponents.get(studentId);
@@ -329,20 +324,12 @@ export class PmStudentsTable extends HTMLElement {
 
     summaryWrapper.append(siblingsSummary, guardiansSummary, coursesSummary);
 
-    // A Private-grade student takes no part in extra-curriculars, so the roster
-    // shows no section at all rather than an empty one — an empty state would
-    // suggest they could hold activities. They have no tab in the modal for the
-    // same reason.
-    if (student.grade !== 'Private') {
-      const extraCurricularsSummary = document.createElement(
-        'pm-student-extra-curriculars-summary',
-      ) as PmStudentExtraCurricularsSummary;
-      extraCurricularsSummary.extraCurriculars = this._extraCurricularsCache.get(student.studentId) ?? [];
-      this._extraCurricularsSummaryComponents.set(student.studentId, extraCurricularsSummary);
-      summaryWrapper.appendChild(extraCurricularsSummary);
-    } else {
-      this._extraCurricularsSummaryComponents.delete(student.studentId);
-    }
+    const extraCurricularsSummary = document.createElement(
+      'pm-student-extra-curriculars-summary',
+    ) as PmStudentExtraCurricularsSummary;
+    extraCurricularsSummary.extraCurriculars = this._extraCurricularsCache.get(student.studentId) ?? [];
+    this._extraCurricularsSummaryComponents.set(student.studentId, extraCurricularsSummary);
+    summaryWrapper.appendChild(extraCurricularsSummary);
 
     summaryCell.appendChild(summaryWrapper);
     summaryRow.appendChild(summaryCell);

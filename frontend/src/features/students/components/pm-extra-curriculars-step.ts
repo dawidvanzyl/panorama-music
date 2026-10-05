@@ -1,6 +1,7 @@
 import {
   NO_ACTIVITIES_ASSIGNED,
   PHASE_LABELS,
+  PHASE_ORDER,
   PHASE_RESTRICTION_NOTE,
   activityOptionLabel,
   practiceTimesText,
@@ -60,10 +61,9 @@ styles.replaceSync(`
       padding: 0 3px 4px;
     }
     .ec-step__fields {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
-      align-items: end;
+      display: flex;
+      flex-direction: column;
+      max-width: 520px;
     }
     .ec-step__field {
       display: flex;
@@ -212,10 +212,6 @@ template.innerHTML = `
             <label class="ec-step__label" for="activitySelect">Activity</label>
             <select class="ec-step__control" id="activitySelect"></select>
           </div>
-          <div class="ec-step__field">
-            <label class="ec-step__label" for="phaseField">Phase</label>
-            <input class="ec-step__control" id="phaseField" disabled value="">
-          </div>
         </div>
         <p class="ec-step__note" id="note"></p>
         <div class="ec-step__panel-actions">
@@ -253,7 +249,6 @@ export class PmExtraCurricularsStep extends HTMLElement {
   private addBtn: HTMLButtonElement | null = null;
   private panel: HTMLElement | null = null;
   private activitySelect: HTMLSelectElement | null = null;
-  private phaseField: HTMLInputElement | null = null;
   private note: HTMLElement | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
   private assignBtn: HTMLButtonElement | null = null;
@@ -281,7 +276,6 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.addBtn = this.shadowRoot!.getElementById('addBtn') as HTMLButtonElement;
     this.panel = this.shadowRoot!.getElementById('panel') as HTMLElement;
     this.activitySelect = this.shadowRoot!.getElementById('activitySelect') as HTMLSelectElement;
-    this.phaseField = this.shadowRoot!.getElementById('phaseField') as HTMLInputElement;
     this.note = this.shadowRoot!.getElementById('note') as HTMLElement;
     this.cancelBtn = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
     this.assignBtn = this.shadowRoot!.getElementById('assignBtn') as HTMLButtonElement;
@@ -290,6 +284,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.message = this.shadowRoot!.getElementById('message') as HTMLElement;
 
     this.note.textContent = PHASE_RESTRICTION_NOTE;
+    this.note.hidden = this._phase === null;
     this.emptyMessage.textContent = NO_ACTIVITIES_ASSIGNED;
     this.panel.setAttribute('inert', '');
 
@@ -366,14 +361,22 @@ export class PmExtraCurricularsStep extends HTMLElement {
     // in edit mode the ones it holds but was not asked to exclude. One filter,
     // because `_assigned` is the same list either way.
     const held = new Set(this._assigned.map((activity) => activity.extraCurricularId));
-    this._assignable = value.filter((activity) => !held.has(activity.extraCurricularId));
+    // A student offered both phases sees Junior before Senior. The sort is stable,
+    // so the server's alphabetical order holds within each phase.
+    this._assignable = value
+      .filter((activity) => !held.has(activity.extraCurricularId))
+      .sort((a, b) => PHASE_ORDER.indexOf(a.phase) - PHASE_ORDER.indexOf(b.phase));
     this.renderAssignable();
   }
 
-  /** The student's own phase, shown as the panel's non-editable Phase value. */
+  /**
+   * The student's own phase. A null phase here means a Private-grade student, who
+   * is offered every phase, so the note saying the list is limited to one phase is
+   * hidden for them.
+   */
   set phase(value: PhaseType | null) {
     this._phase = value;
-    if (this.phaseField) this.phaseField.value = value ? PHASE_LABELS[value] : '';
+    if (this.note) this.note.hidden = value === null;
   }
 
   /** Whether the student is enrolled in any course, which decides if their last activity may be removed. */
@@ -389,20 +392,6 @@ export class PmExtraCurricularsStep extends HTMLElement {
   /** Whether the create wizard has any activity staged. */
   get hasPendingExtraCurriculars(): boolean {
     return this._assigned.length > 0;
-  }
-
-  /**
-   * Drops everything staged and closes the panel. Run when the grade becomes
-   * Private in create mode: that student takes part in nothing, and nothing has
-   * been written yet, so the staged set simply goes. Edit mode does not call this
-   * — a persisted assignment is deleted by saving the student, not by the change.
-   */
-  discardStaged(): void {
-    this._assigned = [];
-    this._assignable = [];
-    this.clearError();
-    this.closePanel();
-    this.renderAssigned();
   }
 
   showError(message: string): void {
@@ -436,9 +425,9 @@ export class PmExtraCurricularsStep extends HTMLElement {
 
     // The list is asked for each time the panel opens, so an activity removed a
     // moment ago is offered again without the tab having to track it. The phase
-    // is the whole of the request: the read is phase-scoped in both modes, and
-    // which activities this student already holds is settled here rather than by
-    // the caller.
+    // is the whole of the request, and a null phase asks for every phase: the
+    // read is phase-scoped in both modes, and which activities this student
+    // already holds is settled here rather than by the caller.
     this.dispatchEvent(
       new CustomEvent('extra-curriculars-assignable-requested', {
         bubbles: true,

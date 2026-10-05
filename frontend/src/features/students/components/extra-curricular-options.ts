@@ -41,15 +41,19 @@ export function practiceTimesText(extraCurricular: StudentExtraCurricular): stri
   return extraCurricular.practiceTimes.map(practiceTimeText).join(' · ');
 }
 
+/** The order the picker lists phases in when it offers more than one. */
+export const PHASE_ORDER: PhaseType[] = ['Junior', 'Senior'];
+
 /**
- * How the picker labels an option: the activity's description, alone. A student
- * is assigned to an activity and never to one of its practice times, so naming a
- * slot in the option would state something false — an activity meeting twice
- * would read as a choice between its two slots, with the second hidden. The
- * whole set is what the assigned row then shows.
+ * How the picker labels an option: the activity's description and its phase. The
+ * phase is named because a Private-grade student is offered both phases in one
+ * list. A student is assigned to an activity and never to one of its practice
+ * times, so naming a slot in the option would state something false — an activity
+ * meeting twice would read as a choice between its two slots, with the second
+ * hidden. The whole set is what the assigned row then shows.
  */
 export function activityOptionLabel(extraCurricular: StudentExtraCurricular): string {
-  return extraCurricular.description;
+  return `${extraCurricular.description} (${PHASE_LABELS[extraCurricular.phase]})`;
 }
 
 /** Stands in for the rows when the student takes part in nothing. */
