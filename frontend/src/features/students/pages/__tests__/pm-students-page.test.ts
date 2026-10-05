@@ -1815,10 +1815,18 @@ describe(
       const wizard = wizardModalOf(el);
       wizard.openForEdit(privateStudent);
 
-      // The bug this fixes: the tab was absent and, once reachable, read the
-      // phase from the stored row — which is still Private, still null.
-      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+      // The tab is there from the start for a Private-grade student, and while
+      // the form still holds Private the picker asks for every phase.
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
+      (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+      await flush();
+      const stepShadow = extraCurricularsStepShadowOf(wizard);
+      (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
+      await flush();
+      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenLastCalledWith(null);
+      (stepShadow.getElementById('cancelBtn') as HTMLButtonElement).click();
 
+      (wizard.shadowRoot!.getElementById('tabStudent') as HTMLButtonElement).click();
       chooseGradeAndPhase(wizard, 'Grade4', 'Senior');
       await flush();
 
@@ -1826,15 +1834,13 @@ describe(
 
       (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
       await flush();
-      const stepShadow = extraCurricularsStepShadowOf(wizard);
       (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
       await flush();
 
       // Read for the phase the form holds now, not the student's stored null,
       // and nothing was saved to get there.
-      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith('Senior');
+      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenLastCalledWith('Senior');
       expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
-      expect((stepShadow.getElementById('phaseField') as HTMLInputElement).value).toBe('Senior');
       expect(
         [...(stepShadow.getElementById('activitySelect') as HTMLSelectElement).options].map((o) => o.value),
       ).toEqual(['ec1', 'ec2']);
@@ -1859,7 +1865,7 @@ describe(
       ).toEqual(['ec2']);
     });
 
-    it('removes the tab when a saved graded student is changed to Private', async () => {
+    it('keeps the tab when a saved graded student is changed to Private, offering every phase', async () => {
       const wizard = wizardModalOf(el);
       wizard.openForEdit(alice);
       expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
@@ -1867,7 +1873,11 @@ describe(
       chooseGradeAndPhase(wizard, 'Private', '');
       await flush();
 
-      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+      expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
+      (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+      (extraCurricularsStepShadowOf(wizard).getElementById('addBtn') as HTMLButtonElement).click();
+      await flush();
+      expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenLastCalledWith(null);
     });
   },
 );
@@ -1898,21 +1908,19 @@ describe('pm-students-page — a grade changed to Private in edit mode', { tags:
     gradeSelect.dispatchEvent(new Event('change'));
   }
 
-  it('saves the student and lets that update carry the deletion — the page deletes nothing itself', async () => {
+  it('saves the student and deletes none of their assignments', async () => {
     vi.mocked(updateStudent).mockResolvedValue({ ...alice, grade: 'Private', class: null, phase: null });
     const wizard = wizardModalOf(el);
     wizard.openForEdit(alice);
     turnPrivate(wizard);
     await flush();
 
-    expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(true);
+    expect(wizard.shadowRoot!.getElementById('tabExtraCurriculars')!.hidden).toBe(false);
 
     (wizard.shadowRoot!.getElementById('studentSaveBtn') as HTMLButtonElement).click();
     await flush();
 
     expect(vi.mocked(updateStudent)).toHaveBeenCalledWith('s1', expect.objectContaining({ grade: 'Private' }));
-    // The assignments go with the update, server-side (277UC24). The page issuing
-    // its own removals would be a second, racing writer of the same rule.
     expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
   });
 
@@ -1930,6 +1938,68 @@ describe('pm-students-page — a grade changed to Private in edit mode', { tags:
     // student exactly as they were — assignments included.
     expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
     expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+  });
+});
+
+describe('pm-students-page — expanding a Private-grade row', { tags: ['344UC6'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getStudentExtraCurriculars).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+    mockGetStudents.mockImplementation(() => Promise.resolve([privateStudent]));
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('reads their activities and shows the populated Extra-Curriculars section', async () => {
+    const tableShadow = (el.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable).shadowRoot!;
+    (tableShadow.querySelector('.students-table__chevron-btn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(getStudentExtraCurriculars)).toHaveBeenCalledWith('s4');
+    const summary = tableShadow.querySelector('pm-student-extra-curriculars-summary') as HTMLElement;
+    expect(summary.shadowRoot!.querySelector('.summary__item-heading')!.textContent).toBe('Choir');
+  });
+});
+
+describe('pm-students-page — Add Activity asks for the right phases', { tags: ['344UC7', '344UC8'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getStudentExtraCurriculars).mockReset();
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+    vi.mocked(getAssignableExtraCurricularsByPhase).mockResolvedValue([choir]);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  async function openAddActivity(student: StudentResult): Promise<void> {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(student);
+    (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+    (extraCurricularsStepShadowOf(wizard).getElementById('addBtn') as HTMLButtonElement).click();
+    await flush();
+  }
+
+  it('requests every phase for a Private-grade student', async () => {
+    await openAddActivity(privateStudent);
+
+    expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith(null);
+  });
+
+  it('requests only Junior for a Junior student', async () => {
+    await openAddActivity(alice);
+
+    expect(vi.mocked(getAssignableExtraCurricularsByPhase)).toHaveBeenCalledWith('Junior');
   });
 });
 
