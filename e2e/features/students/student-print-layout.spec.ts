@@ -159,7 +159,7 @@ test.describe('Printed record — nothing is cut off or runs past the page', { t
 
     const printedGuardians = await record.printedGuardians();
     expect(printedGuardians.map((g) => g.heading)).toEqual(extended.guardians.map((g) => g.heading));
-    expect(printedGuardians.map((g) => g.contacts.join('\n'))).toEqual(
+    expect(printedGuardians.map((g) => g.contacts.join(' · '))).toEqual(
       extended.guardians.map((g) => g.contact ?? ''),
     );
     expect(await record.printedCourses()).toEqual(extended.courses);
