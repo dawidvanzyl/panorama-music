@@ -2,10 +2,11 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './base';
 import { loginAsRoles } from './testUsers';
 import { seedEnrollmentTarget, waitForSeededEntry, type SeededEnrollmentTarget } from './enrollment';
-import { seedReportStudent, type SeedReportStudentOptions } from './reports';
+import { seedReportStudent, type ReportStudentEnrolment, type SeedReportStudentOptions } from './reports';
 import { addGuardianToStudent, type GuardianSeedInput, type SeededGuardian } from './guardians';
 import { linkSiblings } from './siblings';
 import { seedActivity, type SeedActivityOptions } from './extraCurriculars';
+import { ensureCourseOfType, fetchLessonStructureId } from './waitingList';
 import { StudentsPage } from '../pages/students/StudentsPage';
 
 /**
@@ -266,4 +267,115 @@ export async function choosePrint(page: Page, studentsPage: StudentsPage, studen
   await stubPrint(page);
   await studentsPage.printButtonOf(studentId).click();
   expect(await printCallCount(page)).toBeGreaterThan(0);
+}
+
+export const BODY_FONT = "13px 'Inter', system-ui, sans-serif";
+
+/** The width of a text at a CSS font, measured in the signed-in page. */
+export async function measureTextWidth(page: Page, text: string, font = BODY_FONT): Promise<number> {
+  return page.evaluate(
+    async ({ text, font }) => {
+      await document.fonts.ready;
+      const context = document.createElement('canvas').getContext('2d')!;
+      context.font = font;
+      return context.measureText(text).width;
+    },
+    { text, font },
+  );
+}
+
+export interface EmailWidthCriteria {
+  /** The start of the address's local part; it is padded until the criteria hold. */
+  prefix: string;
+  domain: string;
+  font?: string;
+  /** The width limits of the address on its own. */
+  emailMin?: number;
+  emailMax?: number;
+  /** With `cell`, the width limits of `{cell} · {email}`. */
+  cell?: string;
+  pairMin?: number;
+  pairMax?: number;
+}
+
+/**
+ * An address, without spaces, whose measured width meets every given limit at the
+ * record's body text style. Widths depend on the font the browser resolves, so the
+ * address is sized by measuring rather than by counting characters.
+ */
+export async function emailFitting(page: Page, criteria: EmailWidthCriteria): Promise<string> {
+  const email = await page.evaluate(
+    async ({ criteria, font }) => {
+      await document.fonts.ready;
+      const context = document.createElement('canvas').getContext('2d')!;
+      context.font = font;
+      const width = (text: string): number => context.measureText(text).width;
+      let local = criteria.prefix;
+      for (let attempt = 0; attempt < 230; attempt++) {
+        const candidate = `${local}@${criteria.domain}`;
+        const emailWidth = width(candidate);
+        const pairWidth = criteria.cell ? width(`${criteria.cell} · ${candidate}`) : 0;
+        const holds =
+          (criteria.emailMin === undefined || emailWidth >= criteria.emailMin) &&
+          (criteria.emailMax === undefined || emailWidth <= criteria.emailMax) &&
+          (criteria.pairMin === undefined || pairWidth >= criteria.pairMin) &&
+          (criteria.pairMax === undefined || pairWidth <= criteria.pairMax);
+        if (holds) return candidate;
+        if (criteria.emailMax !== undefined && emailWidth > criteria.emailMax) return null;
+        local += 'x';
+      }
+      return null;
+    },
+    { criteria, font: criteria.font ?? BODY_FONT },
+  );
+  expect(email, 'an address meeting the width limits must exist').not.toBeNull();
+  return email!;
+}
+
+/** Creates a teacher with a chosen name, through the real endpoint (Coordinator). */
+export async function seedNamedTeacher(
+  page: Page,
+  firstName: string,
+  surname: string,
+): Promise<{ teacherId: string; teacherName: string }> {
+  const seeded = await page.evaluate(
+    async ({ firstName, surname }) => {
+      const response = await fetch('/api/teachers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('pm_access_token')}`,
+        },
+        body: JSON.stringify({ firstName, surname, isPrivate: false }),
+      });
+      const teacher = (await response.json()) as { teacherId: string };
+      return { status: response.status, teacherId: teacher.teacherId };
+    },
+    { firstName, surname },
+  );
+  expect(seeded.status).toBe(201);
+  return { teacherId: seeded.teacherId, teacherName: `${firstName} ${surname}` };
+}
+
+/** The id of the Instrument course on During School · Individual · Half Hour, created if absent. */
+export async function instrumentCourseId(page: Page): Promise<string> {
+  const structureId = await fetchLessonStructureId(page, {
+    occurrenceType: 'DuringSchool',
+    lessonType: 'Individual',
+    durationType: 'HalfHour',
+  });
+  return (await ensureCourseOfType(page, structureId, 'Instrument')).courseId;
+}
+
+/** Two enrolments for one teacher: the seeded Recorder course and a Piano Instrument course. */
+export async function twoCourseEnrolments(
+  page: Page,
+  target: SeededEnrollmentTarget,
+  teacherId: string = target.teacherId,
+): Promise<ReportStudentEnrolment[]> {
+  const piano = await instrumentCourseId(page);
+  return [
+    { courseId: target.courseId, teacherId },
+    { courseId: piano, teacherId, instrumentType: 'Piano', stepType: 'Step3A' },
+  ];
 }
