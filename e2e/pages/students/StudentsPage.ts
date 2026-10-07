@@ -708,4 +708,25 @@ export class StudentsPage extends BasePage {
   extraCurricularsStepMessage(): Locator {
     return this.extraCurricularsStep().locator('#message');
   }
+
+  /** The summary row that follows a student's roster row, found by the student's id. */
+  summaryRowOf(studentId: string): Locator {
+    return this.page.locator(`pm-students-table tr.students-table__summary-row[data-student-id="${studentId}"]`);
+  }
+
+  /** Every Print control the screen offers, wherever it sits. */
+  anyPrintButton(): Locator {
+    return this.page.getByRole('button', { name: 'Print', exact: true });
+  }
+
+  /** The Print control inside one student's expanded area. */
+  printButtonOf(studentId: string): Locator {
+    return this.summaryRowOf(studentId).locator('.students-table__btn--print');
+  }
+
+  /** Expands the row and waits until its four reads have succeeded and Print is offered. */
+  async expandUntilPrintOffered(name: string, studentId: string): Promise<void> {
+    await this.toggleRowExpanded(name);
+    await expect(this.printButtonOf(studentId)).toBeVisible();
+  }
 }
