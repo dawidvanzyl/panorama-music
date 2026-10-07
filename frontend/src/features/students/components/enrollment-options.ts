@@ -80,6 +80,12 @@ export function enrollmentAssignment(enrollment: EnrollmentResult): string {
     .join(' · ');
 }
 
+export function enrolledLine(enrollment: EnrollmentResult): string {
+  return `Enrolled ${enrollment.enrolledDate}`;
+}
+
+export const NO_COURSE_ENROLLMENTS = 'No course enrollments.';
+
 export function teacherLabel(enrollment: EnrollmentResult): string {
   return `${enrollment.teacherFirstName} ${enrollment.teacherSurname}`.trim();
 }

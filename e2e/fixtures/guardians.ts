@@ -4,6 +4,7 @@ import { expect } from './base';
 export interface GuardianSeedInput {
   firstName?: string;
   surname?: string;
+  /** Omit for the default cell; pass `null` for a guardian with no cell. */
   cell?: string | null;
   email?: string | null;
   receivesCorrespondence?: boolean;
@@ -80,6 +81,7 @@ export async function addGuardianToStudent(
     input.guardianRelationshipId ?? (await firstGuardianRelationshipId(page));
   const firstName = input.firstName ?? 'Guardian';
   const surname = input.surname ?? `G-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const cell = input.cell === undefined ? '0821234567' : input.cell;
 
   const created = await page.evaluate(
     async ({ studentId, body }) => {
@@ -100,7 +102,7 @@ export async function addGuardianToStudent(
         guardianRelationshipId,
         firstName,
         surname,
-        cell: input.cell ?? '0821234567',
+        cell,
         email: input.email ?? null,
         receivesCorrespondence: input.receivesCorrespondence ?? false,
         responsibleForPayment: input.responsibleForPayment ?? false,
@@ -116,7 +118,7 @@ export async function addGuardianToStudent(
     firstName,
     surname,
     fullName: `${firstName} ${surname}`,
-    cell: input.cell ?? '0821234567',
+    cell,
     email: input.email ?? null,
   };
 }

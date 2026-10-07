@@ -4,6 +4,7 @@ import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-student-modal';
 import '../components/pm-delete-guardian-modal';
 import '../components/pm-withdraw-enrollment-modal';
+import '../components/pm-student-print-record';
 import {
   getStudents,
   createStudent,
@@ -54,13 +55,15 @@ import {
   StudentExtraCurricularsError,
   type PhaseType,
 } from '../services/student-extra-curriculars';
-import { courseLabel } from '../components/enrollment-options';
+import { courseLabel, todayIsoDate } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
 import type { PmWithdrawEnrollmentModal } from '../components/pm-withdraw-enrollment-modal';
+import type { PmStudentPrintRecord } from '../components/pm-student-print-record';
+import type { StudentRecordSource } from '../components/student-record';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -110,6 +113,17 @@ styles.replaceSync(`
     .students-page__error--visible {
       display: block;
     }
+    #printRecord {
+      display: none;
+    }
+    @media print {
+      :host([printing]) > :not(#printRecord) {
+        display: none;
+      }
+      :host([printing]) #printRecord {
+        display: block;
+      }
+    }
   `);
 
 const template = document.createElement('template');
@@ -128,6 +142,7 @@ template.innerHTML = `
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
   <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
   <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal"></pm-withdraw-enrollment-modal>
+  <pm-student-print-record id="printRecord"></pm-student-print-record>
 `;
 
 export class PmStudentsPage extends HTMLElement {
@@ -136,6 +151,9 @@ export class PmStudentsPage extends HTMLElement {
   private deleteModal: PmDeleteStudentModal | null = null;
   private deleteGuardianModal: PmDeleteGuardianModal | null = null;
   private withdrawEnrollmentModal: PmWithdrawEnrollmentModal | null = null;
+  private printRecord: PmStudentPrintRecord | null = null;
+  private _expandReads = new Map<string, number>();
+  private _expandReadCounter = 0;
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
   private _allStudents: StudentResult[] = [];
@@ -165,6 +183,7 @@ export class PmStudentsPage extends HTMLElement {
     this.withdrawEnrollmentModal = this.shadowRoot!.getElementById(
       'withdrawEnrollmentModal',
     ) as unknown as PmWithdrawEnrollmentModal;
+    this.printRecord = this.shadowRoot!.getElementById('printRecord') as unknown as PmStudentPrintRecord;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
@@ -176,6 +195,8 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('student-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.addEventListener('student-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.addEventListener('student-row-expanded', this.handleRowExpanded);
+    this.shadowRoot!.addEventListener('student-print-requested', this.handlePrintRequested);
+    window.addEventListener('afterprint', this.handleAfterPrint);
     this.shadowRoot!.addEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.addEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.addEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
@@ -211,6 +232,8 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('student-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.removeEventListener('student-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.removeEventListener('student-row-expanded', this.handleRowExpanded);
+    this.shadowRoot!.removeEventListener('student-print-requested', this.handlePrintRequested);
+    window.removeEventListener('afterprint', this.handleAfterPrint);
     this.shadowRoot!.removeEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.removeEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.removeEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
@@ -392,6 +415,8 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
+    const read = ++this._expandReadCounter;
+    this._expandReads.set(studentId, read);
     try {
       const [siblings, guardians, enrollments, extraCurriculars] = await Promise.all([
         getSiblings(studentId),
@@ -399,16 +424,32 @@ export class PmStudentsPage extends HTMLElement {
         getStudentCourses(studentId),
         getStudentExtraCurriculars(studentId),
       ]);
+      // A newer expansion of this row owns its summaries; a superseded read writes nothing.
+      if (this._expandReads.get(studentId) !== read) return;
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
       this.studentsTable!.setCoursesSummary(studentId, enrollments);
       this.studentsTable!.setExtraCurricularsSummary(studentId, extraCurriculars);
+      this.studentsTable!.markSummaryLoaded(studentId);
     } catch {
+      if (this._expandReads.get(studentId) !== read) return;
       this.studentsTable!.setSiblingsSummary(studentId, []);
       this.studentsTable!.setGuardiansSummary(studentId, []);
       this.studentsTable!.setCoursesSummary(studentId, []);
       this.studentsTable!.setExtraCurricularsSummary(studentId, []);
     }
+  };
+
+  private handlePrintRequested = (event: Event): void => {
+    const source = (event as CustomEvent<StudentRecordSource>).detail;
+    this.printRecord!.show(source, todayIsoDate());
+    this.toggleAttribute('printing', true);
+    window.print();
+  };
+
+  // The browser may return from print() before its dialog closes, so printing ends here.
+  private handleAfterPrint = (): void => {
+    this.toggleAttribute('printing', false);
   };
 
   private handleSiblingsTabActivated = async (event: Event): Promise<void> => {
@@ -772,6 +813,7 @@ export class PmStudentsPage extends HTMLElement {
       const relationships = await getGuardianRelationships();
       this.wizardModal!.guardianRelationships = relationships;
       this.studentsTable!.relationships = relationships;
+      this.printRecord!.relationships = relationships;
     } catch (err) {
       this.showError(err);
     }

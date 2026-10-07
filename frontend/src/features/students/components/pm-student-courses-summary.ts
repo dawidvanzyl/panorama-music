@@ -1,4 +1,4 @@
-import { enrollmentAssignment, enrollmentHeading } from './enrollment-options';
+import { enrolledLine, enrollmentAssignment, enrollmentHeading, NO_COURSE_ENROLLMENTS } from './enrollment-options';
 import type { EnrollmentResult } from '../services/enrollments';
 
 const styles = new CSSStyleSheet();
@@ -60,7 +60,7 @@ template.innerHTML = `
 
   <div class="summary__label">Courses</div>
   <ul class="summary__list" id="list" hidden></ul>
-  <p class="summary__empty" id="empty">No course enrollments.</p>
+  <p class="summary__empty" id="empty">${NO_COURSE_ENROLLMENTS}</p>
 `;
 
 export class PmStudentCoursesSummary extends HTMLElement {
@@ -119,7 +119,7 @@ export class PmStudentCoursesSummary extends HTMLElement {
 
     const enrolled = document.createElement('span');
     enrolled.classList.add('summary__item-enrolled');
-    enrolled.textContent = `Enrolled ${enrollment.enrolledDate}`;
+    enrolled.textContent = enrolledLine(enrollment);
     item.appendChild(enrolled);
 
     return item;
