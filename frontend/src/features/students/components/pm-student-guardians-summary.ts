@@ -99,7 +99,6 @@ export class PmStudentGuardiansSummary extends HTMLElement {
     this.render();
   }
 
-
   private render(): void {
     if (!this.list || !this.emptyMessage) return;
 
