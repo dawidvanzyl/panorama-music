@@ -178,7 +178,7 @@ test.describe('Students — closing the print dialog leaves the screen as it was
     const record = new StudentPrintRecordPage(page);
 
     expect(namesBefore).toEqual([`Ava ${token}`, `Ben ${token}`]);
-    await expect(page).toHaveURL(/#/students$/);
+    await expect(page).toHaveURL(/#\/students$/);
     await expect(studentsPage.filterNameInput).toHaveValue(token);
     await expect(studentsPage.filterGradeSelect).toHaveValue('Grade4');
     expect(await studentsPage.listedStudentNames().allTextContents()).toEqual(namesBefore);
