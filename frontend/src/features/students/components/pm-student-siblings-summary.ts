@@ -1,5 +1,5 @@
 import type { StudentResult } from '../services/students';
-import { gradeNumber } from './student-options';
+import { NO_SIBLINGS_LINKED, siblingLabel } from './student-options';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -45,7 +45,7 @@ template.innerHTML = `
 
   <div class="summary__label">Siblings</div>
   <ul class="summary__list" id="list" hidden></ul>
-  <p class="summary__empty" id="empty">No siblings linked.</p>
+  <p class="summary__empty" id="empty">${NO_SIBLINGS_LINKED}</p>
 `;
 
 export class PmStudentSiblingsSummary extends HTMLElement {
@@ -86,7 +86,7 @@ export class PmStudentSiblingsSummary extends HTMLElement {
     for (const sibling of this._siblings) {
       const item = document.createElement('li');
       item.classList.add('summary__item');
-      item.textContent = `${sibling.firstName} ${sibling.lastName} ${gradeNumber(sibling.grade)}${sibling.class ?? ''}`;
+      item.textContent = siblingLabel(sibling);
       this.list.appendChild(item);
     }
   }
