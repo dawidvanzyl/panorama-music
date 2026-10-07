@@ -439,8 +439,8 @@ test.describe('Printed record — an email that does not fit beside the cell mov
     const cell = '082 555 0142';
     const email = await emailFitting(page, {
       prefix: `nomsa.mokoena.${token}`,
-      domain: 'riverside.example.org',
-      emailMax: 320,
+      domain: 'school.example.org',
+      emailMax: 335,
       cell,
       pairMin: 365,
     });

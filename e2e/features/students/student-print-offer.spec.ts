@@ -273,7 +273,7 @@ test.describe('Students — Print is not offered in the wizard or on the waiting
     await expect(waitingListPage.rowFor('During School', entry.lastName)).toBeVisible();
     for (const label of ['During School', 'After School'] as const) {
       const header = waitingListPage.groupHeader(label);
-      if ((await header.getAttribute('data-expanded')) === 'false') {
+      if ((await header.count()) > 0 && (await header.getAttribute('data-expanded')) === 'false') {
         await waitingListPage.toggleGroup(label);
       }
     }
