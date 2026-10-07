@@ -1,6 +1,6 @@
 import type { GuardianRelationship } from '../services/guardians';
 import { NO_COURSE_ENROLLMENTS } from './enrollment-options';
-import { NO_GUARDIANS_LINKED } from './guardian-options';
+import { CONTACT_SEPARATOR, NO_GUARDIANS_LINKED } from './guardian-options';
 import {
   activitiesLine,
   COLUMN_GAP_PX,
@@ -21,7 +21,6 @@ import { NO_ACTIVITIES_ASSIGNED } from './extra-curricular-options';
 
 const BODY_FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const BODY_FONT = `13px ${BODY_FONT_FAMILY}`;
-const CONTACT_SEPARATOR = ' · ';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`

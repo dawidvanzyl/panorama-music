@@ -3,6 +3,9 @@ import { EM_DASH } from './enrollment-options';
 
 export const NO_GUARDIANS_LINKED = 'No guardians linked.';
 
+/** Joins a guardian's cell and email when they share a line. */
+export const CONTACT_SEPARATOR = ' · ';
+
 /** A guardian's name and how they relate to the student. */
 export function guardianHeading(guardian: GuardianResult, relationships: GuardianRelationship[]): string {
   const relationship =

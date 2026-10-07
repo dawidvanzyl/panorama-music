@@ -115,6 +115,7 @@ styles.replaceSync(`
       display: flex;
       justify-content: flex-end;
       padding: 12px 16px 0;
+      margin-bottom: 4px;
     }
     .students-table__summary-row[hidden] {
       display: none;

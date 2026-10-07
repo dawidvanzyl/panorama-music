@@ -1,5 +1,5 @@
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
-import { guardianFlags, guardianHeading, NO_GUARDIANS_LINKED } from './guardian-options';
+import { CONTACT_SEPARATOR, guardianFlags, guardianHeading, NO_GUARDIANS_LINKED } from './guardian-options';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -152,7 +152,7 @@ export class PmStudentGuardiansSummary extends HTMLElement {
     }
 
     if (guardian.email) {
-      if (guardian.cell) contact.appendChild(document.createTextNode(' · '));
+      if (guardian.cell) contact.appendChild(document.createTextNode(CONTACT_SEPARATOR));
 
       const email = document.createElement('a');
       email.classList.add('summary__item-email');
