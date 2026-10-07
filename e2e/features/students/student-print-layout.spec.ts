@@ -438,7 +438,7 @@ test.describe('Printed record — an email that does not fit beside the cell mov
     const studentId = await seedStudent(page, target, { firstName: 'Thandi', lastName: token });
     const cell = '082 555 0142';
     const email = await emailFitting(page, {
-      prefix: `nomsa.mokoena.${token}`,
+      prefix: `nomsa.${token}`,
       domain: 'school.example.org',
       emailMax: 335,
       cell,
