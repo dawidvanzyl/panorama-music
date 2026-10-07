@@ -181,7 +181,7 @@ test.describe('Students — closing the print dialog leaves the screen as it was
     await expect(page).toHaveURL(/#\/students$/);
     await expect(studentsPage.filterNameInput).toHaveValue(token);
     await expect(studentsPage.filterGradeSelect).toHaveValue('Grade4');
-    expect(await studentsPage.listedStudentNames().allTextContents()).toEqual(namesBefore);
+    await expect(studentsPage.listedStudentNames()).toHaveText(namesBefore);
     await expect(studentsPage.printButtonOf(firstId)).toBeVisible();
     expect(await readExtendedView(studentsPage)).toEqual(extendedBefore);
     await expect(record.record).toBeHidden();
