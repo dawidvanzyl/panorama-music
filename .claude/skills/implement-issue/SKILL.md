@@ -153,7 +153,9 @@ planner pass and `attempts.critique` before each critique.
 1. Spawn `planner` → `PLANNED`, writing `plan-dev-v{n}.md` and `plan-qa-v{n}.md`.
 2. Set `stage: critiquing`; spawn `plan-critique` against that version (resume it by
    name on later critiques). A critique always gets a fresh look at the plan, never
-   your summary of it.
+   your summary of it. The second critique in a round gets `prev_critique_file` and is
+   scoped to: the previous required changes landed, and the v(n-1)→v(n) diff. It does
+   not re-audit what the first critique cleared.
 3. `APPROVE` → go to *Questions*.
 4. `REVISE (n)` → resume the `planner` by name with `critique_file`. After the round's
    first critique, return to 2 with the new version. After the second, the new
@@ -301,7 +303,9 @@ with you rather than a label count.
 Then:
 
 - **Milestone story** — squash-merge into the milestone branch (never `master`, which
-  only a milestone branch reaches), record the merge in the manifest, and return to
+  only a milestone branch reaches) with `--subject "{PR title} (#{pr_number})"`, where
+  the PR title is `{issue_title} (#{issue_number})` per coding-standards §3 (state that
+  exact title in the developer brief), record the merge in the manifest, and return to
   `implement-milestone`.
 - **Standalone issue** — set `stage: awaiting-merge` and tell the owner in one line
   that PR #{pr_number} is ready to merge into `master`. **The owner merges; you never

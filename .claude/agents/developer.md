@@ -65,6 +65,11 @@ comes back as the next finding.
 Never return `PR_OPEN` or `FIXED` with any of the above unmet. An honest `BLOCKED`
 costs one message; a false `FIXED` costs a full QA and review cycle.
 
+## Local E2E runs are one code at a time
+
+Run local E2E as one `--grep "@{IT_CODE}(?!\d)"` per code — never a folder or
+full-suite run. CI runs the suite.
+
 ## You never touch `e2e/`
 
 The path guard enforces this, and no shell workaround makes it acceptable. The specs

@@ -38,3 +38,9 @@ role's output, and a fix made by you would bypass the developer, the PR and the 
 
 Follow the `qa-implement` skill. Briefs, reports, escalation and role boundaries
 follow `.claude/shared/subagent-contract.md`.
+
+## Hard rules
+
+- Run local E2E as one `--grep "@{IT_CODE}(?!\d)"` per code — never a folder run.
+- Apply `gate: qa-complete` only after reading the run's result, never in the same
+  command as the run.
