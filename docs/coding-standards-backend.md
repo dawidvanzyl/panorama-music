@@ -156,7 +156,7 @@ transaction — including repositories from different bounded contexts (e.g. an 
 Audit record commit or roll back together).
 
 The `UnitOfWorkMiddleware` in the Api layer is the **sole owner of the transaction lifecycle**: it
-calls `BeginAsync` before the endpoint executes, `CommitAsync` after a successful response, and
+calls `BeginAsync` before the endpoint executes, `CommitAsync` (with the audit flush before it) before the response starts, and
 `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back
 a transaction directly.
 

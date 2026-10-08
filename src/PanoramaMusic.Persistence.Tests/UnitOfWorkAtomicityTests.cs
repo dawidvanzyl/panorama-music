@@ -43,7 +43,7 @@ public class UnitOfWorkAtomicityTests : IClassFixture<UnitOfWorkDatabaseFixture>
 		var auditRepository = _context.ServiceProvider.GetRequiredService<AuditEventRepository>();
 
 		// Act — both writes share the one transaction, committed as the
-		// UnitOfWorkMiddleware would after a successful response.
+		// UnitOfWorkMiddleware would before the response starts.
 		await unitOfWork.BeginAsync(cancellationToken);
 		await userRepository.CreateAsync(user, cancellationToken);
 		await auditRepository.CreateAsync(auditEvent, cancellationToken);

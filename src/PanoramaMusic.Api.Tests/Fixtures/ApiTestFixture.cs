@@ -49,6 +49,10 @@ public sealed class ApiTestFixture : WebApplicationFactory<Program>, IAsyncLifet
 		Environment.SetEnvironmentVariable("JWT__AbsoluteSessionLifetimeDays", "30");
 		Environment.SetEnvironmentVariable("ASPNETCORE_WEBROOT", _webRoot);
 
+		// A RESET_DB=true leaked in from the shell would make every host a test derives
+		// wipe the shared test database when it starts.
+		Environment.SetEnvironmentVariable("RESET_DB", "false");
+
 		// Smaller account limit than the IP limit lets tests trip the account-keyed
 		// bucket deterministically while the IP-keyed bucket still has headroom.
 		Environment.SetEnvironmentVariable("RateLimiting__Auth__IpPermitLimit", "10");
