@@ -108,3 +108,50 @@ describe('pm-student-step: non-Private grade requires class/phase', { tags: ['20
     expect(step.getValues().phase).toBe('Junior');
   });
 });
+
+describe('pm-student-step: showing a phase conflict', { tags: ['345UC6'] }, () => {
+  const conflict = 'The conflict sentence.';
+
+  it('shows the message and outlines the Phase select', () => {
+    const step = mountStep();
+    step.reset();
+
+    step.showPhaseConflict(conflict);
+
+    const message = step.shadowRoot!.getElementById('message') as HTMLElement;
+    expect(message.textContent).toBe(conflict);
+    expect(message.classList.contains('student-step__message--error')).toBe(true);
+    expect(phaseSelect(step).classList.contains('student-step__select--error')).toBe(true);
+  });
+
+  it('clears the message and the outline on clearError', () => {
+    const step = mountStep();
+    step.reset();
+    step.showPhaseConflict(conflict);
+
+    step.clearError();
+
+    expect((step.shadowRoot!.getElementById('message') as HTMLElement).textContent).toBe('');
+    expect(phaseSelect(step).classList.contains('student-step__select--error')).toBe(false);
+  });
+
+  it('clears the message and the outline when values are set', () => {
+    const step = mountStep();
+    step.reset();
+    step.showPhaseConflict(conflict);
+
+    step.setValues({
+      studentId: 's1',
+      firstName: 'Alice',
+      lastName: 'Vance',
+      dateOfBirth: '2014-05-12',
+      grade: 'Grade4',
+      class: 'A1',
+      phase: 'Junior',
+      language: 'English',
+    });
+
+    expect((step.shadowRoot!.getElementById('message') as HTMLElement).textContent).toBe('');
+    expect(phaseSelect(step).classList.contains('student-step__select--error')).toBe(false);
+  });
+});

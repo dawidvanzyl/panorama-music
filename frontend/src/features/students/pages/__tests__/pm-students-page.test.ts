@@ -2150,3 +2150,103 @@ describe(
     );
   },
 );
+
+function requestEdit(el: HTMLElement, student: StudentResult): void {
+  el.shadowRoot!.dispatchEvent(
+    new CustomEvent('student-edit-requested', { bubbles: true, composed: true, detail: { student } }),
+  );
+}
+
+function chooseSeniorPhase(wizard: PmStudentWizardModal): void {
+  const phaseSelect = wizard
+    .shadowRoot!.getElementById('studentStep')!
+    .shadowRoot!.getElementById('phase') as HTMLSelectElement;
+  phaseSelect.value = 'Senior';
+  phaseSelect.dispatchEvent(new Event('change'));
+}
+
+describe(
+  'pm-students-page — editing a student whose phase disagrees with a held activity',
+  { tags: ['345UC6'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      vi.mocked(getStudentExtraCurriculars).mockReset();
+      vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    it('reads the held activities before the wizard opens and refuses a Save that changes the phase', async () => {
+      requestEdit(el, alice);
+      await flush();
+
+      const wizard = wizardModalOf(el);
+      expect(vi.mocked(getStudentExtraCurriculars)).toHaveBeenCalledWith('s1');
+      expect(wizard.hasAttribute('open')).toBe(true);
+
+      chooseSeniorPhase(wizard);
+      (wizard.shadowRoot!.getElementById('studentSaveBtn') as HTMLButtonElement).click();
+      await flush();
+
+      expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+      expect(studentStepMessageOf(wizard).textContent).toContain('Remove the Junior extra-curricular (Choir)');
+    });
+
+    it('does not open the wizard and shows the page error when the activities cannot be read', async () => {
+      vi.mocked(getStudentExtraCurriculars).mockRejectedValue(new Error('activities unavailable'));
+
+      requestEdit(el, alice);
+      await flush();
+
+      expect(wizardModalOf(el).hasAttribute('open')).toBe(false);
+      expect(el.shadowRoot!.textContent).toContain('An unexpected error occurred');
+    });
+  },
+);
+
+describe('pm-students-page — saving once the conflicting activity is removed', { tags: ['345UC8'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    vi.mocked(getStudentExtraCurriculars).mockReset();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+    vi.mocked(removeExtraCurricular).mockReset();
+    vi.mocked(removeExtraCurricular).mockResolvedValue(undefined);
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('requests the update after the activity is removed from the Extra-Curriculars tab', async () => {
+    vi.mocked(updateStudent).mockResolvedValue({ ...alice, phase: 'Senior' });
+    requestEdit(el, alice);
+    await flush();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    (wizardShadow.getElementById('tabCourses') as HTMLButtonElement).click();
+    await flush();
+
+    chooseSeniorPhase(wizard);
+    (wizardShadow.getElementById('studentSaveBtn') as HTMLButtonElement).click();
+    expect(vi.mocked(updateStudent)).not.toHaveBeenCalled();
+
+    (wizardShadow.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
+    (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+    await flush();
+    (wizardShadow.getElementById('tabStudent') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('studentSaveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(updateStudent)).toHaveBeenCalledWith('s1', expect.objectContaining({ phase: 'Senior' }));
+  });
+});

@@ -44,6 +44,9 @@ styles.replaceSync(`
       color: var(--pm-text);
       font-size: 14px;
     }
+    .student-step__select--error {
+      border-color: var(--pm-danger);
+    }
     .student-step__message {
       margin-top: 16px;
       padding: 12px 16px;
@@ -235,7 +238,13 @@ export class PmStudentStep extends HTMLElement {
     this.message!.classList.add('student-step__message--error');
   }
 
+  showPhaseConflict(message: string): void {
+    this.showError(message);
+    this.phaseSelect!.classList.add('student-step__select--error');
+  }
+
   clearError(): void {
+    this.phaseSelect!.classList.remove('student-step__select--error');
     this.message!.textContent = '';
     this.message!.className = 'student-step__message';
   }

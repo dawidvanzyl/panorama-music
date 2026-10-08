@@ -810,3 +810,122 @@ describe(
     });
   },
 );
+
+const juniorChoir = {
+  extraCurricularId: 'ec1',
+  description: 'Choir',
+  phase: 'Junior' as const,
+  practiceTimes: [{ practiceTimeId: 'pt1', day: 'Tuesday' as const, startTime: '14:30:00' }],
+};
+
+const PHASE_CONFLICT_ON_CHOIR =
+  "The student's phase must match the phase of their extra-curriculars. Remove the Junior extra-curricular (Choir) before changing the phase to Senior.";
+
+function studentStepMessage(): HTMLElement {
+  return byId('studentStep').shadowRoot!.getElementById('message') as HTMLElement;
+}
+
+function studentStepPhaseSelect(): HTMLSelectElement {
+  return byId('studentStep').shadowRoot!.getElementById('phase') as HTMLSelectElement;
+}
+
+function openEditHoldingChoirAndChooseSenior(): CustomEvent[] {
+  mountModal();
+  modal.openForEdit(alice);
+  modal.extraCurriculars = [juniorChoir];
+  choosePhase('Senior');
+  const updates: CustomEvent[] = [];
+  modal.addEventListener('student-update-requested', (event) => updates.push(event as CustomEvent));
+  return updates;
+}
+
+describe(
+  'pm-student-wizard-modal — saving an edited student whose phase disagrees with a held activity',
+  { tags: ['345UC6'] },
+  () => {
+    it('requests no update and names the conflict on the Student step', () => {
+      const updates = openEditHoldingChoirAndChooseSenior();
+
+      byId<HTMLButtonElement>('studentSaveBtn').click();
+
+      expect(updates).toEqual([]);
+      expect(studentStepMessage().textContent).toBe(PHASE_CONFLICT_ON_CHOIR);
+      expect(studentStepMessage().classList.contains('student-step__message--error')).toBe(true);
+      expect(studentStepPhaseSelect().classList.contains('student-step__select--error')).toBe(true);
+      expect(byId<HTMLButtonElement>('studentSaveBtn').disabled).toBe(false);
+    });
+
+    it('keeps the held activity in the Extra-Curriculars step', () => {
+      openEditHoldingChoirAndChooseSenior();
+
+      byId<HTMLButtonElement>('studentSaveBtn').click();
+
+      expect(modal.pendingExtraCurricularIds).toEqual(['ec1']);
+    });
+
+    it('requests the update when the phase agrees with the held activity', () => {
+      const updates = openEditHoldingChoirAndChooseSenior();
+      choosePhase('Junior');
+
+      byId<HTMLButtonElement>('studentSaveBtn').click();
+
+      expect(updates.map((update) => update.detail.input.phase)).toEqual(['Junior']);
+    });
+  },
+);
+
+describe(
+  'pm-student-wizard-modal — saving a new student whose phase disagrees with a staged activity',
+  { tags: ['345UC7'] },
+  () => {
+    function stageChoirThenChooseSenior(): CustomEvent[] {
+      mountModal();
+      modal.openForCreate([]);
+      fillStudentStep();
+      advanceToFinalStep();
+      stageChoir();
+      byId<HTMLButtonElement>('tabStudent').click();
+      choosePhase('Senior');
+      advanceToFinalStep();
+      const creates: CustomEvent[] = [];
+      modal.addEventListener('student-create-requested', (event) => creates.push(event as CustomEvent));
+      return creates;
+    }
+
+    it('requests no create, returns to the Student step and states the conflict', () => {
+      const creates = stageChoirThenChooseSenior();
+
+      byId<HTMLButtonElement>('saveBtn').click();
+
+      expect(creates).toEqual([]);
+      expect(byId('tabStudent').getAttribute('aria-selected')).toBe('true');
+      expect(studentStepMessage().textContent).toBe(PHASE_CONFLICT_ON_CHOIR);
+      expect(modal.pendingExtraCurricularIds).toEqual(['ec1']);
+    });
+
+    it('requests the create when the phase is set back to the staged activity phase', () => {
+      const creates = stageChoirThenChooseSenior();
+      byId<HTMLButtonElement>('saveBtn').click();
+
+      choosePhase('Junior');
+      advanceToFinalStep();
+      byId<HTMLButtonElement>('saveBtn').click();
+
+      expect(creates).toHaveLength(1);
+    });
+  },
+);
+
+describe('pm-student-wizard-modal — saving once the conflicting activity is removed', { tags: ['345UC8'] }, () => {
+  it('requests the update and clears the conflict', () => {
+    const updates = openEditHoldingChoirAndChooseSenior();
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+
+    modal.extraCurriculars = [];
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+
+    expect(updates.map((update) => update.detail.input.phase)).toEqual(['Senior']);
+    expect(studentStepMessage().textContent).toBe('');
+    expect(studentStepPhaseSelect().classList.contains('student-step__select--error')).toBe(false);
+  });
+});

@@ -54,6 +54,7 @@ import {
   removeExtraCurricular,
   StudentExtraCurricularsError,
   type PhaseType,
+  type StudentExtraCurricular,
 } from '../services/student-extra-curriculars';
 import { courseLabel, todayIsoDate } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
@@ -378,9 +379,19 @@ export class PmStudentsPage extends HTMLElement {
     }
   }
 
-  private handleEditRequested = (event: Event): void => {
+  private handleEditRequested = async (event: Event): Promise<void> => {
     const { student } = (event as CustomEvent<{ student: StudentResult }>).detail;
-    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForEdit(student));
+    let held: StudentExtraCurricular[];
+    try {
+      held = await getStudentExtraCurriculars(student.studentId);
+    } catch (err) {
+      this.showError(err);
+      return;
+    }
+    this.openWizardWhenGuardianRelationshipsReady(() => {
+      this.wizardModal!.openForEdit(student);
+      this.wizardModal!.extraCurriculars = held;
+    });
   };
 
   private handleUpdateRequested = async (event: Event): Promise<void> => {
