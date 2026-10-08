@@ -385,6 +385,11 @@ export class PmExtraCurricularsStep extends HTMLElement {
     return this._assigned.map((activity) => activity.extraCurricularId);
   }
 
+  /** The activities this step lists: staged in create mode, held in edit mode. */
+  get heldExtraCurriculars(): readonly StudentExtraCurricular[] {
+    return this._assigned;
+  }
+
   /** Whether the create wizard has any activity staged. */
   get hasPendingExtraCurriculars(): boolean {
     return this._assigned.length > 0;

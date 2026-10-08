@@ -4,10 +4,13 @@ using PanoramaMusic.Students.Application.Models;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
+using PanoramaMusic.Students.Domain.ValueObjects;
 
 namespace PanoramaMusic.Students.Application.Handlers.Students;
 
-public sealed class UpdateStudentHandler(IStudentRepository studentRepository)
+public sealed class UpdateStudentHandler(
+	IStudentRepository studentRepository,
+	IStudentExtraCurricularRepository studentExtraCurricularRepository)
 {
 	public async Task<StudentResult> HandleAsync(UpdateStudentCommand command, CancellationToken cancellationToken)
 	{
@@ -15,6 +18,12 @@ public sealed class UpdateStudentHandler(IStudentRepository studentRepository)
 			?? throw new EntityNotFoundException($"Student {command.StudentId} was not found.");
 
 		var request = command.Request;
+
+		if (request.Phase is { } phase)
+		{
+			var assignments = await studentExtraCurricularRepository.GetByStudentIdAsync(student.StudentId, cancellationToken);
+			new HeldExtraCurriculars([.. assignments]).EnsureAgreesWith(phase);
+		}
 
 		student.Update(
 			request.FirstName,

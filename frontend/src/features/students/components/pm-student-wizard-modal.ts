@@ -6,6 +6,7 @@ import './pm-extra-curriculars-step';
 import './pm-waiting-list-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { COURSE_OR_EXTRA_CURRICULAR_TO_SAVE } from './course-or-extra-curricular';
+import { phaseConflictMessage } from './phase-agreement';
 import type { SiblingStudentResult, StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
@@ -833,6 +834,19 @@ export class PmStudentWizardModal extends HTMLElement {
       const step = finalStep === 'extraCurriculars' ? this.extraCurricularsStep! : this.coursesStep!;
       step.showError(COURSE_OR_EXTRA_CURRICULAR_TO_SAVE);
       return;
+    }
+
+    if (this._wizardMode === 'enrolled') {
+      const conflict = phaseConflictMessage(
+        this.studentStep!.getValues().phase,
+        this.extraCurricularsStep!.heldExtraCurriculars,
+      );
+      if (conflict) {
+        this.goToStep('student');
+        this.studentStep!.showPhaseConflict(conflict);
+        return;
+      }
+      this.studentStep!.clearError();
     }
 
     const input = this.studentStep!.getValues();

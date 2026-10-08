@@ -348,6 +348,9 @@ export default defineConfig({
       { name: '346UC9', description: 'Sections with nothing to print show the extended view empty states' },
       { name: '346UC10', description: 'Guardians print in two columns when every email fits one column' },
       { name: '346UC11', description: 'Guardians print in one column when any email is wider than a column' },
+      { name: '345UC6', description: 'Saving an edited student whose phase disagrees with a held activity requests no update and names the conflict on the Student step' },
+      { name: '345UC7', description: 'Saving a new student whose phase disagrees with a staged activity requests no create and states the conflict' },
+      { name: '345UC8', description: 'Once the conflicting activity is removed, Save requests the update' },
     ],
   },
 })
