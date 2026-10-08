@@ -207,6 +207,44 @@ export class StudentsPage extends BasePage {
     await this.wizardModal.locator('#studentSaveBtn').click();
   }
 
+  /** The wizard's Student step. */
+  studentStep(): Locator {
+    return this.wizardModal.locator('#studentStep');
+  }
+
+  /** The Student step's Phase select. */
+  phaseSelect(): Locator {
+    return this.studentStep().locator('#phase');
+  }
+
+  /** The Student step's message banner, where a refusal is stated. */
+  studentStepMessage(): Locator {
+    return this.studentStep().locator('#message');
+  }
+
+  /** Opens the Edit wizard for `name` and waits until the Student step shows the stored record. */
+  async openEditWizard(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await expect(this.wizardModal).toHaveAttribute('open', '');
+    await expect(this.studentStep().locator('#lastName')).toHaveValue(name);
+  }
+
+  /** Changes the named Student step fields and leaves the rest as they are, without saving. */
+  async changeStudentFields(changes: Partial<StudentInput>): Promise<void> {
+    await this.fillStudentFields(changes);
+  }
+
+  /** Presses the Edit wizard's Save on the Student step. */
+  async saveEditedStudent(): Promise<void> {
+    await this.wizardModal.locator('#studentSaveBtn').click();
+  }
+
+  /** The cell under `header` (Grade or Phase) on the roster row for `name`. */
+  rosterCell(name: string, header: 'Grade' | 'Phase'): Locator {
+    const index = header === 'Grade' ? 2 : 3;
+    return this.row(name).first().locator('td').nth(index);
+  }
+
   private async fillStudentFields(changes: Partial<StudentInput>): Promise<void> {
     const step = this.wizardModal.locator('#studentStep');
     if (changes.firstName) await step.locator('#firstName').fill(changes.firstName);
