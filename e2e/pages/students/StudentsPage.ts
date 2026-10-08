@@ -306,7 +306,7 @@ export class StudentsPage extends BasePage {
 
   /** The roster's own empty-state message. */
   emptyRosterMessage(): Locator {
-    return this.page.locator('pm-students-table').locator('#empty');
+    return this.page.locator('pm-students-table').locator('.students-table__empty');
   }
 
   async clearFilters(): Promise<void> {
