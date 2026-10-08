@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PanoramaMusic.Api.Tests.Fixtures;
@@ -31,6 +32,8 @@ public sealed class UnitOfWorkCommitFailureTests(ApiTestFixture fixture)
 		await using var factory = fixture.WithWebHostBuilder(builder =>
 		{
 			builder.UseUrls("http://127.0.0.1:0");
+			builder.ConfigureAppConfiguration((_, configuration) =>
+				configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["RESET_DB"] = "false" }));
 			builder.ConfigureServices(services =>
 			{
 				services.AddHttpContextAccessor();
