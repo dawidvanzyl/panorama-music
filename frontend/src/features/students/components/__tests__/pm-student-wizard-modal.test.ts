@@ -863,6 +863,20 @@ describe(
       expect(modal.pendingExtraCurricularIds).toEqual(['ec1']);
     });
 
+    it('does not apply the rule to a waiting-list student', () => {
+      mountModal();
+      modal.lessonStructures = [individualHourDuringSchool];
+      modal.openForWaitingListEdit(alice, amaraEntry);
+      modal.extraCurriculars = [juniorChoir];
+      choosePhase('Senior');
+      const updates: CustomEvent[] = [];
+      modal.addEventListener('student-update-requested', (event) => updates.push(event as CustomEvent));
+
+      byId<HTMLButtonElement>('studentSaveBtn').click();
+
+      expect(updates).toHaveLength(1);
+    });
+
     it('requests the update when the phase agrees with the held activity', () => {
       const updates = openEditHoldingChoirAndChooseSenior();
       choosePhase('Junior');

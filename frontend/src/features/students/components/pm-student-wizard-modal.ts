@@ -836,16 +836,18 @@ export class PmStudentWizardModal extends HTMLElement {
       return;
     }
 
-    const conflict = phaseConflictMessage(
-      this.studentStep!.getValues().phase,
-      this.extraCurricularsStep!.heldExtraCurriculars,
-    );
-    if (conflict) {
-      this.goToStep('student');
-      this.studentStep!.showPhaseConflict(conflict);
-      return;
+    if (this._wizardMode === 'enrolled') {
+      const conflict = phaseConflictMessage(
+        this.studentStep!.getValues().phase,
+        this.extraCurricularsStep!.heldExtraCurriculars,
+      );
+      if (conflict) {
+        this.goToStep('student');
+        this.studentStep!.showPhaseConflict(conflict);
+        return;
+      }
+      this.studentStep!.clearError();
     }
-    this.studentStep!.clearError();
 
     const input = this.studentStep!.getValues();
     this.saveBtn!.disabled = true;
