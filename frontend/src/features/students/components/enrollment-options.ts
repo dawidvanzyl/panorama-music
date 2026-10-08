@@ -54,13 +54,37 @@ export const EM_DASH = '—';
  * course this way, so the label is taken from the parts they have in common.
  */
 export function courseLabel(course: EnrollableCourse | EnrollmentResult): string {
+  return withLessonStructure(COURSE_TYPE_LABELS[course.courseType], course);
+}
+
+function withLessonStructure(lead: string, course: EnrollableCourse | EnrollmentResult): string {
   return [
-    COURSE_TYPE_LABELS[course.courseType],
+    lead,
     LESSON_TYPE_LABELS[course.lessonType],
     DURATION_TYPE_LABELS[course.durationType],
     OCCURRENCE_TYPE_LABELS[course.occurrenceType],
   ].join(' · ');
 }
+
+/** An instrument enrollment is named by its instrument; every other course by its type. */
+export function enrollmentHeading(enrollment: EnrollmentResult): string {
+  if (recordsInstrumentType(enrollment.courseType) && enrollment.instrumentType) {
+    return withLessonStructure(INSTRUMENT_TYPE_LABELS[enrollment.instrumentType], enrollment);
+  }
+  return courseLabel(enrollment);
+}
+
+export function enrollmentAssignment(enrollment: EnrollmentResult): string {
+  return [teacherLabel(enrollment), enrollment.stepType ? `Step ${STEP_TYPE_LABELS[enrollment.stepType]}` : '']
+    .filter((part) => part !== '')
+    .join(' · ');
+}
+
+export function enrolledLine(enrollment: EnrollmentResult): string {
+  return `Enrolled ${enrollment.enrolledDate}`;
+}
+
+export const NO_COURSE_ENROLLMENTS = 'No course enrollments.';
 
 export function teacherLabel(enrollment: EnrollmentResult): string {
   return `${enrollment.teacherFirstName} ${enrollment.teacherSurname}`.trim();

@@ -54,6 +54,7 @@ export class StudentsPage extends BasePage {
   readonly filterGradeSelect: Locator;
   readonly filterPhaseSelect: Locator;
   readonly filterClassSelect: Locator;
+  readonly filterTeacherSelect: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -65,6 +66,7 @@ export class StudentsPage extends BasePage {
     this.filterGradeSelect = page.locator('#filterBar').locator('#grade');
     this.filterPhaseSelect = page.locator('#filterBar').locator('#phase');
     this.filterClassSelect = page.locator('#filterBar').locator('#class');
+    this.filterTeacherSelect = page.locator('#filterBar').locator('#teacher');
   }
 
   async gotoStudents(): Promise<void> {
@@ -83,18 +85,13 @@ export class StudentsPage extends BasePage {
    * it carries Save, and Courses only offers Next — so all four Next clicks
    * are required.
    *
-   * A Private-grade student has no Extra-Curriculars step at all:
-   * Courses is their final step and carries Save directly, so only three
-   * Next clicks happen and `activityOptionLabels` is meaningless for them —
-   * passing any is a caller error, not something this silently tolerates.
-   *
-   * A student must be enrolled in at least one course, so the Courses tab
-   * always stages one. Callers that do not care which pass no `enrollment` and
+   * A student must hold at least one course or one extra-curricular, so this
+   * helper always stages a course on the Courses tab. Callers that do not care which pass no `enrollment` and
    * get the first course and teacher on offer.
    *
    * `activityOptionLabels` stages zero or more activities on the
    * Extra-Curriculars step before Save — each one is the picker's option
-   * label, which is the activity's description alone. Staging in create mode
+   * label, `{description} ({phase})`. Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
    * through identical UI mechanics.
@@ -104,21 +101,12 @@ export class StudentsPage extends BasePage {
     enrollment?: EnrollmentInput,
     activityOptionLabels: string[] = [],
   ): Promise<void> {
-    const isPrivate = input.grade === 'Private';
-    if (isPrivate && activityOptionLabels.length > 0) {
-      throw new Error('A Private-grade student has no Extra-Curriculars step to stage activities on.');
-    }
-
     await this.createButton.click();
     await this.fillStudentFields(input);
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.wizardModal.locator('#nextBtn').click();
     await this.enrollInCourse(enrollment);
-    if (isPrivate) {
-      await this.wizardModal.locator('#saveBtn').click();
-      return;
-    }
     await this.wizardModal.locator('#nextBtn').click();
     for (const optionLabel of activityOptionLabels) {
       await this.assignActivity(optionLabel);
@@ -140,6 +128,31 @@ export class StudentsPage extends BasePage {
   /** Advances the create wizard by one Next click. */
   async goToNextStep(): Promise<void> {
     await this.wizardModal.locator('#nextBtn').click();
+  }
+
+  /** Steps the create wizard back by one Previous click. */
+  async goToPreviousStep(): Promise<void> {
+    await this.wizardModal.locator('#previousBtn').click();
+  }
+
+  /** Changes the grade on the Student step, leaving the rest of the form as it is. */
+  async setGrade(grade: Grade): Promise<void> {
+    await this.wizardModal.locator('#studentStep').locator('#grade').selectOption(grade);
+  }
+
+  /**
+   * Steps the create wizard from the Student step to Extra-Curriculars without
+   * staging anything on the way, for a scenario that stages no course.
+   */
+  async advanceToExtraCurriculars(): Promise<void> {
+    for (let step = 0; step < 4; step++) {
+      await this.goToNextStep();
+    }
+  }
+
+  /** Removes a staged (create-mode) enrollment from the Courses list, without a confirmation. */
+  async removeStagedEnrollment(courseLabel: string): Promise<void> {
+    await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--remove').click();
   }
 
   /** Presses Save on the create wizard's final step (Extra-Curriculars). */
@@ -196,6 +209,44 @@ export class StudentsPage extends BasePage {
     await this.wizardModal.locator('#studentSaveBtn').click();
   }
 
+  /** The wizard's Student step. */
+  studentStep(): Locator {
+    return this.wizardModal.locator('#studentStep');
+  }
+
+  /** The Student step's Phase select. */
+  phaseSelect(): Locator {
+    return this.studentStep().locator('#phase');
+  }
+
+  /** The Student step's message banner, where a refusal is stated. */
+  studentStepMessage(): Locator {
+    return this.studentStep().locator('#message');
+  }
+
+  /** Opens the Edit wizard for `name` and waits until the Student step shows the stored record. */
+  async openEditWizard(name: string): Promise<void> {
+    await this.row(name).locator('.students-table__btn--edit').click();
+    await expect(this.wizardModal).toHaveAttribute('open', '');
+    await expect(this.studentStep().locator('#lastName')).toHaveValue(name);
+  }
+
+  /** Changes the named Student step fields and leaves the rest as they are, without saving. */
+  async changeStudentFields(changes: Partial<StudentInput>): Promise<void> {
+    await this.fillStudentFields(changes);
+  }
+
+  /** Presses the Edit wizard's Save on the Student step. */
+  async saveEditedStudent(): Promise<void> {
+    await this.wizardModal.locator('#studentSaveBtn').click();
+  }
+
+  /** The cell under `header` (Grade or Phase) on the roster row for `name`. */
+  rosterCell(name: string, header: 'Grade' | 'Phase'): Locator {
+    const index = header === 'Grade' ? 2 : 3;
+    return this.row(name).first().locator('td').nth(index);
+  }
+
   private async fillStudentFields(changes: Partial<StudentInput>): Promise<void> {
     const step = this.wizardModal.locator('#studentStep');
     if (changes.firstName) await step.locator('#firstName').fill(changes.firstName);
@@ -215,11 +266,55 @@ export class StudentsPage extends BasePage {
     await this.filterNameInput.fill(name);
   }
 
+  async filterByPhase(phase: Phase | ''): Promise<void> {
+    await this.filterPhaseSelect.selectOption(phase);
+  }
+
+  async filterByClass(studentClass: StudentClass | ''): Promise<void> {
+    await this.filterClassSelect.selectOption(studentClass);
+  }
+
+  /** Chooses a teacher by the option's label (`{firstName} {surname}`), or All Teachers for ''. */
+  async filterByTeacher(teacherName: string): Promise<void> {
+    if (teacherName === '') {
+      await this.filterTeacherSelect.selectOption('');
+      return;
+    }
+    await this.filterTeacherSelect.selectOption({ label: teacherName });
+  }
+
+  /** The Teacher filter's option labels, in listed order. */
+  async teacherOptionTexts(): Promise<string[]> {
+    return this.filterTeacherSelect.locator('option').allTextContents();
+  }
+
+  /** The text of a filter select's selected option. */
+  async selectedOptionText(select: Locator): Promise<string> {
+    return select.evaluate((el) => {
+      const element = el as HTMLSelectElement;
+      return element.options[element.selectedIndex]?.text ?? '';
+    });
+  }
+
+  /** The ids of the filter bar's controls, in the order they sit in the card. */
+  async filterControlOrder(): Promise<string[]> {
+    return this.page
+      .locator('#filterBar')
+      .locator('.filter-bar__card')
+      .evaluate((card) => Array.from(card.children).map((child) => child.id));
+  }
+
+  /** The roster's own empty-state message. */
+  emptyRosterMessage(): Locator {
+    return this.page.locator('pm-students-table').locator('.students-table__empty');
+  }
+
   async clearFilters(): Promise<void> {
     await this.filterNameInput.fill('');
     await this.filterGradeSelect.selectOption('');
     await this.filterPhaseSelect.selectOption('');
     await this.filterClassSelect.selectOption('');
+    await this.filterTeacherSelect.selectOption('');
   }
 
   async deleteStudent(name: string): Promise<void> {
@@ -386,8 +481,8 @@ export class StudentsPage extends BasePage {
 
   /**
    * Withdraws the student from the named course. Confirmation is offered only
-   * while the student holds another enrollment; on their last one the tab states
-   * the requirement instead, so callers testing that path pass `confirm: false`.
+   * while the student holds another enrollment or an extra-curricular; otherwise
+   * the tab states the requirement instead, so callers testing that path pass `confirm: false`.
    */
   async withdrawEnrollment(courseLabel: string, confirm = true): Promise<void> {
     await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--withdraw').click();
@@ -400,7 +495,7 @@ export class StudentsPage extends BasePage {
     return this.page.locator('#withdrawEnrollmentModal');
   }
 
-  /** The Courses step's own message area, where the at-least-one-course requirement is stated. */
+  /** The Courses step's own message area, where the course-or-extra-curricular requirement is stated. */
   coursesStepMessage(): Locator {
     return this.wizardModal.locator('#coursesStep').locator('#message');
   }
@@ -412,8 +507,8 @@ export class StudentsPage extends BasePage {
 
   /**
    * Read-only extra-curriculars summary for the currently-expanded row (same
-   * scoping rule as siblings). Absent entirely for a Private-grade student
-   * (#278's addendum) — it is never rendered for them, not merely empty.
+   * scoping rule as siblings). Rendered for a Private-grade student exactly as
+   * for a graded one.
    */
   visibleExtraCurricularsSummary(): Locator {
     return this.page.locator('pm-student-extra-curriculars-summary:visible');
@@ -630,17 +725,28 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * The Add Activity panel's picker. Options read the activity's description
-   * alone — a student is assigned to an activity, never to one of its
-   * practice times, so no slot is named.
+   * The Add Activity panel's picker. Options read `{description} ({phase})` —
+   * a student is assigned to an activity, never to one of its practice
+   * times, so no slot is named.
    */
   activityPicker(): Locator {
     return this.extraCurricularsStep().locator('#activitySelect');
   }
 
-  /** The panel's disabled, non-editable field showing the student's own phase. */
-  activityPanelPhaseField(): Locator {
-    return this.extraCurricularsStep().locator('#phaseField');
+  /** The phase note shown while the picker is limited to the student's own phase. */
+  activityPhaseNote(): Locator {
+    return this.extraCurricularsStep().locator('#note');
+  }
+
+  /** The text of every option the picker currently offers. */
+  async activityOptionTexts(): Promise<string[]> {
+    const texts = await this.activityPicker().locator('option').allTextContents();
+    return texts.map((text) => text.trim());
+  }
+
+  /** Any control or label in the Add Activity panel named "Phase". */
+  activityPanelPhaseControl(): Locator {
+    return this.extraCurricularsStep().locator('#panel').getByLabel('Phase', { exact: true });
   }
 
   /**
@@ -685,5 +791,26 @@ export class StudentsPage extends BasePage {
   /** The Extra-Curriculars step's own message area, where a refusal is shown. */
   extraCurricularsStepMessage(): Locator {
     return this.extraCurricularsStep().locator('#message');
+  }
+
+  /** The summary row that follows a student's roster row, found by the student's id. */
+  summaryRowOf(studentId: string): Locator {
+    return this.page.locator(`pm-students-table tr.students-table__summary-row[data-student-id="${studentId}"]`);
+  }
+
+  /** Every Print control the screen offers, wherever it sits. */
+  anyPrintButton(): Locator {
+    return this.page.getByRole('button', { name: 'Print', exact: true });
+  }
+
+  /** The Print control inside one student's expanded area. */
+  printButtonOf(studentId: string): Locator {
+    return this.summaryRowOf(studentId).locator('.students-table__btn--print');
+  }
+
+  /** Expands the row and waits until its four reads have succeeded and Print is offered. */
+  async expandUntilPrintOffered(name: string, studentId: string): Promise<void> {
+    await this.toggleRowExpanded(name);
+    await expect(this.printButtonOf(studentId)).toBeVisible();
   }
 }

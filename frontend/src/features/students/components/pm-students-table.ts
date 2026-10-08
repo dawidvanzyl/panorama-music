@@ -11,6 +11,7 @@ import type { PmStudentGuardiansSummary } from './pm-student-guardians-summary';
 import type { PmStudentCoursesSummary } from './pm-student-courses-summary';
 import type { PmStudentExtraCurricularsSummary } from './pm-student-extra-curriculars-summary';
 import { gradeLabel } from './student-options';
+import type { StudentRecordSource } from './student-record';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -72,12 +73,14 @@ styles.replaceSync(`
       padding: 6px 12px;
       cursor: pointer;
     }
-    .students-table__btn--edit {
+    .students-table__btn--edit,
+    .students-table__btn--print {
       background: transparent;
       border: 1px solid var(--pm-accent);
       color: var(--pm-accent);
     }
-    .students-table__btn--edit:hover {
+    .students-table__btn--edit:hover,
+    .students-table__btn--print:hover {
       background: rgba(79, 124, 255, 0.1);
     }
     .students-table__btn--delete {
@@ -107,6 +110,12 @@ styles.replaceSync(`
       display: flex;
       flex-direction: column;
       gap: 4px;
+    }
+    .students-table__summary-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 16px 0;
+      margin-bottom: 4px;
     }
     .students-table__summary-row[hidden] {
       display: none;
@@ -171,6 +180,8 @@ export class PmStudentsTable extends HTMLElement {
   private _extraCurricularsCache = new Map<string, StudentExtraCurricular[]>();
   private _extraCurricularsSummaryComponents = new Map<string, PmStudentExtraCurricularsSummary>();
   private _relationships: GuardianRelationship[] = [];
+  private _summaryLoadedIds = new Set<string>();
+  private _summaryCells = new Map<string, HTMLTableCellElement>();
 
   constructor() {
     super();
@@ -211,11 +222,6 @@ export class PmStudentsTable extends HTMLElement {
     if (component) component.guardians = guardians;
   }
 
-  /**
-   * A Private-grade student has no summary component at all, so this is a no-op
-   * for them — the cache entry is still kept, which costs nothing and keeps the
-   * caller from having to know the rule.
-   */
   setExtraCurricularsSummary(studentId: string, extraCurriculars: StudentExtraCurricular[]): void {
     this._extraCurricularsCache.set(studentId, extraCurriculars);
     const component = this._extraCurricularsSummaryComponents.get(studentId);
@@ -242,6 +248,7 @@ export class PmStudentsTable extends HTMLElement {
     this._summaryComponents.clear();
     this._guardianSummaryComponents.clear();
     this._coursesSummaryComponents.clear();
+    this._summaryCells.clear();
     this.emptyMessage.hidden = this._students.length > 0;
 
     for (const student of this._students) {
@@ -311,6 +318,10 @@ export class PmStudentsTable extends HTMLElement {
     summaryRow.dataset.studentId = student.studentId;
     const summaryCell = document.createElement('td');
     summaryCell.colSpan = 8;
+    this._summaryCells.set(student.studentId, summaryCell);
+    if (isExpanded && this._summaryLoadedIds.has(student.studentId)) {
+      summaryCell.appendChild(this.buildPrintBar(student));
+    }
     const summaryWrapper = document.createElement('div');
     summaryWrapper.classList.add('students-table__summary-wrapper');
 
@@ -329,20 +340,12 @@ export class PmStudentsTable extends HTMLElement {
 
     summaryWrapper.append(siblingsSummary, guardiansSummary, coursesSummary);
 
-    // A Private-grade student takes no part in extra-curriculars, so the roster
-    // shows no section at all rather than an empty one — an empty state would
-    // suggest they could hold activities. They have no tab in the modal for the
-    // same reason.
-    if (student.grade !== 'Private') {
-      const extraCurricularsSummary = document.createElement(
-        'pm-student-extra-curriculars-summary',
-      ) as PmStudentExtraCurricularsSummary;
-      extraCurricularsSummary.extraCurriculars = this._extraCurricularsCache.get(student.studentId) ?? [];
-      this._extraCurricularsSummaryComponents.set(student.studentId, extraCurricularsSummary);
-      summaryWrapper.appendChild(extraCurricularsSummary);
-    } else {
-      this._extraCurricularsSummaryComponents.delete(student.studentId);
-    }
+    const extraCurricularsSummary = document.createElement(
+      'pm-student-extra-curriculars-summary',
+    ) as PmStudentExtraCurricularsSummary;
+    extraCurricularsSummary.extraCurriculars = this._extraCurricularsCache.get(student.studentId) ?? [];
+    this._extraCurricularsSummaryComponents.set(student.studentId, extraCurricularsSummary);
+    summaryWrapper.appendChild(extraCurricularsSummary);
 
     summaryCell.appendChild(summaryWrapper);
     summaryRow.appendChild(summaryCell);
@@ -350,7 +353,30 @@ export class PmStudentsTable extends HTMLElement {
     return { mainRow: row, summaryRow };
   }
 
+  /** Offers Print for a row once its current expansion's reads have all succeeded. */
+  markSummaryLoaded(studentId: string): void {
+    this._summaryLoadedIds.add(studentId);
+    const student = this._students.find((s) => s.studentId === studentId);
+    const cell = this._summaryCells.get(studentId);
+    if (!student || !cell || !this._expandedIds.has(studentId)) return;
+    if (cell.querySelector('.students-table__summary-actions')) return;
+    cell.prepend(this.buildPrintBar(student));
+  }
+
+  private buildPrintBar(student: StudentResult): HTMLDivElement {
+    const bar = document.createElement('div');
+    bar.classList.add('students-table__summary-actions');
+    const printBtn = document.createElement('button');
+    printBtn.type = 'button';
+    printBtn.classList.add('students-table__btn', 'students-table__btn--print');
+    printBtn.textContent = 'Print';
+    printBtn.addEventListener('click', () => this.handlePrint(student));
+    bar.appendChild(printBtn);
+    return bar;
+  }
+
   private toggleExpanded(studentId: string): void {
+    this._summaryLoadedIds.delete(studentId);
     if (this._expandedIds.has(studentId)) {
       this._expandedIds.delete(studentId);
       this.render();
@@ -367,6 +393,17 @@ export class PmStudentsTable extends HTMLElement {
         detail: { studentId },
       }),
     );
+  }
+
+  private handlePrint(student: StudentResult): void {
+    const detail: StudentRecordSource = {
+      student,
+      siblings: this._siblingsCache.get(student.studentId) ?? [],
+      guardians: this._guardiansCache.get(student.studentId) ?? [],
+      enrollments: this._enrollmentsCache.get(student.studentId) ?? [],
+      extraCurriculars: this._extraCurricularsCache.get(student.studentId) ?? [],
+    };
+    this.dispatchEvent(new CustomEvent('student-print-requested', { bubbles: true, composed: true, detail }));
   }
 
   private handleEdit(student: StudentResult): void {

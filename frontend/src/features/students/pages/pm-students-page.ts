@@ -4,6 +4,7 @@ import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-student-modal';
 import '../components/pm-delete-guardian-modal';
 import '../components/pm-withdraw-enrollment-modal';
+import '../components/pm-student-print-record';
 import {
   getStudents,
   createStudent,
@@ -17,6 +18,7 @@ import {
   StudentsError,
   type StudentInput,
   type StudentResult,
+  type RosterStudentResult,
   type SiblingStudentResult,
 } from '../services/students';
 import {
@@ -53,14 +55,18 @@ import {
   removeExtraCurricular,
   StudentExtraCurricularsError,
   type PhaseType,
+  type StudentExtraCurricular,
 } from '../services/student-extra-curriculars';
-import { courseLabel } from '../components/enrollment-options';
+import { courseLabel, todayIsoDate } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
+import type { PmStudentFilterBar } from '../components/pm-student-filter-bar';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
 import type { PmWithdrawEnrollmentModal } from '../components/pm-withdraw-enrollment-modal';
+import type { PmStudentPrintRecord } from '../components/pm-student-print-record';
+import type { StudentRecordSource } from '../components/student-record';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -110,6 +116,17 @@ styles.replaceSync(`
     .students-page__error--visible {
       display: block;
     }
+    #printRecord {
+      display: none;
+    }
+    @media print {
+      :host([printing]) > :not(#printRecord) {
+        display: none;
+      }
+      :host([printing]) #printRecord {
+        display: block;
+      }
+    }
   `);
 
 const template = document.createElement('template');
@@ -128,6 +145,7 @@ template.innerHTML = `
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
   <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
   <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal"></pm-withdraw-enrollment-modal>
+  <pm-student-print-record id="printRecord"></pm-student-print-record>
 `;
 
 export class PmStudentsPage extends HTMLElement {
@@ -136,9 +154,13 @@ export class PmStudentsPage extends HTMLElement {
   private deleteModal: PmDeleteStudentModal | null = null;
   private deleteGuardianModal: PmDeleteGuardianModal | null = null;
   private withdrawEnrollmentModal: PmWithdrawEnrollmentModal | null = null;
+  private printRecord: PmStudentPrintRecord | null = null;
+  private _expandReads = new Map<string, number>();
+  private _expandReadCounter = 0;
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
-  private _allStudents: StudentResult[] = [];
+  private filterBar: PmStudentFilterBar | null = null;
+  private _allStudents: RosterStudentResult[] = [];
   /**
    * The Siblings tab's own list, read separately from the roster this screen
    * shows: a sibling may be a waiting-list student, who is not on the roster at
@@ -156,6 +178,7 @@ export class PmStudentsPage extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmStudentFilterBar;
     this.studentsTable = this.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable;
     this.wizardModal = this.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteStudentModal;
@@ -165,6 +188,7 @@ export class PmStudentsPage extends HTMLElement {
     this.withdrawEnrollmentModal = this.shadowRoot!.getElementById(
       'withdrawEnrollmentModal',
     ) as unknown as PmWithdrawEnrollmentModal;
+    this.printRecord = this.shadowRoot!.getElementById('printRecord') as unknown as PmStudentPrintRecord;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
@@ -176,6 +200,8 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('student-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.addEventListener('student-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.addEventListener('student-row-expanded', this.handleRowExpanded);
+    this.shadowRoot!.addEventListener('student-print-requested', this.handlePrintRequested);
+    window.addEventListener('afterprint', this.handleAfterPrint);
     this.shadowRoot!.addEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.addEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.addEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
@@ -211,6 +237,8 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('student-delete-requested', this.handleDeleteRequested);
     this.shadowRoot!.removeEventListener('student-delete-confirmed', this.handleDeleteConfirmed);
     this.shadowRoot!.removeEventListener('student-row-expanded', this.handleRowExpanded);
+    this.shadowRoot!.removeEventListener('student-print-requested', this.handlePrintRequested);
+    window.removeEventListener('afterprint', this.handleAfterPrint);
     this.shadowRoot!.removeEventListener('siblings-tab-activated', this.handleSiblingsTabActivated);
     this.shadowRoot!.removeEventListener('sibling-add-requested', this.handleSiblingAddRequested);
     this.shadowRoot!.removeEventListener('sibling-remove-requested', this.handleSiblingRemoveRequested);
@@ -346,18 +374,31 @@ export class PmStudentsPage extends HTMLElement {
    * (now-closed) wizard.
    */
   private async createPendingEnrollments(studentId: string, enrollments: EnrollmentInput[]): Promise<void> {
+    let written = false;
     try {
       for (const enrollment of enrollments) {
         await enrollStudent(studentId, enrollment);
+        written = true;
       }
     } catch (err) {
       this.showError(err);
     }
+    if (written) await this.reloadRoster();
   }
 
-  private handleEditRequested = (event: Event): void => {
+  private handleEditRequested = async (event: Event): Promise<void> => {
     const { student } = (event as CustomEvent<{ student: StudentResult }>).detail;
-    this.openWizardWhenGuardianRelationshipsReady(() => this.wizardModal!.openForEdit(student));
+    let held: StudentExtraCurricular[];
+    try {
+      held = await getStudentExtraCurriculars(student.studentId);
+    } catch (err) {
+      this.showError(err);
+      return;
+    }
+    this.openWizardWhenGuardianRelationshipsReady(() => {
+      this.wizardModal!.openForEdit(student);
+      this.wizardModal!.extraCurriculars = held;
+    });
   };
 
   private handleUpdateRequested = async (event: Event): Promise<void> => {
@@ -392,27 +433,41 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    // A Private-grade student takes no part in extra-curriculars and is given no
-    // summary to populate, so their activities are not read at all rather than
-    // read and discarded.
-    const takesPartInActivities = this._allStudents.find((s) => s.studentId === studentId)?.grade !== 'Private';
+    const read = ++this._expandReadCounter;
+    this._expandReads.set(studentId, read);
     try {
       const [siblings, guardians, enrollments, extraCurriculars] = await Promise.all([
         getSiblings(studentId),
         getGuardians(studentId),
         getStudentCourses(studentId),
-        takesPartInActivities ? getStudentExtraCurriculars(studentId) : Promise.resolve([]),
+        getStudentExtraCurriculars(studentId),
       ]);
+      // A newer expansion of this row owns its summaries; a superseded read writes nothing.
+      if (this._expandReads.get(studentId) !== read) return;
       this.studentsTable!.setSiblingsSummary(studentId, siblings);
       this.studentsTable!.setGuardiansSummary(studentId, guardians);
       this.studentsTable!.setCoursesSummary(studentId, enrollments);
       this.studentsTable!.setExtraCurricularsSummary(studentId, extraCurriculars);
+      this.studentsTable!.markSummaryLoaded(studentId);
     } catch {
+      if (this._expandReads.get(studentId) !== read) return;
       this.studentsTable!.setSiblingsSummary(studentId, []);
       this.studentsTable!.setGuardiansSummary(studentId, []);
       this.studentsTable!.setCoursesSummary(studentId, []);
       this.studentsTable!.setExtraCurricularsSummary(studentId, []);
     }
+  };
+
+  private handlePrintRequested = (event: Event): void => {
+    const source = (event as CustomEvent<StudentRecordSource>).detail;
+    this.printRecord!.show(source, todayIsoDate());
+    this.toggleAttribute('printing', true);
+    window.print();
+  };
+
+  // The browser may return from print() before its dialog closes, so printing ends here.
+  private handleAfterPrint = (): void => {
+    this.toggleAttribute('printing', false);
   };
 
   private handleSiblingsTabActivated = async (event: Event): Promise<void> => {
@@ -569,13 +624,14 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleCoursesTabActivated = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    await this.refreshWizardEnrollments(studentId);
+    await this.refreshWizardHoldings(studentId, 'courses');
   };
 
   private handleEnrollmentAddRequested = async (event: Event): Promise<void> => {
     const { studentId, input } = (event as CustomEvent<{ studentId: string; input: EnrollmentInput }>).detail;
     try {
       await enrollStudent(studentId, input);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       this.wizardModal!.closeEnrollmentForm();
     } catch (err) {
@@ -591,6 +647,7 @@ export class PmStudentsPage extends HTMLElement {
     ).detail;
     try {
       await updateEnrollment(studentId, studentCourseId, input);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       // Returns the corrected row to its read-only form, the same way the
       // enroll panel is closed after a successful add.
@@ -625,6 +682,7 @@ export class PmStudentsPage extends HTMLElement {
       .detail;
     try {
       await withdrawEnrollment(studentId, studentCourseId);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       // Another row may have been open for editing when this withdrawal was
       // confirmed; the refreshed list would otherwise re-seed it from server
@@ -639,7 +697,32 @@ export class PmStudentsPage extends HTMLElement {
 
   private handleExtraCurricularsTabActivated = async (event: Event): Promise<void> => {
     const { studentId } = (event as CustomEvent<{ studentId: string }>).detail;
-    await this.refreshWizardExtraCurriculars(studentId);
+    await this.refreshWizardHoldings(studentId, 'extraCurriculars');
+  };
+
+  /**
+   * Both lists are read before either is shown, so the rule each step applies
+   * to its own Withdraw or Remove never meets a count of the other kind that is
+   * older than the list beside it. A failure is reported on the tab that was
+   * activated and leaves both lists as they were.
+   */
+  private refreshWizardHoldings = async (studentId: string, tab: 'courses' | 'extraCurriculars'): Promise<void> => {
+    try {
+      const [enrollments, extraCurriculars] = await Promise.all([
+        getStudentCourses(studentId),
+        getStudentExtraCurriculars(studentId),
+      ]);
+      this.wizardModal!.enrollments = enrollments;
+      this.wizardModal!.extraCurriculars = extraCurriculars;
+    } catch (err) {
+      if (tab === 'courses') {
+        this.wizardModal!.showCoursesError(
+          err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
+        );
+      } else {
+        this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+      }
+    }
   };
 
   /**
@@ -647,14 +730,14 @@ export class PmStudentsPage extends HTMLElement {
    * modes read by the phase the form currently holds, never by the stored
    * student: an unsaved phase is the whole point — editing a Private-grade
    * student into a graded one has to offer that phase's activities before
-   * anything is saved. Leaving out what the student already holds is the step's,
-   * since a phase-scoped read knows nothing about them.
+   * anything is saved. No phase means a Private-grade student, who is offered
+   * every phase. Leaving out what the student already holds is the step's, since
+   * a phase-scoped read knows nothing about them.
    */
   private handleAssignableRequested = async (event: Event): Promise<void> => {
     const { phase } = (event as CustomEvent<{ phase: PhaseType | null }>).detail;
     try {
-      // No phase means no step at all, so there is nothing to offer.
-      this.wizardModal!.assignableExtraCurriculars = phase ? await getAssignableExtraCurricularsByPhase(phase) : [];
+      this.wizardModal!.assignableExtraCurriculars = await getAssignableExtraCurricularsByPhase(phase);
     } catch (err) {
       this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
     }
@@ -727,6 +810,7 @@ export class PmStudentsPage extends HTMLElement {
       const [courses, teachers] = await Promise.all([getEnrollableCourses(), getAssignableTeachers()]);
       this.wizardModal!.enrollableCourses = courses;
       this.wizardModal!.assignableTeachers = teachers;
+      this.filterBar!.teachers = teachers;
     } catch (err) {
       this.showError(err);
     }
@@ -751,6 +835,7 @@ export class PmStudentsPage extends HTMLElement {
       const relationships = await getGuardianRelationships();
       this.wizardModal!.guardianRelationships = relationships;
       this.studentsTable!.relationships = relationships;
+      this.printRecord!.relationships = relationships;
     } catch (err) {
       this.showError(err);
     }
@@ -765,6 +850,15 @@ export class PmStudentsPage extends HTMLElement {
       this.showError(err);
     }
     await this.loadSiblingCandidates();
+  };
+
+  private reloadRoster = async (): Promise<void> => {
+    try {
+      this._allStudents = await getStudents();
+      this.applyFilters();
+    } catch (err) {
+      this.showError(err);
+    }
   };
 
   private loadSiblingCandidates = async (): Promise<void> => {

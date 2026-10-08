@@ -96,6 +96,8 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 		var coordinator = await SignInAsync("student-ec-teacher-coordinator", Role.Coordinator, "10.0.73.4");
 		var student = await CreateStudentAsync(setupTeacher, "Sipho", "Ndlovu", PhaseType.Senior);
 		var activity = await CreateActivityAsync(coordinator, $"Senior Band {Guid.NewGuid()}", PhaseType.Senior);
+		var other = await CreateActivityAsync(coordinator, $"Senior Choir {Guid.NewGuid()}", PhaseType.Senior);
+		await AssignAsync(setupTeacher, student.StudentId, other.ExtraCurricularId);
 
 		// A Teacher already maintains student records elsewhere, and this endpoint
 		// carries that same boundary — the mirror image of the practice-time
@@ -115,36 +117,90 @@ public sealed class StudentExtraCurricularRoutesTests(ApiTestFixture fixture)
 
 		ShouldlyHelpers.Satisfy(
 			() => assignResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
-			() => afterAssign.Select(entry => entry.ExtraCurricularId).ShouldBe([activity.ExtraCurricularId]),
+			() => afterAssign.Select(entry => entry.ExtraCurricularId).ShouldBe(
+				[other.ExtraCurricularId, activity.ExtraCurricularId], ignoreOrder: true),
 			() => removeResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent),
-			() => afterRemove.ShouldBeEmpty());
+			() => afterRemove.Select(entry => entry.ExtraCurricularId).ShouldBe([other.ExtraCurricularId]));
 	}
 
 	[Fact]
 	[Trait("AC", "277UC23")]
-	public async Task AssignStudentExtraCurricular_PrivateGradeStudent_IsRefusedOverTheWireAndNothingIsPersisted()
+	[Trait("AC", "344UC1")]
+	public async Task AssignStudentExtraCurricular_PrivateGradeStudent_IsAssignedActivitiesOfEveryPhase()
 	{
 		var teacher = await SignInAsync("student-ec-private-teacher", Role.Teacher, "10.0.73.6");
 		var coordinator = await SignInAsync("student-ec-private-coordinator", Role.Coordinator, "10.0.73.7");
 		var student = await CreatePrivateStudentAsync(teacher, "Kagiso", "Dlamini");
-		var activity = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
+		var junior = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
+		var senior = await CreateActivityAsync(coordinator, $"Senior Band {Guid.NewGuid()}", PhaseType.Senior);
 
-		// The interface hides the step, but the rule is not the interface's: this
-		// is the request the hidden step would have sent, made directly.
-		var response = await teacher.Client.SendAsync(
+		var juniorResponse = await teacher.Client.SendAsync(
 			teacher.AuthorizedPostRequest(
 				$"/api/students/{student.StudentId}/extra-curriculars",
-				new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
+				new AssignExtraCurricularRequest(junior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+		var seniorResponse = await teacher.Client.SendAsync(
+			teacher.AuthorizedPostRequest(
+				$"/api/students/{student.StudentId}/extra-curriculars",
+				new AssignExtraCurricularRequest(senior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+
+		var assigned = await ReadAssignedAsync(teacher, student.StudentId);
+
+		ShouldlyHelpers.Satisfy(
+			() => juniorResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => seniorResponse.StatusCode.ShouldBe(HttpStatusCode.Created),
+			() => assigned.Select(entry => entry.ExtraCurricularId).ShouldBe(
+				[junior.ExtraCurricularId, senior.ExtraCurricularId], ignoreOrder: true));
+	}
+
+	[Fact]
+	[Trait("AC", "344UC3")]
+	public async Task GetAssignableExtraCurriculars_WithoutAPhase_ListsActivitiesOfEveryPhase()
+	{
+		var teacher = await SignInAsync("student-ec-allphases-teacher", Role.Teacher, "10.0.73.9");
+		var coordinator = await SignInAsync("student-ec-allphases-coordinator", Role.Coordinator, "10.0.73.10");
+		var junior = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
+		var senior = await CreateActivityAsync(coordinator, $"Senior Band {Guid.NewGuid()}", PhaseType.Senior);
+
+		var response = await teacher.Client.SendAsync(
+			teacher.AuthorizedGetRequest("/api/students/extra-curriculars/assignable"),
+			TestContext.Current.CancellationToken);
+		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+		var listed = JsonSerializer.Deserialize<List<ExtraCurricularResult>>(payload, _jsonOptions).ShouldNotBeNull();
+
+		ShouldlyHelpers.Satisfy(
+			() => response.StatusCode.ShouldBe(HttpStatusCode.OK, payload),
+			() => listed.Select(entry => entry.ExtraCurricularId).ShouldContain(junior.ExtraCurricularId),
+			() => listed.Select(entry => entry.ExtraCurricularId).ShouldContain(senior.ExtraCurricularId));
+	}
+
+	[Fact]
+	[Trait("AC", "344UC4")]
+	public async Task UpdateStudent_GradedStudentChangedToPrivate_KeepsTheirAssignments()
+	{
+		var teacher = await SignInAsync("student-ec-toprivate-teacher", Role.Teacher, "10.0.73.11");
+		var coordinator = await SignInAsync("student-ec-toprivate-coordinator", Role.Coordinator, "10.0.73.12");
+		var student = await CreateStudentAsync(teacher, "Lerato", "Mokoena", PhaseType.Junior);
+		var choir = await CreateActivityAsync(coordinator, $"Choir {Guid.NewGuid()}", PhaseType.Junior);
+		var recorders = await CreateActivityAsync(coordinator, $"Recorders {Guid.NewGuid()}", PhaseType.Junior);
+		await AssignAsync(teacher, student.StudentId, choir.ExtraCurricularId);
+		await AssignAsync(teacher, student.StudentId, recorders.ExtraCurricularId);
+
+		var response = await teacher.Client.SendAsync(
+			teacher.AuthorizedPutRequest(
+				$"/api/students/{student.StudentId}",
+				new UpdateStudentRequest(
+					student.FirstName, student.LastName, student.DateOfBirth, GradeType.Private, null, null, student.Language)),
 			TestContext.Current.CancellationToken);
 		var payload = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
 		var assigned = await ReadAssignedAsync(teacher, student.StudentId);
 
 		ShouldlyHelpers.Satisfy(
-			() => response.StatusCode.ShouldBe(HttpStatusCode.BadRequest),
-			// Named for the grade, not for the absent phase the grade implies.
-			() => payload.ShouldContain("Private-grade student"),
-			() => assigned.ShouldBeEmpty());
+			() => response.StatusCode.ShouldBe(HttpStatusCode.OK, payload),
+			() => assigned.Select(entry => entry.ExtraCurricularId).ShouldBe(
+				[choir.ExtraCurricularId, recorders.ExtraCurricularId], ignoreOrder: true));
 	}
 
 	private static async Task<StudentResult> CreatePrivateStudentAsync(

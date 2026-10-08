@@ -5,7 +5,8 @@ import './pm-courses-step';
 import './pm-extra-curriculars-step';
 import './pm-waiting-list-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
-import { AT_LEAST_ONE_COURSE_TO_SAVE } from './pm-courses-step';
+import { COURSE_OR_EXTRA_CURRICULAR_TO_SAVE } from './course-or-extra-curricular';
+import { phaseConflictMessage } from './phase-agreement';
 import type { SiblingStudentResult, StudentResult } from '../services/students';
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../services/enrollments';
@@ -28,9 +29,9 @@ type Step = 'student' | 'siblings' | 'guardians' | 'courses' | 'extraCurriculars
 /**
  * Which tabs the wizard presents. 'enrolled' is the Students screen's own
  * modal, unchanged — Courses and Extra-Curriculars, with the "at least one
- * course" rule intact. 'waitingList' is the Waiting List page's capture mode —
- * Waiting List in their place, and no course rule at all (a waiting-list
- * student holds no course).
+ * course or extra-curricular" rule intact. 'waitingList' is the Waiting List
+ * page's capture mode — Waiting List in their place, and no such rule at all (a
+ * waiting-list student holds neither).
  */
 type WizardMode = 'enrolled' | 'waitingList';
 
@@ -221,6 +222,8 @@ export class PmStudentWizardModal extends HTMLElement {
   private _waitingListEntryId: string | null = null;
   /** The student's own phase, which is what limits the activities the picker offers. */
   private _phase: PhaseType | null = null;
+  /** Whether the form's grade is Private, whose student has no phase and is offered every phase. */
+  private _privateGrade = false;
 
   constructor() {
     super();
@@ -284,18 +287,20 @@ export class PmStudentWizardModal extends HTMLElement {
    * `wizardMode` decides which tabs this open presents: 'enrolled' (the
    * Students screen's own modal, default) keeps Courses and
    * Extra-Curriculars; 'waitingList' (the Waiting List page's capture)
-   * presents Waiting List in their place — no course rule, since a
-   * waiting-list student holds no course.
+   * presents Waiting List in their place — no course-or-extra-curricular rule,
+   * since a waiting-list student holds neither.
    */
   openForCreate(candidates: SiblingStudentResult[], wizardMode: WizardMode = 'enrolled'): void {
+    this.enrollments = [];
+    this.extraCurriculars = [];
     this._mode = 'create';
     this._wizardMode = wizardMode;
     this._studentId = null;
     this.titleEl!.textContent = wizardMode === 'waitingList' ? 'Capture Waiting List Student' : 'Create Student';
-    // No phase until one is chosen on the Student step, which announces it. The
-    // reset below fires that announcement, so this is the starting point rather
-    // than the last student's phase carrying over.
-    this.applyPhase(null);
+    // No phase and no grade until they are chosen on the Student step, which
+    // announces them. The reset below fires that announcement, so this is the
+    // starting point rather than the last student's phase carrying over.
+    this.applyPhase(null, false);
     this.studentStep!.reset();
     this.siblingsStep!.activateForCreate(candidates);
     this.guardiansStep!.activateForCreate();
@@ -313,6 +318,8 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   openForEdit(student: StudentResult): void {
+    this.enrollments = [];
+    this.extraCurriculars = [];
     this._mode = 'edit';
     this._wizardMode = 'enrolled';
     this._waitingListEntryId = null;
@@ -322,7 +329,7 @@ export class PmStudentWizardModal extends HTMLElement {
     // rather than inheriting whichever was last opened. From here on the form's
     // own field is what governs — setValues below announces it, and every later
     // edit of it does too.
-    this.applyPhase((student.phase as PhaseType | null) ?? null);
+    this.applyPhase((student.phase as PhaseType | null) ?? null, student.grade === 'Private');
     this.studentStep!.setValues(student);
     this.applyWizardModeTabs();
     this.saveBtn!.disabled = false;
@@ -343,7 +350,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this._studentId = student.studentId;
     this._waitingListEntryId = entry.waitingListEntryId;
     this.titleEl!.textContent = `Edit Waiting List Student: ${student.firstName} ${student.lastName}`;
-    this.applyPhase((student.phase as PhaseType | null) ?? null);
+    this.applyPhase((student.phase as PhaseType | null) ?? null, student.grade === 'Private');
     this.studentStep!.setValues(student);
     this.waitingListStep!.setValues(entry);
     this.applyWizardModeTabs();
@@ -369,7 +376,7 @@ export class PmStudentWizardModal extends HTMLElement {
   private applyWizardModeTabs(): void {
     const isWaitingList = this._wizardMode === 'waitingList';
     this.tabCourses!.hidden = isWaitingList;
-    this.tabExtraCurriculars!.hidden = isWaitingList || this._phase === null;
+    this.tabExtraCurriculars!.hidden = isWaitingList || !this.offersExtraCurriculars;
     this.tabWaitingList!.hidden = !isWaitingList;
   }
 
@@ -444,6 +451,7 @@ export class PmStudentWizardModal extends HTMLElement {
 
   set enrollments(value: EnrollmentResult[]) {
     this.coursesStep!.enrollments = value;
+    this.extraCurricularsStep!.holdsCourse = value.length > 0;
   }
 
   set enrollableCourses(value: EnrollableCourse[]) {
@@ -457,6 +465,7 @@ export class PmStudentWizardModal extends HTMLElement {
   /** The activities the student takes part in (edit mode). */
   set extraCurriculars(value: StudentExtraCurricular[]) {
     this.extraCurricularsStep!.assigned = value;
+    this.coursesStep!.holdsExtraCurricular = value.length > 0;
   }
 
   /** The Add Activity picker's options, fetched when the panel is opened. */
@@ -514,48 +523,54 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   private handleExtraCurricularsTabClick(): void {
-    if (this._mode === 'create' || !this._phase) return;
+    if (this._mode === 'create' || !this.offersExtraCurriculars) return;
     this.goToStep('extraCurriculars');
   }
 
   /**
-   * The Student step's phase field decides whether this wizard has an
-   * Extra-Curriculars step at all, and it is followed live: the form's current
-   * value, not the saved student's. Editing a Private-grade student into a graded
-   * one makes the step available before anything is saved, which reading the
-   * stored row could never do.
+   * Whether the Extra-Curriculars step exists for the form as it stands: a
+   * Private-grade student takes part in activities of any phase, and a graded
+   * student only once their phase is chosen.
+   */
+  private get offersExtraCurriculars(): boolean {
+    return this._privateGrade || this._phase !== null;
+  }
+
+  /**
+   * The Student step's grade and phase fields decide whether this wizard has an
+   * Extra-Curriculars step at all, and they are followed live: the form's current
+   * values, not the saved student's. Editing a graded student into a Private-grade
+   * one keeps the step, and clearing a graded student's phase removes it, before
+   * anything is saved, which reading the stored row could never do.
    */
   private handlePhaseChanged = (event: Event): void => {
-    const { phase } = (event as CustomEvent<{ phase: PhaseType | null }>).detail;
-    if (phase === this._phase) return;
+    const { phase, privateGrade } = (event as CustomEvent<{ phase: PhaseType | null; privateGrade: boolean }>).detail;
+    if (phase === this._phase && privateGrade === this._privateGrade) return;
 
-    this.applyPhase(phase);
+    this.applyPhase(phase, privateGrade);
   };
 
   /**
-   * Sets the phase the wizard is shaped around. Losing the phase removes the step:
-   * in create mode nothing has been written, so what was staged is discarded
-   * outright; in edit mode the tab goes now but the student's stored assignments
-   * do not — those are deleted when the student is saved, so cancelling the edit
-   * leaves them intact.
+   * Sets the phase and grade the wizard is shaped around. A student with neither a
+   * phase nor the Private grade has no step. Nothing staged or stored is touched
+   * by a change here: staged activities survive any change in create mode, and in
+   * edit mode the student's stored assignments are never deleted by the form.
    * <para>
    * Whether the tab is offered is `updateFooter`'s to apply, and every path out of
    * here reaches it — directly, or through the `goToStep` below, which ends in it.
    * </para>
    */
-  private applyPhase(phase: PhaseType | null): void {
+  private applyPhase(phase: PhaseType | null, privateGrade: boolean): void {
     this._phase = phase;
-    // Pushed down so the panel's non-editable Phase value and the picker's read
-    // both follow the form rather than the stored student.
+    this._privateGrade = privateGrade;
+    // Pushed down so the picker's read and the phase note follow the form rather
+    // than the stored student.
     this.extraCurricularsStep!.phase = phase;
 
-    if (phase === null) {
-      if (this._mode === 'create') this.extraCurricularsStep!.discardStaged();
-      // Never leave the wizard showing a step it no longer offers.
-      if (this._activeStep === 'extraCurriculars') {
-        this.goToStep('courses');
-        return;
-      }
+    // Never leave the wizard showing a step it no longer offers.
+    if (!this.offersExtraCurriculars && this._activeStep === 'extraCurriculars') {
+      this.goToStep('courses');
+      return;
     }
 
     this.updateFooter();
@@ -563,15 +578,13 @@ export class PmStudentWizardModal extends HTMLElement {
 
   /**
    * The last step of the create wizard, which is the one that carries Save. In
-   * waiting-list mode that is always Waiting List — there is no course rule to
-   * route around. In enrolled mode a student with no phase has no
-   * Extra-Curriculars step, so Courses is theirs — which is how a
-   * Private-grade student gets Save on Courses, their grade having cleared
-   * the phase field.
+   * waiting-list mode that is always Waiting List — there is no holdings rule
+   * to route around. In enrolled mode a student offered no Extra-Curriculars step
+   * (a graded student with no phase chosen yet) has Courses as theirs.
    */
   private get finalStep(): Step {
     if (this._wizardMode === 'waitingList') return 'waitingList';
-    return this._phase ? 'extraCurriculars' : 'courses';
+    return this.offersExtraCurriculars ? 'extraCurriculars' : 'courses';
   }
 
   private goToStep(step: Step): void {
@@ -664,13 +677,13 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabExtraCurriculars!.disabled = isCreate;
     this.tabWaitingList!.disabled = isCreate;
     // Which tabs exist at all is applyWizardModeTabs's call; Extra-Curriculars'
-    // own presence is further narrowed by phase, but only in enrolled mode —
-    // waiting-list mode never offers it regardless of phase.
-    this.tabExtraCurriculars!.hidden = this._wizardMode === 'waitingList' || this._phase === null;
+    // own presence is further narrowed by grade and phase, but only in enrolled
+    // mode — waiting-list mode never offers it regardless of either.
+    this.tabExtraCurriculars!.hidden = this._wizardMode === 'waitingList' || !this.offersExtraCurriculars;
 
     // The final step is the one that carries Save and the only one without a
-    // Next. That is Extra-Curriculars, except for a Private-grade student, who
-    // has no such step — for them Courses is last and carries Save.
+    // Next. That is Extra-Curriculars, except for a graded student with no phase
+    // chosen yet, who has no such step — for them Courses is last and carries Save.
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
     this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
     this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
@@ -727,10 +740,11 @@ export class PmStudentWizardModal extends HTMLElement {
       return;
     }
     if (this._activeStep === 'courses') {
-      // Courses is the last step for a student with no phase, so there is nowhere
-      // forward to go — Next is hidden for them anyway. The phase itself is
-      // already current: the Student step announces every change to it.
-      if (!this._phase) return;
+      // Courses is the last step for a student offered no Extra-Curriculars step,
+      // so there is nowhere forward to go — Next is hidden for them anyway. The
+      // phase and grade are already current: the Student step announces every
+      // change to them.
+      if (!this.offersExtraCurriculars) return;
 
       this.goToStep('extraCurriculars');
     }
@@ -806,14 +820,33 @@ export class PmStudentWizardModal extends HTMLElement {
       return;
     }
 
-    // A student must be enrolled in at least one course, so the create flow
-    // cannot save one with nothing staged — stated on the Courses tab rather
-    // than failing silently. Waiting-list mode carries no such rule, hence the
-    // early return above never reaches here for it.
-    if (this._mode === 'create' && !this.coursesStep!.hasPendingEnrollments) {
-      this.goToStep('courses');
-      this.coursesStep!.showError(AT_LEAST_ONE_COURSE_TO_SAVE);
+    // A student must hold a course or an extra-curricular, so the create flow
+    // cannot save one with neither staged — stated on the step that carries Save
+    // rather than failing silently. Waiting-list mode carries no such rule, hence
+    // the early return above never reaches here for it.
+    if (
+      this._mode === 'create' &&
+      !this.coursesStep!.hasPendingEnrollments &&
+      !this.extraCurricularsStep!.hasPendingExtraCurriculars
+    ) {
+      const finalStep = this.finalStep;
+      this.goToStep(finalStep);
+      const step = finalStep === 'extraCurriculars' ? this.extraCurricularsStep! : this.coursesStep!;
+      step.showError(COURSE_OR_EXTRA_CURRICULAR_TO_SAVE);
       return;
+    }
+
+    if (this._wizardMode === 'enrolled') {
+      const conflict = phaseConflictMessage(
+        this.studentStep!.getValues().phase,
+        this.extraCurricularsStep!.heldExtraCurriculars,
+      );
+      if (conflict) {
+        this.goToStep('student');
+        this.studentStep!.showPhaseConflict(conflict);
+        return;
+      }
+      this.studentStep!.clearError();
     }
 
     const input = this.studentStep!.getValues();

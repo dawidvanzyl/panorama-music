@@ -1,4 +1,6 @@
-import type { Grade, StudentClass, Phase, StudentLanguage } from '../services/students';
+import type { Grade, StudentClass, Phase, StudentLanguage, StudentResult } from '../services/students';
+
+export const NO_SIBLINGS_LINKED = 'No siblings linked.';
 
 export const GRADES: Grade[] = ['Grade1', 'Grade2', 'Grade3', 'Grade4', 'Grade5', 'Grade6', 'Grade7', 'Private'];
 export const CLASSES: StudentClass[] = ['A1', 'A2', 'E1', 'E2', 'E3', 'E4'];
@@ -34,6 +36,12 @@ const GRADE_NUMBERS: Record<Grade, string> = {
 /** Bare grade digit for compact displays (e.g. "4A2"); Private has no digit. */
 export function gradeNumber(value: Grade): string {
   return GRADE_NUMBERS[value];
+}
+
+/** A sibling as the extended view names them: "Naledi Mokoena 7A1". */
+export function siblingLabel(sibling: StudentResult): string {
+  const suffix = `${gradeNumber(sibling.grade)}${sibling.class ?? ''}`;
+  return `${sibling.firstName} ${sibling.lastName}${suffix === '' ? '' : ` ${suffix}`}`;
 }
 
 export function populateSelectOptions<T extends string>(

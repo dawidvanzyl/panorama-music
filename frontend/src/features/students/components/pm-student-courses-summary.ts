@@ -1,4 +1,4 @@
-import { INSTRUMENT_TYPE_LABELS, STEP_TYPE_LABELS, courseLabel, teacherLabel } from './enrollment-options';
+import { enrolledLine, enrollmentAssignment, enrollmentHeading, NO_COURSE_ENROLLMENTS } from './enrollment-options';
 import type { EnrollmentResult } from '../services/enrollments';
 
 const styles = new CSSStyleSheet();
@@ -60,7 +60,7 @@ template.innerHTML = `
 
   <div class="summary__label">Courses</div>
   <ul class="summary__list" id="list" hidden></ul>
-  <p class="summary__empty" id="empty">No course enrollments.</p>
+  <p class="summary__empty" id="empty">${NO_COURSE_ENROLLMENTS}</p>
 `;
 
 export class PmStudentCoursesSummary extends HTMLElement {
@@ -103,33 +103,23 @@ export class PmStudentCoursesSummary extends HTMLElement {
     }
   }
 
-  /**
-   * One block per enrollment: the course, then the teacher with whichever of the
-   * instrument and step the course type records, then the date enrolled.
-   */
   private buildItem(enrollment: EnrollmentResult): HTMLLIElement {
     const item = document.createElement('li');
     item.classList.add('summary__item');
 
     const heading = document.createElement('span');
     heading.classList.add('summary__item-heading');
-    heading.textContent = courseLabel(enrollment);
+    heading.textContent = enrollmentHeading(enrollment);
     item.appendChild(heading);
 
     const assignment = document.createElement('span');
     assignment.classList.add('summary__item-assignment');
-    assignment.textContent = [
-      teacherLabel(enrollment),
-      enrollment.instrumentType ? INSTRUMENT_TYPE_LABELS[enrollment.instrumentType] : null,
-      enrollment.stepType ? `Step ${STEP_TYPE_LABELS[enrollment.stepType]}` : null,
-    ]
-      .filter((part) => part !== null && part !== '')
-      .join(' · ');
+    assignment.textContent = enrollmentAssignment(enrollment);
     item.appendChild(assignment);
 
     const enrolled = document.createElement('span');
     enrolled.classList.add('summary__item-enrolled');
-    enrolled.textContent = `Enrolled ${enrollment.enrolledDate}`;
+    enrolled.textContent = enrolledLine(enrollment);
     item.appendChild(enrolled);
 
     return item;

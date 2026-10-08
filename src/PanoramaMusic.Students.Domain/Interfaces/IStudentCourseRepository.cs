@@ -32,9 +32,9 @@ public interface IStudentCourseRepository
 	Task<StudentCourse?> GetByIdAsync(Guid studentId, Guid studentCourseId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// How many courses the student is enrolled in — the condition that blocks
-	/// withdrawing their last one. A count rather than a read of every row, since
-	/// the caller only needs the number.
+	/// How many courses the student is enrolled in — the enrollment half of the
+	/// condition that blocks withdrawing their last holding. A count rather than
+	/// a read of every row, since the caller only needs the number.
 	/// </summary>
 	Task<int> CountByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
 

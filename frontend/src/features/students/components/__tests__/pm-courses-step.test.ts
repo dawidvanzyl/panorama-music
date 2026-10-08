@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { PmCoursesStep, AT_LEAST_ONE_COURSE, AT_LEAST_ONE_COURSE_TO_WITHDRAW } from '../pm-courses-step';
+import { PmCoursesStep } from '../pm-courses-step';
+import { COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW } from '../course-or-extra-curricular';
 import type { AssignableTeacher, EnrollableCourse, EnrollmentResult } from '../../services/enrollments';
 
 const instrumentCourse: EnrollableCourse = {
@@ -242,11 +243,13 @@ describe('pm-courses-step refuses to withdraw the only enrollment', { tags: ['26
 
     expect(requests).toHaveLength(0);
     expect(rows()).toHaveLength(1);
-    expect((stepShadow().getElementById('message') as HTMLElement).textContent).toBe(AT_LEAST_ONE_COURSE_TO_WITHDRAW);
+    expect((stepShadow().getElementById('message') as HTMLElement).textContent).toBe(
+      COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW,
+    );
   });
 });
 
-describe('pm-courses-step lists the student existing enrollments', { tags: ['268UC14'] }, () => {
+describe('pm-courses-step lists the student existing enrollments', { tags: ['268UC14', '342UC4'] }, () => {
   it('shows course, teacher, instrument, step and enrolled date, with an em dash for what the course type omits', () => {
     step.activate('s1');
     step.enrollments = [
@@ -321,16 +324,16 @@ describe('pm-courses-step removes a staged enrollment', { tags: ['268UC24'] }, (
   });
 });
 
-describe('pm-courses-step refuses to remove the only staged enrollment', { tags: ['268UC28'] }, () => {
-  it('keeps the row staged and states the requirement', () => {
+describe('pm-courses-step removes the only staged enrollment', { tags: ['343UC12'] }, () => {
+  it('drops the row and leaves no message', () => {
     step.activateForCreate();
     stageEnrollment(instrumentCourse.courseId, thabo.teacherId, 'Piano', 'Step2A');
 
     (rows()[0].querySelector('.enrollment-list__btn--remove') as HTMLButtonElement).click();
 
-    expect(rows()).toHaveLength(1);
-    expect(step.pendingEnrollments).toHaveLength(1);
-    expect((stepShadow().getElementById('message') as HTMLElement).textContent).toBe(AT_LEAST_ONE_COURSE);
+    expect(rows()).toHaveLength(0);
+    expect(step.pendingEnrollments).toHaveLength(0);
+    expect((stepShadow().getElementById('message') as HTMLElement).textContent).toBe('');
   });
 });
 

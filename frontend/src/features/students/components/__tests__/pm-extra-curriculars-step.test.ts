@@ -121,7 +121,7 @@ describe('pm-extra-curriculars-step — assigned rows', { tags: ['277UC13'] }, (
 });
 
 describe('pm-extra-curriculars-step — the picker names the activity', { tags: ['278UC23'] }, () => {
-  it('shows the description alone and names no practice time', () => {
+  it('shows the description and phase and names no practice time', () => {
     step.activate('s1', 'Junior');
     step.assigned = [];
 
@@ -129,9 +129,70 @@ describe('pm-extra-curriculars-step — the picker names the activity', { tags: 
     // meeting is what is being chosen, and hide the Thursday one entirely.
     openPanel([choir]);
 
-    expect(pickerOptions()).toEqual(['Choir']);
+    expect(pickerOptions()).toEqual(['Choir (Junior)']);
     expect(pickerOptions()[0]).not.toContain('Tuesday');
     expect(pickerOptions()[0]).not.toContain('14:30');
+  });
+});
+
+describe('pm-extra-curriculars-step — the phase in the option label', { tags: ['344UC10'] }, () => {
+  it('reads Choir (Junior) for a Junior activity and names the phase of a Senior one', () => {
+    step.activate('s1', null);
+    step.assigned = [];
+
+    openPanel([choir, { ...orchestra, phase: 'Senior' }]);
+
+    expect(pickerOptions()).toEqual(['Choir (Junior)', 'String Orchestra (Senior)']);
+  });
+});
+
+describe('pm-extra-curriculars-step — the panel has no Phase field', { tags: ['344UC11'] }, () => {
+  it('shows the Activity list and no Phase field', () => {
+    step.activate('s1', 'Junior');
+    step.assigned = [];
+
+    openPanel([choir]);
+
+    const panel = byId('panel');
+    const labels = [...panel.querySelectorAll('label')].map((label) => label.textContent);
+    expect(byId('activitySelect')).not.toBeNull();
+    expect(shadow().getElementById('phaseField')).toBeNull();
+    expect(labels).toEqual(['Activity']);
+    expect(panel.querySelectorAll('input')).toHaveLength(0);
+  });
+});
+
+describe('pm-extra-curriculars-step — a Private-grade student sees Junior before Senior', { tags: ['344UC12'] }, () => {
+  it('lists every Junior activity before every Senior activity, keeping the given order within each phase', () => {
+    step.activate('s1', null);
+    step.assigned = [];
+    const brass: StudentExtraCurricular = {
+      ...orchestra,
+      extraCurricularId: 'ec4',
+      description: 'Brass Band',
+      phase: 'Senior',
+    };
+    const senior: StudentExtraCurricular = {
+      ...orchestra,
+      extraCurricularId: 'ec5',
+      description: 'Orchestra',
+      phase: 'Senior',
+    };
+    const recorders: StudentExtraCurricular = {
+      ...orchestra,
+      extraCurricularId: 'ec6',
+      description: 'Recorder Ensemble',
+      phase: 'Junior',
+    };
+
+    openPanel([brass, choir, senior, recorders]);
+
+    expect(pickerOptions()).toEqual([
+      'Choir (Junior)',
+      'Recorder Ensemble (Junior)',
+      'Brass Band (Senior)',
+      'Orchestra (Senior)',
+    ]);
   });
 });
 
@@ -153,32 +214,37 @@ describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC
     step.assigned = [];
   });
 
-  it('opens on Add Activity offering a picker, a disabled Phase field and Cancel and Assign', () => {
+  it('opens on Add Activity offering a picker, the phase note and Cancel and Assign', () => {
     expect(isPanelOpen()).toBe(false);
 
     openPanel([orchestra]);
 
-    const phaseField = byId<HTMLInputElement>('phaseField');
     expect(isPanelOpen()).toBe(true);
     expect(byId('activitySelect')).not.toBeNull();
-    // The student's own phase, shown so it is clear why the list is limited —
-    // and not editable from here.
-    expect(phaseField.value).toBe('Junior');
-    expect(phaseField.disabled).toBe(true);
+    expect(shadow().getElementById('phaseField')).toBeNull();
     expect(byId('note').textContent).toBe(PHASE_RESTRICTION_NOTE);
+    expect(byId('note').hidden).toBe(false);
     expect(byId('cancelBtn').textContent).toBe('Cancel');
     expect(byId('assignBtn').textContent).toBe('Assign');
+  });
+
+  it('hides the phase note for a student with no phase', () => {
+    step.phase = null;
+
+    openPanel([orchestra]);
+
+    expect(byId('note').hidden).toBe(true);
   });
 });
 
 describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC15'] }, () => {
-  it('labels each option with its description alone', () => {
+  it('labels each option with its description and phase', () => {
     step.activate('s1', 'Junior');
     step.assigned = [];
 
     openPanel([drumline, orchestra]);
 
-    expect(pickerOptions()).toEqual(['Junior Drumline', 'String Orchestra']);
+    expect(pickerOptions()).toEqual(['Junior Drumline (Junior)', 'String Orchestra (Junior)']);
   });
 
   it('leaves out an activity already staged, which the server cannot know about in create mode', () => {
@@ -187,7 +253,7 @@ describe('pm-extra-curriculars-step — what the picker offers', { tags: ['277UC
 
     openPanel([choir, orchestra]);
 
-    expect(pickerOptions()).toEqual(['String Orchestra']);
+    expect(pickerOptions()).toEqual(['String Orchestra (Junior)']);
   });
 });
 
@@ -247,7 +313,7 @@ describe('pm-extra-curriculars-step — removing an assignment', { tags: ['277UC
     expect(rows().map((row) => cellsOf(row)[0])).toEqual(['String Orchestra']);
 
     openPanel([choir, orchestra, drumline]);
-    expect(pickerOptions()).toEqual(['Choir', 'Junior Drumline']);
+    expect(pickerOptions()).toEqual(['Choir (Junior)', 'Junior Drumline (Junior)']);
   });
 
   it('asks the page to remove a persisted assignment rather than dropping it in memory', () => {

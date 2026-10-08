@@ -1,7 +1,7 @@
 -- get_enrollment_count_by_student
--- How many courses a student is enrolled in. A student must remain enrolled in
--- at least one, so this is the condition that blocks withdrawing their last
--- enrollment — the same shape as get_enrollment_count_by_course.
+-- How many courses a student is enrolled in. A student must hold at least one
+-- course or one extra-curricular, so this is half of the condition that blocks
+-- giving up their last holding — the same shape as get_enrollment_count_by_course.
 
 CREATE OR REPLACE FUNCTION students.get_enrollment_count_by_student(
     p_student_id UUID

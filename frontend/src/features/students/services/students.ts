@@ -20,6 +20,11 @@ export interface StudentResult {
   language: StudentLanguage;
 }
 
+/** A student on the roster, with the teachers of the courses they hold. */
+export interface RosterStudentResult extends StudentResult {
+  teacherIds: string[];
+}
+
 /**
  * Which of the two listings a student belongs to. The two are complementary:
  * `WaitingList` is exactly the set the waiting list shows and `Enrolled` is
@@ -80,7 +85,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-let _studentsCache: StudentResult[] | null = null;
+let _studentsCache: RosterStudentResult[] | null = null;
 
 export function clearStudentsCache(): void {
   _studentsCache = null;
@@ -89,14 +94,14 @@ export function clearStudentsCache(): void {
 registerSessionCache(clearStudentsCache);
 
 /**
- * Returns the full student roster. Grade/phase/class/name filtering is a
- * client-side concern applied over this cached list, not a server round trip.
+ * Returns the full student roster. Filtering is a client-side concern applied
+ * over this cached list, not a server round trip.
  */
-export async function getStudents(): Promise<StudentResult[]> {
+export async function getStudents(): Promise<RosterStudentResult[]> {
   if (_studentsCache) return _studentsCache;
 
   const response = await fetch(API_BASE, { headers: authHeaders() });
-  _studentsCache = await handleResponse<StudentResult[]>(response);
+  _studentsCache = await handleResponse<RosterStudentResult[]>(response);
   return _studentsCache;
 }
 

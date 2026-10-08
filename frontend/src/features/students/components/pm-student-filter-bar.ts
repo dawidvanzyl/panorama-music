@@ -1,4 +1,5 @@
 import { GRADES, PHASES, CLASSES, populateSelectOptions, gradeLabel } from './student-options';
+import type { AssignableTeacher } from '../services/enrollments';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -51,6 +52,9 @@ template.innerHTML = `
     <select class="filter-bar__select" id="class">
       <option value="">All Classes</option>
     </select>
+    <select class="filter-bar__select" id="teacher">
+      <option value="">All Teachers</option>
+    </select>
   </div>
 `;
 
@@ -59,6 +63,8 @@ export class PmStudentFilterBar extends HTMLElement {
   private gradeSelect: HTMLSelectElement | null = null;
   private phaseSelect: HTMLSelectElement | null = null;
   private classSelect: HTMLSelectElement | null = null;
+  private teacherSelect: HTMLSelectElement | null = null;
+  private _teachers: AssignableTeacher[] = [];
 
   constructor() {
     super();
@@ -72,15 +78,18 @@ export class PmStudentFilterBar extends HTMLElement {
     this.gradeSelect = this.shadowRoot!.getElementById('grade') as HTMLSelectElement;
     this.phaseSelect = this.shadowRoot!.getElementById('phase') as HTMLSelectElement;
     this.classSelect = this.shadowRoot!.getElementById('class') as HTMLSelectElement;
+    this.teacherSelect = this.shadowRoot!.getElementById('teacher') as HTMLSelectElement;
 
     populateSelectOptions(this.gradeSelect, GRADES, gradeLabel);
     populateSelectOptions(this.phaseSelect, PHASES);
     populateSelectOptions(this.classSelect, CLASSES);
+    this.renderTeacherOptions();
 
     this.nameInput.addEventListener('input', this.handleChange);
     this.gradeSelect.addEventListener('change', this.handleChange);
     this.phaseSelect.addEventListener('change', this.handleChange);
     this.classSelect.addEventListener('change', this.handleChange);
+    this.teacherSelect.addEventListener('change', this.handleChange);
   }
 
   disconnectedCallback(): void {
@@ -88,6 +97,28 @@ export class PmStudentFilterBar extends HTMLElement {
     this.gradeSelect?.removeEventListener('change', this.handleChange);
     this.phaseSelect?.removeEventListener('change', this.handleChange);
     this.classSelect?.removeEventListener('change', this.handleChange);
+    this.teacherSelect?.removeEventListener('change', this.handleChange);
+  }
+
+  set teachers(value: AssignableTeacher[]) {
+    this._teachers = value;
+    this.renderTeacherOptions();
+  }
+
+  private renderTeacherOptions(): void {
+    if (!this.teacherSelect) return;
+
+    const selected = this.teacherSelect.value;
+    while (this.teacherSelect.options.length > 1) {
+      this.teacherSelect.remove(1);
+    }
+    for (const teacher of this._teachers) {
+      const option = document.createElement('option');
+      option.value = teacher.teacherId;
+      option.textContent = `${teacher.firstName} ${teacher.surname}`;
+      this.teacherSelect.appendChild(option);
+    }
+    this.teacherSelect.value = selected;
   }
 
   private handleChange = (): void => {
@@ -100,6 +131,7 @@ export class PmStudentFilterBar extends HTMLElement {
           grade: this.gradeSelect!.value || undefined,
           phase: this.phaseSelect!.value || undefined,
           class: this.classSelect!.value || undefined,
+          teacherId: this.teacherSelect!.value || undefined,
         },
       }),
     );

@@ -7,6 +7,8 @@ using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.StudentExtraCurriculars;
 using PanoramaMusic.Students.Domain.Events.Students;
+using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
 using Shouldly;
 using Xunit;
@@ -35,6 +37,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		_context.Repositories.StudentRepositoryMock
 			.Setup(r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()))
 			.Returns(Task.CompletedTask);
+		GivenAssignments(student);
 
 		var request = new UpdateStudentRequest(
 			"Alicia",
@@ -71,6 +74,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		_context.Repositories.StudentRepositoryMock
 			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(student);
+		GivenAssignments(student);
 
 		var request = new UpdateStudentRequest(
 			"Alicia",
@@ -107,62 +111,161 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 
 	[Fact]
 	[Trait("AC", "277UC24")]
-	public async Task HandleAsync_GradeChangedToPrivate_DeletesEveryOneOfTheStudentsExtraCurricularAssignments()
+	[Trait("AC", "344UC4")]
+	public async Task HandleAsync_GradeChangedToPrivate_KeepsEveryOneOfTheStudentsExtraCurricularAssignments()
 	{
 		var student = GivenStudent(GradeType.Grade4);
 		var assignments = GivenAssignments(student, "Choir", "String Orchestra");
-		var deletedFor = CaptureBulkDeletes();
 
-		await _handler.HandleAsync(
+		var result = await _handler.HandleAsync(
 			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Private)),
 			TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
-			// A Private-grade student is not part of the school, so the whole set
-			// goes — and in one write, not a delete per assignment.
-			() => deletedFor.ShouldBe([student.StudentId]),
-			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
-				r => r.DeleteAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never),
-			// Every removal is still audited individually: the trail names the
-			// activities the student stopped taking part in, not a bare count.
+			() => result.Grade.ShouldBe(GradeType.Private),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Invocations.ShouldBeEmpty(),
 			() => assignments
 				.SelectMany(assignment => assignment.DrainEvents())
 				.OfType<StudentRemovedFromExtraCurricular>()
-				.Select(removed => removed.Assignment.ExtraCurricular.Description)
-				.ShouldBe(["Choir", "String Orchestra"]));
+				.ShouldBeEmpty());
 	}
 
 	[Fact]
 	[Trait("AC", "277UC24")]
-	public async Task HandleAsync_GradeChangedToPrivateWithNoAssignments_WritesNothingAtAll()
+	public async Task HandleAsync_GradeChangedToPrivateWithNoAssignments_WritesNothingToTheAssignments()
 	{
 		var student = GivenStudent(GradeType.Grade4);
-		GivenAssignments(student);
-		var deletedFor = CaptureBulkDeletes();
 
 		await _handler.HandleAsync(
 			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Private)),
 			TestContext.Current.CancellationToken);
 
-		// Nothing to discard, so no write is issued for it.
-		deletedFor.ShouldBeEmpty();
+		_context.Repositories.StudentExtraCurricularRepositoryMock.Invocations.ShouldBeEmpty();
 	}
 
 	[Fact]
 	[Trait("AC", "277UC24")]
-	public async Task HandleAsync_GradeChangedButNotToPrivate_LeavesTheAssignmentsAlone()
+	public async Task HandleAsync_GradeChangedToAnotherPhaseWhileHoldingAnActivity_IsRefusedAndWritesNothing()
 	{
 		var student = GivenStudent(GradeType.Grade4);
 		GivenAssignments(student, "Choir");
-		var deletedFor = CaptureBulkDeletes();
 
-		await _handler.HandleAsync(
+		await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
 			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Grade5, PhaseType.Senior)),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
+	[Trait("AC", "345UC1")]
+	public async Task HandleAsync_PhaseChangedAwayFromAHeldActivity_IsRefusedAndLeavesTheStudentUnchanged()
+	{
+		var student = GivenStudent(GradeType.Grade4);
+		GivenActivities(student, ExtraCurricularFactory.Create(description: "Choir", phase: PhaseType.Junior));
+
+		var exception = await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Grade4, PhaseType.Senior)),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => exception.Message.ShouldBe(HeldExtraCurricularsMessages.PhaseMustMatch),
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => student.Phase.ShouldBe(PhaseType.Junior),
+			() => student.DrainEvents().OfType<StudentUpdated>().ShouldBeEmpty());
+	}
+
+	[Fact]
+	[Trait("AC", "345UC2")]
+	public async Task HandleAsync_PrivateStudentHoldingASeniorActivityMovedToJunior_IsRefused()
+	{
+		var student = GivenPrivateStudent();
+		GivenActivities(student, ExtraCurricularFactory.Create(description: "Orchestra", phase: PhaseType.Senior));
+
+		await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Grade1, PhaseType.Junior)),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => student.Grade.ShouldBe(GradeType.Private),
+			() => student.Phase.ShouldBeNull());
+	}
+
+	[Theory]
+	[InlineData(PhaseType.Junior)]
+	[InlineData(PhaseType.Senior)]
+	[Trait("AC", "345UC3")]
+	public async Task HandleAsync_PrivateStudentHoldingActivitiesOfBothPhases_IsRefusedForEitherPhase(PhaseType target)
+	{
+		var student = GivenPrivateStudent();
+		GivenActivities(
+			student,
+			ExtraCurricularFactory.Create(description: "Choir", phase: PhaseType.Junior),
+			ExtraCurricularFactory.Create(description: "Orchestra", phase: PhaseType.Senior));
+
+		await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Grade1, target)),
+			TestContext.Current.CancellationToken));
+
+		_context.Repositories.StudentRepositoryMock.Verify(
+			r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "345UC4")]
+	public async Task HandleAsync_PrivateStudentHoldingAnActivityMovedToItsPhase_IsAccepted()
+	{
+		var student = GivenPrivateStudent();
+		GivenActivities(student, ExtraCurricularFactory.Create(description: "Choir", phase: PhaseType.Junior));
+
+		var result = await _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, RequestFor(GradeType.Grade1, PhaseType.Junior)),
 			TestContext.Current.CancellationToken);
 
-		// Junior-to-Senior movement is a re-check of which activities still fit,
-		// which this story explicitly leaves alone. Only Private discards.
-		deletedFor.ShouldBeEmpty();
+		ShouldlyHelpers.Satisfy(
+			() => result.Grade.ShouldBe(GradeType.Grade1),
+			() => result.Phase.ShouldBe(PhaseType.Junior),
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.UpdateAsync(student, It.IsAny<CancellationToken>()), Times.Once),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.CreateAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never),
+			() => _context.Repositories.StudentExtraCurricularRepositoryMock.Verify(
+				r => r.DeleteAsync(It.IsAny<StudentExtraCurricular>(), It.IsAny<CancellationToken>()), Times.Never));
+	}
+
+	[Fact]
+	[Trait("AC", "345UC5")]
+	public async Task HandleAsync_GradeChangedWithinTheSamePhaseWhileHoldingActivities_IsAccepted()
+	{
+		var student = GivenStudent(GradeType.Grade4);
+		GivenActivities(
+			student,
+			ExtraCurricularFactory.Create(description: "Choir", phase: PhaseType.Junior),
+			ExtraCurricularFactory.Create(description: "Recorders", phase: PhaseType.Junior));
+		var request = RequestFor(GradeType.Grade3, PhaseType.Junior) with { FirstName = "Alicia" };
+
+		var result = await _handler.HandleAsync(
+			new UpdateStudentCommand(student.StudentId, request),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => result.FirstName.ShouldBe("Alicia"),
+			() => result.Grade.ShouldBe(GradeType.Grade3),
+			() => _context.Repositories.StudentRepositoryMock.Verify(
+				r => r.UpdateAsync(student, It.IsAny<CancellationToken>()), Times.Once));
 	}
 
 	[Fact]
@@ -171,10 +274,6 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 	{
 		var student = GivenStudent(GradeType.Grade4);
 		GivenAssignments(student, "Choir", "String Orchestra");
-		var deletedFor = CaptureBulkDeletes();
-		// The student's own write fails. The discard is sequenced after it, so it
-		// is never reached — and on the request's ambient transaction, a failure
-		// here would take the whole update back with it either way.
 		_context.Repositories.StudentRepositoryMock
 			.Setup(r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new InvalidOperationException("the update was rejected"));
@@ -191,7 +290,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 			new UpdateStudentCommand(unknownStudent, RequestFor(GradeType.Private)),
 			TestContext.Current.CancellationToken));
 
-		deletedFor.ShouldBeEmpty();
+		_context.Repositories.StudentExtraCurricularRepositoryMock.Invocations.ShouldBeEmpty();
 	}
 
 	private static UpdateStudentRequest RequestFor(GradeType grade, PhaseType? phase = null)
@@ -220,11 +319,28 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		return student;
 	}
 
-	private List<StudentExtraCurricular> GivenAssignments(Student student, params string[] descriptions)
+	private Student GivenPrivateStudent()
 	{
-		var assignments = descriptions
-			.Select(description => new StudentExtraCurricular(
-				student.StudentId, ExtraCurricularFactory.Create(description: description)))
+		var student = StudentFactory.Create(grade: GradeType.Private, @class: null, phase: null);
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.GetByIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(student);
+		_context.Repositories.StudentRepositoryMock
+			.Setup(r => r.UpdateAsync(It.IsAny<Student>(), It.IsAny<CancellationToken>()))
+			.Returns(Task.CompletedTask);
+
+		return student;
+	}
+
+	private List<StudentExtraCurricular> GivenAssignments(Student student, params string[] descriptions) =>
+		GivenActivities(
+			student,
+			[.. descriptions.Select(description => ExtraCurricularFactory.Create(description: description))]);
+
+	private List<StudentExtraCurricular> GivenActivities(Student student, params ExtraCurricular[] activities)
+	{
+		var assignments = activities
+			.Select(activity => new StudentExtraCurricular(student.StudentId, activity))
 			.ToList();
 
 		_context.Repositories.StudentExtraCurricularRepositoryMock
@@ -232,19 +348,5 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 			.ReturnsAsync(assignments);
 
 		return assignments;
-	}
-
-	/// <summary>The students whose whole assignment set the handler asked to be discarded.</summary>
-	private List<Guid> CaptureBulkDeletes()
-	{
-		var captured = new List<Guid>();
-
-		_context.Repositories.StudentExtraCurricularRepositoryMock
-			.Setup(r => r.DeleteAllByStudentIdAsync(
-				It.IsAny<Guid>(), It.IsAny<IEnumerable<StudentExtraCurricular>>(), It.IsAny<CancellationToken>()))
-			.Callback<Guid, IEnumerable<StudentExtraCurricular>, CancellationToken>((studentId, _, _) => captured.Add(studentId))
-			.Returns(Task.CompletedTask);
-
-		return captured;
 	}
 }

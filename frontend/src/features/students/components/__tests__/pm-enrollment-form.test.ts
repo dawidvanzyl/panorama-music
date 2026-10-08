@@ -64,7 +64,7 @@ afterEach(() => {
   document.body.removeChild(form);
 });
 
-describe('pm-enrollment-form fields offered on open', { tags: ['268UC16'] }, () => {
+describe('pm-enrollment-form fields offered on open', { tags: ['268UC16', '342UC4'] }, () => {
   it('offers course, teacher, instrument type, step and an enrolled date defaulted to today', () => {
     form.resetForAdd();
 

@@ -1,5 +1,6 @@
 -- get_students
--- Returns the student roster. Filtering is a client-side concern over the
+-- Returns the student roster, each student with the teacher of every course they
+-- hold (empty when none). Filtering is a client-side concern over the
 -- cached list, not a server-side responsibility.
 -- A student holding a waiting-list entry is excluded (#292) — unless they also
 -- hold a course enrollment, in which case enrollment wins: the milestone rule
@@ -8,6 +9,7 @@
 -- both stays visible here rather than disappearing from both screens.
 
 DROP FUNCTION IF EXISTS students.get_students(TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS students.get_students();
 
 CREATE OR REPLACE FUNCTION students.get_students()
 RETURNS TABLE(
@@ -18,13 +20,15 @@ RETURNS TABLE(
     grade          TEXT,
     class          TEXT,
     phase          TEXT,
-    language       TEXT
+    language       TEXT,
+    teacher_ids    UUID[]
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT s.student_id, s.first_name, s.last_name, s.date_of_birth, s.grade, s.class, s.phase, s.language
+    SELECT s.student_id, s.first_name, s.last_name, s.date_of_birth, s.grade, s.class, s.phase, s.language,
+           ARRAY(SELECT sc.teacher_id FROM students.student_courses sc WHERE sc.student_id = s.student_id)
     FROM students.students s
     WHERE NOT EXISTS (
         SELECT 1 FROM students.waiting_list wl WHERE wl.student_id = s.student_id

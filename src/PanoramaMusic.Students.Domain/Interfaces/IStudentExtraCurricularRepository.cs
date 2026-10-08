@@ -13,10 +13,11 @@ public interface IStudentExtraCurricularRepository
 	Task<IList<StudentExtraCurricular>> GetByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// The activities the student may be assigned to: those offered to their own
-	/// phase that they do not already take part in. A student whose phase is not
-	/// recorded may be assigned to none, and the query answers that with an empty
-	/// list rather than the caller special-casing it.
+	/// The activities the student may be assigned to that they do not already take
+	/// part in: those offered to their own phase, or every phase for a Private-grade
+	/// student. A graded student whose phase is not recorded may be assigned to
+	/// none, and the query answers that with an empty list rather than the caller
+	/// special-casing it.
 	/// </summary>
 	Task<IList<ExtraCurricular>> GetAssignableAsync(Guid studentId, CancellationToken cancellationToken);
 
@@ -35,18 +36,14 @@ public interface IStudentExtraCurricularRepository
 	/// </summary>
 	Task<int> CountByExtraCurricularIdAsync(Guid extraCurricularId, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// How many activities the student takes part in — the assignment half of the
+	/// condition that blocks removing their last holding. A count rather than a
+	/// read of every row, since the caller only needs the number.
+	/// </summary>
+	Task<int> CountByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
+
 	Task CreateAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
 
 	Task DeleteAsync(StudentExtraCurricular assignment, CancellationToken cancellationToken);
-
-	/// <summary>
-	/// Every one of the student's assignments, in a single statement rather than a
-	/// delete per row. The assignments are passed alongside because they are the
-	/// aggregates carrying the pending removal events, so each removal is still
-	/// audited individually even though the write is one.
-	/// </summary>
-	Task DeleteAllByStudentIdAsync(
-		Guid studentId,
-		IEnumerable<StudentExtraCurricular> assignments,
-		CancellationToken cancellationToken);
 }

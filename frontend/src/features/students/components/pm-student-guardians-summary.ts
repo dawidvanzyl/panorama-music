@@ -1,4 +1,5 @@
 import type { GuardianRelationship, GuardianResult } from '../services/guardians';
+import { CONTACT_SEPARATOR, guardianFlags, guardianHeading, NO_GUARDIANS_LINKED } from './guardian-options';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -62,7 +63,7 @@ template.innerHTML = `
 
   <div class="summary__label">Guardians</div>
   <ul class="summary__list" id="list" hidden></ul>
-  <p class="summary__empty" id="empty">No guardians linked.</p>
+  <p class="summary__empty" id="empty">${NO_GUARDIANS_LINKED}</p>
 `;
 
 export class PmStudentGuardiansSummary extends HTMLElement {
@@ -98,10 +99,6 @@ export class PmStudentGuardiansSummary extends HTMLElement {
     this.render();
   }
 
-  private relationshipName(id: string): string {
-    return this._relationships.find((r) => r.guardianRelationshipId === id)?.name ?? '—';
-  }
-
   private render(): void {
     if (!this.list || !this.emptyMessage) return;
 
@@ -126,22 +123,17 @@ export class PmStudentGuardiansSummary extends HTMLElement {
 
     const heading = document.createElement('span');
     heading.classList.add('summary__item-heading');
-    heading.textContent = `${guardian.firstName} ${guardian.surname} · ${this.relationshipName(guardian.guardianRelationshipId)}`;
+    heading.textContent = guardianHeading(guardian, this._relationships);
     item.appendChild(heading);
 
     const contact = this.buildContact(guardian);
     if (contact) item.appendChild(contact);
 
-    const flags = [
-      guardian.receivesCorrespondence ? 'Correspondence' : null,
-      guardian.responsibleForPayment ? 'Payment' : null,
-      guardian.married ? 'Married' : null,
-    ].filter((flag) => flag !== null);
-
-    if (flags.length > 0) {
+    const flags = guardianFlags(guardian);
+    if (flags !== null) {
       const flagsLine = document.createElement('span');
       flagsLine.classList.add('summary__item-flags');
-      flagsLine.textContent = flags.join(', ');
+      flagsLine.textContent = flags;
       item.appendChild(flagsLine);
     }
 
@@ -160,7 +152,7 @@ export class PmStudentGuardiansSummary extends HTMLElement {
     }
 
     if (guardian.email) {
-      if (guardian.cell) contact.appendChild(document.createTextNode(' · '));
+      if (guardian.cell) contact.appendChild(document.createTextNode(CONTACT_SEPARATOR));
 
       const email = document.createElement('a');
       email.classList.add('summary__item-email');

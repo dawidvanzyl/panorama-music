@@ -132,6 +132,45 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 	}
 
 	[Fact]
+	[Trait("AC", "343UC3")]
+	public async Task HandleAsync_OnlyAssignmentWhileEnrolledInACourse_DeletesTheAssignment()
+	{
+		var student = GivenStudent(PhaseType.Junior);
+		var choir = GivenActivity("Choir", PhaseType.Junior);
+		GivenAssigned(student, [choir]);
+		GivenEnrolledIn(student, 1);
+		var writes = CaptureWrites();
+
+		await _removeHandler.HandleAsync(
+			new RemoveExtraCurricularCommand(student.StudentId, choir.ExtraCurricularId),
+			TestContext.Current.CancellationToken);
+
+		ShouldlyHelpers.Satisfy(
+			() => writes.Deleted.Count.ShouldBe(1),
+			() => writes.Deleted[0].ExtraCurricular.ExtraCurricularId.ShouldBe(choir.ExtraCurricularId));
+	}
+
+	[Fact]
+	[Trait("AC", "343UC4")]
+	public async Task HandleAsync_OnlyAssignmentWithNoCourse_ThrowsDomainExceptionAndDeletesNothing()
+	{
+		var student = GivenStudent(PhaseType.Junior);
+		var choir = GivenActivity("Choir", PhaseType.Junior);
+		GivenAssigned(student, [choir]);
+		GivenEnrolledIn(student, 0);
+		var writes = CaptureWrites();
+
+		var thrown = await Should.ThrowAsync<DomainException>(() => _removeHandler.HandleAsync(
+			new RemoveExtraCurricularCommand(student.StudentId, choir.ExtraCurricularId),
+			TestContext.Current.CancellationToken));
+
+		ShouldlyHelpers.Satisfy(
+			() => thrown.Message.ShouldBe("A student must have at least one course or one extra-curricular."),
+			() => writes.Deleted.ShouldBeEmpty(),
+			() => writes.Created.ShouldBeEmpty());
+	}
+
+	[Fact]
 	[Trait("AC", "277UC5")]
 	public async Task HandleAsync_AssignedActivitiesAreRead_EachCarriesItsDescriptionPhaseAndSlotsInWeekOrder()
 	{
@@ -176,23 +215,41 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 
 	[Fact]
 	[Trait("AC", "277UC23")]
-	public async Task HandleAsync_PrivateGradeStudent_IsRefusedForTheGradeAndPersistsNothing()
+	[Trait("AC", "344UC1")]
+	public async Task HandleAsync_PrivateGradeStudent_IsAssignedActivitiesOfEveryPhase()
 	{
-		// Private-grade, so no phase — the two are biconditional. The refusal has to
-		// name the grade all the same: "no phase matches" is not the reason, and the
-		// endpoint states the rule for any caller, not only the screen that hides
-		// the step.
 		var student = GivenStudent(GradeType.Private, phase: null);
-		var activity = GivenActivity("Choir", PhaseType.Junior);
+		var junior = GivenActivity("Choir", PhaseType.Junior);
+		var senior = GivenActivity("Senior Band", PhaseType.Senior);
+		GivenAssigned(student, []);
+		var writes = CaptureWrites();
+
+		await _assignHandler.HandleAsync(
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(junior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+		await _assignHandler.HandleAsync(
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(senior.ExtraCurricularId)),
+			TestContext.Current.CancellationToken);
+
+		writes.Created.Select(assignment => assignment.ExtraCurricular.ExtraCurricularId)
+			.ShouldBe([junior.ExtraCurricularId, senior.ExtraCurricularId]);
+	}
+
+	[Fact]
+	[Trait("AC", "344UC2")]
+	public async Task HandleAsync_GradedStudentAndActivityOfTheOtherPhase_IsRefusedWithThePhaseMessageAndPersistsNothing()
+	{
+		var student = GivenStudent(GradeType.Grade5, PhaseType.Junior);
+		var senior = GivenActivity("Senior Band", PhaseType.Senior);
 		GivenAssigned(student, []);
 		var writes = CaptureWrites();
 
 		var thrown = await Should.ThrowAsync<DomainException>(() => _assignHandler.HandleAsync(
-			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(activity.ExtraCurricularId)),
+			new AssignExtraCurricularCommand(student.StudentId, new AssignExtraCurricularRequest(senior.ExtraCurricularId)),
 			TestContext.Current.CancellationToken));
 
 		ShouldlyHelpers.Satisfy(
-			() => thrown.Message.ShouldBe("A Private-grade student does not take part in extra-curricular activities."),
+			() => thrown.Message.ShouldBe("A student can only be assigned to an activity offered to their own phase."),
 			() => writes.Created.ShouldBeEmpty());
 	}
 
@@ -280,6 +337,11 @@ public class StudentExtraCurricularHandlerTests : IClassFixture<StudentsTestFixt
 			.ReturnsAsync((Guid _, Guid extraCurricularId, CancellationToken _) =>
 				activities.Any(activity => activity.ExtraCurricularId == extraCurricularId));
 	}
+
+	private void GivenEnrolledIn(Student student, int enrollments) =>
+		_context.Repositories.StudentCourseRepositoryMock
+			.Setup(r => r.CountByStudentIdAsync(student.StudentId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(enrollments);
 
 	/// <summary>What the handler asked the repository to write.</summary>
 	private CapturedWrites CaptureWrites()
