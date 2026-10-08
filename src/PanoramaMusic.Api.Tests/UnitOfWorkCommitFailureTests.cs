@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PanoramaMusic.Api.Tests.Fixtures;
+using PanoramaMusic.Api.Tests.Providers;
 using PanoramaMusic.Api.Tests.Transactions;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Interfaces;
@@ -23,19 +25,22 @@ public sealed class UnitOfWorkCommitFailureTests(ApiTestFixture fixture)
 	public async Task Login_CommitFailsAsResponseStarts_ClientGetsNoSuccessStatusAndWriteIsNotPersisted()
 	{
 		var (email, userId) = await fixture.SeedActiveUserAsync(_password, "commit-failure");
+		var correlationId = Guid.NewGuid().ToString();
+		var captureProvider = new CaptureLoggerProvider();
 
 		await using var factory = fixture.WithWebHostBuilder(builder =>
 		{
 			builder.ConfigureServices(services =>
 			{
 				services.AddHttpContextAccessor();
+				services.AddSingleton<ILoggerFactory>(new LoggerFactory([captureProvider]));
 				services.AddScoped<NpgsqlUnitOfWork>();
 				services.AddScoped<IUnitOfWork>(provider => new CommitFailingUnitOfWork(
 					provider.GetRequiredService<NpgsqlUnitOfWork>(),
 					provider.GetRequiredService<IHttpContextAccessor>()));
 			});
 		});
-		factory.UseKestrel();
+		factory.UseKestrel(0);
 		factory.StartServer();
 
 		using var client = factory.CreateClient();
@@ -45,6 +50,7 @@ public sealed class UnitOfWorkCommitFailureTests(ApiTestFixture fixture)
 		};
 		request.Headers.Add("X-Test-Remote-Ip", "10.0.35.1");
 		request.Headers.Add(CommitFailingUnitOfWork.HeaderName, "1");
+		request.Headers.Add("X-Correlation-ID", correlationId);
 
 		using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
@@ -52,8 +58,27 @@ public sealed class UnitOfWorkCommitFailureTests(ApiTestFixture fixture)
 		var refreshTokenRepository = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
 		var activeTokens = await refreshTokenRepository.GetActiveByUserIdAsync(userId, TestContext.Current.CancellationToken);
 
+		var loggedWithCorrelationId = await WaitForErrorLogAsync(captureProvider, correlationId);
+
 		ShouldlyHelpers.Satisfy(
 			() => ((int)response.StatusCode).ShouldBeGreaterThanOrEqualTo(400),
-			() => activeTokens.ShouldBeEmpty());
+			() => activeTokens.ShouldBeEmpty(),
+			() => loggedWithCorrelationId.ShouldBeTrue());
 	}
+
+	private static async Task<bool> WaitForErrorLogAsync(CaptureLoggerProvider captureProvider, string correlationId)
+	{
+		for (var attempt = 0; attempt < 50; attempt++)
+		{
+			if (captureProvider.Entries.Any(entry => entry.Level == LogLevel.Error && HasCorrelationId(entry, correlationId)))
+				return true;
+
+			await Task.Delay(100, TestContext.Current.CancellationToken);
+		}
+
+		return false;
+	}
+
+	private static bool HasCorrelationId(CapturedLogEntry entry, string correlationId) =>
+		entry.Properties.TryGetValue("CorrelationId", out var value) && Equals(value?.ToString(), correlationId);
 }
