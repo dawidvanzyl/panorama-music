@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 import type {
   ReportDefinitionModel,
@@ -108,29 +107,6 @@ export class ReportsError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new ReportsError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 /**
  * Wraps a network failure (fetch rejecting outright — offline, DNS, CORS) in
  * the same `ReportsError` a non-2xx response produces, so callers never need
@@ -229,7 +205,7 @@ function mapSavedReportRunResult(api: ApiSavedReportRunResult): ReportResultMode
 export async function getFields(): Promise<ReportFieldsModel> {
   return guardNetworkFailure(async () => {
     const response = await fetch(`${API_BASE}/fields`, { headers: authHeaders() });
-    return mapFields(await handleResponse<ApiReportFields>(response));
+    return mapFields(await handleResponse<ApiReportFields>(response, ReportsError));
   });
 }
 
@@ -241,7 +217,7 @@ export async function runReport(definition: ReportDefinitionModel): Promise<Repo
       headers: authHeaders(),
       body: JSON.stringify(definition),
     });
-    return mapRunResult(await handleResponse<ApiReportRunResult>(response));
+    return mapRunResult(await handleResponse<ApiReportRunResult>(response, ReportsError));
   });
 }
 
@@ -259,7 +235,7 @@ export async function listSavedReports(): Promise<SavedReportSummary[]> {
 
   return guardNetworkFailure(async () => {
     const response = await fetch(API_BASE, { headers: authHeaders() });
-    const result = (await handleResponse<ApiSavedReportSummary[]>(response)).map(mapSavedReportSummary);
+    const result = (await handleResponse<ApiSavedReportSummary[]>(response, ReportsError)).map(mapSavedReportSummary);
     _savedReportsCache = result;
     return result;
   });
@@ -273,7 +249,7 @@ export async function saveReport(name: string, definition: ReportDefinitionModel
       headers: authHeaders(),
       body: JSON.stringify({ name, definition }),
     });
-    const saved = await handleResponse<ApiSavedReportSummary>(response);
+    const saved = await handleResponse<ApiSavedReportSummary>(response, ReportsError);
     clearSavedReportsCache();
     return { id: saved.id, name: saved.name, createdBy: saved.createdBy, isOwner: saved.isOwner };
   });
@@ -283,7 +259,7 @@ export async function saveReport(name: string, definition: ReportDefinitionModel
 export async function getSavedReport(id: string): Promise<SavedReportDetail> {
   return guardNetworkFailure(async () => {
     const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { headers: authHeaders() });
-    return mapSavedReportDetail(await handleResponse<ApiSavedReportDetail>(response));
+    return mapSavedReportDetail(await handleResponse<ApiSavedReportDetail>(response, ReportsError));
   });
 }
 
@@ -294,7 +270,7 @@ export async function runSavedReport(id: string): Promise<ReportResultModel> {
       method: 'POST',
       headers: authHeaders(),
     });
-    const result = mapSavedReportRunResult(await handleResponse<ApiSavedReportRunResult>(response));
+    const result = mapSavedReportRunResult(await handleResponse<ApiSavedReportRunResult>(response, ReportsError));
     clearSavedReportsCache();
     return result;
   });
@@ -312,7 +288,7 @@ export async function updateReport(
       headers: authHeaders(),
       body: JSON.stringify({ name, definition }),
     });
-    const saved = await handleResponse<ApiSavedReportSummary>(response);
+    const saved = await handleResponse<ApiSavedReportSummary>(response, ReportsError);
     clearSavedReportsCache();
     return { id: saved.id, name: saved.name, createdBy: saved.createdBy, isOwner: saved.isOwner };
   });
@@ -325,7 +301,7 @@ export async function deleteReport(id: string): Promise<void> {
       method: 'DELETE',
       headers: authHeaders(),
     });
-    await assertOk(response);
+    await assertOk(response, ReportsError);
     clearSavedReportsCache();
   });
 }

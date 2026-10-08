@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 import { registerCourseCatalogueCache } from '../../../services/course-catalogue-cache';
 import type {
@@ -87,29 +86,6 @@ export class WaitingListError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new WaitingListError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 let _waitingListCache: WaitingListGroupResult[] | null = null;
 
 export function clearWaitingListCache(): void {
@@ -127,7 +103,7 @@ export async function getWaitingList(): Promise<WaitingListGroupResult[]> {
   if (_waitingListCache) return _waitingListCache;
 
   const response = await fetch(API_BASE, { headers: authHeaders() });
-  _waitingListCache = await handleResponse<WaitingListGroupResult[]>(response);
+  _waitingListCache = await handleResponse<WaitingListGroupResult[]>(response, WaitingListError);
   return _waitingListCache;
 }
 
@@ -156,7 +132,7 @@ export async function getOfferedLessonStructures(): Promise<LessonStructure[]> {
   if (_offeredLessonStructuresCache) return _offeredLessonStructuresCache;
 
   const response = await fetch(`${LESSON_STRUCTURES_BASE}/offered`, { headers: authHeaders() });
-  _offeredLessonStructuresCache = await handleResponse<LessonStructure[]>(response);
+  _offeredLessonStructuresCache = await handleResponse<LessonStructure[]>(response, WaitingListError);
   return _offeredLessonStructuresCache;
 }
 
@@ -174,7 +150,7 @@ export async function captureWaitingListStudent(
     headers: authHeaders(),
     body: JSON.stringify({ ...student, ...waitingList }),
   });
-  const created = await handleResponse<WaitingListEntryResult>(response);
+  const created = await handleResponse<WaitingListEntryResult>(response, WaitingListError);
   clearWaitingListCache();
   return created;
 }
@@ -194,7 +170,7 @@ export async function updateWaitingListEntry(
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const updated = await handleResponse<WaitingListEntryResult>(response);
+  const updated = await handleResponse<WaitingListEntryResult>(response, WaitingListError);
   clearWaitingListCache();
   return updated;
 }
@@ -210,7 +186,7 @@ export async function updateWaitingListStudent(studentId: string, input: Student
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  await assertOk(response);
+  await assertOk(response, WaitingListError);
   clearWaitingListCache();
 }
 
@@ -224,7 +200,7 @@ export async function removeWaitingListStudent(studentId: string): Promise<void>
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, WaitingListError);
   clearWaitingListCache();
 }
 
@@ -245,7 +221,7 @@ export async function enrolWaitingListStudent(
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const enrolled = await handleResponse<EnrollmentResult>(response);
+  const enrolled = await handleResponse<EnrollmentResult>(response, WaitingListError);
   clearWaitingListCache();
   return enrolled;
 }

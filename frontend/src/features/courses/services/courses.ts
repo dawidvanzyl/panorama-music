@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 import { clearCourseCatalogueCaches } from '../../../services/course-catalogue-cache';
 import type { CourseType, LessonType, DurationType, OccurrenceType } from '../../../services/lesson-structure';
@@ -48,29 +47,6 @@ export class CoursesError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new CoursesError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 let _coursesCache: Course[] | null = null;
 
 export function clearCoursesCache(): void {
@@ -100,7 +76,7 @@ export async function getCourses(): Promise<Course[]> {
   if (_coursesCache) return _coursesCache;
 
   const response = await fetch(COURSES_BASE, { headers: authHeaders() });
-  _coursesCache = await handleResponse<Course[]>(response);
+  _coursesCache = await handleResponse<Course[]>(response, CoursesError);
   return _coursesCache;
 }
 
@@ -116,7 +92,7 @@ export async function createCourse(input: CourseInput): Promise<Course> {
       lessonStructureId: input.lessonStructureId,
     }),
   });
-  const result = await handleResponse<Course>(response);
+  const result = await handleResponse<Course>(response, CoursesError);
   onCatalogueChanged();
   return result;
 }
@@ -132,7 +108,7 @@ export async function updateCourseCost(courseId: string, cost: string): Promise<
     headers: authHeaders(),
     body: JSON.stringify({ cost }),
   });
-  const result = await handleResponse<Course>(response);
+  const result = await handleResponse<Course>(response, CoursesError);
   clearCoursesCache();
   return result;
 }
@@ -148,7 +124,7 @@ export interface CourseEnrollmentCount {
  */
 export async function countCourseEnrollments(courseId: string): Promise<CourseEnrollmentCount> {
   const response = await fetch(`${COURSES_BASE}/${courseId}/enrollments/count`, { headers: authHeaders() });
-  return handleResponse<CourseEnrollmentCount>(response);
+  return handleResponse<CourseEnrollmentCount>(response, CoursesError);
 }
 
 /** Rejected by the API with a 400 while any student is still enrolled in the course. */
@@ -157,7 +133,7 @@ export async function deleteCourse(courseId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, CoursesError);
   onCatalogueChanged();
 }
 
@@ -174,6 +150,6 @@ export async function getLessonStructures(): Promise<LessonStructure[]> {
   if (_lessonStructuresCache) return _lessonStructuresCache;
 
   const response = await fetch(LESSON_STRUCTURES_BASE, { headers: authHeaders() });
-  _lessonStructuresCache = await handleResponse<LessonStructure[]>(response);
+  _lessonStructuresCache = await handleResponse<LessonStructure[]>(response, CoursesError);
   return _lessonStructuresCache;
 }

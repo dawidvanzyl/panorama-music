@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 
 const STUDENTS_BASE = '/api/students';
@@ -55,29 +54,6 @@ export class GuardiansError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new GuardiansError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 /**
  * A student's guardians change frequently within a single wizard session
  * (add/edit/unlink/sync all refresh the list immediately), so like
@@ -85,7 +61,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  */
 export async function getGuardians(studentId: string): Promise<GuardianResult[]> {
   const response = await fetch(`${STUDENTS_BASE}/${studentId}/guardians`, { headers: authHeaders() });
-  return handleResponse<GuardianResult[]>(response);
+  return handleResponse<GuardianResult[]>(response, GuardiansError);
 }
 
 export async function addGuardian(studentId: string, input: GuardianInput): Promise<GuardianResult> {
@@ -94,7 +70,7 @@ export async function addGuardian(studentId: string, input: GuardianInput): Prom
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  return handleResponse<GuardianResult>(response);
+  return handleResponse<GuardianResult>(response, GuardiansError);
 }
 
 export async function updateGuardian(guardianId: string, input: GuardianInput): Promise<GuardianResult> {
@@ -103,7 +79,7 @@ export async function updateGuardian(guardianId: string, input: GuardianInput): 
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  return handleResponse<GuardianResult>(response);
+  return handleResponse<GuardianResult>(response, GuardiansError);
 }
 
 /** Unlinks the guardian from this student only; the record and its other sibling links survive. */
@@ -112,7 +88,7 @@ export async function unlinkGuardian(studentId: string, guardianId: string): Pro
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, GuardiansError);
 }
 
 /** Deletes the guardian record and every link to it across the sibling group. */
@@ -121,7 +97,7 @@ export async function deleteGuardian(guardianId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, GuardiansError);
 }
 
 /**
@@ -132,7 +108,7 @@ export async function deleteGuardian(guardianId: string): Promise<void> {
  */
 export async function isGuardianShared(guardianId: string): Promise<boolean> {
   const response = await fetch(`${GUARDIANS_BASE}/${guardianId}/shared`, { headers: authHeaders() });
-  return handleResponse<boolean>(response);
+  return handleResponse<boolean>(response, GuardiansError);
 }
 
 /** Re-links every sibling-group guardian the student is currently missing. */
@@ -141,7 +117,7 @@ export async function syncGuardians(studentId: string): Promise<GuardianResult[]
     method: 'POST',
     headers: authHeaders(),
   });
-  return handleResponse<GuardianResult[]>(response);
+  return handleResponse<GuardianResult[]>(response, GuardiansError);
 }
 
 /**
@@ -151,7 +127,7 @@ export async function syncGuardians(studentId: string): Promise<GuardianResult[]
  */
 export async function getMissingSiblingGuardians(studentId: string): Promise<GuardianResult[]> {
   const response = await fetch(`${STUDENTS_BASE}/${studentId}/guardians/missing`, { headers: authHeaders() });
-  return handleResponse<GuardianResult[]>(response);
+  return handleResponse<GuardianResult[]>(response, GuardiansError);
 }
 
 let _guardianRelationshipsCache: GuardianRelationship[] | null = null;
@@ -183,7 +159,7 @@ export async function getGuardianRelationships(): Promise<GuardianRelationship[]
   if (_guardianRelationshipsCache) return _guardianRelationshipsCache;
 
   const response = await fetch(GUARDIAN_RELATIONSHIPS_BASE, { headers: authHeaders() });
-  _guardianRelationshipsCache = await handleResponse<GuardianRelationship[]>(response);
+  _guardianRelationshipsCache = await handleResponse<GuardianRelationship[]>(response, GuardiansError);
   return _guardianRelationshipsCache;
 }
 
@@ -193,7 +169,7 @@ export async function createGuardianRelationship(name: string): Promise<Guardian
     headers: authHeaders(),
     body: JSON.stringify({ name }),
   });
-  const created = await handleResponse<GuardianRelationship>(response);
+  const created = await handleResponse<GuardianRelationship>(response, GuardiansError);
   clearGuardianRelationshipsCache();
   return created;
 }
@@ -207,7 +183,7 @@ export async function renameGuardianRelationship(
     headers: authHeaders(),
     body: JSON.stringify({ name }),
   });
-  const renamed = await handleResponse<GuardianRelationship>(response);
+  const renamed = await handleResponse<GuardianRelationship>(response, GuardiansError);
   clearGuardianRelationshipsCache();
   return renamed;
 }
@@ -221,7 +197,7 @@ export async function countGuardianRelationship(guardianRelationshipId: string):
   const response = await fetch(`${GUARDIAN_RELATIONSHIPS_BASE}/${guardianRelationshipId}/count`, {
     headers: authHeaders(),
   });
-  return handleResponse<CountGuardianRelationship>(response);
+  return handleResponse<CountGuardianRelationship>(response, GuardiansError);
 }
 
 /** Rejected by the API with a 400 when the type is still assigned to a guardian. */
@@ -230,6 +206,6 @@ export async function deleteGuardianRelationship(guardianRelationshipId: string)
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, GuardiansError);
   clearGuardianRelationshipsCache();
 }

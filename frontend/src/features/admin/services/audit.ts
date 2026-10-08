@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { authHeaders, handleResponse } from '../../../services/api-client';
 
 const API_BASE = '/api/audit';
 
@@ -116,25 +115,6 @@ export class AuditError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new AuditError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-  return response.json() as Promise<T>;
-}
-
 export async function getAuditEvents(filters: AuditEventFilters = {}): Promise<AuditEventPage> {
   const params = new URLSearchParams();
   if (filters.actor) params.set('actor', filters.actor);
@@ -147,5 +127,5 @@ export async function getAuditEvents(filters: AuditEventFilters = {}): Promise<A
   const response = await fetch(`${API_BASE}?${params.toString()}`, {
     headers: authHeaders(),
   });
-  return handleResponse<AuditEventPage>(response);
+  return handleResponse<AuditEventPage>(response, AuditError);
 }

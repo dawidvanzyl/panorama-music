@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/students';
@@ -62,29 +61,6 @@ export class StudentsError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new StudentsError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 let _studentsCache: RosterStudentResult[] | null = null;
 
 export function clearStudentsCache(): void {
@@ -101,7 +77,7 @@ export async function getStudents(): Promise<RosterStudentResult[]> {
   if (_studentsCache) return _studentsCache;
 
   const response = await fetch(API_BASE, { headers: authHeaders() });
-  _studentsCache = await handleResponse<RosterStudentResult[]>(response);
+  _studentsCache = await handleResponse<RosterStudentResult[]>(response, StudentsError);
   return _studentsCache;
 }
 
@@ -111,7 +87,7 @@ export async function createStudent(input: StudentInput): Promise<StudentResult>
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<StudentResult>(response);
+  const result = await handleResponse<StudentResult>(response, StudentsError);
   clearStudentsCache();
   return result;
 }
@@ -123,7 +99,7 @@ export async function createStudent(input: StudentInput): Promise<StudentResult>
  */
 export async function getStudentById(studentId: string): Promise<StudentResult> {
   const response = await fetch(`${API_BASE}/${studentId}`, { headers: authHeaders() });
-  return handleResponse<StudentResult>(response);
+  return handleResponse<StudentResult>(response, StudentsError);
 }
 
 export async function updateStudent(studentId: string, input: StudentInput): Promise<StudentResult> {
@@ -132,7 +108,7 @@ export async function updateStudent(studentId: string, input: StudentInput): Pro
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<StudentResult>(response);
+  const result = await handleResponse<StudentResult>(response, StudentsError);
   clearStudentsCache();
   return result;
 }
@@ -142,7 +118,7 @@ export async function deleteStudent(studentId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, StudentsError);
   clearStudentsCache();
 }
 
@@ -154,7 +130,7 @@ export async function deleteStudent(studentId: string): Promise<void> {
  */
 export async function getSiblings(studentId: string): Promise<SiblingStudentResult[]> {
   const response = await fetch(`${API_BASE}/${studentId}/siblings`, { headers: authHeaders() });
-  return handleResponse<SiblingStudentResult[]>(response);
+  return handleResponse<SiblingStudentResult[]>(response, StudentsError);
 }
 
 /**
@@ -168,7 +144,7 @@ export async function getSiblings(studentId: string): Promise<SiblingStudentResu
  */
 export async function getSiblingCandidates(): Promise<SiblingStudentResult[]> {
   const response = await fetch(`${API_BASE}/sibling-candidates`, { headers: authHeaders() });
-  return handleResponse<SiblingStudentResult[]>(response);
+  return handleResponse<SiblingStudentResult[]>(response, StudentsError);
 }
 
 export async function addSibling(studentId: string, siblingId: string): Promise<StudentResult> {
@@ -177,7 +153,7 @@ export async function addSibling(studentId: string, siblingId: string): Promise<
     headers: authHeaders(),
     body: JSON.stringify({ siblingId }),
   });
-  return handleResponse<StudentResult>(response);
+  return handleResponse<StudentResult>(response, StudentsError);
 }
 
 export async function removeSibling(studentId: string, siblingId: string): Promise<void> {
@@ -185,5 +161,5 @@ export async function removeSibling(studentId: string, siblingId: string): Promi
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, StudentsError);
 }
