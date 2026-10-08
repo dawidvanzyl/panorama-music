@@ -98,7 +98,7 @@ public sealed class SecurityHeadersTests(ApiTestFixture fixture)
 			client.AuthorizedGetRequest("/api/students"),
 			TestContext.Current.CancellationToken);
 
-		var students = await response.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+		var students = await response.Content.ReadFromJsonAsync<List<RosterStudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
 
 		ShouldlyHelpers.Satisfy(
 			() => response.Headers.GetValues("Cache-Control").ShouldContain(value => value.Contains("no-store")),

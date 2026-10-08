@@ -42,7 +42,7 @@ public sealed class StudentRoutesTests(ApiTestFixture fixture)
 			client.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
 
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
-		var results = await response.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+		var results = await response.Content.ReadFromJsonAsync<List<RosterStudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
 
 		results.ShouldNotBeNull();
 		var createdNames = new HashSet<(string, string)> { ("Julian", "Thorne"), ("Alice", "Vance"), ("Priya", "Okafor") };

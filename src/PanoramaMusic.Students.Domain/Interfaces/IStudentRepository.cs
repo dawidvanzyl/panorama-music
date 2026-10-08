@@ -8,10 +8,11 @@ public interface IStudentRepository
 	Task<Student?> GetByIdAsync(Guid studentId, CancellationToken cancellationToken);
 
 	/// <summary>
-	/// The student roster. A student whose only state is a waiting-list entry is
-	/// excluded, which is what keeps the two listings mutually exclusive.
+	/// The student roster, each student carrying the teachers of the courses they hold.
+	/// A student whose only state is a waiting-list entry is excluded, which is what
+	/// keeps the two listings mutually exclusive.
 	/// </summary>
-	Task<IList<Student>> GetAllAsync(CancellationToken cancellationToken);
+	Task<IList<RosterStudent>> GetAllAsync(CancellationToken cancellationToken);
 
 	/// <summary>
 	/// Every student who may be linked as a sibling, each carrying the listing

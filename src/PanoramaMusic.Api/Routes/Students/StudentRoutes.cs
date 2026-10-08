@@ -39,7 +39,7 @@ public static class StudentRoutes
 			})
 			.MarkSensitiveResponse()
 			.WithName("GetStudents")
-			.Produces<IList<StudentResult>>(StatusCodes.Status200OK)
+			.Produces<IList<RosterStudentResult>>(StatusCodes.Status200OK)
 			.Produces(StatusCodes.Status401Unauthorized)
 			.Produces(StatusCodes.Status403Forbidden);
 

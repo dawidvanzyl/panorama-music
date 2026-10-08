@@ -6,7 +6,7 @@ namespace PanoramaMusic.Students.Application.Handlers.Students;
 
 public sealed class GetStudentsHandler(IStudentRepository studentRepository)
 {
-	public async Task<IList<StudentResult>> HandleAsync(CancellationToken cancellationToken)
+	public async Task<IList<RosterStudentResult>> HandleAsync(CancellationToken cancellationToken)
 	{
 		var students = await studentRepository.GetAllAsync(cancellationToken);
 
