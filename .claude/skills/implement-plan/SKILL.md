@@ -203,7 +203,12 @@ needs. `implement-plan` owns the count; `verify-implementation` is stateless.
 **Verify reviews code; it does not run the checks.** So the automated checks from step 4
 must be green before you call it — never invoke verify on a red build, and after fixing
 any review finding that changed code, re-run the checks green before the next cycle. A
-green gauntlet is the precondition of every verify call.
+green gauntlet is the precondition of every verify call. The full gauntlet (backend
+plus full frontend) must run on the final code commit; a partial or folder-scoped
+vitest after the last code commit does not count.
+
+`verify-{cycle}.md` is produced only by invoking the `verify-implementation` skill. A
+developer-authored verify report is a definition-of-done failure.
 
 Each cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this
 skill is running in, `cycle`, `plan_answers_file` when you have one, and from cycle 2: `prev_verify_sha` (previous

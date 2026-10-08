@@ -182,6 +182,11 @@ exists), and **persistence** (anything claimed recorded survives a reload).
   or **needs exclusive {resource}** (depends on global state or the absence of other
   data). See the unique-value helpers in
   `e2e/features/courses/course-management.spec.ts`.
+- **State seed preconditions against code.** Every seeded value names the validator
+  limit it respects (file:line); every seeder names the fixture that waits for its
+  write; every assertion whose truth depends on rendered size names the in-browser
+  measurement that precedes it. No seeded token may contain a word the scenario
+  asserts present or absent.
 - **Every IT code gets at least one scenario.** If one can't be designed — ambiguous
   intent, or the story doesn't deliver it — record it under `## Uncovered` with the
   reason. An honest uncovered row beats a scenario that can't fail. Never invent,

@@ -96,6 +96,9 @@ Ground every bullet in something that actually happened this milestone — a cei
 hit, a ruling that recurred, a stage that re-ran needlessly, a brief that drifted.
 Vague self-help is noise.
 
+List in the retrospective every out-of-scope defect the milestone surfaced (from
+`rulings.md`) with its evidence, so the owner can decide on each at milestone end.
+
 **Write `process-improvements.md`** in the same dir: for each learning worth acting on,
 the specific MD change that would fix it. You **propose**; you do not edit any file
 under `.claude/` — a self-edit by the agent that ran the milestone ships silently and

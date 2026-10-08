@@ -75,9 +75,13 @@ must turn them green before reporting done.
    scenario that needs a hook the table lacks is a `NEEDS_RULING` — never guess one.
 5. Run the *Comment labels* check in `.claude/shared/automated-checks.md` over the
    specs and fix every hit.
-6. Type-check the specs (`cd e2e && npx tsc --noEmit`), commit them per spec and push
-   the branch. Don't stand up a stack or run them: they are expected to fail until
-   the code exists, and no bug is logged in this phase.
+6. Type-check the specs (`cd e2e && npx tsc --noEmit`), then dry-run each IT code once
+   against a fresh stack built from the base branch. Each spec must fail on its
+   feature assertion, not earlier: a timeout or error in seeding, fixtures, locators
+   or preconditions (strict-mode locator matches, unsatisfiable seed sizing, waits on
+   elements the seed never creates) is a spec defect — fix it before returning
+   `SPECIFIED`. Record each code's first-failing line in `qa-spec.md`. Commit the
+   specs per spec and push the branch. No bug is logged in this phase.
 
 Reply with `VERDICT: SPECIFIED`, `REPORT: {journal_dir}/qa-spec.md`, `BRANCH`, `SHA`
 and `IT_CODES: {n} specified`.
