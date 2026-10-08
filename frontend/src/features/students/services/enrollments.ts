@@ -1,5 +1,6 @@
 import { getAccessToken } from '../../../services/token-storage';
 import { handleUnauthorized } from '../../../services/auth';
+import { clearStudentsCache } from './students';
 import type {
   CourseType,
   LessonType,
@@ -118,7 +119,9 @@ export async function enrollStudent(studentId: string, input: EnrollmentInput): 
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  return handleResponse<EnrollmentResult>(response);
+  const result = await handleResponse<EnrollmentResult>(response);
+  clearStudentsCache();
+  return result;
 }
 
 export async function updateEnrollment(
@@ -131,7 +134,9 @@ export async function updateEnrollment(
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  return handleResponse<EnrollmentResult>(response);
+  const result = await handleResponse<EnrollmentResult>(response);
+  clearStudentsCache();
+  return result;
 }
 
 /** Withdraws the student from the course, removing the enrollment outright. */
@@ -141,6 +146,7 @@ export async function withdrawEnrollment(studentId: string, studentCourseId: str
     headers: authHeaders(),
   });
   await assertOk(response);
+  clearStudentsCache();
 }
 
 /**

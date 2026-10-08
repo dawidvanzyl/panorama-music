@@ -351,6 +351,13 @@ export default defineConfig({
       { name: '345UC6', description: 'Saving an edited student whose phase disagrees with a held activity requests no update and names the conflict on the Student step' },
       { name: '345UC7', description: 'Saving a new student whose phase disagrees with a staged activity requests no create and states the conflict' },
       { name: '345UC8', description: 'Once the conflicting activity is removed, Save requests the update' },
+      { name: '341UC3', description: 'The filter bar offers a Teacher select after Class listing All Teachers then each active teacher, and choosing one emits the teacher id' },
+      { name: '341UC4', description: 'Filtering by a teacher lists only the students holding a course with that teacher' },
+      { name: '341UC5', description: 'A student with no course is excluded under every teacher' },
+      { name: '341UC6', description: 'Setting Teacher back to All Teachers lists every student again' },
+      { name: '341UC7', description: 'The Teacher filter combines with the other filters' },
+      { name: '341UC8', description: 'With no teacher chosen the name, grade, phase and class filters behave as before' },
+      { name: '341UC9', description: 'An enrollment add, correction or withdrawal refreshes the roster so the Teacher filter reflects current courses' },
     ],
   },
 })

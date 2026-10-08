@@ -2250,3 +2250,116 @@ describe('pm-students-page — saving once the conflicting activity is removed',
     expect(vi.mocked(updateStudent)).toHaveBeenCalledWith('s1', expect.objectContaining({ phase: 'Senior' }));
   });
 });
+
+function teacherFilterOf(el: HTMLElement): HTMLSelectElement {
+  return el.shadowRoot!.getElementById('filterBar')!.shadowRoot!.getElementById('teacher') as HTMLSelectElement;
+}
+
+function chooseTeacherFilter(el: HTMLElement, teacherId: string): void {
+  const select = teacherFilterOf(el);
+  select.value = teacherId;
+  select.dispatchEvent(new Event('change'));
+}
+
+const aliceWithThabo = { ...alice, teacherIds: [thabo.teacherId] };
+const julianWithNoCourse = { ...julian, teacherIds: [] as string[] };
+
+describe('pm-students-page — the Teacher filter', { tags: ['341UC3', '341UC6'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetStudents.mockImplementation(() => Promise.resolve([aliceWithThabo, julianWithNoCourse]));
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('hands the assignable teachers to the filter bar without another request', () => {
+    expect([...teacherFilterOf(el).options].map((o) => o.textContent)).toEqual(['All Teachers', 'Thabo Nkosi']);
+    expect(vi.mocked(getAssignableTeachers)).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists only the chosen teacher students, and every student again once All Teachers is chosen', () => {
+    chooseTeacherFilter(el, thabo.teacherId);
+    expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1']);
+
+    chooseTeacherFilter(el, '');
+    expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1', 's2']);
+  });
+});
+
+describe('pm-students-page — the roster is read again after an enrollment write', { tags: ['341UC9'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian].map((s) => ({ ...s, teacherIds: [] }))));
+    el = await mountPage();
+    chooseTeacherFilter(el, thabo.teacherId);
+    mockGetStudents.mockClear();
+    mockGetStudents.mockImplementation(() => Promise.resolve([aliceWithThabo, julianWithNoCourse]));
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('shows the student under the teacher once an enrollment is added', async () => {
+    expect(tableOf(el).students).toEqual([]);
+    const wizard = await openCoursesTab(el);
+
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
+    await flush();
+
+    expect(mockGetStudents).toHaveBeenCalledTimes(1);
+    expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1']);
+  });
+
+  it('reads the roster again once an enrollment is corrected', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--save') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(updateEnrollment)).toHaveBeenCalled();
+    expect(mockGetStudents).toHaveBeenCalledTimes(1);
+    expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1']);
+  });
+
+  it('drops the student from under the teacher once their enrollment is withdrawn', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--withdraw') as HTMLButtonElement).click();
+    mockGetStudents.mockImplementation(() => Promise.resolve([alice, julian].map((s) => ({ ...s, teacherIds: [] }))));
+    (withdrawEnrollmentModalOf(el).shadowRoot!.getElementById('withdrawBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(vi.mocked(withdrawEnrollment)).toHaveBeenCalledWith('s1', 'sc1');
+    expect(mockGetStudents).toHaveBeenCalledTimes(1);
+    expect(tableOf(el).students).toEqual([]);
+  });
+
+  it('reads the roster again after the staged enrollments of a new student are written', async () => {
+    const created: StudentResult = { ...alice, studentId: 's3', firstName: 'Nadia' };
+    vi.mocked(createStudent).mockResolvedValue(created);
+    mockGetStudents.mockImplementation(() =>
+      Promise.resolve([aliceWithThabo, julianWithNoCourse, { ...created, teacherIds: [thabo.teacherId] }]),
+    );
+
+    (el.shadowRoot!.getElementById('createBtn') as HTMLButtonElement).click();
+    const wizard = wizardModalOf(el);
+    const wizardShadow = wizard.shadowRoot!;
+    fillStudentStep(wizard);
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    (wizardShadow.getElementById('nextBtn') as HTMLButtonElement).click();
+    enrollViaForm(wizard, recorderCourse.courseId, thabo.teacherId);
+    (wizardShadow.getElementById('saveBtn') as HTMLButtonElement).click();
+    await flush();
+
+    expect(mockGetStudents).toHaveBeenCalledTimes(2);
+    expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1', 's3']);
+  });
+});

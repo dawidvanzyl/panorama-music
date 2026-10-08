@@ -18,6 +18,7 @@ import {
   StudentsError,
   type StudentInput,
   type StudentResult,
+  type RosterStudentResult,
   type SiblingStudentResult,
 } from '../services/students';
 import {
@@ -58,6 +59,7 @@ import {
 } from '../services/student-extra-curriculars';
 import { courseLabel, todayIsoDate } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
+import type { PmStudentFilterBar } from '../components/pm-student-filter-bar';
 import type { PmStudentsTable } from '../components/pm-students-table';
 import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal';
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
@@ -157,7 +159,8 @@ export class PmStudentsPage extends HTMLElement {
   private _expandReadCounter = 0;
   private createBtn: HTMLButtonElement | null = null;
   private errorBanner: HTMLElement | null = null;
-  private _allStudents: StudentResult[] = [];
+  private filterBar: PmStudentFilterBar | null = null;
+  private _allStudents: RosterStudentResult[] = [];
   /**
    * The Siblings tab's own list, read separately from the roster this screen
    * shows: a sibling may be a waiting-list student, who is not on the roster at
@@ -175,6 +178,7 @@ export class PmStudentsPage extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmStudentFilterBar;
     this.studentsTable = this.shadowRoot!.getElementById('studentsTable') as unknown as PmStudentsTable;
     this.wizardModal = this.shadowRoot!.getElementById('wizardModal') as unknown as PmStudentWizardModal;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteStudentModal;
@@ -370,13 +374,16 @@ export class PmStudentsPage extends HTMLElement {
    * (now-closed) wizard.
    */
   private async createPendingEnrollments(studentId: string, enrollments: EnrollmentInput[]): Promise<void> {
+    let written = false;
     try {
       for (const enrollment of enrollments) {
         await enrollStudent(studentId, enrollment);
+        written = true;
       }
     } catch (err) {
       this.showError(err);
     }
+    if (written) await this.reloadRoster();
   }
 
   private handleEditRequested = async (event: Event): Promise<void> => {
@@ -624,6 +631,7 @@ export class PmStudentsPage extends HTMLElement {
     const { studentId, input } = (event as CustomEvent<{ studentId: string; input: EnrollmentInput }>).detail;
     try {
       await enrollStudent(studentId, input);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       this.wizardModal!.closeEnrollmentForm();
     } catch (err) {
@@ -639,6 +647,7 @@ export class PmStudentsPage extends HTMLElement {
     ).detail;
     try {
       await updateEnrollment(studentId, studentCourseId, input);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       // Returns the corrected row to its read-only form, the same way the
       // enroll panel is closed after a successful add.
@@ -673,6 +682,7 @@ export class PmStudentsPage extends HTMLElement {
       .detail;
     try {
       await withdrawEnrollment(studentId, studentCourseId);
+      await this.reloadRoster();
       await this.refreshWizardEnrollments(studentId);
       // Another row may have been open for editing when this withdrawal was
       // confirmed; the refreshed list would otherwise re-seed it from server
@@ -800,6 +810,7 @@ export class PmStudentsPage extends HTMLElement {
       const [courses, teachers] = await Promise.all([getEnrollableCourses(), getAssignableTeachers()]);
       this.wizardModal!.enrollableCourses = courses;
       this.wizardModal!.assignableTeachers = teachers;
+      this.filterBar!.teachers = teachers;
     } catch (err) {
       this.showError(err);
     }
@@ -839,6 +850,15 @@ export class PmStudentsPage extends HTMLElement {
       this.showError(err);
     }
     await this.loadSiblingCandidates();
+  };
+
+  private reloadRoster = async (): Promise<void> => {
+    try {
+      this._allStudents = await getStudents();
+      this.applyFilters();
+    } catch (err) {
+      this.showError(err);
+    }
   };
 
   private loadSiblingCandidates = async (): Promise<void> => {
