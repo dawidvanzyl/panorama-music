@@ -30,6 +30,7 @@ public sealed class UnitOfWorkCommitFailureTests(ApiTestFixture fixture)
 
 		await using var factory = fixture.WithWebHostBuilder(builder =>
 		{
+			builder.UseUrls("http://127.0.0.1:0");
 			builder.ConfigureServices(services =>
 			{
 				services.AddHttpContextAccessor();
