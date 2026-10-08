@@ -1,5 +1,6 @@
 using Npgsql;
 using PanoramaMusic.Students.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

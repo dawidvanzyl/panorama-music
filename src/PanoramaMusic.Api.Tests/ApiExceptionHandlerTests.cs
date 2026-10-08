@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Tests.Providers;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Exceptions;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Text.Json;
 using Xunit;
-using ReportingExceptions = PanoramaMusic.Reporting.Domain.Exceptions;
-using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Tests;
 
@@ -78,7 +79,7 @@ public sealed class ApiExceptionHandlerTests
 	public async Task TryHandleAsync_ReportingEntityNotFoundException_Returns404()
 	{
 		var httpContext = CreateHttpContext();
-		var exception = new ReportingExceptions.EntityNotFoundException("The saved report was not found.");
+		var exception = new EntityNotFoundException("The saved report was not found.");
 
 		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
 
@@ -93,7 +94,7 @@ public sealed class ApiExceptionHandlerTests
 	public async Task TryHandleAsync_StudentsEntityAlreadyExistsException_Returns409WithErrorAndCorrelationId()
 	{
 		var httpContext = CreateHttpContext();
-		var exception = new StudentsExceptions.EntityAlreadyExistsException("Course already exists");
+		var exception = new EntityAlreadyExistsException("Course already exists");
 
 		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
 		var body = JsonDocument.Parse(ReadBody(httpContext));
@@ -109,7 +110,7 @@ public sealed class ApiExceptionHandlerTests
 	public async Task TryHandleAsync_ReportingForbiddenException_Returns403WithErrorAndCorrelationId()
 	{
 		var httpContext = CreateHttpContext();
-		var exception = new ReportingExceptions.ForbiddenException("Only the creator of a saved report may change or delete it.");
+		var exception = new ForbiddenException("Only the creator of a saved report may change or delete it.");
 
 		var handled = await _handler.TryHandleAsync(httpContext, exception, TestContext.Current.CancellationToken);
 

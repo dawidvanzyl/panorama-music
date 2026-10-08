@@ -1,12 +1,12 @@
 using PanoramaMusic.Audit.Application.Factories;
 using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Audit.Domain.Interfaces;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Extensions;
 using PanoramaMusic.Identity.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Entities;
-using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Interfaces;
 
 namespace PanoramaMusic.Identity.Application.Handlers.Admin;

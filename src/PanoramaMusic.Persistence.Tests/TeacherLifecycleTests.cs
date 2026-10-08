@@ -10,6 +10,7 @@ using PanoramaMusic.Teachers.Application.Requests.Banking;
 using PanoramaMusic.Teachers.Domain.Entities;
 using PanoramaMusic.Teachers.Domain.Enums;
 using PanoramaMusic.Teachers.Domain.Interfaces;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

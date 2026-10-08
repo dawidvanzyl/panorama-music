@@ -1,6 +1,6 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Application.Interfaces;
 using PanoramaMusic.Students.Domain.Entities;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Application.Services;

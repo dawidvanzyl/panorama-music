@@ -4,14 +4,14 @@ using PanoramaMusic.Api.Extensions;
 using PanoramaMusic.Audit.Application.Factories;
 using PanoramaMusic.Audit.Domain;
 using PanoramaMusic.Audit.Domain.Interfaces;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Application.Constants;
 using PanoramaMusic.Identity.Application.Interfaces;
+using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Reporting.Domain.Exceptions;
+using PanoramaMusic.Students.Domain.Exceptions;
 using System.Text.Json;
-using IdentityExceptions = PanoramaMusic.Identity.Domain.Exceptions;
-using ReportingExceptions = PanoramaMusic.Reporting.Domain.Exceptions;
-using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
-using TeachersExceptions = PanoramaMusic.Teachers.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Middleware;
 
@@ -64,7 +64,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is IdentityExceptions.UnauthorizedException or IdentityExceptions.InvalidResetTokenException)
+		if (exception is UnauthorizedException or InvalidResetTokenException)
 		{
 			LogHandled(exception, StatusCodes.Status401Unauthorized, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status401Unauthorized, new { error = exception.Message, correlationId }, cancellationToken);
@@ -75,7 +75,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 		// than by the route, which the authorization middleware never sees. It
 		// is audited on the same terms as a policy denial, since ASVS
 		// 5.0.0-16.3.2 is about the attempt, not about which layer refused it.
-		if (exception is StudentsExceptions.ForbiddenException or ReportingExceptions.ForbiddenException)
+		if (exception is ForbiddenException)
 		{
 			LogHandled(exception, StatusCodes.Status403Forbidden, correlationId);
 			await AuditDeniedAsync(httpContext, exception.Message, cancellationToken);
@@ -83,21 +83,28 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 			return true;
 		}
 
-		if (exception is IdentityExceptions.EntityNotFoundException or StudentsExceptions.EntityNotFoundException or TeachersExceptions.EntityNotFoundException or ReportingExceptions.EntityNotFoundException)
+		if (exception is EntityNotFoundException)
 		{
 			LogHandled(exception, StatusCodes.Status404NotFound, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status404NotFound, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 
-		if (exception is StudentsExceptions.EntityAlreadyExistsException)
+		if (exception is EntityAlreadyExistsException)
 		{
 			LogHandled(exception, StatusCodes.Status409Conflict, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status409Conflict, new { error = exception.Message, correlationId }, cancellationToken);
 			return true;
 		}
 
-		if (exception is IdentityExceptions.DomainException or StudentsExceptions.DomainException or TeachersExceptions.DomainException or ReportingExceptions.DomainException)
+		if (exception is DomainException)
+		{
+			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);
+			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = exception.Message, correlationId }, cancellationToken);
+			return true;
+		}
+
+		if (exception is InvalidReportDefinitionException or InvalidSavedReportException)
 		{
 			LogHandled(exception, StatusCodes.Status400BadRequest, correlationId);
 			await WriteAsync(httpContext, StatusCodes.Status400BadRequest, new { error = exception.Message, correlationId }, cancellationToken);

@@ -1,5 +1,6 @@
 using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

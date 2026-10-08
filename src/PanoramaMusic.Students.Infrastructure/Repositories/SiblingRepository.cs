@@ -1,4 +1,5 @@
 using Dapper;
+using PanoramaMusic.Infrastructure.Repositories.Bases;
 using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Entities;
@@ -6,7 +7,6 @@ using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Infrastructure.Dtos;
 using PanoramaMusic.Students.Infrastructure.Extensions;
-using PanoramaMusic.Students.Infrastructure.Repositories.Bases;
 
 namespace PanoramaMusic.Students.Infrastructure.Repositories;
 

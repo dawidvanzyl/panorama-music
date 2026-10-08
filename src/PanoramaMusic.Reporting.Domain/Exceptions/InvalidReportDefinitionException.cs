@@ -8,6 +8,6 @@ namespace PanoramaMusic.Reporting.Domain.Exceptions;
 /// <c>ReportDefinitionMessages</c>).
 /// </summary>
 public sealed class InvalidReportDefinitionException(string message)
-	: DomainException(message)
+	: Exception(message)
 {
 }

@@ -1,7 +1,7 @@
 using PanoramaMusic.Domain;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.StudentCourses;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Domain.ValueObjects;
 

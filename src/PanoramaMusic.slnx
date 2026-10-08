@@ -37,6 +37,7 @@
     <Project Path="PanoramaMusic.Api.Tests/PanoramaMusic.Api.Tests.csproj" />
     <Project Path="PanoramaMusic.Domain.Tests/PanoramaMusic.Domain.Tests.csproj" />
     <Project Path="PanoramaMusic.Persistence.Tests/PanoramaMusic.Persistence.Tests.csproj" />
+    <Project Path="PanoramaMusic.Testing/PanoramaMusic.Testing.csproj" />
   </Folder>
   <Folder Name="/Tests/Domains/" />
   <Folder Name="/Tests/Domains/Audit/">
@@ -60,5 +61,6 @@
   <Project Path="PanoramaMusic.Api/PanoramaMusic.Api.csproj" />
   <Project Path="PanoramaMusic.DataProtection/PanoramaMusic.DataProtection.csproj" />
   <Project Path="PanoramaMusic.Domain/PanoramaMusic.Domain.csproj" />
+  <Project Path="PanoramaMusic.Infrastructure/PanoramaMusic.Infrastructure.csproj" />
   <Project Path="PanoramaMusic.Persistence/PanoramaMusic.Persistence.csproj" />
 </Solution>

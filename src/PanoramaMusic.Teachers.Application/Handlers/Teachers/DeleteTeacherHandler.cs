@@ -1,5 +1,5 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Teachers.Application.Commands.Teachers;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 
 namespace PanoramaMusic.Teachers.Application.Handlers.Teachers;

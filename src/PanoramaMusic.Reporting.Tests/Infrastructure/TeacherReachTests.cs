@@ -5,6 +5,7 @@ using PanoramaMusic.Reporting.Domain.ValueObjects;
 using PanoramaMusic.Reporting.Infrastructure.Sql;
 using PanoramaMusic.Reporting.Infrastructure.Sql.Predicates;
 using PanoramaMusic.Teachers.Infrastructure.Persistence;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Text.RegularExpressions;
 using Xunit;

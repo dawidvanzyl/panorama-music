@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Application.Commands.Students;
 using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Application.Requests.Students;
@@ -7,9 +8,9 @@ using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.StudentExtraCurriculars;
 using PanoramaMusic.Students.Domain.Events.Students;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 
@@ -105,7 +106,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		var request = new UpdateStudentRequest(
 			"Alicia", "Vance", new DateOnly(2014, 5, 12), GradeType.Grade5, ClassType.E1, PhaseType.Senior, Language.Afrikaans);
 
-		await Should.ThrowAsync<Domain.Exceptions.EntityNotFoundException>(
+		await Should.ThrowAsync<EntityNotFoundException>(
 			() => _handler.HandleAsync(new UpdateStudentCommand(studentId, request), TestContext.Current.CancellationToken));
 	}
 
@@ -286,7 +287,7 @@ public class UpdateStudentHandlerTests : IClassFixture<StudentsTestFixture>
 		_context.Repositories.StudentRepositoryMock
 			.Setup(r => r.GetByIdAsync(unknownStudent, It.IsAny<CancellationToken>()))
 			.ReturnsAsync((Student?)null);
-		await Should.ThrowAsync<Domain.Exceptions.EntityNotFoundException>(() => _handler.HandleAsync(
+		await Should.ThrowAsync<EntityNotFoundException>(() => _handler.HandleAsync(
 			new UpdateStudentCommand(unknownStudent, RequestFor(GradeType.Private)),
 			TestContext.Current.CancellationToken));
 

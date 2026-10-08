@@ -8,6 +8,7 @@ using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Teachers.Application.Models;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;

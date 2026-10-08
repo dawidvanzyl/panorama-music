@@ -1,9 +1,11 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Entities;
 using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Events;
 using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

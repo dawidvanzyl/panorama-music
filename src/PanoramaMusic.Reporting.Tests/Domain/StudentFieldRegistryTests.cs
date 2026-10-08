@@ -1,4 +1,5 @@
 using PanoramaMusic.Reporting.Domain.Registries;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

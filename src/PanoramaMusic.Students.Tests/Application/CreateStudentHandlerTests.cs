@@ -6,6 +6,7 @@ using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Events.Students;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

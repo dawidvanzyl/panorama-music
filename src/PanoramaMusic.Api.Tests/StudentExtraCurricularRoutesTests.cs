@@ -6,6 +6,7 @@ using PanoramaMusic.Students.Application.Requests.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Requests.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Requests.Students;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;

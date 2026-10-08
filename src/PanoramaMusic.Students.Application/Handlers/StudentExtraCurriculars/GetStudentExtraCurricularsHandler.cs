@@ -1,6 +1,6 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Application.Models;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Interfaces;
 
 namespace PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;

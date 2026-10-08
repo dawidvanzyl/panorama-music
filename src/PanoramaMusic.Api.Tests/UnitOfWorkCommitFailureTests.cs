@@ -9,6 +9,7 @@ using PanoramaMusic.Api.Tests.Transactions;
 using PanoramaMusic.Identity.Application.Requests.Auth;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Net.Http.Json;
 using Xunit;

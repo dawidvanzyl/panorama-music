@@ -1,12 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Persistence.Tests.Fixtures;
 using PanoramaMusic.Persistence.Tests.Repository;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Reporting.Application.Constants;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Requests;
-using PanoramaMusic.Reporting.Domain.Exceptions;
 using Shouldly;
 using System.Text.Json;
 using Xunit;

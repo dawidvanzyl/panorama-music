@@ -1,8 +1,8 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Reporting.Application.Extensions;
 using PanoramaMusic.Reporting.Application.Interfaces;
 using PanoramaMusic.Reporting.Application.Models;
 using PanoramaMusic.Reporting.Application.Services;
-using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Messages;
 

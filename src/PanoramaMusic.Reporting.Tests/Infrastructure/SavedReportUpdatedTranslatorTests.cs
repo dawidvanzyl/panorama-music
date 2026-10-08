@@ -7,6 +7,7 @@ using PanoramaMusic.Reporting.Application.Interfaces;
 using PanoramaMusic.Reporting.Domain.Events;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
 using PanoramaMusic.Reporting.Infrastructure.Translators;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

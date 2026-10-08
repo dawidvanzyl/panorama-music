@@ -5,10 +5,11 @@ using Moq;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Tests.Features;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Persistence.Transactions;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
-using StudentsExceptions = PanoramaMusic.Students.Domain.Exceptions;
 
 namespace PanoramaMusic.Api.Tests;
 
@@ -61,11 +62,11 @@ public sealed class UnitOfWorkMiddlewareTests
 	[Trait("AC", "355UC2")]
 	public async Task InvokeAsync_EndpointThrowsBeforeWriting_RollsBackAndNeverCommits()
 	{
-		var exception = new StudentsExceptions.DomainException("Invalid student.");
+		var exception = new DomainException("Invalid student.");
 		var middleware = new UnitOfWorkMiddleware(_ => throw exception);
 		var handler = new ApiExceptionHandler(new LoggerFactory().CreateLogger<ApiExceptionHandler>());
 
-		var thrown = await Should.ThrowAsync<StudentsExceptions.DomainException>(
+		var thrown = await Should.ThrowAsync<DomainException>(
 			() => middleware.InvokeAsync(_context, _unitOfWork.Object, _auditFlushService.Object));
 		var handled = await handler.TryHandleAsync(_context, thrown, TestContext.Current.CancellationToken);
 

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Application.Commands.Courses;
 using PanoramaMusic.Students.Application.Handlers.Courses;
 using PanoramaMusic.Students.Application.Requests.Courses;
@@ -8,6 +9,7 @@ using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

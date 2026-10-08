@@ -4,6 +4,7 @@ using PanoramaMusic.Teachers.Application.Commands.Teachers;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Application.Requests.Teachers;
 using PanoramaMusic.Teachers.Domain.Entities;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

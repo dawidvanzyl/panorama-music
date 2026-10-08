@@ -1,16 +1,16 @@
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Npgsql;
+using PanoramaMusic.Domain.Exceptions;
+using PanoramaMusic.Infrastructure.Repositories.Bases;
 using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Teachers.Domain.Entities;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Messages;
 using PanoramaMusic.Teachers.Domain.ValueObjects;
 using PanoramaMusic.Teachers.Infrastructure.Dtos;
 using PanoramaMusic.Teachers.Infrastructure.Extensions;
-using PanoramaMusic.Teachers.Infrastructure.Repositories.Bases;
 using System.Security.Cryptography;
 
 namespace PanoramaMusic.Teachers.Infrastructure.Repositories;

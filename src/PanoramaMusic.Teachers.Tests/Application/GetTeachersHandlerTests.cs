@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

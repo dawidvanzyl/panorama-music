@@ -1,11 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Teachers.Application.Commands.Teachers;
 using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Domain.Entities;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Messages;
 using PanoramaMusic.Teachers.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

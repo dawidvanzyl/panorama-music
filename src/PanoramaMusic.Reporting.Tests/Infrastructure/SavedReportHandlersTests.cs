@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Requests;
-using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Messages;
 using PanoramaMusic.Reporting.Tests.Fixtures;

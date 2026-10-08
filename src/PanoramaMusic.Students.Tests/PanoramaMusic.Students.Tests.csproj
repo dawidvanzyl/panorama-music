@@ -24,6 +24,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\PanoramaMusic.Students.Domain\PanoramaMusic.Students.Domain.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Testing\PanoramaMusic.Testing.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Students.Infrastructure\PanoramaMusic.Students.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

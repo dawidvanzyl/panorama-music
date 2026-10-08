@@ -5,6 +5,7 @@ using PanoramaMusic.Identity.Application.Services.Auth;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Tests;
 using PanoramaMusic.Identity.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 
