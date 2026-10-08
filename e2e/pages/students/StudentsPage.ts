@@ -54,6 +54,7 @@ export class StudentsPage extends BasePage {
   readonly filterGradeSelect: Locator;
   readonly filterPhaseSelect: Locator;
   readonly filterClassSelect: Locator;
+  readonly filterTeacherSelect: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -65,6 +66,7 @@ export class StudentsPage extends BasePage {
     this.filterGradeSelect = page.locator('#filterBar').locator('#grade');
     this.filterPhaseSelect = page.locator('#filterBar').locator('#phase');
     this.filterClassSelect = page.locator('#filterBar').locator('#class');
+    this.filterTeacherSelect = page.locator('#filterBar').locator('#teacher');
   }
 
   async gotoStudents(): Promise<void> {
@@ -264,11 +266,55 @@ export class StudentsPage extends BasePage {
     await this.filterNameInput.fill(name);
   }
 
+  async filterByPhase(phase: Phase | ''): Promise<void> {
+    await this.filterPhaseSelect.selectOption(phase);
+  }
+
+  async filterByClass(studentClass: StudentClass | ''): Promise<void> {
+    await this.filterClassSelect.selectOption(studentClass);
+  }
+
+  /** Chooses a teacher by the option's label (`{firstName} {surname}`), or All Teachers for ''. */
+  async filterByTeacher(teacherName: string): Promise<void> {
+    if (teacherName === '') {
+      await this.filterTeacherSelect.selectOption('');
+      return;
+    }
+    await this.filterTeacherSelect.selectOption({ label: teacherName });
+  }
+
+  /** The Teacher filter's option labels, in listed order. */
+  async teacherOptionTexts(): Promise<string[]> {
+    return this.filterTeacherSelect.locator('option').allTextContents();
+  }
+
+  /** The text of a filter select's selected option. */
+  async selectedOptionText(select: Locator): Promise<string> {
+    return select.evaluate((el) => {
+      const element = el as HTMLSelectElement;
+      return element.options[element.selectedIndex]?.text ?? '';
+    });
+  }
+
+  /** The ids of the filter bar's controls, in the order they sit in the card. */
+  async filterControlOrder(): Promise<string[]> {
+    return this.page
+      .locator('#filterBar')
+      .locator('.filter-bar__card')
+      .evaluate((card) => Array.from(card.children).map((child) => child.id));
+  }
+
+  /** The roster's own empty-state message. */
+  emptyRosterMessage(): Locator {
+    return this.page.locator('pm-students-table').locator('#empty');
+  }
+
   async clearFilters(): Promise<void> {
     await this.filterNameInput.fill('');
     await this.filterGradeSelect.selectOption('');
     await this.filterPhaseSelect.selectOption('');
     await this.filterClassSelect.selectOption('');
+    await this.filterTeacherSelect.selectOption('');
   }
 
   async deleteStudent(name: string): Promise<void> {
