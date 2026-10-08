@@ -95,7 +95,7 @@ public sealed class SiblingCandidateRoutesTests(ApiTestFixture fixture)
 
 		var rosterResponse = await teacherClient.Client.SendAsync(
 			teacherClient.AuthorizedGetRequest("/api/students"), TestContext.Current.CancellationToken);
-		var roster = await rosterResponse.Content.ReadFromJsonAsync<List<StudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
+		var roster = await rosterResponse.Content.ReadFromJsonAsync<List<RosterStudentResult>>(_jsonOptions, TestContext.Current.CancellationToken);
 
 		var waitingListResponse = await coordinatorClient.Client.SendAsync(
 			coordinatorClient.AuthorizedGetRequest("/api/waiting-list"), TestContext.Current.CancellationToken);
