@@ -37,21 +37,21 @@ try {
 $command = $payload.tool_input.command
 if ([string]::IsNullOrWhiteSpace($command)) { exit 0 }
 
-$c = ($command -replace '\s+', ' ').Trim()
+$c = ($command -replace '\r?\n', ' ; ' -replace '\s+', ' ').Trim()
 
 # Patterns are deliberately broad. A false positive costs one prompt; a false
 # negative costs a force-pushed branch.
 $rules = @(
-    @{ Pattern = '(?i)\bgit\b.*\bpush\b.*(\s--force(-with-lease)?\b|\s-f\b)'; Reason = 'force push' }
-    @{ Pattern = '(?i)\bgit\b.*\breset\b.*\s--hard\b';                        Reason = 'hard reset' }
-    @{ Pattern = '(?i)\bgit\b.*\bbranch\b.*\s-(D|d)\b';                       Reason = 'local branch deletion' }
-    @{ Pattern = '(?i)\bgit\b.*\bbranch\b.*\s--delete\b';                     Reason = 'local branch deletion' }
-    @{ Pattern = '(?i)\bgit\b.*\bpush\b.*\s--delete\b';                       Reason = 'remote branch deletion' }
-    @{ Pattern = '(?i)\bgit\b.*\bpush\b.*\s:\S';                              Reason = 'remote ref deletion' }
-    @{ Pattern = '(?i)\bgit\b.*\bclean\b.*\s-\w*f';                           Reason = 'working tree clean' }
-    @{ Pattern = '(?i)\bgit\b.*\btag\b.*(\s-d\b|\s--delete\b)';               Reason = 'tag deletion' }
-    @{ Pattern = '(?i)\bgit\b.*\bworktree\b.*\bremove\b.*\s--force\b';        Reason = 'forced worktree removal' }
-    @{ Pattern = '(?i)\bgh\b.*\brepo\b.*\bdelete\b';                          Reason = 'repository deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bpush\b[^;&|]*(\s--force(-with-lease)?\b|\s-f\b)'; Reason = 'force push' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\breset\b[^;&|]*\s--hard\b';                        Reason = 'hard reset' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bbranch\b[^;&|]*\s-(D|d)\b';                       Reason = 'local branch deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bbranch\b[^;&|]*\s--delete\b';                     Reason = 'local branch deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bpush\b[^;&|]*\s--delete\b';                       Reason = 'remote branch deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bpush\b[^;&|]*\s:\S';                              Reason = 'remote ref deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bclean\b[^;&|]*\s-\w*f';                           Reason = 'working tree clean' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\btag\b[^;&|]*(\s-d\b|\s--delete\b)';               Reason = 'tag deletion' }
+    @{ Pattern = '(?i)\bgit\b[^;&|]*\bworktree\b[^;&|]*\bremove\b[^;&|]*\s--force\b';        Reason = 'forced worktree removal' }
+    @{ Pattern = '(?i)\bgh\b[^;&|]*\brepo\b[^;&|]*\bdelete\b';                          Reason = 'repository deletion' }
 )
 
 foreach ($rule in $rules) {
