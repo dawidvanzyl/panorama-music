@@ -21,7 +21,8 @@ application contracts, never by referencing each other's infrastructure.
 
 ## Shared projects
 
-Four projects sit outside every bounded context and are referenced by all of them:
+Four projects sit outside every bounded context. Each context references only the ones it needs,
+and `PanoramaMusic.Testing` is referenced by test projects only:
 
 - `PanoramaMusic.Domain` — the event primitives and the context-free `DomainException`,
   `EntityNotFoundException` and `ForbiddenException`.

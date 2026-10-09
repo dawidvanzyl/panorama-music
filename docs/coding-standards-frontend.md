@@ -39,7 +39,9 @@ A vanilla TypeScript SPA built with Vite using Web Components.
 ```text
 src/
     features/
-        <feature-name>/
+        students/
+        teachers/
+        reports/
     components/
     services/
     styles/
