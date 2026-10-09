@@ -386,7 +386,7 @@ describe('regenerateInvite', { tags: ['M1UC47'] }, () => {
 });
 
 describe('deactivateUser', { tags: ['M1.1UC19'] }, () => {
-  it('calls DELETE endpoint and invalidates cache on success', async () => {
+  it('calls PATCH /deactivate endpoint and invalidates cache on success', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');
 
     const users = [
@@ -410,9 +410,9 @@ describe('deactivateUser', { tags: ['M1.1UC19'] }, () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(3);
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/users/u1',
+      '/api/users/u1/deactivate',
       expect.objectContaining({
-        method: 'DELETE',
+        method: 'PATCH',
         headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
       }),
     );
@@ -430,7 +430,7 @@ describe('deactivateUser', { tags: ['M1.1UC19'] }, () => {
 });
 
 describe('deleteUser', { tags: ['M1.1UC32'] }, () => {
-  it('calls DELETE /permanent endpoint and invalidates cache on success', async () => {
+  it('calls DELETE endpoint and invalidates cache on success', async () => {
     localStorage.setItem('pm_access_token', 'admin-token');
 
     const users = [
@@ -454,7 +454,7 @@ describe('deleteUser', { tags: ['M1.1UC32'] }, () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(3);
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/users/u1/permanent',
+      '/api/users/u1',
       expect.objectContaining({
         method: 'DELETE',
         headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),

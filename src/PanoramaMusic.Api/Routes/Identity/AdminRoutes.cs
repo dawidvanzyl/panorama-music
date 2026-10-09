@@ -74,7 +74,7 @@ public static class AdminRoutes
 			.Produces(StatusCodes.Status404NotFound);
 
 		group
-			.MapDelete("/{userId:guid}", async (Guid userId, DeactivateUserHandler handler, CancellationToken ct) =>
+			.MapPatch("/{userId:guid}/deactivate", async (Guid userId, DeactivateUserHandler handler, CancellationToken ct) =>
 			{
 				var command = new DeactivateUserCommand(userId);
 				await handler.HandleAsync(command, ct);
@@ -88,7 +88,7 @@ public static class AdminRoutes
 			.Produces(StatusCodes.Status404NotFound);
 
 		group
-			.MapDelete("/{userId:guid}/permanent", async (Guid userId, DeleteUserHandler handler, CancellationToken ct) =>
+			.MapDelete("/{userId:guid}", async (Guid userId, DeleteUserHandler handler, CancellationToken ct) =>
 			{
 				var command = new DeleteUserCommand(userId);
 				await handler.HandleAsync(command, ct);

@@ -137,10 +137,10 @@ public sealed class TeacherAccountLinkTests(ApiTestFixture fixture)
 		// The account is deleted while still linked — only a deactivated account
 		// may be permanently deleted, so it is deactivated first.
 		await admin.Client.SendAsync(
-			admin.AuthorizedDeleteRequest($"/api/users/{accountId}"),
+			admin.AuthorizedPatchRequest($"/api/users/{accountId}/deactivate", new { }),
 			TestContext.Current.CancellationToken);
 		var deleteResponse = await admin.Client.SendAsync(
-			admin.AuthorizedDeleteRequest($"/api/users/{accountId}/permanent"),
+			admin.AuthorizedDeleteRequest($"/api/users/{accountId}"),
 			TestContext.Current.CancellationToken);
 
 		var fetched = await GetTeacherAsync(client, teacher.TeacherId);

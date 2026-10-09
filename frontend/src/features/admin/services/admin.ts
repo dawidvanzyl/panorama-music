@@ -102,8 +102,8 @@ export async function regenerateInvite(userId: string): Promise<RegenerateInvite
 }
 
 export async function deactivateUser(userId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${userId}`, {
-    method: 'DELETE',
+  const response = await fetch(`${API_BASE}/${userId}/deactivate`, {
+    method: 'PATCH',
     headers: authHeaders(),
   });
   await assertOk(response, AdminError);
@@ -111,7 +111,7 @@ export async function deactivateUser(userId: string): Promise<void> {
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${userId}/permanent`, {
+  const response = await fetch(`${API_BASE}/${userId}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
