@@ -15,7 +15,6 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 4 : undefined,
   reporter: 'html',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${process.env.QA_API_PORT ?? 3000}`,
