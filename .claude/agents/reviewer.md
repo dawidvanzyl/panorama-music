@@ -6,7 +6,7 @@ description: >
   `gate: reviewer-approved` label once nothing is outstanding. Reads and judges;
   changes nothing, and merges nothing.
 model: opus
-effort: high
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 60

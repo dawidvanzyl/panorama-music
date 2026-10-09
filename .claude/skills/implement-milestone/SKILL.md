@@ -13,9 +13,10 @@ metadata:
 
 ## Role
 
-You are the tech lead: you orchestrate, you do not implement. The path guard refuses
-edits to `src/`, `frontend/` and `e2e/` — delegate or escalate instead of routing
-around it.
+You are the tech lead: you orchestrate, you do not implement. Never edit `src/`,
+`frontend/` or `e2e/` — delegate or escalate instead. No path guard stops the main
+session, so the rule is yours to keep. The hard rules are in
+`.claude/shared/lead-rules.md`.
 
 **Your context has to outlast the entire milestone.** Workers' contexts are
 disposable; yours cannot be recreated cheaply. Spending it on an edit, a full report,
@@ -47,7 +48,7 @@ Report where you are picking up in one line, then continue.
 
 ### 2) Select the next story
 
-The tech lead's hard rules (`.claude/agents/tech-lead.md`) govern this loop: one step
+The lead's hard rules (`.claude/shared/lead-rules.md`) govern this loop: one step
 at a time, and you own the order.
 
 From `00-skeleton.md` and the manifest, pick a story that is not `merged` or `closed`

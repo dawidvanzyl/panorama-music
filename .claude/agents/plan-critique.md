@@ -6,7 +6,7 @@ description: >
   notes the tech lead turns into owner questions. Reads and judges; writes no plan
   and no code.
 model: opus
-effort: high
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 60
