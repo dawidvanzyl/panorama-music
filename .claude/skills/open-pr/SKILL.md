@@ -15,6 +15,8 @@ metadata:
 
 - `issue_number`: required.
 - `mode`: `interactive` (default) or `subagent`.
+- `branch`: required in `subagent` mode. The story's feature branch. In `interactive`
+  mode, take the current branch.
 - `verified_sha`: required. The last `PASS` cycle's `VERIFIED_SHA`, as pushed by
   `implement-plan` step 6.
 - `base_branch`:
@@ -34,7 +36,7 @@ in.
 
 Check all of the following:
 
-- The current branch is the story's feature branch.
+- `git branch --show-current` equals `branch`.
 - `git status --porcelain` is empty.
 - After `git fetch origin {branch}`, both `git rev-parse HEAD` and
   `git rev-parse origin/{branch}` equal `verified_sha`.
@@ -83,7 +85,7 @@ setting everything at creation (do not rely on later edits):
 - `--body-file {path}` — brief overview, `Closes #{issue_number}`, and the milestone
   name as a readable line if assigned
 
-The verdict is `PR_OPEN`.
+Read `{pr_number}` from the `gh pr create` output. The verdict is `PR_OPEN`.
 
 ### 4) Confirm
 
