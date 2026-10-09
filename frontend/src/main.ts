@@ -167,7 +167,11 @@ async function render(): Promise<void> {
           }
         : Object.hasOwn(ROUTES, basePath)
           ? ROUTES[basePath]
-          : () => '<pm-login-page></pm-login-page>';
+          : null;
+  if (route === null) {
+    window.location.hash = '#/';
+    return;
+  }
   app.innerHTML = isPublicPage
     ? '<main>' + route() + '</main>'
     : // The account menu is composed into the nav bar's slot from here: the shell
