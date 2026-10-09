@@ -316,3 +316,91 @@ describe('main router — Teacher Management route guard', { tags: ['273UC4'] },
     expect(document.getElementById('app')!.innerHTML).not.toContain('<pm-students-page>');
   });
 });
+
+describe('main router — an unknown route lands on the topmost permitted entry', { tags: ['251UC1'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(true);
+  });
+
+  async function openFromPublicBaseline(unknownHash: string): Promise<void> {
+    window.location.hash = '#/forgot-password';
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-forgot-password-page>');
+    });
+
+    window.location.hash = unknownHash;
+  }
+
+  it.each([
+    { roles: ['Teacher'], unknown: '#/sessions', landing: '#/students', page: '<pm-students-page>' },
+    { roles: ['Admin'], unknown: '#/sessions', landing: '#/admin/users', page: '<pm-admin-users-page>' },
+    {
+      roles: ['Teacher'],
+      unknown: '#/reports/not-a-report-id',
+      landing: '#/students',
+      page: '<pm-students-page>',
+    },
+    {
+      roles: ['Coordinator'],
+      unknown: '#/teachers/a/b',
+      landing: '#/waiting-list',
+      page: '<pm-waiting-list-page>',
+    },
+  ])('sends a $roles user from $unknown to $landing', async ({ roles, unknown, landing, page }) => {
+    grantRoles(...roles);
+
+    await openFromPublicBaseline(unknown);
+
+    await vi.waitFor(() => {
+      const html = document.getElementById('app')!.innerHTML;
+      expect(window.location.hash).toBe(landing);
+      expect(html).toContain(page);
+      expect(html).not.toContain('<pm-login-page>');
+    });
+  });
+
+  it('sends a user whose session is restored by a refresh to the landing entry', async () => {
+    mockIsAuthenticated.mockReturnValue(false);
+    mockTryRefresh.mockImplementation(async () => {
+      mockIsAuthenticated.mockReturnValue(true);
+      return 'ok';
+    });
+    grantRoles('Teacher');
+
+    await openFromPublicBaseline('#/sessions');
+
+    await vi.waitFor(() => {
+      const html = document.getElementById('app')!.innerHTML;
+      expect(window.location.hash).toBe('#/students');
+      expect(html).toContain('<pm-students-page>');
+      expect(html).not.toContain('<pm-login-page>');
+    });
+  });
+});
+
+describe('main router — an unknown route sends a signed-out visitor to sign in', { tags: ['251UC2'] }, () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    document.body.innerHTML = '<div id="app"></div>';
+    mockIsAuthenticated.mockReturnValue(false);
+    mockTryRefresh.mockResolvedValue('rejected');
+  });
+
+  it('ends on the login page without the application shell', async () => {
+    window.location.hash = '#/forgot-password';
+    await vi.waitFor(() => {
+      expect(document.getElementById('app')!.innerHTML).toContain('<pm-forgot-password-page>');
+    });
+
+    window.location.hash = '#/sessions';
+
+    await vi.waitFor(() => {
+      const html = document.getElementById('app')!.innerHTML;
+      expect(window.location.hash).toBe('#/login');
+      expect(html).toContain('<pm-login-page>');
+      expect(html).not.toContain('<pm-nav-bar>');
+    });
+  });
+});
