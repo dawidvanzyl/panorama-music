@@ -73,7 +73,7 @@ export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<strin
 /**
  * Starts the session the sign-in form would, without rendering the form: the
  * login call sets the refresh cookie on the browser context, and the access
- * token is stored the way the app's own `storeTokens` stores it. `/favicon.ico`
+ * token is stored the way the app's own `storeTokens` stores it. `/api/health`
  * is only a cheap same-origin document to hold the storage write.
  */
 async function signInThroughApi(page: Page, email: string, password: string): Promise<void> {
@@ -84,7 +84,7 @@ async function signInThroughApi(page: Page, email: string, password: string): Pr
     accessTokenExpiresAt: string;
   };
 
-  await page.goto('/favicon.ico');
+  await page.goto('/api/health');
   await page.evaluate(
     ([token, expiresAt]) => {
       localStorage.setItem('pm_access_token', token);
