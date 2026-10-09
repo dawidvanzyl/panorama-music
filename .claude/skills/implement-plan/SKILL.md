@@ -5,8 +5,8 @@ description: >
   "/implement-plan", or when the developer is assigned a story. Builds an issue
   against its frozen plan: prepares the base branch, creates or checks out the
   feature branch, implements the requirements, verifies via the verify-implementation
-  skill, and opens a PR. The per-issue orchestration around it lives in
-  implement-issue.
+  skill, and pushes the branch once its head is verified. The open-pr skill opens the
+  pull request. The per-issue orchestration around it lives in implement-issue.
 license: MIT
 metadata:
   audience: maintainers
@@ -190,15 +190,15 @@ nothing.
   first: a fresh QA stack (`qa-implement` step 3), then
   `cd e2e && npx playwright test --grep "@{IT_CODE}"` once per code, then tear it
   down. You may not edit a spec; a spec you believe is wrong is a raise. Record each
-  code's result in `implement-{attempt}.md`. Never open the PR or report `FIXED`
-  with an IT code red.
+  code's result in `implement-{attempt}.md`. Never push with an IT code red.
 
-### 5) Verify (gauntlet loop, max 3 cycles)
+### 5) Verify (gauntlet loop, max 3 cycles per attempt)
 
-Commit, then run up to three cycles **in this session** — invoke `verify-implementation`
+Commit, then run up to three cycles per attempt **in this session** — invoke `verify-implementation`
 inline with the Skill tool, never as a sub-agent. Running it in your own session saves
 a spawn, a context load and a full report round-trip, and you already hold everything it
-needs. `implement-plan` owns the count; `verify-implementation` is stateless.
+needs. `implement-plan` owns the count; `verify-implementation` is stateless. See
+*Cycle numbering* below for how cycles are counted and numbered.
 
 **Verify reviews code; it does not run the checks.** So the automated checks from step 4
 must be green before you call it — never invoke verify on a red build, and after fixing
@@ -211,10 +211,24 @@ vitest after the last code commit does not count.
 developer-authored verify report is a definition-of-done failure.
 
 Each cycle, pass it `issue_number`, `base_branch`, `journal_dir`, the same `mode` this
-skill is running in, `cycle`, `plan_answers_file` when you have one, and from cycle 2: `prev_verify_sha` (previous
-`VERIFIED_SHA`) and `prev_report` — the **path** to the previous
-`{journal_dir}/verify-{cycle}.md`, annotated with your disposition on every finding. It
-writes its report to the file and returns a verdict block.
+skill is running in, `cycle`, `plan_answers_file` when you have one, and from the
+second cycle of the story on: `prev_verify_sha` (previous `VERIFIED_SHA`) and
+`prev_report` — the **path** to the previous `{journal_dir}/verify-{cycle}.md`,
+annotated with your disposition on every finding. It writes its report to the file and
+returns a verdict block.
+
+**Cycle numbering.** `cycle` numbers run across the whole story and never restart, so
+`verify-{cycle}.md` is never overwritten. The cap is three cycles **per attempt**. The
+first attempt uses cycles 1-3 at most. A later attempt starts at the previous
+attempt's last cycle + 1. On a rework attempt's first cycle, `prev_verify_sha` is the
+previous attempt's last `PASS` `VERIFIED_SHA` (the pushed head), and `prev_report` is
+that cycle's `verify-{cycle}.md`.
+
+**Late commits.** Any commit after a `PASS` cycle's `VERIFIED_SHA` needs another cycle
+before the push. This includes a commit that actions a Warning or Suggestion from that
+`PASS`. The re-run is a full cycle: the automated checks green at the new head, then
+`verify-implementation`. It counts as one of the attempt's three cycles. If the attempt
+has no cycle left, stop and hand up as for a third cycle that is not `PASS`.
 
 **Every finding gets a disposition** — blockers, warnings, suggestions and questions
 alike. "Advisory" means the verdict doesn't gate on it, not that it can be skipped:
@@ -222,63 +236,79 @@ alike. "Advisory" means the verdict doesn't gate on it, not that it can be skipp
 - `ACTIONED: {what you did}` — fixed and committed.
 - `INVALID: {reason}` — citing the issue, codebase or a standards doc; verify
   adjudicates next cycle. Never mark something invalid to avoid work.
-- `DEFERRED: {reason}` — non-blockers only, valid but genuinely out of scope; raise
-  it at step 6. Do not open a tracking issue.
+- `DEFERRED: {reason}` — non-blockers only, valid but genuinely out of scope; record
+  it in `implement-{attempt}.md` and raise it in the report. Do not open a tracking issue.
 
 Verdicts:
 
-- **`PASS`** — once every finding is dispositioned, go to step 6.
+- **`PASS`** — once every finding is dispositioned, record the cycle's `VERIFIED_SHA`
+  in `implement-{attempt}.md`, then go to step 6.
 - **`BLOCKED (n)`** — action or invalidate each blocker, then run the next cycle.
 - **`NEEDS_RULING (n)`** — raise the questions and disputed findings (in
   `subagent` mode the tech lead may answer from the epic, standards or an earlier
   ruling). Record the outcome as `RESOLVED_BY: owner` or `RESOLVED_BY: tech lead`,
   apply any fix, resume. Settled items are never re-raised.
 
-If cycle 3 is not `PASS`, stop and hand the outstanding report up: to the user in
+If the attempt's third cycle is not `PASS`, stop and hand the outstanding report up: to the user in
 `interactive` mode, as `BLOCKED (n)` to the tech lead in `subagent` mode.
 
-### 6) Open PR
+### 6) Push the verified branch
 
-- `interactive` — ask "Are you ready to post a pull request?" and wait for yes.
-- `subagent` — proceed: the PR is the assigned outcome, not a commitment to merge;
-  the two worker gate labels, the approved plans and the lead's judgement still stand
-  before the merge — and for a standalone issue, the owner merges into `master`.
+1. Run this check immediately before the push. `git status --porcelain` must be
+   empty, and `git rev-parse HEAD` must equal the last `PASS` cycle's `VERIFIED_SHA`.
+   If either fails, do not push. Go back to step 5 (*Late commits*).
+2. `interactive` — ask "Ready to push `{branch}` at `{VERIFIED_SHA}`?" and wait for
+   yes. `subagent` — proceed.
+3. Run `git push -u origin {branch}`. Never force.
+4. Run `git fetch origin {branch}` and confirm `git rev-parse origin/{branch}` equals
+   `VERIFIED_SHA`. Record `PUSHED_SHA` in `implement-{attempt}.md`.
+5. Stop. Do not create a pull request, edit labels or edit an existing pull request.
+   - `interactive` — tell the user the branch and `VERIFIED_SHA`, and that
+     `/open-pr` opens the pull request.
+   - `subagent` — return to the developer agent, which invokes `open-pr`.
 
-**Re-entering after rework** (a PR already exists): before pushing, strip the worker
-gates:
+## Rework re-entry
 
-```bash
-gh pr edit {pr_number} --remove-label "gate: qa-complete" --remove-label "gate: reviewer-approved"
-```
+A rework pass is work that comes back after the first push: QA bug sub-issues, review
+findings, or a merge conflict on the story's own branch. It is a new attempt. Set
+`attempt` to the previous attempt + 1, and create a new `implement-{attempt}.md` with a
+`## Progress` heading.
 
-They describe code that stops existing when you push; leaving one would let the story
-merge on a sign-off given against different code. There is no owner label to preserve —
-the owner's judgement was spent in the plan question rounds, before the code existed.
+Do not run steps 0-3 again. Instead:
 
-Push, then `gh pr create` per `docs/coding-standards.md`, setting everything at
-creation (don't rely on later edits):
+1. Check that the working tree is clean (`git status --porcelain`). Run
+   `git fetch origin {branch}` and confirm `git rev-parse HEAD` equals
+   `origin/{branch}`. If either check fails, raise it.
+2. Enter at **step 4**. Fix the code, commit, and get the automated checks and the
+   story's IT specs green locally, with the same rules as the first pass.
+3. Run **step 5** with up to three cycles, numbered as in *Cycle numbering*.
+4. Run **step 6**. Then the developer invokes `open-pr`, which finds the existing
+   pull request and strips the worker gate labels.
 
-- `--base {base_branch}`
-- `--title "{issue_title} (#{issue_number})"`
-- `--milestone "{milestone_title}"` — omit entirely if none; never invent one
-- `--body` — brief overview, `Closes #{issue_number}`, and the milestone name as a
-  readable line if assigned
+The rework pass has cycles of its own because step 6 needs a fresh `PASS` at the new
+head. If the first attempt's spent cycles carried forward, the first rework push would
+be blocked.
 
 ## Guardrails
 
 - No force push, history rewriting or amending unless explicitly requested.
+- The pushed commit is always a commit a verify cycle passed over. Never commit after
+  the last `PASS` and then push. A commit after it needs another cycle (step 5, *Late
+  commits*). Never push from any step but step 6, on the first pass and on every
+  rework pass.
 - Preserve unrelated local changes in the working tree.
 - Never assume missing information — raise it.
 - Keep communication concise and actionable.
 
 ## Reporting (`subagent` mode)
 
-Per `.claude/shared/subagent-contract.md`, reply with only:
+On success, reply with nothing to the tech lead. The developer agent continues with
+`open-pr`, which sends the success verdict. On failure, per
+`.claude/shared/subagent-contract.md`, reply with only:
 
 ```
-VERDICT: {PR_OPEN | BLOCKED (n) | NEEDS_RULING (n)}
+VERDICT: {BLOCKED (n) | NEEDS_RULING (n)}
 REPORT: {journal_dir}/implement-{attempt}.md
-PR: {pr_number}
 SHA: {sha}
 ```
 

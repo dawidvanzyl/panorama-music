@@ -86,7 +86,7 @@ spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 | `critiquing` | `plan-critique` | `plan-critique` | `critique-v{n}.md` |
 | `awaiting-answers` | — (owner) | — | `plan-answers.md` |
 | `specifying` | `qa-implement` (`phase: specify`) | `qa-implement` | failing specs on the feature branch |
-| `implementing` | `developer` | `implement-plan` | the PR, every IT spec green locally |
+| `implementing` | `developer` | `implement-plan`, then `open-pr` | the PR, every IT spec green locally |
 | `testing` | `qa-implement` (`phase: run`) | `qa-implement` | `gate: qa-complete` |
 | `reviewing` | `reviewer` | `review-pull-request` | `gate: reviewer-approved` |
 | `awaiting-merge` | — (owner) | — | standalone only: the owner's merge into `master` |
@@ -246,8 +246,8 @@ If you verify that the diff since QA's sign-off changes only comments, test name
 trait/tag strings, QA re-applies `gate: qa-complete` from the diff without a stack
 run; CI's E2E run is the behavioural proof.
 
-Otherwise, after rework, always go through `testing` again before `reviewing`: the push
-strips `gate: qa-complete`, and re-running existing specs is cheap and the only proof
+Otherwise, after rework, always go through `testing` again before `reviewing`: `open-pr`
+strips `gate: qa-complete` after the rework push, and re-running existing specs is cheap and the only proof
 the fix didn't break a previously green one.
 
 **Ceilings** — counted per thing, not per round (three different bugs fixed is
@@ -288,7 +288,7 @@ pre-interruption verdict proves nothing about the branch now:
 | `gate: qa-complete` | `qa-implement` |
 | `gate: reviewer-approved` | `reviewer` |
 
-The developer strips both labels before every push (`implement-plan` step 6); at the
+`open-pr` strips both labels on every rework re-entry; at the
 merge gate, confirm each label was applied after the head commit's push. The owner's
 judgement is not a merge label — it was spent in the plan question rounds (step 2a),
 and the plans' approval is recorded as `plans_approved: true`. Confirm that flag is set;
