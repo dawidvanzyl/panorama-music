@@ -64,12 +64,34 @@ export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<strin
   const email = uniqueTestEmail(roles.join('-').toLowerCase());
   const password = 'RolesPass123!';
   await createRegisteredUser(page, email, password, roles);
-
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(email, password);
+  await signInThroughApi(page, email, password);
+  await page.goto('/#/');
   await expect(page).toHaveURL(landingUrl(...roles));
   return email;
+}
+
+/**
+ * Starts the session the sign-in form would, without rendering the form: the
+ * login call sets the refresh cookie on the browser context, and the access
+ * token is stored the way the app's own `storeTokens` stores it. `/favicon.ico`
+ * is only a cheap same-origin document to hold the storage write.
+ */
+async function signInThroughApi(page: Page, email: string, password: string): Promise<void> {
+  const response = await page.request.post('/api/auth/login', { data: { email, password } });
+  expect(response.ok()).toBe(true);
+  const { accessToken, accessTokenExpiresAt } = (await response.json()) as {
+    accessToken: string;
+    accessTokenExpiresAt: string;
+  };
+
+  await page.goto('/favicon.ico');
+  await page.evaluate(
+    ([token, expiresAt]) => {
+      localStorage.setItem('pm_access_token', token);
+      localStorage.setItem('pm_expires_at', expiresAt);
+    },
+    [accessToken, accessTokenExpiresAt]
+  );
 }
 
 /**
@@ -193,6 +215,16 @@ export async function createRegisteredUser(
   password: string,
   roles: UserRole[] = ['Teacher']
 ): Promise<void> {
-  const inviteToken = await inviteUser(page, email, roles);
-  await registerUser(page, inviteToken, password);
+  const accessToken = await getAdminAccessToken(page);
+  const created = await page.request.post('/api/users', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { email, roles },
+  });
+  expect(created.status()).toBe(201);
+  const { inviteUrl } = (await created.json()) as { inviteUrl: string };
+
+  const completed = await page.request.post('/api/auth/complete-registration', {
+    data: { inviteToken: extractTokenFromUrl(inviteUrl), newPassword: password },
+  });
+  expect(completed.ok()).toBe(true);
 }
