@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Infrastructure.TypeHandlers;
 using PanoramaMusic.Students.Application.Handlers.Courses;
 using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
@@ -51,7 +52,7 @@ public static class ServiceCollectionExtensions
 	{
 		// Dapper has no built-in composite-type<->DbType mapping; process-global and
 		// idempotent, so registering it here on every AddStudentsInfrastructure call is safe.
-		SqlMapper.AddTypeHandler(new StudentInputTypeHandler());
+		SqlMapper.AddTypeHandler(new InputTypeHandler<StudentInputDto>());
 		SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 		services.AddTransient<IStudentRepository, StudentRepository>();

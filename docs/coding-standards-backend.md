@@ -19,6 +19,24 @@ A **bounded context** owns its domain model, application logic, infrastructure i
 persistence concerns and tests, and may own its own database schema. Contexts communicate through
 application contracts, never by referencing each other's infrastructure.
 
+## Shared projects
+
+Four projects sit outside every bounded context. Each context references only the ones it needs,
+and `PanoramaMusic.Testing` is referenced by test projects only:
+
+- `PanoramaMusic.Domain` — the event primitives and the context-free `DomainException`,
+  `EntityNotFoundException` and `ForbiddenException`.
+- `PanoramaMusic.Persistence` — database plumbing.
+- `PanoramaMusic.Infrastructure` — `RepositoryBase`, `UserContextBase` and `InputTypeHandler<T>`.
+- `PanoramaMusic.Testing` — test helpers shared across contexts, such as `ShouldlyHelpers`.
+
+The rule: a type moves into a shared project only when it carries no context's meaning, and a shared
+project never references a bounded context.
+
+These stay per context: exceptions that carry domain meaning, each context's `IUserContext`
+(Application layer) and its `UserContext` subclass, its `*Migrator`, its DTOs, and Audit's own
+`RepositoryBase`.
+
 ---
 
 # 2. Layer Responsibilities
@@ -94,6 +112,8 @@ The event primitives live in a dedicated, dependency-free shared-kernel project,
 * `IDomainEvent` — marker for a domain event.
 * `AggregateRoot` — base type that holds an aggregate's pending events, raises them, and lets
   infrastructure drain them.
+* `DomainException`, `EntityNotFoundException` and `ForbiddenException` — the exceptions that carry
+  no context's meaning, in `PanoramaMusic.Domain.Exceptions`.
 
 Rules:
 
@@ -160,7 +180,7 @@ calls `BeginAsync` before the endpoint executes, `CommitAsync` (with the audit f
 `RollbackAsync` when an exception propagates. No handler or repository begins, commits, or rolls back
 a transaction directly.
 
-A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`) and executes its database
+A repository method resolves `IUnitOfWork` from DI (via `RepositoryBase`, in `PanoramaMusic.Infrastructure`) and executes its database
 function call as a straight command on the shared connection and transaction:
 
 ```csharp
@@ -344,7 +364,7 @@ mocking. Name test methods `MethodUnderTest_Scenario_ExpectedOutcome` (e.g.
 `HandleAsync_UserNotFound_ThrowsEntityNotFoundException`). Tag every test with
 `[Trait("AC", "<code>")]` mapping it to the acceptance criterion it verifies. When a test asserts
 more than one independent condition, group them with `ShouldlyHelpers.Satisfy(() => ..., () => ...)`
-(wraps `Shouldly.ShouldSatisfyAllConditions`) rather than a sequence of bare assertions — this
+(from `PanoramaMusic.Testing`; wraps `Shouldly.ShouldSatisfyAllConditions`) rather than a sequence of bare assertions — this
 ensures every condition is evaluated and reported on failure, instead of stopping at the first one.
 
 ## Test Project Setup

@@ -1,13 +1,14 @@
 using Moq;
 using Npgsql;
 using NpgsqlTypes;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Persistence.Interfaces;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Students.Domain.Enums;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Infrastructure.Repositories;
 using PanoramaMusic.Students.Tests.Factories;
 using PanoramaMusic.Students.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

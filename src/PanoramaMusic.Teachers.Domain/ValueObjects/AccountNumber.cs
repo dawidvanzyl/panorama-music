@@ -1,4 +1,4 @@
-using PanoramaMusic.Teachers.Domain.Exceptions;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Messages;
 
 namespace PanoramaMusic.Teachers.Domain.ValueObjects;

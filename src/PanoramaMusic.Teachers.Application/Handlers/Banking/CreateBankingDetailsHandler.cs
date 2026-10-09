@@ -1,8 +1,8 @@
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Teachers.Application.Commands.Banking;
 using PanoramaMusic.Teachers.Application.Extensions;
 using PanoramaMusic.Teachers.Application.Models;
 using PanoramaMusic.Teachers.Domain.Entities;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Messages;
 using PanoramaMusic.Teachers.Domain.ValueObjects;

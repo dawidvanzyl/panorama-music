@@ -1,7 +1,7 @@
 using Dapper;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Identity.Domain.Interfaces;
-using PanoramaMusic.Identity.Infrastructure.Repositories.Bases;
+using PanoramaMusic.Infrastructure.Repositories.Bases;
 using PanoramaMusic.Persistence.Transactions;
 
 namespace PanoramaMusic.Identity.Infrastructure.Repositories;

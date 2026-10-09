@@ -1,4 +1,5 @@
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Reporting.Application.Handlers;
 using PanoramaMusic.Reporting.Application.Interfaces;
 using PanoramaMusic.Reporting.Application.Requests;
@@ -8,6 +9,7 @@ using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

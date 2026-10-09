@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Interfaces;
+using PanoramaMusic.Infrastructure.TypeHandlers;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Teachers.Application.Handlers.Banking;
 using PanoramaMusic.Teachers.Application.Handlers.Self;
@@ -19,7 +20,6 @@ using PanoramaMusic.Teachers.Infrastructure.Dtos;
 using PanoramaMusic.Teachers.Infrastructure.Repositories;
 using PanoramaMusic.Teachers.Infrastructure.Translators.Banking;
 using PanoramaMusic.Teachers.Infrastructure.Translators.Teachers;
-using PanoramaMusic.Teachers.Infrastructure.TypeHandlers;
 using PanoramaMusic.Teachers.Infrastructure.Validators;
 
 namespace PanoramaMusic.Teachers.Infrastructure.Extensions;
@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
 	{
 		// Dapper has no built-in composite-type<->DbType mapping; process-global and
 		// idempotent, so registering it here on every AddTeachersInfrastructure call is safe.
-		SqlMapper.AddTypeHandler(new TeacherInputTypeHandler());
+		SqlMapper.AddTypeHandler(new InputTypeHandler<TeacherInputDto>());
 
 		services.AddTransient<ITeacherRepository, TeacherRepository>();
 		services.AddTransient<IBankingDetailsRepository, BankingDetailsRepository>();

@@ -1,5 +1,6 @@
 using PanoramaMusic.Students.Application.Requests.StudentExtraCurriculars;
 using PanoramaMusic.Students.Application.Validators.StudentExtraCurriculars;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

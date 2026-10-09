@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders } from '../../../services/api-client';
 
 const API_BASE = '/api/auth';
 
@@ -29,22 +28,8 @@ export class SessionError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 async function handleResponse<T>(response: Response): Promise<T> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new SessionError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
+  await assertOk(response, SessionError);
   if (response.status === 204) {
     return undefined as T;
   }

@@ -1,6 +1,6 @@
 using PanoramaMusic.Domain;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Events.Teachers;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Messages;
 
 namespace PanoramaMusic.Teachers.Domain.Entities;

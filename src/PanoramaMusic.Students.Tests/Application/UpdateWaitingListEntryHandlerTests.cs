@@ -1,13 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Students.Application.Commands.WaitingList;
 using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Requests.WaitingList;
 using PanoramaMusic.Students.Domain.Entities;
 using PanoramaMusic.Students.Domain.Enums;
-using PanoramaMusic.Students.Domain.Exceptions;
 using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

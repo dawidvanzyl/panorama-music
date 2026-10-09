@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Api.Middleware;
 using PanoramaMusic.Api.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

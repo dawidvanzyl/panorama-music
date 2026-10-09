@@ -9,6 +9,7 @@ using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Tests;
 using PanoramaMusic.Identity.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Students.Domain.Exceptions;
+namespace PanoramaMusic.Domain.Exceptions;
 
 /// <summary>
 /// The caller is authenticated and reached an endpoint they are allowed to

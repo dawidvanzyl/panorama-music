@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 
 const STUDENTS_BASE = '/api/students';
 
@@ -37,30 +36,6 @@ export class StudentExtraCurricularsError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-/** Throws the server's own reason, which is what the tab shows the user. */
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new StudentExtraCurricularsError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 /**
  * The activities the student takes part in. Uncached, like the student's
  * enrollments and guardians: assigning and removing refresh the list immediately
@@ -68,7 +43,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  */
 export async function getStudentExtraCurriculars(studentId: string): Promise<StudentExtraCurricular[]> {
   const response = await fetch(`${STUDENTS_BASE}/${studentId}/extra-curriculars`, { headers: authHeaders() });
-  return handleResponse<StudentExtraCurricular[]>(response);
+  return handleResponse<StudentExtraCurricular[]>(response, StudentExtraCurricularsError);
 }
 
 /**
@@ -90,7 +65,7 @@ export async function getAssignableExtraCurricularsByPhase(phase: PhaseType | nu
   const response = await fetch(`${STUDENTS_BASE}/extra-curriculars/assignable${query}`, {
     headers: authHeaders(),
   });
-  return handleResponse<StudentExtraCurricular[]>(response);
+  return handleResponse<StudentExtraCurricular[]>(response, StudentExtraCurricularsError);
 }
 
 export async function assignExtraCurricular(
@@ -102,7 +77,7 @@ export async function assignExtraCurricular(
     headers: authHeaders(),
     body: JSON.stringify({ extraCurricularId }),
   });
-  return handleResponse<StudentExtraCurricular>(response);
+  return handleResponse<StudentExtraCurricular>(response, StudentExtraCurricularsError);
 }
 
 /**
@@ -117,5 +92,5 @@ export async function removeExtraCurricular(studentId: string, extraCurricularId
 
   // A removal answers with no body, so there is nothing to read back — only the
   // refusal, if there was one.
-  await assertOk(response);
+  await assertOk(response, StudentExtraCurricularsError);
 }

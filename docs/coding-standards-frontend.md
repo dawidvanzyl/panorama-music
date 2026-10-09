@@ -21,8 +21,14 @@ models (feature-specific types), state (session/UI where applicable), and pages 
 components). A feature is self-contained and must not depend on the internal structure of another
 feature.
 
-**Shared layer.** A `shared/` layer exists for cross-feature concerns, strictly limited to reusable
-infrastructure and UI primitives. It must not contain feature- or domain-specific logic.
+**Shared layer.** All code outside `features/` is the shared layer, for cross-feature concerns. It is
+strictly limited to reusable infrastructure and UI primitives, and must not contain feature- or
+domain-specific logic.
+
+- `services/` holds cross-feature, non-UI code: API and HTTP helpers (`api-client.ts`),
+  authentication and session primitives (`auth.ts`, `token-storage.ts`, `session-cache.ts`), and
+  cross-feature reference vocabulary (`lesson-structure.ts`).
+- `components/` holds app-shell and reusable UI components (`pm-nav-bar`, `pm-sidebar` and others).
 
 ---
 
@@ -33,17 +39,14 @@ A vanilla TypeScript SPA built with Vite using Web Components.
 ```text
 src/
     features/
-        authentication/
-        songs/
-        playlists/
-    shared/
-        components/
-        services/
-        state/
-        utils/
+        students/
+        teachers/
+        reports/
+    components/
+    services/
     styles/
+    __tests__/
     main.ts
-    index.html
 ```
 
 ---
@@ -65,7 +68,7 @@ If a feature grows beyond this, add folders by responsibility, following the sam
 shared layer — no catch-all folders, no ambiguous names.
 
 **Isolation.** Features must not import internal modules from other features or access another
-feature's state or models directly; they communicate via shared services or APIs only.
+feature's state or models directly; they communicate via the top-level `services/` modules or the API only.
 
 ---
 
@@ -89,7 +92,7 @@ caching, request deduplication, and transformation of responses into feature mod
 manipulate the DOM, contain UI or presentation logic, or render components.
 
 **Fetch policy.** Direct `fetch` inside components is prohibited — all API calls go through a feature
-or shared service.
+service or a top-level `services/` module.
 
 **Caching.** Services cache stable or reusable data where appropriate (song lists, reference data,
 user profile data). Caching is consistent within a feature and transparent to components. Cache
@@ -111,15 +114,20 @@ infrastructure and never duplicated across features.
 
 # 7. Shared Layer Rules
 
-**Allowed in `shared/`:** reusable UI components (design system), API base clients, HTTP utilities,
-authentication primitives (non-feature workflows), generic utilities (formatting, parsing, helpers),
-shared state primitives.
+**Allowed in `services/`:** API base clients, HTTP utilities, authentication primitives (non-feature
+workflows), generic utilities (formatting, parsing, helpers), shared state primitives.
 
-**Prohibited in `shared/`:** feature-specific logic, domain workflows (songs, playlists, etc.),
-business rules, feature-owned services, UI tied to a specific bounded context.
+**Allowed in `components/`:** reusable UI components (design system) and app-shell components.
 
-If code carries domain meaning it does not belong in `shared/` — `shared/` is infrastructure, not an
-application layer.
+**Prohibited in `services/` and `components/`:** feature-specific logic, domain workflows (songs,
+playlists, etc.), business rules, feature-owned services, UI tied to a specific bounded context.
+
+If code carries domain meaning it does not belong in `services/` or `components/` — they are
+infrastructure, not an application layer.
+
+**HTTP helpers.** Feature services take `authHeaders`, `assertOk` and `handleResponse` from
+`services/api-client.ts` and never define their own. Each feature keeps its own error class and passes
+it in. Features never import from another feature; `enforce-feature-boundaries` enforces this.
 
 ---
 

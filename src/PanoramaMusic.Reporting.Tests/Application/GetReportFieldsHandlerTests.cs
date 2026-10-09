@@ -4,6 +4,7 @@ using PanoramaMusic.Reporting.Domain.Enums;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Registries;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

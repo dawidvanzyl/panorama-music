@@ -24,5 +24,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\PanoramaMusic.Api\PanoramaMusic.Api.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Testing\PanoramaMusic.Testing.csproj" />
 	</ItemGroup>
 </Project>

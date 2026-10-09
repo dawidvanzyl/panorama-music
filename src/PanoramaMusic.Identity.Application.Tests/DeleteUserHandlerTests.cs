@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Application.Commands.Admin;
 using PanoramaMusic.Identity.Application.Handlers.Admin;
 using PanoramaMusic.Identity.Domain.Entities;
-using PanoramaMusic.Identity.Domain.Exceptions;
 using PanoramaMusic.Identity.Tests;
 using PanoramaMusic.Identity.Tests.Factories;
 using Shouldly;

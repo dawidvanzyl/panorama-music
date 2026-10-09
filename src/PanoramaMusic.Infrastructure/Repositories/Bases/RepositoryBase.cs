@@ -2,7 +2,7 @@ using Dapper;
 using PanoramaMusic.Persistence.Transactions;
 using System.Data;
 
-namespace PanoramaMusic.Students.Infrastructure.Repositories.Bases;
+namespace PanoramaMusic.Infrastructure.Repositories.Bases;
 
 public abstract class RepositoryBase(IUnitOfWork unitOfWork)
 {

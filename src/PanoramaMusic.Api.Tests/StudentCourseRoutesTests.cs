@@ -2,6 +2,7 @@ using PanoramaMusic.Api.Tests.Fixtures;
 using PanoramaMusic.Api.Tests.ValueObjects;
 using PanoramaMusic.Identity.Domain.Enums;
 using PanoramaMusic.Teachers.Application.Models;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;

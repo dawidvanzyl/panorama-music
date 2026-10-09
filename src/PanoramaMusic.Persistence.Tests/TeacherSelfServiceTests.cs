@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Infrastructure.Repositories;
@@ -7,9 +8,9 @@ using PanoramaMusic.Persistence.Tests.Fixtures;
 using PanoramaMusic.Persistence.Transactions;
 using PanoramaMusic.Teachers.Application.Handlers.Self;
 using PanoramaMusic.Teachers.Domain.Entities;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
 using PanoramaMusic.Teachers.Domain.Messages;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

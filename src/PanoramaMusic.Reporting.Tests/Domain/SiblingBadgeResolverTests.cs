@@ -1,5 +1,6 @@
 using PanoramaMusic.Reporting.Domain.Services;
 using PanoramaMusic.Reporting.Domain.ValueObjects;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

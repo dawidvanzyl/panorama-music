@@ -1,4 +1,4 @@
-namespace PanoramaMusic.Identity.Domain.Exceptions;
+namespace PanoramaMusic.Domain.Exceptions;
 
 public sealed class DomainException(string message)
 	: Exception(message)

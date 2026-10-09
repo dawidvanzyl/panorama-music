@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 
 const API_BASE = '/api/teachers';
@@ -88,29 +87,6 @@ export class TeachersError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new TeachersError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 let _teachersCache: TeacherResult[] | null = null;
 let _ownTeacherCache: TeacherResult | null = null;
 
@@ -129,13 +105,13 @@ export async function getTeachers(): Promise<TeacherResult[]> {
   if (_teachersCache) return _teachersCache;
 
   const response = await fetch(API_BASE, { headers: authHeaders() });
-  _teachersCache = await handleResponse<TeacherResult[]>(response);
+  _teachersCache = await handleResponse<TeacherResult[]>(response, TeachersError);
   return _teachersCache;
 }
 
 export async function getTeacherById(teacherId: string): Promise<TeacherResult> {
   const response = await fetch(`${API_BASE}/${teacherId}`, { headers: authHeaders() });
-  return handleResponse<TeacherResult>(response);
+  return handleResponse<TeacherResult>(response, TeachersError);
 }
 
 export async function createTeacher(input: TeacherInput): Promise<TeacherResult> {
@@ -144,7 +120,7 @@ export async function createTeacher(input: TeacherInput): Promise<TeacherResult>
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -156,7 +132,7 @@ export async function updateTeacherProfile(teacherId: string, input: TeacherProf
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -168,7 +144,7 @@ export async function updateTeacherProfile(teacherId: string, input: TeacherProf
  */
 export async function getLinkableAccounts(): Promise<LinkableAccount[]> {
   const response = await fetch(`${API_BASE}/linkable-accounts`, { headers: authHeaders() });
-  return handleResponse<LinkableAccount[]>(response);
+  return handleResponse<LinkableAccount[]>(response, TeachersError);
 }
 
 /** Attaches a login account. A link is established or removed, never changed in place. */
@@ -178,7 +154,7 @@ export async function linkTeacherAccount(teacherId: string, accountId: string): 
     headers: authHeaders(),
     body: JSON.stringify({ accountId }),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -188,7 +164,7 @@ export async function unlinkTeacherAccount(teacherId: string): Promise<TeacherRe
     method: 'DELETE',
     headers: authHeaders(),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -199,7 +175,7 @@ export async function createBankingDetails(teacherId: string, input: BankingDeta
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<BankingDetails>(response);
+  const result = await handleResponse<BankingDetails>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -210,7 +186,7 @@ export async function updateBankingDetails(teacherId: string, input: BankingDeta
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<BankingDetails>(response);
+  const result = await handleResponse<BankingDetails>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -220,7 +196,7 @@ export async function deleteBankingDetails(teacherId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, TeachersError);
   clearTeachersCache();
 }
 
@@ -235,14 +211,14 @@ export async function revealAccountNumber(teacherId: string): Promise<string> {
     method: 'POST',
     headers: authHeaders(),
   });
-  const result = await handleResponse<{ accountNumber: string }>(response);
+  const result = await handleResponse<{ accountNumber: string }>(response, TeachersError);
   return result.accountNumber;
 }
 
 /** Never cached — the point of the view is to show what has just happened. */
 export async function getBankingActivity(teacherId: string): Promise<BankingActivityEntry[]> {
   const response = await fetch(`${API_BASE}/${teacherId}/banking/activity`, { headers: authHeaders() });
-  return handleResponse<BankingActivityEntry[]>(response);
+  return handleResponse<BankingActivityEntry[]>(response, TeachersError);
 }
 
 /**
@@ -254,7 +230,7 @@ export async function deactivateTeacher(teacherId: string): Promise<TeacherResul
     method: 'PATCH',
     headers: authHeaders(),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -265,7 +241,7 @@ export async function reactivateTeacher(teacherId: string): Promise<TeacherResul
     method: 'PATCH',
     headers: authHeaders(),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -276,7 +252,7 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, TeachersError);
   clearTeachersCache();
 }
 
@@ -295,7 +271,7 @@ export async function getOwnTeacher(): Promise<TeacherResult> {
   if (_ownTeacherCache) return _ownTeacherCache;
 
   const response = await fetch(OWN_API_BASE, { headers: authHeaders() });
-  _ownTeacherCache = await handleResponse<TeacherResult>(response);
+  _ownTeacherCache = await handleResponse<TeacherResult>(response, TeachersError);
   return _ownTeacherCache;
 }
 
@@ -306,7 +282,7 @@ export async function updateOwnTeacherProfile(input: TeacherProfileInput): Promi
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   // The response is the record as it now stands, so the cache is refreshed from
   // it rather than left empty for the next page to fetch again.
@@ -320,7 +296,7 @@ export async function createOwnBankingDetails(input: BankingDetailsInput): Promi
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<BankingDetails>(response);
+  const result = await handleResponse<BankingDetails>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -331,7 +307,7 @@ export async function updateOwnBankingDetails(input: BankingDetailsInput): Promi
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<BankingDetails>(response);
+  const result = await handleResponse<BankingDetails>(response, TeachersError);
   clearTeachersCache();
   return result;
 }
@@ -341,7 +317,7 @@ export async function deleteOwnBankingDetails(): Promise<void> {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, TeachersError);
   clearTeachersCache();
 }
 
@@ -354,13 +330,13 @@ export async function revealOwnAccountNumber(): Promise<string> {
     method: 'POST',
     headers: authHeaders(),
   });
-  const result = await handleResponse<{ accountNumber: string }>(response);
+  const result = await handleResponse<{ accountNumber: string }>(response, TeachersError);
   return result.accountNumber;
 }
 
 export async function getOwnBankingActivity(): Promise<BankingActivityEntry[]> {
   const response = await fetch(`${OWN_API_BASE}/banking/activity`, { headers: authHeaders() });
-  return handleResponse<BankingActivityEntry[]>(response);
+  return handleResponse<BankingActivityEntry[]>(response, TeachersError);
 }
 
 /** Persists the employment classification on its own, outside the edit flow. */
@@ -370,7 +346,7 @@ export async function updateTeacherClassification(teacherId: string, isPrivate: 
     headers: authHeaders(),
     body: JSON.stringify({ isPrivate }),
   });
-  const result = await handleResponse<TeacherResult>(response);
+  const result = await handleResponse<TeacherResult>(response, TeachersError);
   clearTeachersCache();
   return result;
 }

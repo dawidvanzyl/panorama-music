@@ -22,6 +22,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\PanoramaMusic.Audit.Application\PanoramaMusic.Audit.Application.csproj" />
+		<ProjectReference Include="..\PanoramaMusic.Testing\PanoramaMusic.Testing.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Audit.Domain\PanoramaMusic.Audit.Domain.csproj" />
 		<ProjectReference Include="..\PanoramaMusic.Audit.Infrastructure\PanoramaMusic.Audit.Infrastructure.csproj" />
 	</ItemGroup>

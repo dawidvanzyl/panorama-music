@@ -6,6 +6,7 @@ using PanoramaMusic.Teachers.Application.Models;
 using PanoramaMusic.Teachers.Application.Requests.Banking;
 using PanoramaMusic.Teachers.Application.Requests.Teachers;
 using PanoramaMusic.Teachers.Domain.Enums;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;

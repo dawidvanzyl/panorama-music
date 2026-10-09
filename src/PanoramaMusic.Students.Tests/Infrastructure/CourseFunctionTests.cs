@@ -9,6 +9,7 @@ using PanoramaMusic.Students.Domain.Messages;
 using PanoramaMusic.Students.Infrastructure.Repositories;
 using PanoramaMusic.Students.Tests.Factories;
 using PanoramaMusic.Students.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

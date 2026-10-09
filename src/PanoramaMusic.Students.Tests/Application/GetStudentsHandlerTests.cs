@@ -4,6 +4,7 @@ using PanoramaMusic.Students.Application.Handlers.Students;
 using PanoramaMusic.Students.Domain.Enums;
 using PanoramaMusic.Students.Domain.ValueObjects;
 using PanoramaMusic.Students.Tests.Factories;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

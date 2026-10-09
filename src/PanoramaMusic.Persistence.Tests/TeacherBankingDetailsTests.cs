@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Audit.Application.Interfaces;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Persistence.Tests.Fixtures;
 using PanoramaMusic.Persistence.Tests.Repository;
 using PanoramaMusic.Persistence.Transactions;
@@ -9,8 +10,8 @@ using PanoramaMusic.Teachers.Application.Handlers.Banking;
 using PanoramaMusic.Teachers.Application.Requests.Banking;
 using PanoramaMusic.Teachers.Domain.Entities;
 using PanoramaMusic.Teachers.Domain.Enums;
-using PanoramaMusic.Teachers.Domain.Exceptions;
 using PanoramaMusic.Teachers.Domain.Interfaces;
+using PanoramaMusic.Testing;
 using Shouldly;
 using System.Text.Json;
 using Xunit;

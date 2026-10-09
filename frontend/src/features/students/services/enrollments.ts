@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { clearStudentsCache } from './students';
 import type {
   CourseType,
@@ -80,29 +79,6 @@ export class EnrollmentsError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new EnrollmentsError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 /**
  * A student's enrollments change within a single wizard session (enrolling
  * refreshes the list immediately), so like getGuardians this is a plain,
@@ -110,7 +86,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  */
 export async function getStudentCourses(studentId: string): Promise<EnrollmentResult[]> {
   const response = await fetch(`${STUDENTS_BASE}/${studentId}/courses`, { headers: authHeaders() });
-  return handleResponse<EnrollmentResult[]>(response);
+  return handleResponse<EnrollmentResult[]>(response, EnrollmentsError);
 }
 
 export async function enrollStudent(studentId: string, input: EnrollmentInput): Promise<EnrollmentResult> {
@@ -119,7 +95,7 @@ export async function enrollStudent(studentId: string, input: EnrollmentInput): 
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<EnrollmentResult>(response);
+  const result = await handleResponse<EnrollmentResult>(response, EnrollmentsError);
   clearStudentsCache();
   return result;
 }
@@ -134,7 +110,7 @@ export async function updateEnrollment(
     headers: authHeaders(),
     body: JSON.stringify(input),
   });
-  const result = await handleResponse<EnrollmentResult>(response);
+  const result = await handleResponse<EnrollmentResult>(response, EnrollmentsError);
   clearStudentsCache();
   return result;
 }
@@ -145,7 +121,7 @@ export async function withdrawEnrollment(studentId: string, studentCourseId: str
     method: 'DELETE',
     headers: authHeaders(),
   });
-  await assertOk(response);
+  await assertOk(response, EnrollmentsError);
   clearStudentsCache();
 }
 
@@ -162,7 +138,7 @@ export async function withdrawEnrollment(studentId: string, studentCourseId: str
  */
 export async function getEnrollableCourses(): Promise<EnrollableCourse[]> {
   const response = await fetch(COURSES_BASE, { headers: authHeaders() });
-  return handleResponse<EnrollableCourse[]>(response);
+  return handleResponse<EnrollableCourse[]>(response, EnrollmentsError);
 }
 
 /**
@@ -174,6 +150,6 @@ export async function getEnrollableCourses(): Promise<EnrollableCourse[]> {
  */
 export async function getAssignableTeachers(): Promise<AssignableTeacher[]> {
   const response = await fetch(TEACHERS_ROSTER, { headers: authHeaders() });
-  const teachers = await handleResponse<AssignableTeacher[]>(response);
+  const teachers = await handleResponse<AssignableTeacher[]>(response, EnrollmentsError);
   return teachers.filter((teacher) => teacher.isActive);
 }

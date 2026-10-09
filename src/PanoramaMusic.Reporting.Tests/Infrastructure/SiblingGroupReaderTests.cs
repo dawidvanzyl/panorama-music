@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PanoramaMusic.Reporting.Domain.Interfaces;
 using PanoramaMusic.Reporting.Domain.Services;
 using PanoramaMusic.Reporting.Tests.Fixtures;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

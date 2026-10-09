@@ -6,6 +6,7 @@ using PanoramaMusic.Identity.Domain.Entities;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using PanoramaMusic.Identity.Tests;
 using PanoramaMusic.Identity.Tests.Factories;
+using PanoramaMusic.Testing;
 using Xunit;
 
 namespace PanoramaMusic.Identity.Application.Tests;

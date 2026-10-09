@@ -1,5 +1,4 @@
-import { getAccessToken } from '../../../services/token-storage';
-import { handleUnauthorized } from '../../../services/auth';
+import { assertOk, authHeaders, handleResponse } from '../../../services/api-client';
 import { registerSessionCache } from '../../../services/session-cache';
 
 const EXTRA_CURRICULARS_BASE = '/api/extra-curriculars';
@@ -44,30 +43,6 @@ export class ExtraCurricularsError extends Error {
   }
 }
 
-function authHeaders(): HeadersInit {
-  const token = getAccessToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-/** Throws the server's own reason, which is what the screen shows the user. */
-async function assertOk(response: Response): Promise<void> {
-  if (response.status === 401) {
-    handleUnauthorized();
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new ExtraCurricularsError(body.error ?? `HTTP ${response.status}`, response.status);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  await assertOk(response);
-  return response.json() as Promise<T>;
-}
-
 let _extraCurricularsCache: ExtraCurricular[] | null = null;
 
 export function clearExtraCurricularsCache(): void {
@@ -85,7 +60,7 @@ export async function getExtraCurriculars(): Promise<ExtraCurricular[]> {
   if (_extraCurricularsCache) return _extraCurricularsCache;
 
   const response = await fetch(EXTRA_CURRICULARS_BASE, { headers: authHeaders() });
-  _extraCurricularsCache = await handleResponse<ExtraCurricular[]>(response);
+  _extraCurricularsCache = await handleResponse<ExtraCurricular[]>(response, ExtraCurricularsError);
   return _extraCurricularsCache;
 }
 
@@ -104,7 +79,7 @@ export async function createExtraCurricular(input: ExtraCurricularInput): Promis
       practiceTimes: input.practiceTimes.map((slot) => ({ day: slot.day, startTime: slot.startTime })),
     }),
   });
-  const result = await handleResponse<ExtraCurricular>(response);
+  const result = await handleResponse<ExtraCurricular>(response, ExtraCurricularsError);
   clearExtraCurricularsCache();
   return result;
 }
@@ -123,7 +98,7 @@ export async function updateExtraCurricular(
     headers: authHeaders(),
     body: JSON.stringify({ description: input.description, phase: input.phase }),
   });
-  const result = await handleResponse<ExtraCurricular>(response);
+  const result = await handleResponse<ExtraCurricular>(response, ExtraCurricularsError);
   clearExtraCurricularsCache();
   return result;
 }
@@ -137,7 +112,7 @@ export async function countExtraCurricularStudents(extraCurricularId: string): P
   const response = await fetch(`${EXTRA_CURRICULARS_BASE}/${extraCurricularId}/students/count`, {
     headers: authHeaders(),
   });
-  return handleResponse<{ count: number }>(response);
+  return handleResponse<{ count: number }>(response, ExtraCurricularsError);
 }
 
 /** Removes the activity and every one of its practice times. */
@@ -149,7 +124,7 @@ export async function deleteExtraCurricular(extraCurricularId: string): Promise<
 
   // A deletion answers with no body, so there is nothing to read back — only the
   // refusal, if there was one.
-  await assertOk(response);
+  await assertOk(response, ExtraCurricularsError);
 
   clearExtraCurricularsCache();
 }
@@ -164,7 +139,7 @@ export async function addPracticeTime(extraCurricularId: string, input: Practice
     headers: authHeaders(),
     body: JSON.stringify({ day: input.day, startTime: input.startTime }),
   });
-  const result = await handleResponse<PracticeTime>(response);
+  const result = await handleResponse<PracticeTime>(response, ExtraCurricularsError);
   clearExtraCurricularsCache();
   return result;
 }
@@ -181,7 +156,7 @@ export async function removePracticeTime(extraCurricularId: string, practiceTime
 
   // A removal answers with no body, so there is nothing to read back — only the
   // refusal, if there was one.
-  await assertOk(response);
+  await assertOk(response, ExtraCurricularsError);
 
   clearExtraCurricularsCache();
 }

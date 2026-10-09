@@ -1,4 +1,4 @@
-using PanoramaMusic.Identity.Domain.Exceptions;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Identity.Domain.ValueObjects;
 using Shouldly;
 using Xunit;

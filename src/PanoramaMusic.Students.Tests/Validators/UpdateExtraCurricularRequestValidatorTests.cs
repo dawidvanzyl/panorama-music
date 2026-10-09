@@ -1,6 +1,7 @@
 using PanoramaMusic.Students.Application.Requests.ExtraCurriculars;
 using PanoramaMusic.Students.Application.Validators.ExtraCurriculars;
 using PanoramaMusic.Students.Domain.Enums;
+using PanoramaMusic.Testing;
 using Shouldly;
 using Xunit;
 

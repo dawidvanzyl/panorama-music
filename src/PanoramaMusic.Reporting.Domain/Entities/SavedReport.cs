@@ -1,4 +1,5 @@
 using PanoramaMusic.Domain;
+using PanoramaMusic.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Events;
 using PanoramaMusic.Reporting.Domain.Exceptions;
 using PanoramaMusic.Reporting.Domain.Messages;
