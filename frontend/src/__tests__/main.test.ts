@@ -25,16 +25,17 @@ function grantRoles(...roles: string[]): void {
   mockHasAnyRole.mockImplementation((asked: string[]) => asked.some((role) => roles.includes(role)));
 }
 
-describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }, () => {
-  // main.ts pulls in component modules that call customElements.define() at
-  // module scope, so it can only be imported once per test run — re-importing
-  // it (e.g. via vi.resetModules()) throws "already registered in the
-  // registry". Loaded once here; every other piece of state (mocks, DOM,
-  // hash) is reset per test in beforeEach below instead.
-  beforeAll(async () => {
-    await import('../main');
-  });
+// main.ts pulls in component modules that call customElements.define() at
+// module scope, so it can only be imported once per test run — re-importing
+// it (e.g. via vi.resetModules()) throws "already registered in the
+// registry". Loaded once here, at file level, so a --tagsFilter that skips the
+// first describe still wires the router up; every other piece of state (mocks,
+// DOM, hash) is reset per test in each describe's beforeEach instead.
+beforeAll(async () => {
+  await import('../main');
+});
 
+describe('main router — refresh-failure retry handling', { tags: ['M1.2UC2'] }, () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.resetAllMocks();
