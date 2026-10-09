@@ -22,7 +22,7 @@ stage to a worker role and escalate what you can't rule on — never edit `src/`
 **Run inline, never as a subagent.** This skill spawns the workers, and a subagent
 can't spawn subagents.
 
-The hard rules in `.claude/agents/tech-lead.md` apply here, except rule 2 (story order
+The hard rules in `.claude/shared/lead-rules.md` apply here, except rule 2 (story order
 is `implement-milestone`'s). Briefs, verdicts and escalation follow
 `.claude/shared/subagent-contract.md`; run state follows
 `.claude/shared/run-journal.md`.
@@ -142,7 +142,7 @@ After the plans are approved, resolve each worker escalation you can from the ep
 any), the issue, the standards, the approved plans, `plan-answers.md` and
 `rulings.md`, and record the ruling; go to the owner only for the cases in step 4.
 Whenever you wait on the owner, everything waits — one issue and one stage at a time
-(`tech-lead.md` rule 1) means nothing else runs meanwhile.
+(`lead-rules.md` rule 1) means nothing else runs meanwhile.
 
 ### 2a) The planning loop and the plan approval
 

@@ -5,7 +5,7 @@ description: >
   plan for the developer and a QA plan for qa-implement — before any code exists.
   Reads the story, the epic and the existing codebase; writes plans, never code.
 model: opus
-effort: high
+effort: medium
 permissionMode: auto
 background: true
 maxTurns: 80
