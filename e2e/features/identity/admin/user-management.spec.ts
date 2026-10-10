@@ -1,10 +1,28 @@
 import { test, expect } from '../../../fixtures/base';
-import { uniqueTestEmail, createRegisteredUser, goToAdminUsersPage } from '../../../fixtures/testUsers';
+import type { Page } from '@playwright/test';
+import {
+  uniqueTestEmail,
+  createRegisteredUser,
+  getAdminAccessToken,
+  goToAdminUsersPage,
+  loginAsRoles,
+} from '../../../fixtures/testUsers';
 import { extractTokenFromUrl } from '../../../fixtures/url';
 import { LoginPage } from '../../../pages/identity/auth/LoginPage';
 import { landingUrl, sidebarEntry } from '../../../fixtures/navigation';
 
 const ORIGINAL_PASSWORD = 'OriginalPass123';
+
+async function userIdByEmail(page: Page, email: string): Promise<string> {
+  const adminToken = await getAdminAccessToken(page);
+  const response = await page.request.get('/api/users', {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  const users = (await response.json()) as { userId: string; email: string }[];
+  const user = users.find((u) => u.email === email);
+  expect(user).toBeDefined();
+  return user!.userId;
+}
 
 test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
   test('creates a new user from the admin users page and shows an invite URL', async ({ page }) => {
@@ -41,6 +59,9 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
     await adminUsersPage.deactivateUser(email);
     await expect(adminUsersPage.status(email)).toHaveText('Deactivated');
 
+    await page.reload();
+    await expect(adminUsersPage.status(email)).toHaveText('Deactivated');
+
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, ORIGINAL_PASSWORD);
@@ -57,6 +78,10 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
 
     await adminUsersPage.permanentlyDeleteUser(email);
     await expect(adminUsersPage.row(email)).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.locator('.users-table__status').first()).toBeVisible();
+    await expect(adminUsersPage.row(email)).toHaveCount(0);
   });
 
   test('activates a deactivated user, who can log in again', async ({ page }) => {
@@ -70,12 +95,61 @@ test.describe('Admin User Management Flow', { tag: '@M1.2IT4' }, () => {
     await adminUsersPage.activateUser(email);
     await expect(adminUsersPage.status(email)).toHaveText('Active');
 
+    await page.reload();
+    await expect(adminUsersPage.status(email)).toHaveText('Active');
+
     const loginPage = new LoginPage(page);
     await loginPage.gotoLogin();
     await loginPage.login(email, ORIGINAL_PASSWORD);
 
     await expect(page).toHaveURL(landingUrl('Teacher'));
     await expect(sidebarEntry(page, 'studentManagementLink')).toBeVisible();
+  });
+
+  test('refuses a delete request on an active user and leaves the user active', async ({ page }) => {
+    const email = uniqueTestEmail('admin-mgmt-delete-active');
+    await createRegisteredUser(page, email, ORIGINAL_PASSWORD);
+    const userId = await userIdByEmail(page, email);
+    const adminToken = await getAdminAccessToken(page);
+
+    const response = await page.request.delete(`/api/users/${userId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(response.status()).toBe(400);
+
+    const adminUsersPage = await goToAdminUsersPage(page);
+    await expect(adminUsersPage.status(email)).toHaveText('Active');
+  });
+
+  test('refuses a non-Admin caller on deactivate, delete and activate with no state change', async ({
+    page,
+  }) => {
+    const activeEmail = uniqueTestEmail('admin-mgmt-rbac-active');
+    const deactivatedEmail = uniqueTestEmail('admin-mgmt-rbac-inactive');
+    await createRegisteredUser(page, activeEmail, ORIGINAL_PASSWORD);
+    await createRegisteredUser(page, deactivatedEmail, ORIGINAL_PASSWORD);
+    const activeId = await userIdByEmail(page, activeEmail);
+    const deactivatedId = await userIdByEmail(page, deactivatedEmail);
+
+    const adminUsersPage = await goToAdminUsersPage(page);
+    await adminUsersPage.deactivateUser(deactivatedEmail);
+    await expect(adminUsersPage.status(deactivatedEmail)).toHaveText('Deactivated');
+
+    await loginAsRoles(page, ['Teacher']);
+    const teacherToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
+    const headers = { Authorization: `Bearer ${teacherToken}` };
+
+    const deactivate = await page.request.patch(`/api/users/${activeId}/deactivate`, { headers });
+    const remove = await page.request.delete(`/api/users/${deactivatedId}`, { headers });
+    const activate = await page.request.patch(`/api/users/${deactivatedId}/activate`, { headers });
+
+    expect(deactivate.status()).toBe(403);
+    expect(remove.status()).toBe(403);
+    expect(activate.status()).toBe(403);
+
+    const observed = await goToAdminUsersPage(page);
+    await expect(observed.status(activeEmail)).toHaveText('Active');
+    await expect(observed.status(deactivatedEmail)).toHaveText('Deactivated');
   });
 });
 
