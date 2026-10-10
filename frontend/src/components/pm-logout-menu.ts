@@ -37,7 +37,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <button type="button" class="logout-menu__item" id="logoutBtn" role="menuitem">
+  <button type="button" class="logout-menu__item" id="logoutBtn">
     <span class="logout-menu__item-icon" aria-hidden="true">logout</span>Logout
   </button>
 `;

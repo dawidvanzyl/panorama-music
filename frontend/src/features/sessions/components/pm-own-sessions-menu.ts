@@ -40,7 +40,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <button type="button" class="own-sessions-menu__item" id="openBtn" role="menuitem">
+  <button type="button" class="own-sessions-menu__item" id="openBtn">
     <span class="own-sessions-menu__item-icon" aria-hidden="true">devices</span>Active Sessions
   </button>
 `;

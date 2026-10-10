@@ -57,7 +57,7 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <button type="button" class="my-details-menu__item" id="openBtn" role="menuitem">
+  <button type="button" class="my-details-menu__item" id="openBtn">
     <span class="my-details-menu__item-icon" aria-hidden="true">manage_accounts</span>My Details
   </button>
 `;

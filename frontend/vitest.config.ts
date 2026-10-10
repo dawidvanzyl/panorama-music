@@ -360,6 +360,7 @@ export default defineConfig({
       { name: '341UC7', description: 'The Teacher filter combines with the other filters' },
       { name: '341UC8', description: 'With no teacher chosen the name, grade, phase and class filters behave as before' },
       { name: '341UC9', description: 'An enrollment add, correction or withdrawal refreshes the roster so the Teacher filter reflects current courses' },
+      { name: '252UC1', description: 'The account dropdown and chip declare no menu role or popup, each entry on offer is a labelled button, and a self-hidden entry is not announced' },
     ],
   },
 })
