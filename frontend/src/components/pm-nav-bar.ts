@@ -86,12 +86,12 @@ template.innerHTML = `
       <span class="nav-bar__brand">Panorama Music</span>
     </div>
     <div class="nav-bar__account-area" id="accountArea">
-      <button type="button" class="nav-bar__account" id="accountChip" hidden aria-haspopup="menu" aria-expanded="false">
+      <button type="button" class="nav-bar__account" id="accountChip" hidden aria-expanded="false">
         <span class="nav-bar__account-icon" aria-hidden="true">account_circle</span>
         <span id="accountEmail"></span>
         <span class="nav-bar__account-chevron" id="accountChevron" aria-hidden="true" hidden>expand_more</span>
       </button>
-      <div class="nav-bar__account-menu" id="accountMenu" role="menu" hidden>
+      <div class="nav-bar__account-menu" id="accountMenu" hidden>
         <slot name="account-menu" id="accountMenuSlot"></slot>
       </div>
     </div>

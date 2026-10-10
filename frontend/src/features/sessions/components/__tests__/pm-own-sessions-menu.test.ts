@@ -96,8 +96,8 @@ describe('account chip — Active Sessions is offered to every signed-in user', 
     expect(mockGetOwnSessions).not.toHaveBeenCalled();
   });
 
-  it('presents the item as a menu item so it reads as one inside the dropdown', () => {
-    expect(openBtnOf(el).getAttribute('role')).toBe('menuitem');
+  it('presents the item as a plain button', () => {
+    expect(openBtnOf(el).getAttribute('role')).toBeNull();
   });
 });
 

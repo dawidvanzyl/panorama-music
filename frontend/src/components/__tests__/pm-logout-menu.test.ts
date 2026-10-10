@@ -22,11 +22,11 @@ describe('account chip — Logout ends the session and returns to the login scre
     document.body.removeChild(el);
   });
 
-  it('offers Logout as a menu item', () => {
+  it('offers Logout as a plain button', () => {
     const logoutBtn = el.shadowRoot!.getElementById('logoutBtn') as HTMLButtonElement;
 
     expect(logoutBtn.textContent).toContain('Logout');
-    expect(logoutBtn.getAttribute('role')).toBe('menuitem');
+    expect(logoutBtn.getAttribute('role')).toBeNull();
   });
 
   it('calls logout once and redirects to the login screen', async () => {
