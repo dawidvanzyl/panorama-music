@@ -16,9 +16,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Persistence\Migrations\*.sql" />
     <EmbeddedResource Include="Persistence\Functions\*.sql" />
     <EmbeddedResource Include="Persistence\Seeds\*.sql" />

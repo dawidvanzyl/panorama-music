@@ -1,19 +1,12 @@
 using Dapper;
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Identity.Domain.Interfaces;
 using PanoramaMusic.Infrastructure.TypeHandlers;
 using PanoramaMusic.Students.Domain.Interfaces;
-using PanoramaMusic.Teachers.Application.Handlers.Banking;
-using PanoramaMusic.Teachers.Application.Handlers.Self;
-using PanoramaMusic.Teachers.Application.Handlers.Teachers;
 using PanoramaMusic.Teachers.Application.Interfaces;
-using PanoramaMusic.Teachers.Application.Services;
-using PanoramaMusic.Teachers.Application.Validators.Teachers;
 using PanoramaMusic.Teachers.Domain.Interfaces;
-using PanoramaMusic.Teachers.Domain.Services;
 using PanoramaMusic.Teachers.Infrastructure.Contexts;
 using PanoramaMusic.Teachers.Infrastructure.Directories;
 using PanoramaMusic.Teachers.Infrastructure.Dtos;
@@ -44,51 +37,22 @@ public static class ServiceCollectionExtensions
 		// idempotent, so registering it here on every AddTeachersInfrastructure call is safe.
 		SqlMapper.AddTypeHandler(new InputTypeHandler<TeacherInputDto>());
 
-		services.AddTransient<ITeacherRepository, TeacherRepository>();
-		services.AddTransient<IBankingDetailsRepository, BankingDetailsRepository>();
-		services.AddTransient<IBankingActivityLog, AuditBankingActivityLog>();
+		AddContexts(services);
+		AddTeachers(services);
+		AddBanking(services);
+		AddCrossContextPorts(services);
+
+		return services;
+	}
+
+	private static void AddContexts(IServiceCollection services)
+	{
 		services.AddScoped<IUserContext, UserContext>();
-		services.AddTransient<TeacherAccountLinkService>();
-		services.AddTransient<TeacherResultComposer>();
-		services.AddTransient<OwnTeacherResolver>();
+	}
 
-		// Identity owns the contract; the Teachers context supplies the answer, so
-		// Identity can refuse to strip the Teacher role from a linked account
-		// without knowing what a teacher is.
-		services.AddTransient<IRoleRemovalValidator, TeacherLinkRoleRemovalValidator>();
-
-		// Students owns the contract; the Teachers context supplies the answer, so
-		// an enrollment can name the teacher it assigns without the Students
-		// context knowing how a teacher is stored.
-		services.AddTransient<ITeacherDirectory, StudentsTeacherDirectory>();
-
-		services.AddTransient<CreateTeacherHandler>();
-		services.AddTransient<GetTeacherByIdHandler>();
-		services.AddTransient<GetTeachersHandler>();
-		services.AddTransient<GetTeacherRosterHandler>();
-		services.AddTransient<UpdateTeacherProfileHandler>();
-		services.AddTransient<UpdateTeacherClassificationHandler>();
-		services.AddTransient<GetLinkableAccountsHandler>();
-		services.AddTransient<LinkTeacherAccountHandler>();
-		services.AddTransient<UnlinkTeacherAccountHandler>();
-		services.AddTransient<DeactivateTeacherHandler>();
-		services.AddTransient<ReactivateTeacherHandler>();
-		services.AddTransient<DeleteTeacherHandler>();
-		services.AddTransient<CreateBankingDetailsHandler>();
-		services.AddTransient<UpdateBankingDetailsHandler>();
-		services.AddTransient<DeleteBankingDetailsHandler>();
-		services.AddTransient<RevealAccountNumberHandler>();
-		services.AddTransient<GetBankingActivityHandler>();
-
-		services.AddTransient<GetOwnTeacherHandler>();
-		services.AddTransient<UpdateOwnTeacherProfileHandler>();
-		services.AddTransient<CreateOwnBankingDetailsHandler>();
-		services.AddTransient<UpdateOwnBankingDetailsHandler>();
-		services.AddTransient<DeleteOwnBankingDetailsHandler>();
-		services.AddTransient<RevealOwnAccountNumberHandler>();
-		services.AddTransient<GetOwnBankingActivityHandler>();
-
-		services.AddValidatorsFromAssemblyContaining<CreateTeacherRequestValidator>();
+	private static void AddTeachers(IServiceCollection services)
+	{
+		services.AddTransient<ITeacherRepository, TeacherRepository>();
 
 		services.AddTransient<IAuditEventTranslator, TeacherCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherProfileUpdatedTranslator>();
@@ -98,11 +62,29 @@ public static class ServiceCollectionExtensions
 		services.AddTransient<IAuditEventTranslator, TeacherDeactivatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherReactivatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, TeacherDeletedTranslator>();
+	}
+
+	private static void AddBanking(IServiceCollection services)
+	{
+		services.AddTransient<IBankingDetailsRepository, BankingDetailsRepository>();
+		services.AddTransient<IBankingActivityLog, AuditBankingActivityLog>();
+
 		services.AddTransient<IAuditEventTranslator, BankingDetailsAmendedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsCapturedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, BankingDetailsRevealedTranslator>();
+	}
 
-		return services;
+	private static void AddCrossContextPorts(IServiceCollection services)
+	{
+		// Identity owns the contract; the Teachers context supplies the answer, so
+		// Identity can refuse to strip the Teacher role from a linked account
+		// without knowing what a teacher is.
+		services.AddTransient<IRoleRemovalValidator, TeacherLinkRoleRemovalValidator>();
+
+		// Students owns the contract; the Teachers context supplies the answer, so
+		// an enrollment can name the teacher it assigns without the Students
+		// context knowing how a teacher is stored.
+		services.AddTransient<ITeacherDirectory, StudentsTeacherDirectory>();
 	}
 }
