@@ -55,8 +55,9 @@ or any other external framework.
   the domain needs. Must not contain HTTP, database access, SQL, or any framework/infrastructure
   concern.
 - **Application** — orchestrates use cases: commands, queries, handlers, application services,
-  validation, request/response contracts. Coordinates domain behaviour and infrastructure contracts
-  and implements use-case workflows. Holds orchestration logic, not business rules.
+  validation, request/response contracts, and the registration of its own handlers, services and
+  validators. Coordinates domain behaviour and infrastructure contracts and implements use-case
+  workflows. Holds orchestration logic, not business rules.
 - **Infrastructure** — implements external concerns: repositories, database access, PostgreSQL
   function calls, DbUp migrations, external integrations, DI registration. Implements the contracts
   defined in Application and Domain (depending on neither) and performs external I/O. Business rules

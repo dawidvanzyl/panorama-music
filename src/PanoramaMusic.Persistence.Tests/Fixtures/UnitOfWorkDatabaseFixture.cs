@@ -18,8 +18,10 @@ using PanoramaMusic.Persistence.Tests.DomainEvents;
 using PanoramaMusic.Persistence.Tests.Repository;
 using PanoramaMusic.Reporting.Infrastructure.Extensions;
 using PanoramaMusic.Reporting.Infrastructure.Persistence;
+using PanoramaMusic.Students.Application.Extensions;
 using PanoramaMusic.Students.Infrastructure.Extensions;
 using PanoramaMusic.Students.Infrastructure.Persistence;
+using PanoramaMusic.Teachers.Application.Extensions;
 using PanoramaMusic.Teachers.Infrastructure.Extensions;
 using PanoramaMusic.Teachers.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -93,17 +95,19 @@ public sealed class UnitOfWorkDatabaseFixture : IAsyncLifetime
 					})
 					.Build());
 
-			// Registers the real IStudentRepository, Students handlers, and the real
-			// Students audit translators — the same call Program.cs makes, so this
-			// harness stays in sync with production wiring. The real IUserContext it
-			// also registers (which needs an HTTP context that doesn't exist here) is
+			// Together the two calls register the real IStudentRepository, Students
+			// handlers, and the real Students audit translators — the same calls
+			// Program.cs makes, so this harness stays in sync with production wiring.
+			// The real IUserContext the Infrastructure call also registers (which needs an HTTP context that doesn't exist here) is
 			// overridden by a mock in RegisterContexts below.
 			services.AddStudentsInfrastructure();
+			services.AddStudentsApplication();
 
-			// Same reasoning as AddStudentsInfrastructure above: the real banking
+			// Same reasoning as the Students calls above: the real banking
 			// repository is where the account number is protected and where banking
 			// domain events are collected, so the tests drive it rather than a stand-in.
 			services.AddTeachersInfrastructure();
+			services.AddTeachersApplication();
 
 			// Same reasoning again: the real SavedReportRepository is where a
 			// saved report's domain events are collected, and the real

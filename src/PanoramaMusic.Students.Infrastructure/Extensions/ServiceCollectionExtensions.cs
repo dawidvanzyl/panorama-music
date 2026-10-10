@@ -1,22 +1,9 @@
 using Dapper;
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using PanoramaMusic.Audit.Application.Interfaces;
 using PanoramaMusic.Infrastructure.TypeHandlers;
-using PanoramaMusic.Students.Application.Handlers.Courses;
-using PanoramaMusic.Students.Application.Handlers.ExtraCurriculars;
-using PanoramaMusic.Students.Application.Handlers.GuardianRelationships;
-using PanoramaMusic.Students.Application.Handlers.Guardians;
-using PanoramaMusic.Students.Application.Handlers.LessonStructures;
-using PanoramaMusic.Students.Application.Handlers.Siblings;
-using PanoramaMusic.Students.Application.Handlers.StudentCourses;
-using PanoramaMusic.Students.Application.Handlers.StudentExtraCurriculars;
-using PanoramaMusic.Students.Application.Handlers.Students;
-using PanoramaMusic.Students.Application.Handlers.WaitingList;
 using PanoramaMusic.Students.Application.Interfaces;
-using PanoramaMusic.Students.Application.Services;
-using PanoramaMusic.Students.Application.Validators.Students;
 using PanoramaMusic.Students.Domain.Interfaces;
 using PanoramaMusic.Students.Infrastructure.Contexts;
 using PanoramaMusic.Students.Infrastructure.Dtos;
@@ -55,106 +42,113 @@ public static class ServiceCollectionExtensions
 		SqlMapper.AddTypeHandler(new InputTypeHandler<StudentInputDto>());
 		SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
-		services.AddTransient<IStudentRepository, StudentRepository>();
-		services.AddTransient<ISiblingRepository, SiblingRepository>();
-		services.AddTransient<IGuardianRepository, GuardianRepository>();
-		services.AddTransient<IStudentGuardianRepository, StudentGuardianRepository>();
-		services.AddTransient<IGuardianRelationshipRepository, GuardianRelationshipRepository>();
-		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
-		services.AddTransient<ICourseRepository, CourseRepository>();
-		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
-		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
-		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
-		services.AddTransient<IWaitingListRepository, WaitingListRepository>();
+		AddContexts(services);
+		AddStudents(services);
+		AddSiblings(services);
+		AddGuardians(services);
+		AddGuardianRelationships(services);
+		AddLessonStructures(services);
+		AddCourses(services);
+		AddStudentCourses(services);
+		AddExtraCurriculars(services);
+		AddStudentExtraCurriculars(services);
+		AddWaitingList(services);
+
+		return services;
+	}
+
+	private static void AddContexts(IServiceCollection services)
+	{
 		services.AddScoped<IUserContext, UserContext>();
+	}
 
-		services.AddTransient<CreateStudentHandler>();
-		services.AddTransient<GetStudentByIdHandler>();
-		services.AddTransient<GetStudentsHandler>();
-		services.AddTransient<UpdateStudentHandler>();
-		services.AddTransient<DeleteStudentHandler>();
-		services.AddTransient<AddSiblingHandler>();
-		services.AddTransient<GetSiblingsHandler>();
-		services.AddTransient<GetSiblingCandidatesHandler>();
-		services.AddTransient<RemoveSiblingHandler>();
-		services.AddTransient<GuardianMaintenanceScope>();
-		services.AddTransient<StudentPopulationResolver>();
-		services.AddTransient<AddGuardianHandler>();
-		services.AddTransient<UpdateGuardianHandler>();
-		services.AddTransient<GetGuardiansHandler>();
-		services.AddTransient<UnlinkGuardianHandler>();
-		services.AddTransient<DeleteGuardianHandler>();
-		services.AddTransient<IsGuardianSharedHandler>();
-		services.AddTransient<SyncGuardiansHandler>();
-		services.AddTransient<GetMissingSiblingGuardiansHandler>();
-		services.AddTransient<GetGuardianRelationshipsHandler>();
-		services.AddTransient<CreateGuardianRelationshipHandler>();
-		services.AddTransient<RenameGuardianRelationshipHandler>();
-		services.AddTransient<DeleteGuardianRelationshipHandler>();
-		services.AddTransient<CountGuardianRelationshipHandler>();
-		services.AddTransient<GetLessonStructuresHandler>();
-		services.AddTransient<GetOfferedLessonStructuresHandler>();
-		services.AddTransient<CreateCourseHandler>();
-		services.AddTransient<GetCoursesHandler>();
-		services.AddTransient<UpdateCourseCostHandler>();
-		services.AddTransient<DeleteCourseHandler>();
-		services.AddTransient<CountCourseEnrollmentsHandler>();
-		services.AddTransient<EnrollStudentHandler>();
-		services.AddTransient<GetStudentCoursesHandler>();
-		services.AddTransient<UpdateEnrollmentHandler>();
-		services.AddTransient<WithdrawEnrollmentHandler>();
-		services.AddTransient<CreateExtraCurricularHandler>();
-		services.AddTransient<GetExtraCurricularsHandler>();
-		services.AddTransient<UpdateExtraCurricularHandler>();
-		services.AddTransient<DeleteExtraCurricularHandler>();
-		services.AddTransient<CountExtraCurricularStudentsHandler>();
-		services.AddTransient<AddPracticeTimeHandler>();
-		services.AddTransient<RemovePracticeTimeHandler>();
-		services.AddTransient<GetStudentExtraCurricularsHandler>();
-		services.AddTransient<GetAssignableExtraCurricularsHandler>();
-		services.AddTransient<GetAssignableExtraCurricularsByPhaseHandler>();
-		services.AddTransient<AssignExtraCurricularHandler>();
-		services.AddTransient<RemoveExtraCurricularHandler>();
-		services.AddTransient<GetWaitingListHandler>();
-		services.AddTransient<CaptureWaitingListStudentHandler>();
-		services.AddTransient<UpdateWaitingListEntryHandler>();
-		services.AddTransient<UpdateWaitingListStudentHandler>();
-		services.AddTransient<RemoveWaitingListStudentHandler>();
-		services.AddTransient<EnrolWaitingListStudentHandler>();
-
-		services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>();
+	private static void AddStudents(IServiceCollection services)
+	{
+		services.AddTransient<IStudentRepository, StudentRepository>();
 
 		services.AddTransient<IAuditEventTranslator, StudentCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentDeletedTranslator>();
+	}
+
+	private static void AddSiblings(IServiceCollection services)
+	{
+		services.AddTransient<ISiblingRepository, SiblingRepository>();
+
 		services.AddTransient<IAuditEventTranslator, SiblingAddedTranslator>();
 		services.AddTransient<IAuditEventTranslator, SiblingRemovedTranslator>();
+	}
+
+	private static void AddGuardians(IServiceCollection services)
+	{
+		services.AddTransient<IGuardianRepository, GuardianRepository>();
+		services.AddTransient<IStudentGuardianRepository, StudentGuardianRepository>();
+
 		services.AddTransient<IAuditEventTranslator, GuardianCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianLinkedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianUnlinkedTranslator>();
+	}
+
+	private static void AddGuardianRelationships(IServiceCollection services)
+	{
+		services.AddTransient<IGuardianRelationshipRepository, GuardianRelationshipRepository>();
+
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipRenamedTranslator>();
 		services.AddTransient<IAuditEventTranslator, GuardianRelationshipDeletedTranslator>();
+	}
+
+	private static void AddLessonStructures(IServiceCollection services)
+	{
+		services.AddTransient<ILessonStructureRepository, LessonStructureRepository>();
+	}
+
+	private static void AddCourses(IServiceCollection services)
+	{
+		services.AddTransient<ICourseRepository, CourseRepository>();
+
 		services.AddTransient<IAuditEventTranslator, CourseCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, CourseCostUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, CourseDeletedTranslator>();
+	}
+
+	private static void AddStudentCourses(IServiceCollection services)
+	{
+		services.AddTransient<IStudentCourseRepository, StudentCourseRepository>();
+
 		services.AddTransient<IAuditEventTranslator, StudentEnrolledTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentEnrollmentUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentWithdrawnTranslator>();
+	}
+
+	private static void AddExtraCurriculars(IServiceCollection services)
+	{
+		services.AddTransient<IExtraCurricularRepository, ExtraCurricularRepository>();
+
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularDeletedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeAddedTranslator>();
 		services.AddTransient<IAuditEventTranslator, ExtraCurricularPracticeTimeRemovedTranslator>();
+	}
+
+	private static void AddStudentExtraCurriculars(IServiceCollection services)
+	{
+		services.AddTransient<IStudentExtraCurricularRepository, StudentExtraCurricularRepository>();
+
 		services.AddTransient<IAuditEventTranslator, StudentAssignedToExtraCurricularTranslator>();
 		services.AddTransient<IAuditEventTranslator, StudentRemovedFromExtraCurricularTranslator>();
+	}
+
+	private static void AddWaitingList(IServiceCollection services)
+	{
+		services.AddTransient<IWaitingListRepository, WaitingListRepository>();
+
 		services.AddTransient<IAuditEventTranslator, WaitingListEntryCreatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, WaitingListEntryUpdatedTranslator>();
 		services.AddTransient<IAuditEventTranslator, WaitingListEntryRemovedTranslator>();
 		services.AddTransient<IAuditEventTranslator, WaitingListEntryEnrolledTranslator>();
-
-		return services;
 	}
 }
