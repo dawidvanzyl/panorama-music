@@ -3,7 +3,8 @@
 TypeScript, Web Components, Vite, and architectural conventions for the Panorama Music frontend.
 
 > Workflow, branching, commit and PR rules: `coding-standards.md`. Backend conventions:
-> `coding-standards-backend.md`. Code style and formatting are governed by `.editorconfig` and
+> `coding-standards-backend.md`. Visual and wording rules for buttons, forms and modals:
+> `design-standards.md`. Code style and formatting are governed by `.editorconfig` and
 > Prettier; architectural/structural rules are enforced via `eslint.config.js` and the
 > `pm-architecture` ESLint plugin (CI-gated). None of these are duplicated here.
 
@@ -155,6 +156,9 @@ it in. Features never import from another feature; `enforce-feature-boundaries` 
   `song-card--active`).
 - Avoid global style leakage, cross-component styling dependencies, and styling based on an unrelated
   feature's structure.
+- Every button, form and modal follows `docs/design-standards.md`. Read colours, radii, shadows and
+  sizes from the `--pm-*` tokens it defines. Do not add a new button style; add a variant to that
+  document first.
 
 ---
 

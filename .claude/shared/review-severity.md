@@ -35,6 +35,9 @@ Rules:
 - Backend (`src/` touched): `docs/coding-standards-backend.md` and `src/.editorconfig`.
 - Frontend (`frontend/` touched): `docs/coding-standards-frontend.md` and
   `frontend/.editorconfig`.
+- Frontend diff that adds or changes a button, form, modal, label or confirmation text:
+  also `docs/design-standards.md`. Apply its Section 9 checklist. A "no" on any item is a
+  violation. Cite the rule ID (for example `ACT-3`) in the finding.
 
 If a doc doesn't exist, note that and skip it. Check every applicable rule against
 every file in the diff, and take each rule at face value: if the doc says "always do

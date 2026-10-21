@@ -82,7 +82,9 @@ ignoring any `## Post-Implementation Summary`. Extract:
 
 Also read, in full and before coding, `docs/coding-standards.md`, plus for backend
 scope `docs/coding-standards-backend.md` and `src/.editorconfig`, and for frontend
-scope `docs/coding-standards-frontend.md` and `frontend/.editorconfig`. They are
+scope `docs/coding-standards-frontend.md` and `frontend/.editorconfig`. When the story
+adds or changes a button, form, modal, label or confirmation text, also read
+`docs/design-standards.md`. They are
 binding, not background — in particular §5 (test codes) and §6 (comments).
 
 Then read `dev_plan_file` — your specification: the approach, the changes by layer,
