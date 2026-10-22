@@ -538,6 +538,11 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
 
     const message = studentStepMessageOf(wizardModalOf(el));
     expect(message.textContent).toBe('First name is required');
+    const wizardShadow = wizardModalOf(el).shadowRoot!;
+    const confirm = wizardShadow.getElementById('saveBtn') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(false);
+    expect(confirm.hasAttribute('aria-busy')).toBe(false);
+    expect((wizardShadow.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
