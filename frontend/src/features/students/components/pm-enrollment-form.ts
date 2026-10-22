@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { addPlaceholderOption } from './student-options';
 import {
   INSTRUMENT_TYPES,
@@ -57,29 +59,8 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
-    .enrollment-form__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .form-actions {
       margin-top: 20px;
-    }
-    .enrollment-form__btn {
-      height: 40px;
-      padding: 0 20px;
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .enrollment-form__btn--cancel {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .enrollment-form__btn--primary {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
     }
   `);
 
@@ -109,9 +90,9 @@ template.innerHTML = `
         <input class="enrollment-form__input" type="date" id="enrolledDate" required />
       </div>
     </div>
-    <div class="enrollment-form__actions">
-      <button type="button" class="enrollment-form__btn enrollment-form__btn--cancel" id="cancelBtn">Cancel</button>
-      <button type="button" class="enrollment-form__btn enrollment-form__btn--primary" id="confirmBtn">Enroll</button>
+    <div class="form-actions" data-testid="form-actions">
+      <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+      <button type="button" class="form-btn form-btn--primary" id="confirmBtn">Enrol Student</button>
     </div>
   </form>
 `;
@@ -134,7 +115,7 @@ export class PmEnrollmentForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -176,17 +157,13 @@ export class PmEnrollmentForm extends HTMLElement {
     this.renderTeacherOptions();
   }
 
-  /**
-   * The confirm action is "Enroll" against an existing student and "Add" while
-   * a new one is still being staged — nothing is sent in that mode until the
-   * wizard is saved, so calling it Enroll would overstate what it does.
-   */
-  set isPersisted(value: boolean) {
-    if (this.confirmBtn) this.confirmBtn.textContent = value ? 'Enroll' : 'Add';
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.confirmBtn!, this.cancelBtn!, busy);
   }
 
   /** Resets to a blank enroll form with the enrolled date defaulted to today. */
   resetForAdd(): void {
+    this.setBusy(false);
     this.form!.reset();
     this.renderCourseOptions();
     this.renderTeacherOptions();

@@ -261,6 +261,7 @@ export class PmGuardiansStep extends HTMLElement {
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('guardians-step__message--error');
+    this.guardianForm!.setBusy(false);
   }
 
   clearError(): void {
@@ -270,6 +271,7 @@ export class PmGuardiansStep extends HTMLElement {
 
   /** Collapses the form panel, exits any inline row edit, and restores the toolbar/list to their normal visible state. */
   private showListView(): void {
+    this.guardianForm!.setBusy(false);
     this.collapseFormPanelOnly();
     this.addBtn!.hidden = false;
     this.updateSyncBtnVisibility();
@@ -360,6 +362,7 @@ export class PmGuardiansStep extends HTMLElement {
       return;
     }
 
+    this.guardianForm!.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('guardian-add-requested', {
         bubbles: true,

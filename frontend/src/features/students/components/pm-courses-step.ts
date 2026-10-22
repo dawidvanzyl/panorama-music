@@ -181,7 +181,6 @@ export class PmCoursesStep extends HTMLElement {
     this._pendingCounter = 0;
     this.clearError();
     this.enrollmentList!.isPersisted = false;
-    this.enrollmentForm!.isPersisted = false;
     this.showListView();
     this.renderPendingList();
 
@@ -194,7 +193,6 @@ export class PmCoursesStep extends HTMLElement {
     this._studentId = studentId;
     this.clearError();
     this.enrollmentList!.isPersisted = true;
-    this.enrollmentForm!.isPersisted = true;
     this.showListView();
 
     this.enrollmentList!.enrollments = [];
@@ -235,6 +233,7 @@ export class PmCoursesStep extends HTMLElement {
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('courses-step__message--error');
+    this.enrollmentForm!.setBusy(false);
   }
 
   clearError(): void {
@@ -247,6 +246,7 @@ export class PmCoursesStep extends HTMLElement {
   }
 
   private showListView(): void {
+    this.enrollmentForm!.setBusy(false);
     this.collapseFormPanelOnly();
     this.enrollBtn!.hidden = false;
     this.enrollmentList!.exitEditMode();
@@ -282,6 +282,7 @@ export class PmCoursesStep extends HTMLElement {
       return;
     }
 
+    this.enrollmentForm!.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('enrollment-add-requested', {
         bubbles: true,
