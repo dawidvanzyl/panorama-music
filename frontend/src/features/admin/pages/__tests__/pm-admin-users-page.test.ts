@@ -133,7 +133,7 @@ describe('pm-admin-users-page — surfaces deactivate failures', { tags: ['161UC
     document.body.removeChild(el);
   });
 
-  it('displays the AdminError message on the page when deactivateUser rejects', async () => {
+  it('displays the AdminError message in the modal and leaves it open when deactivateUser rejects', async () => {
     vi.mocked(deactivateUser).mockRejectedValue(new AdminError('User is protected', 400));
 
     const modal = deactivateModalOf(el);
@@ -141,13 +141,12 @@ describe('pm-admin-users-page — surfaces deactivate failures', { tags: ['161UC
     modal.shadowRoot!.getElementById('deactivateBtn')!.click();
     await flush();
 
-    const banner = errorBannerOf(el);
-    expect(banner.textContent).toBe('User is protected');
-    expect(banner.classList.contains('admin-users__error--visible')).toBe(true);
-    expect(modal.hasAttribute('open')).toBe(false);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('User is protected');
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect((modal.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('displays the generic fallback message when deactivateUser rejects with a non-AdminError', async () => {
+  it('displays the generic fallback message in the modal when deactivateUser rejects with a non-AdminError', async () => {
     vi.mocked(deactivateUser).mockRejectedValue(new Error('boom'));
 
     const modal = deactivateModalOf(el);
@@ -155,7 +154,7 @@ describe('pm-admin-users-page — surfaces deactivate failures', { tags: ['161UC
     modal.shadowRoot!.getElementById('deactivateBtn')!.click();
     await flush();
 
-    expect(errorBannerOf(el).textContent).toBe('An unexpected error occurred');
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('An unexpected error occurred');
   });
 });
 
@@ -220,7 +219,7 @@ describe('pm-admin-users-page — surfaces delete failures', { tags: ['161UC6'] 
     document.body.removeChild(el);
   });
 
-  it('displays the AdminError message on the page when deleteUser rejects and keeps the row', async () => {
+  it('displays the AdminError message in the modal and keeps the row when deleteUser rejects', async () => {
     vi.mocked(deleteUser).mockRejectedValue(new AdminError('User still has active sessions', 409));
 
     const table = el.shadowRoot!.getElementById('usersTable') as unknown as PmUsersTable;
@@ -229,14 +228,12 @@ describe('pm-admin-users-page — surfaces delete failures', { tags: ['161UC6'] 
     confirmDelete(modal, 'bob@example.com');
     await flush();
 
-    const banner = errorBannerOf(el);
-    expect(banner.textContent).toBe('User still has active sessions');
-    expect(banner.classList.contains('admin-users__error--visible')).toBe(true);
-    expect(modal.hasAttribute('open')).toBe(false);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('User still has active sessions');
+    expect(modal.hasAttribute('open')).toBe(true);
     expect(table.users.map((u) => u.userId)).toEqual(['u1', 'u2']);
   });
 
-  it('displays the generic fallback message when deleteUser rejects with a non-AdminError', async () => {
+  it('displays the generic fallback message in the modal when deleteUser rejects with a non-AdminError', async () => {
     vi.mocked(deleteUser).mockRejectedValue(new Error('boom'));
 
     const modal = deleteModalOf(el);
@@ -244,6 +241,36 @@ describe('pm-admin-users-page — surfaces delete failures', { tags: ['161UC6'] 
     confirmDelete(modal, 'bob@example.com');
     await flush();
 
-    expect(errorBannerOf(el).textContent).toBe('An unexpected error occurred');
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('An unexpected error occurred');
+  });
+});
+
+describe('pm-admin-users-page — confirmations close on success', { tags: ['377UC2'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('closes the deactivate modal once the request has succeeded', async () => {
+    const modal = deactivateModalOf(el);
+    modal.show('u1', 'alice@example.com');
+    modal.shadowRoot!.getElementById('deactivateBtn')!.click();
+    await flush();
+
+    expect(modal.hasAttribute('open')).toBe(false);
+  });
+
+  it('closes the delete modal once the request has succeeded', async () => {
+    const modal = deleteModalOf(el);
+    modal.show('u2', 'bob@example.com');
+    confirmDelete(modal, 'bob@example.com');
+    await flush();
+
+    expect(modal.hasAttribute('open')).toBe(false);
   });
 });

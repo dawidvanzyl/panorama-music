@@ -361,6 +361,11 @@ export default defineConfig({
       { name: '341UC8', description: 'With no teacher chosen the name, grade, phase and class filters behave as before' },
       { name: '341UC9', description: 'An enrollment add, correction or withdrawal refreshes the roster so the Teacher filter reflects current courses' },
       { name: '252UC1', description: 'The account dropdown and chip declare no menu role or popup, each entry on offer is a labelled button, and a self-hidden entry is not announced' },
+      { name: '377UC1', description: 'A confirmation modal enters the loading state when its confirm action is clicked: the action is disabled, busy, keeps its label and shows the loading icon first, Cancel is disabled and the modal stays open' },
+      { name: '377UC2', description: 'When the request ends in failure the parent restores the modal and shows the message in it; on success the parent closes it' },
+      { name: '377UC3', description: 'A typed-confirmation modal never enables its confirm action while busy and re-applies the typed-text gate when the busy state ends' },
+      { name: '377UC4', description: 'A confirmation modal action row holds Cancel then the destructive confirm action as its last control' },
+      { name: '377UC5', description: 'Each button stylesheet hides its buttons and action row in print' },
     ],
   },
 })

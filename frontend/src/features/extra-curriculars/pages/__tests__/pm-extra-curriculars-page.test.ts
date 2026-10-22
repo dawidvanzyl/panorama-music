@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ExtraCurricularsError, createExtraCurricular, type ExtraCurricular } from '../../services/extra-curriculars';
+import {
+  ExtraCurricularsError,
+  createExtraCurricular,
+  deleteExtraCurricular,
+  type ExtraCurricular,
+} from '../../services/extra-curriculars';
 
 const mockGetExtraCurriculars = vi.fn();
 const mockHasAnyRole = vi.fn();
@@ -12,6 +17,7 @@ vi.mock('../../services/extra-curriculars', async () => {
     ...actual,
     getExtraCurriculars: () => mockGetExtraCurriculars(),
     createExtraCurricular: vi.fn(),
+    deleteExtraCurricular: vi.fn(),
   };
 });
 
@@ -137,6 +143,7 @@ beforeEach(() => {
   mockGetExtraCurriculars.mockReset();
   mockGetExtraCurriculars.mockResolvedValue([marimba, choir]);
   vi.mocked(createExtraCurricular).mockReset();
+  vi.mocked(deleteExtraCurricular).mockReset();
 });
 
 describe('pm-extra-curriculars-page — lists each activity with its slots', { tags: ['275UC12'] }, () => {
@@ -480,3 +487,48 @@ describe('pm-extra-curriculars-page — read-only for a Teacher who is not a Coo
     expect(mockHasAnyRole).toHaveBeenCalledWith(['Coordinator']);
   });
 });
+
+describe(
+  'pm-extra-curriculars-page — the delete confirmation closes on success and reports failures',
+  { tags: ['377UC2'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    function confirmDelete(): HTMLElement {
+      const modal = el.shadowRoot!.getElementById('deleteModal')!;
+      (modal as unknown as { show(id: string, name: string, count: number): void }).show('ec1', 'Marimba Band', 3);
+      modal.shadowRoot!.getElementById('deleteBtn')!.click();
+      return modal;
+    }
+
+    it('keeps the modal open with the message and restores the buttons on failure', async () => {
+      vi.mocked(deleteExtraCurricular).mockRejectedValue(new ExtraCurricularsError('Activity refused', 409));
+
+      const modal = confirmDelete();
+      await flush();
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Activity refused');
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('closes the modal and drops the row on success', async () => {
+      vi.mocked(deleteExtraCurricular).mockResolvedValue(undefined);
+
+      const modal = confirmDelete();
+      await flush();
+
+      expect(modal.hasAttribute('open')).toBe(false);
+      expect(rowTextsOf(el).map((row) => row[1])).not.toContain('Marimba Band');
+    });
+  },
+);

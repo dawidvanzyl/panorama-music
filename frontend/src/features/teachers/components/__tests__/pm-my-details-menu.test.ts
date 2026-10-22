@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { TeacherResult } from '../../services/teachers';
+import { TeachersError, type TeacherResult } from '../../services/teachers';
 
 const mockIsAuthenticated = vi.fn(() => true);
 vi.mock('../../../../services/auth', () => ({
@@ -18,9 +18,14 @@ vi.mock('../../../../services/token-storage', () => ({
 }));
 
 const mockGetOwnTeacher = vi.fn();
+const mockDeleteOwnBankingDetails = vi.fn();
 vi.mock('../../services/teachers', async () => {
   const actual = await vi.importActual<typeof import('../../services/teachers')>('../../services/teachers');
-  return { ...actual, getOwnTeacher: () => mockGetOwnTeacher() };
+  return {
+    ...actual,
+    getOwnTeacher: () => mockGetOwnTeacher(),
+    deleteOwnBankingDetails: () => mockDeleteOwnBankingDetails(),
+  };
 });
 
 import '../../../../components/pm-nav-bar';
@@ -62,6 +67,7 @@ async function mountShell(): Promise<HTMLElement> {
 beforeEach(() => {
   mockIsAuthenticated.mockReturnValue(true);
   mockGetOwnTeacher.mockReset().mockResolvedValue(linkedTeacher);
+  mockDeleteOwnBankingDetails.mockReset();
   grantRoles('Teacher');
 });
 
@@ -111,5 +117,35 @@ describe('account chip — My Details is offered only to a linked teacher', { ta
 
     expect(mockGetOwnTeacher).not.toHaveBeenCalled();
     expect(menu.hidden).toBe(true);
+  });
+});
+
+describe('account chip — deleting own banking details', { tags: ['377UC2'] }, () => {
+  async function confirmDelete(): Promise<HTMLElement> {
+    const menu = (await mountShell()) as unknown as { dialogHost: HTMLElement };
+    const modal = menu.dialogHost.querySelector('#bankingDeleteModal') as HTMLElement;
+    (modal as unknown as { show(last4: string): void }).show('1234');
+    modal.shadowRoot!.getElementById('deleteBtn')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return modal;
+  }
+
+  it('keeps the confirmation open with the message and restores its buttons when the delete fails', async () => {
+    mockDeleteOwnBankingDetails.mockRejectedValue(new TeachersError('Could not delete', 500));
+
+    const modal = await confirmDelete();
+
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Could not delete');
+    expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('closes the confirmation when the delete succeeds', async () => {
+    mockDeleteOwnBankingDetails.mockResolvedValue(undefined);
+
+    const modal = await confirmDelete();
+
+    expect(modal.hasAttribute('open')).toBe(false);
   });
 });

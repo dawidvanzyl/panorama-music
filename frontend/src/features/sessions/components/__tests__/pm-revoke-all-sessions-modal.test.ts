@@ -46,7 +46,7 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
     expect(revokeAllBtn.disabled).toBe(false);
   });
 
-  it('clicking Revoke All dispatches revoke-all-sessions-confirmed and closes the modal', () => {
+  it('clicking Revoke All dispatches revoke-all-sessions-confirmed and keeps the modal open for the page to close', () => {
     const events: CustomEvent[] = [];
     modal.addEventListener('revoke-all-sessions-confirmed', (e) => events.push(e as CustomEvent));
 
@@ -57,7 +57,7 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
     modal.shadowRoot!.getElementById('revokeAllBtn')!.click();
 
     expect(events).toHaveLength(1);
-    expect(modal.hasAttribute('open')).toBe(false);
+    expect(modal.hasAttribute('open')).toBe(true);
   });
 
   it('Cancel button closes the modal without dispatching anything', () => {
