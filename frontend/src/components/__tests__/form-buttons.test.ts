@@ -106,8 +106,8 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'saveBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'saveBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'teacher-profile-update-requested',
         fill: () => undefined,
         makeInvalid: () => type(byId(root, 'firstName'), ''),
@@ -124,7 +124,7 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'saveBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'saveBtn'),
         cancel: null,
         event: 'teacher-create-requested',
         fill: () => {
@@ -147,7 +147,7 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'createBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'createBtn'),
         cancel: null,
         event: 'course-form-submitted',
         fill: () => {
@@ -169,7 +169,7 @@ const cases: Case[] = [
       stubValidity(root);
       return {
         host,
-        confirm: byId(root, 'saveBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'saveBtn'),
         cancel: null,
         event: 'relationship-form-submitted',
         fill: () => type(byId(root, 'name'), 'Aunt'),
@@ -187,7 +187,7 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'createBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'createBtn'),
         cancel: null,
         event: 'extra-curricular-form-submitted',
         fill: () => {
@@ -216,7 +216,7 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'addBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'addBtn'),
         cancel: null,
         event: 'extra-curricular-practice-time-add-requested',
         fill: () => {
@@ -240,8 +240,8 @@ const cases: Case[] = [
       byId<HTMLButtonElement>(root, 'editBtn').click();
       return {
         host,
-        confirm: byId(root, 'submitBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'submitBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'teacher-banking-save-requested',
         fill: () => undefined,
         makeInvalid: () => type(byId(root, 'branchCodeInput'), '12'),
@@ -265,8 +265,8 @@ const cases: Case[] = [
       stubValidity(formRoot);
       return {
         host,
-        confirm: byId(formRoot, 'confirmBtn'),
-        cancel: byId(formRoot, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(formRoot, 'confirmBtn'),
+        cancel: byId<HTMLButtonElement>(formRoot, 'cancelBtn'),
         event: 'guardian-add-requested',
         fill: () => {
           type(byId(formRoot, 'firstName'), 'Sipho');
@@ -293,8 +293,8 @@ const cases: Case[] = [
       stubValidity(formRoot);
       return {
         host,
-        confirm: byId(formRoot, 'confirmBtn'),
-        cancel: byId(formRoot, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(formRoot, 'confirmBtn'),
+        cancel: byId<HTMLButtonElement>(formRoot, 'cancelBtn'),
         event: 'enrollment-add-requested',
         fill: () => {
           type(byId(formRoot, 'course'), 'c-theory');
@@ -319,7 +319,7 @@ const cases: Case[] = [
       const searchRoot = byId(host.shadowRoot!, 'searchSelect').shadowRoot!;
       return {
         host,
-        confirm: byId(searchRoot, 'addBtn'),
+        confirm: byId<HTMLButtonElement>(searchRoot, 'addBtn'),
         cancel: null,
         event: 'sibling-add-requested',
         fill: () => {
@@ -347,8 +347,8 @@ const cases: Case[] = [
       ];
       return {
         host,
-        confirm: byId(root, 'assignBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'assignBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'extra-curricular-assign-requested',
         fill: () => type(byId(root, 'activitySelect'), 'e1'),
         fail: () => call(host, 'showError', 'Refused.'),
@@ -391,8 +391,8 @@ const cases: Case[] = [
       stubValidity(root);
       return {
         host,
-        confirm: byId(root, 'confirmBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'confirmBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'waiting-list-enrol-confirmed',
         fill: () => {
           type(byId(root, 'teacher'), 't1');
@@ -413,8 +413,8 @@ const cases: Case[] = [
       const root = host.shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'saveBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'saveBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'save-report-confirmed',
         fill: () => type(byId(root, 'nameInput'), 'Grade 4 Contacts'),
         fail: () => {
@@ -438,8 +438,8 @@ const cases: Case[] = [
       const picker = byId(root, 'picker').shadowRoot!;
       return {
         host,
-        confirm: byId(root, 'linkBtn'),
-        cancel: byId(root, 'cancelBtn'),
+        confirm: byId<HTMLButtonElement>(root, 'linkBtn'),
+        cancel: byId<HTMLButtonElement>(root, 'cancelBtn'),
         event: 'teacher-account-link-confirmed',
         fill: () => type(byId(picker, 'account'), 'a1'),
         fail: () => call(host, 'showError', 'Refused.'),
