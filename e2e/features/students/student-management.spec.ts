@@ -106,6 +106,8 @@ test.describe('Student Wizard Modal Fixed Size', { tag: ['@5IT7'] }, () => {
   test('modal stays a fixed size while switching steps and the sibling list scrolls internally', async ({
     page,
   }) => {
+    // About a hundred wizard clicks, each with a button transition: the default budget is too tight under CI load.
+    test.slow();
     const primary = uniqueName('modal-fixed');
     const fullNamePrimary = `${primary.firstName} ${primary.lastName}`;
     const studentsPage = await goToStudentsPage(page);
@@ -136,9 +138,11 @@ test.describe('Student Wizard Modal Fixed Size', { tag: ['@5IT7'] }, () => {
     }
 
     await studentsPage.row(fullNamePrimary).locator('.students-table__btn--edit').click();
+    await expect(studentsPage.wizardCard()).toBeVisible();
     const cardBoxOnStudentStep = await studentsPage.wizardCard().boundingBox();
 
     await studentsPage.wizardModal.locator('#tabSiblings').click();
+    await expect(studentsPage.wizardCard()).toBeVisible();
     const cardBoxOnSiblingsStep = await studentsPage.wizardCard().boundingBox();
     expect(cardBoxOnSiblingsStep).toEqual(cardBoxOnStudentStep);
 
