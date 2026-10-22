@@ -5,6 +5,8 @@ import './pm-courses-step';
 import './pm-extra-curriculars-step';
 import './pm-waiting-list-step';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { formButtonStyles } from '../../../components/form-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 import { COURSE_OR_EXTRA_CURRICULAR_TO_SAVE } from './course-or-extra-curricular';
 import { phaseConflictMessage } from './phase-agreement';
 import type { SiblingStudentResult, StudentResult } from '../services/students';
@@ -87,47 +89,18 @@ styles.replaceSync(`
       min-height: 0;
     }
     .wizard__actions {
-      display: flex;
       flex-shrink: 0;
-      justify-content: flex-end;
-      gap: 12px;
       margin-top: 24px;
+    }
+    .wizard__actions #cancelBtn {
+      margin-right: auto;
     }
     .wizard__step-actions {
       flex: 0 0 auto;
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
       margin-top: 24px;
     }
-    .wizard__step-actions[hidden] {
-      display: none;
-    }
-    .wizard__btn {
-      height: 44px;
-      padding: 0 24px;
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .wizard__btn--cancel {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .wizard__btn--secondary {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .wizard__btn--primary {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .wizard__btn[hidden] {
-      display: none;
+    [hidden] {
+      display: none !important;
     }
   `);
 
@@ -149,9 +122,9 @@ template.innerHTML = `
       </div>
       <div class="wizard__step wizard__step--visible" id="stepStudent" role="tabpanel" aria-labelledby="tabStudent">
         <pm-student-step id="studentStep"></pm-student-step>
-        <div class="wizard__step-actions" id="studentStepActions" hidden>
-          <button type="button" class="wizard__btn wizard__btn--cancel" id="studentCancelBtn">Cancel</button>
-          <button type="button" class="wizard__btn wizard__btn--primary" id="studentSaveBtn">Save</button>
+        <div class="wizard__step-actions form-actions" id="studentStepActions" hidden>
+          <button type="button" class="form-btn form-btn--secondary" id="studentCancelBtn">Cancel</button>
+          <button type="button" class="form-btn form-btn--primary" id="studentSaveBtn">Save</button>
         </div>
       </div>
       <div class="wizard__step" id="stepSiblings" role="tabpanel" aria-labelledby="tabSiblings">
@@ -168,16 +141,16 @@ template.innerHTML = `
       </div>
       <div class="wizard__step" id="stepWaitingList" role="tabpanel" aria-labelledby="tabWaitingList">
         <pm-waiting-list-step id="waitingListStep"></pm-waiting-list-step>
-        <div class="wizard__step-actions" id="waitingListStepActions" hidden>
-          <button type="button" class="wizard__btn wizard__btn--cancel" id="waitingListCloseBtn">Close</button>
-          <button type="button" class="wizard__btn wizard__btn--primary" id="waitingListSaveBtn">Save</button>
+        <div class="wizard__step-actions form-actions" id="waitingListStepActions" hidden>
+          <button type="button" class="form-btn form-btn--secondary" id="waitingListCloseBtn">Cancel</button>
+          <button type="button" class="form-btn form-btn--primary" id="waitingListSaveBtn">Save</button>
         </div>
       </div>
-      <div class="wizard__actions">
-        <button type="button" class="wizard__btn wizard__btn--cancel" id="cancelBtn">Cancel</button>
-        <button type="button" class="wizard__btn wizard__btn--secondary" id="previousBtn" hidden>Previous</button>
-        <button type="button" class="wizard__btn wizard__btn--primary" id="nextBtn" hidden>Next</button>
-        <button type="button" class="wizard__btn wizard__btn--primary" id="saveBtn" hidden>Save</button>
+      <div class="wizard__actions form-actions" data-testid="wizard-footer">
+        <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+        <button type="button" class="form-btn form-btn--secondary" id="previousBtn" hidden>Previous</button>
+        <button type="button" class="form-btn form-btn--primary" id="nextBtn" hidden>Next</button>
+        <button type="button" class="form-btn form-btn--primary" id="saveBtn" hidden>Create Student</button>
       </div>
     </div>
   </div>
@@ -228,7 +201,7 @@ export class PmStudentWizardModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -311,8 +284,8 @@ export class PmStudentWizardModal extends HTMLElement {
       this.extraCurricularsStep!.activateForCreate(this._phase);
     }
     this.applyWizardModeTabs();
-    this.saveBtn!.disabled = false;
-    this.studentSaveBtn!.disabled = false;
+    this.saveBtn!.textContent = wizardMode === 'waitingList' ? 'Create Waiting List Entry' : 'Create Student';
+    this.setStudentSaveBusy(false);
     this.goToStep('student');
     this.setAttribute('open', '');
   }
@@ -332,8 +305,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.applyPhase((student.phase as PhaseType | null) ?? null, student.grade === 'Private');
     this.studentStep!.setValues(student);
     this.applyWizardModeTabs();
-    this.saveBtn!.disabled = false;
-    this.studentSaveBtn!.disabled = false;
+    this.setStudentSaveBusy(false);
     this.goToStep('student');
     this.setAttribute('open', '');
   }
@@ -354,9 +326,8 @@ export class PmStudentWizardModal extends HTMLElement {
     this.studentStep!.setValues(student);
     this.waitingListStep!.setValues(entry);
     this.applyWizardModeTabs();
-    this.saveBtn!.disabled = false;
-    this.studentSaveBtn!.disabled = false;
-    this.waitingListSaveBtn!.disabled = false;
+    this.setStudentSaveBusy(false);
+    this.setEntrySaveBusy(false);
     this.goToStep('student');
     this.setAttribute('open', '');
   }
@@ -381,17 +352,37 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   close(): void {
+    this.setStudentSaveBusy(false);
+    this.setEntrySaveBusy(false);
     this.removeAttribute('open');
+  }
+
+  private setStudentSaveBusy(busy: boolean): void {
+    setButtonsBusy(this.saveBtn!, this.cancelBtn!, busy);
+    setButtonsBusy(this.studentSaveBtn!, this.studentCancelBtn!, busy);
+  }
+
+  private setEntrySaveBusy(busy: boolean): void {
+    setButtonsBusy(this.waitingListSaveBtn!, this.waitingListCloseBtn!, busy);
   }
 
   get studentId(): string | null {
     return this._studentId;
   }
 
+  /**
+   * A failed create is reported on the step that carries the confirm action,
+   * because the Student step's own message line is hidden there.
+   */
   showStudentError(message: string): void {
-    this.studentStep!.showError(message);
-    this.saveBtn!.disabled = false;
-    this.studentSaveBtn!.disabled = false;
+    if (this._mode === 'create' && this._activeStep === 'courses') {
+      this.coursesStep!.showError(message);
+    } else if (this._mode === 'create' && this._activeStep === 'extraCurriculars') {
+      this.extraCurricularsStep!.showError(message);
+    } else {
+      this.studentStep!.showError(message);
+    }
+    this.setStudentSaveBusy(false);
   }
 
   showSiblingsError(message: string): void {
@@ -408,15 +399,18 @@ export class PmStudentWizardModal extends HTMLElement {
 
   /**
    * Capture is one atomic request, so a failure there is the whole save
-   * failing — the same reasoning `showStudentError` re-enables Save for the
+   * failing — the same reasoning `showStudentError` ends the busy state for the
    * enrolled-mode student-tab error. In edit mode the failed save is the
-   * tab's own, so its Save is the one that has to come back.
+   * tab's own, so only its confirm action comes back; a Student tab save still
+   * running is not touched.
    */
   showWaitingListError(message: string): void {
     this.waitingListStep!.showError(message);
-    this.saveBtn!.disabled = false;
-    this.studentSaveBtn!.disabled = false;
-    this.waitingListSaveBtn!.disabled = false;
+    if (this._mode === 'create') {
+      this.setStudentSaveBusy(false);
+    } else {
+      this.setEntrySaveBusy(false);
+    }
   }
 
   /** Collapses the Guardians step's Add/Edit form panel (if open) and returns to the list view. */
@@ -577,7 +571,7 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   /**
-   * The last step of the create wizard, which is the one that carries Save. In
+   * The last step of the create wizard, which is the one that carries the confirm action. In
    * waiting-list mode that is always Waiting List — there is no holdings rule
    * to route around. In enrolled mode a student offered no Extra-Curriculars step
    * (a graded student with no phase chosen yet) has Courses as theirs.
@@ -661,8 +655,8 @@ export class PmStudentWizardModal extends HTMLElement {
    * the shared Cancel/Save pair only ever acted on the Student tab's fields, which
    * misleadingly implied it covered the other tabs too. So in edit mode, Student's
    * own Cancel/Save live next to its fields instead of the shared footer, and the
-   * footer falls back to a plain Close (nothing left for it to cancel) on the other tabs.
-   * The Waiting List tab is the same shape as Student — its own Close/Save next to
+   * footer falls back to a plain Cancel (nothing left for it to cancel) on the other tabs.
+   * The Waiting List tab is the same shape as Student — its own Cancel/Save next to
    * its own fields, since it writes the entry and nothing else does.
    */
   private updateFooter(): void {
@@ -681,14 +675,13 @@ export class PmStudentWizardModal extends HTMLElement {
     // mode — waiting-list mode never offers it regardless of either.
     this.tabExtraCurriculars!.hidden = this._wizardMode === 'waitingList' || !this.offersExtraCurriculars;
 
-    // The final step is the one that carries Save and the only one without a
-    // Next. That is Extra-Curriculars, except for a graded student with no phase
-    // chosen yet, who has no such step — for them Courses is last and carries Save.
+    // The final step is the one that carries the confirm action and the only one
+    // without a Next. That is Extra-Curriculars, except for a graded student with no
+    // phase chosen yet, who has no such step — for them Courses is last.
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
     this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
     this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
     this.cancelBtn!.hidden = !isCreate && (onStudentTab || onWaitingListTab);
-    this.cancelBtn!.textContent = isCreate ? 'Cancel' : 'Close';
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
     this.waitingListStepActions!.hidden = !editingEntry;
   }
@@ -766,7 +759,7 @@ export class PmStudentWizardModal extends HTMLElement {
       return;
     }
 
-    this.waitingListSaveBtn!.disabled = true;
+    this.setEntrySaveBusy(true);
     this.dispatchEvent(
       new CustomEvent('waiting-list-entry-update-requested', {
         bubbles: true,
@@ -803,8 +796,7 @@ export class PmStudentWizardModal extends HTMLElement {
       }
 
       const input = this.studentStep!.getValues();
-      this.saveBtn!.disabled = true;
-      this.studentSaveBtn!.disabled = true;
+      this.setStudentSaveBusy(true);
       this.dispatchEvent(
         new CustomEvent('waiting-list-capture-requested', {
           bubbles: true,
@@ -850,8 +842,7 @@ export class PmStudentWizardModal extends HTMLElement {
     }
 
     const input = this.studentStep!.getValues();
-    this.saveBtn!.disabled = true;
-    this.studentSaveBtn!.disabled = true;
+    this.setStudentSaveBusy(true);
 
     if (this._mode === 'create') {
       this.dispatchEvent(
