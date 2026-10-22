@@ -1,4 +1,5 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const CONFIRM_PHRASE = 'REVOKE ALL';
 
@@ -25,14 +26,6 @@ styles.replaceSync(`
     .modal__confirm-input:focus {
       border-color: var(--pm-danger);
     }
-    .modal__btn--revoke-all {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--revoke-all:hover:not(:disabled) {
-      opacity: 0.9;
-    }
   `);
 
 const template = document.createElement('template');
@@ -49,9 +42,10 @@ template.innerHTML = `
       </p>
       <label class="modal__confirm-label" for="confirmInput">Type "${CONFIRM_PHRASE}" to confirm</label>
       <input class="modal__confirm-input" id="confirmInput" type="text" autocomplete="off" />
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--revoke-all" id="revokeAllBtn" type="button" disabled>Revoke All</button>
+        <button class="modal__btn modal__btn--destructive" id="revokeAllBtn" type="button" disabled>Revoke All</button>
       </div>
     </div>
   </div>
@@ -59,6 +53,7 @@ template.innerHTML = `
 
 export class PmRevokeAllSessionsModal extends HTMLElement {
   private lastFocusedElement: Element | null = null;
+  private busy = false;
 
   constructor() {
     super();
@@ -72,7 +67,7 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
     this.shadowRoot!.getElementById('revokeAllBtn')!.addEventListener('click', () => this.handleConfirm());
     this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
     this.shadowRoot!.getElementById('backdrop')!.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) this.close();
+      if (e.target === e.currentTarget && !this.busy) this.close();
     });
     this.addEventListener('keydown', this.handleKeydown);
   }
@@ -84,18 +79,34 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
   show(): void {
     this.lastFocusedElement = document.activeElement;
     (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).value = '';
-    (this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement).disabled = true;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
     (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).focus();
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
     (this.lastFocusedElement as HTMLElement | null)?.focus();
   }
 
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+    this.checkConfirmation();
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
+  }
+
   private handleKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && this.hasAttribute('open')) {
+    if (event.key === 'Escape' && this.hasAttribute('open') && !this.busy) {
       this.close();
     }
   };
@@ -103,17 +114,17 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
   private checkConfirmation(): void {
     const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
     const revokeAllBtn = this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
-    revokeAllBtn.disabled = input.value !== CONFIRM_PHRASE;
+    revokeAllBtn.disabled = this.busy || input.value !== CONFIRM_PHRASE;
   }
 
   private handleConfirm(): void {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('revoke-all-sessions-confirmed', {
         bubbles: true,
         composed: true,
       }),
     );
-    this.close();
   }
 }
 

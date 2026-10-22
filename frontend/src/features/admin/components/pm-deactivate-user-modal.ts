@@ -1,4 +1,5 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -8,14 +9,6 @@ styles.replaceSync(`
     .modal__email {
       color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--deactivate {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--deactivate:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -31,9 +24,10 @@ template.innerHTML = `
       <p class="modal__body">
         Are you sure you want to deactivate the user <span class="modal__email" id="modalEmail"></span>? They will no longer be able to log in.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--deactivate" id="deactivateBtn" type="button">Deactivate</button>
+        <button class="modal__btn modal__btn--destructive" id="deactivateBtn" type="button">Deactivate</button>
       </div>
     </div>
   </div>
@@ -57,14 +51,30 @@ export class PmDeactivateUserModal extends HTMLElement {
   show(userId: string, email: string): void {
     this._userId = userId;
     this.shadowRoot!.getElementById('modalEmail')!.textContent = email;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleDeactivate(): void {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('user-deactivate-confirmed', {
         bubbles: true,
@@ -72,7 +82,6 @@ export class PmDeactivateUserModal extends HTMLElement {
         detail: { userId: this._userId },
       }),
     );
-    this.close();
   }
 }
 

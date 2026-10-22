@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__name {
       color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--deactivate {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--deactivate:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -30,9 +23,10 @@ template.innerHTML = `
         active selection lists and their banking details will be permanently deleted in the same operation. The teacher
         record and its history are preserved.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--deactivate" id="deactivateBtn" type="button">Deactivate</button>
+        <button class="modal__btn modal__btn--destructive" id="deactivateBtn" type="button">Deactivate</button>
       </div>
     </div>
   </div>
@@ -63,23 +57,38 @@ export class PmTeacherDeactivateModal extends HTMLElement {
 
   show(teacherName: string): void {
     this.shadowRoot!.getElementById('modalName')!.textContent = teacherName;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
   close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleCancel = (): void => this.close();
 
   private handleDeactivate = (): void => {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('teacher-deactivate-confirmed', {
         bubbles: true,
         composed: true,
       }),
     );
-    this.close();
   };
 }
 

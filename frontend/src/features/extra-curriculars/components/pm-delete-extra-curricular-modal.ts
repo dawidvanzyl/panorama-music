@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__name {
       color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -28,9 +21,10 @@ template.innerHTML = `
       <p class="modal__body">
         This action cannot be undone. The activity <span class="modal__name" id="modalName"></span> and its <span id="modalCount"></span> practice time(s) will be permanently removed.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
       </div>
     </div>
   </div>
@@ -60,14 +54,30 @@ export class PmDeleteExtraCurricularModal extends HTMLElement {
     this._extraCurricularId = extraCurricularId;
     this.shadowRoot!.getElementById('modalName')!.textContent = description;
     this.shadowRoot!.getElementById('modalCount')!.textContent = String(practiceTimeCount);
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleDelete(): void {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-delete-confirmed', {
         bubbles: true,
@@ -75,7 +85,6 @@ export class PmDeleteExtraCurricularModal extends HTMLElement {
         detail: { extraCurricularId: this._extraCurricularId },
       }),
     );
-    this.close();
   }
 }
 

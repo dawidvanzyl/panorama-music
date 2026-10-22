@@ -1,4 +1,5 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -41,36 +42,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       margin: 0 0 24px;
     }
-    .modal__actions {
-      gap: 10px;
-    }
-    .modal__btn {
-      box-sizing: border-box;
-      height: 48px;
-      padding: 0 24px;
-      font-family: inherit;
-      letter-spacing: -0.01em;
-      line-height: 1.4;
-    }
-    .modal__btn--cancel {
-      color: var(--pm-text);
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger);
-      border: none;
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-    .modal__error {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--pm-danger);
-    }
-    .modal__error:empty {
-      display: none;
-    }
   `);
 
 const template = document.createElement('template');
@@ -85,9 +56,9 @@ template.innerHTML = `
         <p class="modal__message" data-testid="delete-report-text">Are you sure you want to delete the report <strong id="reportName" data-testid="delete-report-name"></strong>? This cannot be undone.</p>
         <p class="modal__error" id="error" data-testid="delete-report-error"></p>
       </div>
-      <div class="modal__actions">
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
       </div>
     </div>
   </div>
@@ -133,6 +104,7 @@ export class PmDeleteReportModal extends HTMLElement {
 
   close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
   }
 
   showError(message: string): void {
@@ -140,13 +112,13 @@ export class PmDeleteReportModal extends HTMLElement {
   }
 
   setBusy(busy: boolean): void {
-    this.deleteButton!.disabled = busy;
-    this.cancelButton!.disabled = busy;
+    setButtonsBusy(this.deleteButton!, this.cancelButton, busy);
   }
 
   private handleCancel = (): void => this.close();
 
   private handleDelete = (): void => {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('delete-report-confirmed', {
         bubbles: true,

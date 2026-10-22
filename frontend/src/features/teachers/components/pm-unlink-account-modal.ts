@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__email {
       color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--unlink {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--unlink:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -30,9 +23,10 @@ template.innerHTML = `
         and the account keeps its Teacher role, but the teacher loses self-service access to this profile and its
         banking details.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--unlink" id="unlinkBtn" type="button">Unlink</button>
+        <button class="modal__btn modal__btn--destructive" id="unlinkBtn" type="button">Unlink</button>
       </div>
     </div>
   </div>
@@ -59,23 +53,38 @@ export class PmUnlinkAccountModal extends HTMLElement {
 
   show(accountEmail: string | null): void {
     this.shadowRoot!.getElementById('modalEmail')!.textContent = accountEmail ?? 'this account';
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
   close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('unlinkBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleCancel = (): void => this.close();
 
   private handleUnlink = (): void => {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('teacher-account-unlink-confirmed', {
         bubbles: true,
         composed: true,
       }),
     );
-    this.close();
   };
 }
 

@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__name {
       color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
     }
     .modal__scope-choice {
       display: flex;
@@ -64,9 +57,10 @@ template.innerHTML = `
           Delete guardian and remove all links — permanently removes the record and every sibling's link to it.
         </label>
       </div>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
       </div>
     </div>
   </div>
@@ -128,14 +122,30 @@ export class PmDeleteGuardianModal extends HTMLElement {
     this.shadowRoot!.getElementById('modalNameScoped')!.textContent = name;
     this.shadowRoot!.getElementById('modalNameRestricted')!.textContent = name;
 
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleDelete(): void {
+    this.setBusy(true);
     const scope: GuardianDeleteScope = !this._restricted && this._shared && this.scopeAllRadio!.checked ? 'all' : 'one';
 
     this.dispatchEvent(
@@ -145,7 +155,6 @@ export class PmDeleteGuardianModal extends HTMLElement {
         detail: { studentId: this._studentId, guardianId: this._guardianId, scope },
       }),
     );
-    this.close();
   }
 }
 

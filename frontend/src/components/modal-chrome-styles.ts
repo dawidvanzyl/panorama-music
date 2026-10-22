@@ -55,7 +55,7 @@ modalChromeStyles.replaceSync(`
       gap: 12px;
     }
     .modal__error {
-      margin-top: 12px;
+      margin: 12px 0 var(--pm-modal-body-gap);
       font-size: 13px;
       font-weight: 400;
       color: var(--pm-danger-text);
