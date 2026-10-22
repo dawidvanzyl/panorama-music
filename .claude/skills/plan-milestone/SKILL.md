@@ -60,7 +60,8 @@ Read:
 * `.github/ISSUE_TEMPLATE/sub-issue.md` — authoritative structure for every draft;
   if missing, stop and tell the user
 * `docs/coding-standards.md`, `docs/coding-standards-backend.md`,
-  `docs/coding-standards-frontend.md`, `src/.editorconfig`, `frontend/.editorconfig`
+  `docs/coding-standards-frontend.md`, `docs/design-standards.md`, `src/.editorconfig`,
+  `frontend/.editorconfig`
   — for domain conventions, naming and layer boundaries (not implementation steps)
 * architectural decisions or constraints established earlier in the session
 
@@ -172,6 +173,10 @@ it before reading, since packed text isn't greppable.
 message and blocked action it shows is a requirement; where it and the epic disagree,
 the mockup governs and the difference is in scope. Design only from the file(s) the
 user names — never blend in a sibling. Where it is silent, ask.
+
+**The mockup must follow `docs/design-standards.md`.** That document governs the
+buttons, forms, modals, labels and confirmation text. If the mockup breaks a rule there,
+do not copy the difference into the sub-issue. Tell the user and ask which one wins.
 
 Then write `issues/{id}/ui.md` (the `.design/` path(s), a line on what each shows, and
 the Page Architecture revised to match) and set `ui_resolved = true`. If the user

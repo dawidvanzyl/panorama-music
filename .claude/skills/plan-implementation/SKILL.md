@@ -99,6 +99,8 @@ approach that fights them is what the critique will flag.
 **From the standards (dev plan):** `docs/coding-standards.md` always, plus
 `docs/coding-standards-backend.md` and `src/.editorconfig` for backend scope,
 `docs/coding-standards-frontend.md` and `frontend/.editorconfig` for frontend scope,
+`docs/design-standards.md` when the story adds or changes a button, form, modal, label or
+confirmation text (name the rule IDs the plan relies on),
 and `docs/security-standards.md` when the change touches authentication, authorization,
 input handling, data exposure or a similar surface. Plan an approach that already
 conforms — a plan that fights a documented standard becomes a review finding and a
