@@ -1,6 +1,6 @@
 ---
 name: Panorama Music UI Design Standard
-version: 1.1
+version: 1.2
 status: normative
 theme: dark (default), print (light override)
 colors:
@@ -666,9 +666,11 @@ For modals that hold fields, a wizard, or information.
 | save | `Save {Noun}` (see LBL-6) | One sentence on where the saved item appears. | `Save {Noun}` | none | Yes (by delete) |
 | link | `Link {Noun}` | One sentence on the limits of the link. | `Link {Noun}` | none | Yes (by unlink) |
 | enrol | `Enrol {Noun}` | One sentence on the consequence. | `Enrol {Noun}` | none | Yes (by withdraw) |
+| assign | `Assign {Noun}` | One sentence on the consequence. | `Assign {Noun}` | none | Yes (by remove) |
 | sign in | Page heading (not set by this standard) | None. | `Sign In` | none | Yes (by sign out) |
 | request reset | Page heading (not set by this standard) | None. | `Send Reset Link` | none | n/a |
 | register | Page heading (not set by this standard) | None. | `Complete Setup` | none | n/a |
+| reset password | Page heading (not set by this standard) | None. | `Complete Password Reset` | none | n/a |
 
 ### 8.4 Label rules
 
@@ -678,15 +680,16 @@ For modals that hold fields, a wizard, or information.
 | LBL-2 | A label MUST use Title Case. |
 | LBL-3 | A label MUST NOT end with a full stop, ellipsis or colon. |
 | LBL-4 | A confirm label in a confirmation modal MUST be the verb only. The title already names the noun. |
-| LBL-5 | A confirm label in a form that creates, links or enrols MUST be `{Verb} {Noun}`. The noun is REQUIRED, because the page can hold several forms. The auth page submit labels in Section 8.3 ("Sign In", "Send Reset Link", "Complete Setup") are exempt from LBL-5, LBL-11 and LBL-12, because an auth page has one form. |
+| LBL-5 | A confirm label in a form that creates, links, enrols or assigns MUST be `{Verb} {Noun}`. The noun is REQUIRED, because the page can hold several forms. The auth page submit labels in Section 8.3 ("Sign In", "Send Reset Link", "Complete Password Reset", "Complete Setup") are exempt from LBL-5, LBL-11 and LBL-12, because an auth page has one form. |
 | LBL-6 | A confirm label in a form that edits MUST be "Save" with no noun. "Save {Noun}" is allowed only when the form saves a result that does not exist yet, for example a built report. |
 | LBL-7 | A table row action label MUST be the verb only (ROW-5). |
 | LBL-8 | The dismiss label MUST be "Cancel" (ACT-9). |
-| LBL-9 | A label MUST NOT use these words: Add, Submit, OK, Yes, No, Confirm, Activate, Discard, Close, Done. Use the verb in Section 8.2 or 8.3. |
+| LBL-9 | A label MUST NOT use these words: Add, Submit, OK, Yes, No, Confirm, Activate, Discard, Close, Done, except as LBL-14 allows. Use the verb in Section 8.2 or 8.3. |
 | LBL-10 | The wizard labels MUST be "Previous" and "Next". |
 | LBL-11 | A noun in a label MUST match the noun in the title of the same form or modal. |
-| LBL-12 | The noun MUST be the product term for the record: Student, Guardian, Teacher, User, Course, Activity, Relationship, Report, Banking Details, Waiting List Entry, Account, Session. |
+| LBL-12 | The noun MUST be the product term for the record: Student, Guardian, Teacher, User, Course, Activity, Relationship, Report, Banking Details, Waiting List Entry, Account, Session, Practice Time. |
 | LBL-13 | A label MUST have one verb and at most one noun. The noun is a product term from LBL-12 and can have several words. The revoke labels in MTX-4 are the only exception. |
+| LBL-14 | "Add" is allowed only on a button that adds an item to a list without creating a record, for example a report filter. |
 
 ---
 
@@ -817,7 +820,7 @@ This appendix is not part of the rules. It lists today's components, the target 
 | `pm-create-user-form` | Own submit rule. | Form buttons. "Create User". |
 | `pm-extra-curricular-form` | Not reviewed. | Form buttons. "Create Activity" or "Save". |
 | `pm-enrollment-form` | Not reviewed. | Form buttons. "Enrol Student" or "Save". |
-| Login, registration, forgot-password and reset-password pages | Own button rules. A trailing icon (`login`, `arrow_forward`). The label is replaced while busy ("Authenticating...", "Sending...", "Activating..."). Hover uses `brightness`. | Form primary button, full width (PGB-4). Remove the icon (BTN-3). Keep the label while busy and show the loading icon (Section 7.1, LBL-3). Hover is a darker fill. Labels: "Sign In", "Send Reset Link", "Complete Setup". Check the reset-password label against Section 8.4. |
+| Login, registration, forgot-password and reset-password pages | Own button rules. A trailing icon (`login`, `arrow_forward`). The label is replaced while busy ("Authenticating...", "Sending...", "Activating..."). Hover uses `brightness`. | Form primary button, full width (PGB-4). Remove the icon (BTN-3). Keep the label while busy and show the loading icon (Section 7.1, LBL-3). Hover is a darker fill. Labels: "Sign In", "Send Reset Link", "Complete Password Reset", "Complete Setup". |
 | Label "Add" (banking, other) | "Add" | "Create {Noun}" (LBL-9). |
 
 ### A.4 Table row and list row actions
