@@ -527,6 +527,10 @@ describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] },
     expect(wizard.hasAttribute('open')).toBe(true);
     const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
     expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('Lesson structure does not exist.');
+    const confirm = wizard.shadowRoot!.getElementById('saveBtn') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(false);
+    expect(confirm.hasAttribute('aria-busy')).toBe(false);
+    expect((wizard.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 
   // Reviewer finding on PR #298: the student and their waiting-list entry are

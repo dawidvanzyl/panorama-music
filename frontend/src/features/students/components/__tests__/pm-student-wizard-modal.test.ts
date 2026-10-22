@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { PmStudentWizardModal } from '../pm-student-wizard-modal';
 import { formatAddedAt } from '../waiting-list-display';
+import { formButtonStyles } from '../../../../components/form-button-styles';
 import type { StudentResult } from '../../services/students';
 
 const alice: StudentResult = {
@@ -15,8 +16,7 @@ const alice: StudentResult = {
 };
 
 function localStyleSheetFor(shadowRoot: ShadowRoot): CSSStyleSheet {
-  const [, localSheet] = shadowRoot.adoptedStyleSheets;
-  return localSheet;
+  return shadowRoot.adoptedStyleSheets[shadowRoot.adoptedStyleSheets.length - 1];
 }
 
 function ruleFor(sheet: CSSStyleSheet, selector: string): CSSStyleRule {
@@ -941,5 +941,514 @@ describe('pm-student-wizard-modal — saving once the conflicting activity is re
     expect(updates.map((update) => update.detail.input.phase)).toEqual(['Senior']);
     expect(studentStepMessage().textContent).toBe('');
     expect(studentStepPhaseSelect().classList.contains('student-step__select--error')).toBe(false);
+  });
+});
+
+function openEnrolledCreateOnFinalStep(): void {
+  mountModal();
+  modal.openForCreate([]);
+  fillStudentStep();
+  advanceToFinalStep();
+}
+
+function openCaptureOnFinalStep(): void {
+  mountModal();
+  modal.lessonStructures = [individualHourDuringSchool];
+  modal.openForCreate([], 'waitingList');
+  fillStudentStep();
+  byId<HTMLButtonElement>('nextBtn').click();
+  byId<HTMLButtonElement>('nextBtn').click();
+  byId<HTMLButtonElement>('nextBtn').click();
+  fillWaitingListStep();
+}
+
+function expectBusy(confirm: string, dismiss: string, label: string): void {
+  const confirmBtn = byId<HTMLButtonElement>(confirm);
+  expect(confirmBtn.disabled).toBe(true);
+  expect(confirmBtn.getAttribute('aria-busy')).toBe('true');
+  expect(confirmBtn.textContent).toContain(label);
+  expect(confirmBtn.firstElementChild?.getAttribute('data-testid')).toBe('button-loading-icon');
+  expect(byId<HTMLButtonElement>(dismiss).disabled).toBe(true);
+}
+
+function expectIdle(confirm: string, dismiss: string, label: string): void {
+  const confirmBtn = byId<HTMLButtonElement>(confirm);
+  expect(confirmBtn.disabled).toBe(false);
+  expect(confirmBtn.hasAttribute('aria-busy')).toBe(false);
+  expect(confirmBtn.querySelector('[data-testid="button-loading-icon"]')).toBeNull();
+  expect(confirmBtn.textContent).toBe(label);
+  expect(byId<HTMLButtonElement>(dismiss).disabled).toBe(false);
+}
+
+function collectEvents(name: string): CustomEvent[] {
+  const events: CustomEvent[] = [];
+  modal.addEventListener(name, (event) => events.push(event as CustomEvent));
+  return events;
+}
+
+describe('pm-student-wizard-modal — footer on the first step', { tags: ['379UC1'] }, () => {
+  it.each([['enrolled' as const], ['waitingList' as const]])(
+    'hides Previous and shows Cancel and Next in %s mode',
+    (mode) => {
+      mountModal();
+      modal.openForCreate([], mode);
+
+      expect(byId('previousBtn').hidden).toBe(true);
+      expect(byId('cancelBtn').hidden).toBe(false);
+      expect(byId('nextBtn').hidden).toBe(false);
+      expect(byId('saveBtn').hidden).toBe(true);
+    },
+  );
+});
+
+describe('pm-student-wizard-modal — footer on a middle step', { tags: ['379UC2'] }, () => {
+  it('shows Cancel, Previous and Next on Siblings, Guardians and Courses in enrolled mode', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+
+    for (let step = 0; step < 3; step++) {
+      byId<HTMLButtonElement>('nextBtn').click();
+      expect(byId('cancelBtn').hidden).toBe(false);
+      expect(byId('previousBtn').hidden).toBe(false);
+      expect(byId('nextBtn').hidden).toBe(false);
+      expect(byId('saveBtn').hidden).toBe(true);
+    }
+  });
+
+  it('shows Cancel, Previous and Next on Siblings and Guardians in waiting-list mode', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+
+    for (let step = 0; step < 2; step++) {
+      byId<HTMLButtonElement>('nextBtn').click();
+      expect(byId('cancelBtn').hidden).toBe(false);
+      expect(byId('previousBtn').hidden).toBe(false);
+      expect(byId('nextBtn').hidden).toBe(false);
+      expect(byId('saveBtn').hidden).toBe(true);
+    }
+  });
+});
+
+describe('pm-student-wizard-modal — enrolled create confirm action', { tags: ['379UC3'] }, () => {
+  it('hides Next and reads Create Student on Extra-Curriculars', () => {
+    openEnrolledCreateOnFinalStep();
+
+    expect(byId('nextBtn').hidden).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+    expect(byId('saveBtn').textContent).toBe('Create Student');
+  });
+
+  it('hides Next and reads Create Student on Courses for a graded student with no phase', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    advanceToFinalStep();
+    choosePhase('');
+
+    expect(byId('stepCourses').classList.contains('wizard__step--visible')).toBe(true);
+    expect(byId('nextBtn').hidden).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+    expect(byId('saveBtn').textContent).toBe('Create Student');
+  });
+
+  it('reads Create Student again after a waiting-list open', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+    modal.openForCreate([]);
+
+    expect(byId('saveBtn').textContent).toBe('Create Student');
+  });
+});
+
+describe('pm-student-wizard-modal — capture confirm action', { tags: ['379UC4'] }, () => {
+  it('reads Create Waiting List Entry on the Waiting List step and restores Create Student on an enrolled open', () => {
+    openCaptureOnFinalStep();
+
+    expect(byId('nextBtn').hidden).toBe(true);
+    expect(byId('saveBtn').hidden).toBe(false);
+    expect(byId('saveBtn').textContent).toBe('Create Waiting List Entry');
+
+    modal.openForCreate([]);
+    expect(byId('saveBtn').textContent).toBe('Create Student');
+  });
+});
+
+describe('pm-student-wizard-modal — footer anatomy', { tags: ['379UC5'] }, () => {
+  it('orders Cancel, Previous, Next and the confirm action with the form button classes', () => {
+    mountModal();
+    modal.openForCreate([]);
+    const footer = modal.shadowRoot!.querySelector('[data-testid="wizard-footer"]')!;
+
+    expect([...footer.children].map((child) => child.id)).toEqual(['cancelBtn', 'previousBtn', 'nextBtn', 'saveBtn']);
+    expect(footer.classList.contains('form-actions')).toBe(true);
+    expect(byId('cancelBtn').classList.contains('form-btn--secondary')).toBe(true);
+    expect(byId('previousBtn').classList.contains('form-btn--secondary')).toBe(true);
+    expect(byId('nextBtn').classList.contains('form-btn--primary')).toBe(true);
+    expect(byId('saveBtn').classList.contains('form-btn--primary')).toBe(true);
+  });
+
+  it('holds no icon in any idle button of the footer or the step rows', () => {
+    mountModal();
+    modal.openForCreate([]);
+
+    for (const id of [
+      'cancelBtn',
+      'previousBtn',
+      'nextBtn',
+      'saveBtn',
+      'studentCancelBtn',
+      'studentSaveBtn',
+      'waitingListCloseBtn',
+      'waitingListSaveBtn',
+    ]) {
+      expect(byId(id).children).toHaveLength(0);
+    }
+  });
+
+  it('places the footer Cancel apart at the left edge', () => {
+    mountModal();
+    const localSheet = localStyleSheetFor(modal.shadowRoot!);
+
+    expect(ruleFor(localSheet, '.wizard__actions #cancelBtn').style.getPropertyValue('margin-right')).toBe('auto');
+  });
+});
+
+describe('pm-student-wizard-modal — create confirm action loading state', { tags: ['379UC6'] }, () => {
+  it('puts the enrolled create confirm action and Cancel into the loading state once', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+    const requests = collectEvents('student-create-requested');
+
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expectBusy('saveBtn', 'cancelBtn', 'Create Student');
+    expect(requests).toHaveLength(1);
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(requests).toHaveLength(1);
+  });
+
+  it('puts the capture confirm action and Cancel into the loading state once', () => {
+    openCaptureOnFinalStep();
+    const requests = collectEvents('waiting-list-capture-requested');
+
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expectBusy('saveBtn', 'cancelBtn', 'Create Waiting List Entry');
+    expect(requests).toHaveLength(1);
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(requests).toHaveLength(1);
+  });
+
+  it('disables Previous while the enrolled create request runs and restores it when it fails', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(true);
+
+    modal.showStudentError('Could not create');
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(false);
+  });
+
+  it('disables Previous while the capture request runs and restores it when it fails', () => {
+    openCaptureOnFinalStep();
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(true);
+
+    modal.showWaitingListError('Could not capture');
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(false);
+  });
+  it('stays idle when nothing is staged', () => {
+    openEnrolledCreateOnFinalStep();
+    const requests = collectEvents('student-create-requested');
+
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expect(requests).toHaveLength(0);
+    expectIdle('saveBtn', 'cancelBtn', 'Create Student');
+  });
+
+  it('stays idle when the Student step is invalid', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+    (byId('studentStep').shadowRoot!.getElementById('firstName') as HTMLInputElement).value = '';
+    const requests = collectEvents('student-create-requested');
+
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expect(requests).toHaveLength(0);
+    expectIdle('saveBtn', 'cancelBtn', 'Create Student');
+  });
+
+  it('stays idle when the lesson-structure lookup never loaded', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+    fillStudentStep();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    byId<HTMLButtonElement>('nextBtn').click();
+    const requests = collectEvents('waiting-list-capture-requested');
+
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    expect(requests).toHaveLength(0);
+    expectIdle('saveBtn', 'cancelBtn', 'Create Waiting List Entry');
+  });
+});
+
+describe(
+  'pm-student-wizard-modal — the open step cannot change while a create request runs',
+  { tags: ['379UC6'] },
+  () => {
+    const modes = [
+      {
+        name: 'enrolled create',
+        finalStep: 'stepExtraCurriculars',
+        open: () => {
+          openEnrolledCreateOnFinalStep();
+          stageChoir();
+          byId<HTMLButtonElement>('saveBtn').click();
+        },
+        fail: () => modal.showStudentError('Could not create'),
+        errorLine: () => byId('extraCurricularsStep').shadowRoot!.getElementById('message')!,
+      },
+      {
+        name: 'capture',
+        finalStep: 'stepWaitingList',
+        open: () => {
+          openCaptureOnFinalStep();
+          byId<HTMLButtonElement>('saveBtn').click();
+        },
+        fail: () => modal.showWaitingListError('Could not create'),
+        errorLine: () => byId('waitingListStep').shadowRoot!.getElementById('message')!,
+      },
+    ];
+
+    function expectStillOnFinalStep(finalStep: string): void {
+      expect(byId(finalStep).classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(false);
+    }
+
+    describe.each(modes)('', (mode) => {
+      it('ignores a click on the Student tab', () => {
+        mode.open();
+        byId<HTMLButtonElement>('tabStudent').click();
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a click on Previous', () => {
+        mode.open();
+        byId<HTMLButtonElement>('previousBtn').click();
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a click on Next and requests no guardian preview', () => {
+        mode.open();
+        const previews = collectEvents('create-guardians-preview-requested');
+        byId<HTMLButtonElement>('nextBtn').click();
+        expectStillOnFinalStep(mode.finalStep);
+        expect(previews).toHaveLength(0);
+      });
+
+      it('ignores a click on every other tab', () => {
+        mode.open();
+        for (const tab of ['tabSiblings', 'tabGuardians', 'tabCourses', 'tabExtraCurriculars', 'tabWaitingList']) {
+          byId<HTMLButtonElement>(tab).click();
+        }
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a phase change announced by the Student step', () => {
+        mode.open();
+        choosePhase('');
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('shows a failure on the step that is still open and unlocks the steps', () => {
+        mode.open();
+        byId<HTMLButtonElement>('tabStudent').click();
+        mode.fail();
+
+        expect(mode.errorLine().textContent).toBe('Could not create');
+        byId<HTMLButtonElement>('tabStudent').click();
+        expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(true);
+      });
+    });
+  },
+);
+describe('pm-student-wizard-modal — create failure and reset', { tags: ['379UC7'] }, () => {
+  it('restores the enrolled create buttons and shows the error on Extra-Curriculars without changing step', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    modal.showStudentError('Could not create');
+
+    expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
+    expectIdle('saveBtn', 'cancelBtn', 'Create Student');
+    const line = byId('extraCurricularsStep').shadowRoot!.getElementById('message')!;
+    expect(line.textContent).toBe('Could not create');
+    expect(studentStepMessage().textContent).toBe('');
+  });
+
+  it('shows the error on Courses when Courses is the last step', () => {
+    mountModal();
+    modal.openForCreate([]);
+    fillStudentStep();
+    advanceToFinalStep();
+    choosePhase('');
+
+    modal.showStudentError('Could not create');
+
+    expect(byId('coursesStep').shadowRoot!.getElementById('message')!.textContent).toBe('Could not create');
+    expect(studentStepMessage().textContent).toBe('');
+  });
+
+  it('shows the error on the Student step in edit mode', () => {
+    mountModal();
+    modal.openForEdit(alice);
+
+    modal.showStudentError('Could not save');
+
+    expect(studentStepMessage().textContent).toBe('Could not save');
+  });
+
+  it('restores the capture buttons and keeps the step', () => {
+    openCaptureOnFinalStep();
+    byId<HTMLButtonElement>('saveBtn').click();
+
+    modal.showWaitingListError('Could not capture');
+
+    expect(byId('stepWaitingList').classList.contains('wizard__step--visible')).toBe(true);
+    expectIdle('saveBtn', 'cancelBtn', 'Create Waiting List Entry');
+  });
+
+  it('ends the busy state when the wizard closes or opens again', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+    byId<HTMLButtonElement>('saveBtn').click();
+    modal.close();
+    expectIdle('saveBtn', 'cancelBtn', 'Create Student');
+
+    modal.openForEdit(alice);
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+    modal.openForEdit(alice);
+    expectIdle('studentSaveBtn', 'studentCancelBtn', 'Save');
+  });
+});
+
+describe('pm-student-wizard-modal — edit-mode Save loading state', { tags: ['379UC8'] }, () => {
+  it('puts the Student step Save and Cancel into the loading state until the error returns', () => {
+    mountModal();
+    modal.openForEdit(alice);
+
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+    expectBusy('studentSaveBtn', 'studentCancelBtn', 'Save');
+
+    modal.showStudentError('Could not save');
+    expectIdle('studentSaveBtn', 'studentCancelBtn', 'Save');
+  });
+
+  it('puts the Waiting List step Save and Cancel into the loading state until the error returns', () => {
+    openWaitingListEdit();
+    byId<HTMLButtonElement>('tabWaitingList').click();
+
+    byId<HTMLButtonElement>('waitingListSaveBtn').click();
+    expectBusy('waitingListSaveBtn', 'waitingListCloseBtn', 'Save');
+
+    modal.showWaitingListError('Could not save');
+    expectIdle('waitingListSaveBtn', 'waitingListCloseBtn', 'Save');
+  });
+
+  it('leaves a running Student save busy when the entry save fails', () => {
+    openWaitingListEdit();
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+    byId<HTMLButtonElement>('tabWaitingList').click();
+    byId<HTMLButtonElement>('waitingListSaveBtn').click();
+
+    modal.showWaitingListError('Could not save');
+
+    expectIdle('waitingListSaveBtn', 'waitingListCloseBtn', 'Save');
+    expectBusy('studentSaveBtn', 'studentCancelBtn', 'Save');
+  });
+
+  it('leaves a running Student save busy when the entry values cannot be read', () => {
+    openWaitingListEdit();
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+    byId<HTMLButtonElement>('tabWaitingList').click();
+    modal.lessonStructures = [];
+
+    byId<HTMLButtonElement>('waitingListSaveBtn').click();
+
+    expectIdle('waitingListSaveBtn', 'waitingListCloseBtn', 'Save');
+    expectBusy('studentSaveBtn', 'studentCancelBtn', 'Save');
+  });
+});
+
+describe('pm-student-wizard-modal — dismiss actions in edit mode', { tags: ['379UC9'] }, () => {
+  function buttonTexts(): string[] {
+    return [...modal.shadowRoot!.querySelectorAll('.form-btn')].map((button) => button.textContent!.trim());
+  }
+
+  it.each([['Siblings'], ['Guardians'], ['Courses'], ['ExtraCurriculars']])(
+    'shows only a Cancel in the footer on the %s step',
+    (step) => {
+      mountModal();
+      modal.openForEdit(alice);
+      byId<HTMLButtonElement>(`tab${step}`).click();
+
+      const visible = ['cancelBtn', 'previousBtn', 'nextBtn', 'saveBtn'].filter((id) => !byId(id).hidden);
+      expect(visible).toEqual(['cancelBtn']);
+      expect(byId('cancelBtn').textContent).toBe('Cancel');
+      expect(buttonTexts()).not.toContain('Close');
+    },
+  );
+
+  it('reads Cancel on the Waiting List step row in waiting-list edit', () => {
+    openWaitingListEdit();
+    byId<HTMLButtonElement>('tabWaitingList').click();
+
+    expect(byId('waitingListCloseBtn').textContent).toBe('Cancel');
+    expect(buttonTexts()).not.toContain('Close');
+  });
+
+  it('closes the wizard from either Cancel', () => {
+    openWaitingListEdit();
+    byId<HTMLButtonElement>('tabWaitingList').click();
+    byId<HTMLButtonElement>('waitingListCloseBtn').click();
+    expect(modal.hasAttribute('open')).toBe(false);
+
+    modal.openForEdit(alice);
+    byId<HTMLButtonElement>('tabSiblings').click();
+    byId<HTMLButtonElement>('cancelBtn').click();
+    expect(modal.hasAttribute('open')).toBe(false);
+  });
+});
+
+describe('pm-student-wizard-modal — shared button stylesheet', { tags: ['379UC10'] }, () => {
+  it('adopts the form button stylesheet and keeps no local button rules', () => {
+    mountModal();
+    const sheets = modal.shadowRoot!.adoptedStyleSheets;
+    const localText = Array.from(localStyleSheetFor(modal.shadowRoot!).cssRules)
+      .map((rule) => rule.cssText)
+      .join('\n');
+
+    expect(sheets).toContain(formButtonStyles);
+    expect(localText).not.toContain('wizard__btn');
+    expect(localText).not.toContain('#fff');
+  });
+
+  it('sets no display on the action rows outside the hidden rule', () => {
+    mountModal();
+    const rules = Array.from(localStyleSheetFor(modal.shadowRoot!).cssRules) as CSSStyleRule[];
+
+    for (const rule of rules.filter((r) => /wizard__(step-)?actions/.test(r.selectorText))) {
+      expect(rule.style.getPropertyValue('display')).toBe('');
+    }
   });
 });

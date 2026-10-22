@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
+import { WizardActionRows } from './WizardActionRows';
 
 export type Grade =
   | 'Grade1'
@@ -73,6 +74,37 @@ export class StudentsPage extends BasePage {
     await this.goto('/#/students');
   }
 
+  /** The wizard's footer and step action rows. */
+  actionRows(): WizardActionRows {
+    return new WizardActionRows(this.wizardModal);
+  }
+
+  /** A wizard tab, addressed by its label. */
+  tab(name: 'Student' | 'Siblings' | 'Guardians' | 'Courses' | 'Extra-Curriculars'): Locator {
+    const ids = {
+      Student: '#tabStudent',
+      Siblings: '#tabSiblings',
+      Guardians: '#tabGuardians',
+      Courses: '#tabCourses',
+      'Extra-Curriculars': '#tabExtraCurriculars',
+    };
+    return this.wizardModal.locator(ids[name]);
+  }
+
+  /**
+   * Opens the create wizard with valid student fields and steps it to its last
+   * step, staging the first offered course on the way. Nothing is saved.
+   */
+  async reachLastCreateStep(input: StudentInput): Promise<void> {
+    await this.startCreatingStudent(input);
+    await this.goToNextStep(); // Student -> Siblings
+    await this.goToNextStep(); // Siblings -> Guardians
+    await this.goToNextStep(); // Guardians -> Courses
+    await this.enrollInCourse();
+    await this.goToNextStep(); // Courses -> Extra-Curriculars
+    await expect(this.tab('Extra-Curriculars')).toHaveClass(/wizard__tab--active/);
+  }
+
   /** The wizard's own tab strip, restricted to the tabs currently offered (not `hidden`). */
   visibleTabs(): Locator {
     return this.wizardModal.locator('.wizard__tab:not([hidden])');
@@ -82,7 +114,7 @@ export class StudentsPage extends BasePage {
    * Steps the create wizard through all five tabs (Student → Siblings →
    * Guardians → Courses → Extra-Curriculars) without adding any siblings or
    * guardians. Extra-Curriculars is the wizard's final step in create mode —
-   * it carries Save, and Courses only offers Next — so all four Next clicks
+   * it carries Create Student, and Courses only offers Next — so all four Next clicks
    * are required.
    *
    * A student must hold at least one course or one extra-curricular, so this
@@ -90,7 +122,7 @@ export class StudentsPage extends BasePage {
    * get the first course and teacher on offer.
    *
    * `activityOptionLabels` stages zero or more activities on the
-   * Extra-Curriculars step before Save — each one is the picker's option
+   * Extra-Curriculars step before Create Student — each one is the picker's option
    * label, `{description} ({phase})`. Staging in create mode
    * writes nothing until Save; this is the same panel `assignActivity` drives
    * in edit mode, so both this staged path and edit mode's immediate write go
@@ -155,7 +187,7 @@ export class StudentsPage extends BasePage {
     await this.enrollmentListRow(courseLabel).locator('.enrollment-list__btn--remove').click();
   }
 
-  /** Presses Save on the create wizard's final step (Extra-Curriculars). */
+  /** Presses Create Student on the create wizard's final step (Extra-Curriculars). */
   async saveStudent(): Promise<void> {
     await this.wizardModal.locator('#saveBtn').click();
   }
@@ -353,9 +385,9 @@ export class StudentsPage extends BasePage {
 
   /**
    * Closes the wizard via whichever dismiss control is currently visible: the
-   * shared footer's Cancel (create mode) or Close (edit mode's Siblings/Guardians
-   * tabs, which persist their own changes and have nothing left to cancel), or
-   * the Student tab's own local Cancel (edit mode). Scoped to the wizard's own
+   * shared footer's Cancel (create mode, and edit mode's Siblings, Guardians,
+   * Courses and Extra-Curriculars tabs), or the Student tab's own Cancel (edit
+   * mode). Scoped to the wizard's own
    * footer/step-actions rather than a bare role query, since a nested guardian
    * form also has its own "Cancel" button that could otherwise collide.
    */
