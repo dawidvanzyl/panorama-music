@@ -3,12 +3,12 @@ import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__email {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
     }
     .modal__confirm-label {
       font-size: 13px;
-      color: var(--pm-text-muted, #9194a6);
+      color: var(--pm-text-muted);
       margin-bottom: 6px;
       display: block;
     }
@@ -16,20 +16,20 @@ styles.replaceSync(`
       width: 100%;
       box-sizing: border-box;
       padding: 8px 12px;
-      border-radius: var(--pm-radius, 6px);
-      border: 1px solid var(--pm-border, #2e3250);
-      background: var(--pm-surface-2, #22263a);
-      color: var(--pm-text, #e2e1ed);
+      border-radius: var(--pm-radius);
+      border: 1px solid var(--pm-border);
+      background: var(--pm-surface-2);
+      color: var(--pm-text);
       font-size: 13px;
       margin-bottom: 24px;
       outline: none;
     }
     .modal__confirm-input:focus {
-      border-color: var(--pm-danger, #e05252);
+      border-color: var(--pm-danger);
     }
     .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .modal__btn--delete:hover:not(:disabled) {

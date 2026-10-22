@@ -71,7 +71,7 @@ styles.replaceSync(`
       color: var(--pm-text);
     }
     .saved-reports-table__delete {
-      background: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
       border: none;
       color: #fff;
     }

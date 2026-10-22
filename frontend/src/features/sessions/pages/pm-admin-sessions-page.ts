@@ -38,8 +38,8 @@ styles.replaceSync(`
     }
     .admin-sessions-page__revoke-all {
       background: transparent;
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
       border-radius: var(--pm-radius);
       padding: 10px 20px;
       font-size: 14px;

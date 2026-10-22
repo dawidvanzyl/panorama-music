@@ -60,8 +60,8 @@ styles.replaceSync(`
     /* Filled red with white text, the same destructive treatment the delete and
        unlink confirmations use — a delete should read the same wherever it is. */
     .banking__btn--danger {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border-color: var(--pm-danger);
       color: #fff;
     }
     .banking__btn--danger:hover {
@@ -171,12 +171,12 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
     }
     .banking__hint--error {
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .banking__error {
       margin-top: 8px;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       min-height: 18px;
     }
     .banking__form-actions {

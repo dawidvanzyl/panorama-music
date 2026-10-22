@@ -52,7 +52,7 @@ styles.replaceSync(`
       cursor: pointer;
     }
     .reports-page__create:hover {
-      background: var(--pm-accent-hover);
+      background: var(--pm-accent-solid);
     }
     .reports-page__empty {
       background: var(--pm-surface);

@@ -3,12 +3,12 @@ import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__last4 {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
     }
     .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .modal__btn--delete:hover:not(:disabled) {

@@ -79,7 +79,7 @@ styles.replaceSync(`
     }
     .guardian-list__btn--delete {
       border: none;
-      background: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
       color: #fff;
     }
     .guardian-list__btn--delete:hover:not(:disabled) {
@@ -94,7 +94,7 @@ styles.replaceSync(`
     }
     .guardian-list__btn--remove {
       border: none;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .guardian-list__btn--remove:hover:not(:disabled) {
       background: rgba(224, 82, 82, 0.1);

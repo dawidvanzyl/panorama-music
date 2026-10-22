@@ -3,12 +3,12 @@ import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__name {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
     }
     .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .modal__btn--delete:hover:not(:disabled) {
@@ -18,7 +18,7 @@ styles.replaceSync(`
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-bottom: var(--pm-modal-body-gap, 16px);
+      margin-bottom: var(--pm-modal-body-gap);
     }
     .modal__scope-choice[hidden] {
       display: none;

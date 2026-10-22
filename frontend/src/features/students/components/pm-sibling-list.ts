@@ -39,7 +39,7 @@ styles.replaceSync(`
     .sibling-list__remove-btn {
       background: transparent;
       border: none;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       font-size: 12px;
       cursor: pointer;
       padding: 4px 8px;

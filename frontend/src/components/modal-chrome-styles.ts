@@ -1,3 +1,5 @@
+import { buttonStateRules } from './button-states';
+
 const modalChromeStyles = new CSSStyleSheet();
 modalChromeStyles.replaceSync(`
     :host {
@@ -17,9 +19,9 @@ modalChromeStyles.replaceSync(`
       justify-content: center;
     }
     .modal__card {
-      background: var(--pm-surface, #1a1d27);
-      border: 1px solid var(--pm-border, #2e3250);
-      border-radius: var(--pm-radius, 10px);
+      background: var(--pm-surface);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
       padding: 24px;
       max-width: 420px;
       width: calc(100% - 32px);
@@ -33,43 +35,78 @@ modalChromeStyles.replaceSync(`
     }
     .modal__icon {
       font-family: 'Material Symbols Outlined', sans-serif;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       font-size: 24px;
     }
     .modal__title {
       font-size: 1.125rem;
       font-weight: 700;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .modal__body {
       font-size: 14px;
       line-height: 1.6;
-      color: var(--pm-text-muted, #9194a6);
-      margin-bottom: var(--pm-modal-body-gap, 16px);
+      color: var(--pm-text-muted);
+      margin-bottom: var(--pm-modal-body-gap);
     }
     .modal__actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
     }
+    .modal__error {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--pm-danger-text);
+    }
+    .modal__error:empty {
+      display: none;
+    }
     .modal__btn {
-      padding: 10px 24px;
-      border-radius: 9999px;
+      box-sizing: border-box;
+      height: 40px;
+      min-width: 96px;
+      padding: 0 24px;
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius-full);
+      font-family: inherit;
       font-size: 14px;
       font-weight: 600;
-      cursor: pointer;
+      line-height: 1;
     }
-    .modal__btn:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
+    .modal__btn--primary {
+      background: var(--pm-accent-solid);
+      border-color: var(--pm-accent-solid);
+      color: var(--pm-on-solid);
+    }
+    .modal__btn--primary:hover:not(:disabled) {
+      background: var(--pm-accent-solid-hover);
+      border-color: var(--pm-accent-solid-hover);
+    }
+    .modal__btn--destructive {
+      background: var(--pm-danger-solid);
+      border-color: var(--pm-danger-solid);
+      color: var(--pm-on-solid);
+    }
+    .modal__btn--destructive:hover:not(:disabled) {
+      background: var(--pm-danger-solid-hover);
+      border-color: var(--pm-danger-solid-hover);
     }
     .modal__btn--cancel {
       background: transparent;
-      border: 1px solid var(--pm-border, #2e3250);
-      color: var(--pm-text-muted, #9194a6);
+      border-color: var(--pm-border);
+      color: var(--pm-text);
     }
     .modal__btn--cancel:hover:not(:disabled) {
-      background: var(--pm-surface-2, #22263a);
+      background: var(--pm-surface-2);
+    }
+    ${buttonStateRules('.modal__btn', ['.modal__btn--primary', '.modal__btn--destructive'])}
+    @media print {
+      .modal__btn,
+      .modal__actions {
+        display: none;
+      }
     }
   `);
 

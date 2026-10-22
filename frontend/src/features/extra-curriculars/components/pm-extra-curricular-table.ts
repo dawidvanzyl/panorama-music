@@ -137,8 +137,8 @@ styles.replaceSync(`
       background: rgba(79, 124, 255, 0.1);
     }
     .ec-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border-color: var(--pm-danger);
       color: #fff;
     }
     .ec-table__btn--save {

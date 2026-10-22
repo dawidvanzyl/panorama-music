@@ -29,7 +29,7 @@ styles.replaceSync(`
       flex-shrink: 0;
     }
     .modal__icon {
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .modal__title {
       color: var(--pm-text);
@@ -56,7 +56,7 @@ styles.replaceSync(`
       color: var(--pm-text);
     }
     .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
       border: none;
       color: #fff;
     }
@@ -66,7 +66,7 @@ styles.replaceSync(`
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .modal__error:empty {
       display: none;

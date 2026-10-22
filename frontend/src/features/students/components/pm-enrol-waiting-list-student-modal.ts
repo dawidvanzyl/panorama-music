@@ -59,12 +59,12 @@ styles.replaceSync(`
     .enrol__title {
       font-size: 18px;
       font-weight: 700;
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       margin: 0 0 4px;
     }
     .enrol__notice {
       font-size: 13px;
-      color: var(--pm-text-muted, #9194a6);
+      color: var(--pm-text-muted);
       margin: 0 0 20px;
     }
     .enrol__grid {
@@ -86,17 +86,17 @@ styles.replaceSync(`
     .enrol__label {
       font-size: 13px;
       font-weight: 500;
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
     }
     .enrol__input,
     .enrol__select {
       box-sizing: border-box;
       height: 44px;
       padding: 0 12px;
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      border-radius: var(--pm-radius, 10px);
-      color: var(--pm-text, #e2e1ed);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text);
       font-size: 14px;
       font-family: inherit;
     }
@@ -107,10 +107,10 @@ styles.replaceSync(`
       align-items: center;
       justify-content: space-between;
       padding: 0 12px;
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      border-radius: var(--pm-radius, 10px);
-      color: var(--pm-text-muted, #9194a6);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text-muted);
       font-size: 14px;
     }
     .enrol__locked {
@@ -118,10 +118,10 @@ styles.replaceSync(`
     }
     .enrol__notice-empty {
       padding: 12px 16px;
-      border-radius: var(--pm-radius, 10px);
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      color: var(--pm-text-muted, #9194a6);
+      border-radius: var(--pm-radius);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text-muted);
       font-size: 13px;
       margin: 0;
     }
@@ -134,7 +134,7 @@ styles.replaceSync(`
     .enrol__error {
       margin: 16px 0 0;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       display: none;
     }
     .enrol__error--visible {
@@ -144,8 +144,8 @@ styles.replaceSync(`
       margin-top: 24px;
     }
     .modal__btn--primary {
-      background: var(--pm-accent, #6c5ce7);
-      border: 1px solid var(--pm-accent, #6c5ce7);
+      background: var(--pm-accent);
+      border: 1px solid var(--pm-accent);
       color: #fff;
     }
   `);

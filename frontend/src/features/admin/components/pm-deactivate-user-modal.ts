@@ -6,12 +6,12 @@ styles.replaceSync(`
       --pm-modal-body-gap: 32px;
     }
     .modal__email {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
     }
     .modal__btn--deactivate {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .modal__btn--deactivate:hover:not(:disabled) {

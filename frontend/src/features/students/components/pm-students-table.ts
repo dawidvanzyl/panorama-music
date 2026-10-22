@@ -84,8 +84,8 @@ styles.replaceSync(`
       background: rgba(79, 124, 255, 0.1);
     }
     .students-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .students-table__btn--delete:hover {

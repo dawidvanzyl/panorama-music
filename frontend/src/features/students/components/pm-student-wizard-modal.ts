@@ -40,7 +40,7 @@ styles.replaceSync(`
     .modal__card {
       box-sizing: border-box;
       max-width: none;
-      width: calc(100% - var(--pm-sidebar-width, 240px) - (2 * var(--pm-content-padding, 1cm)));
+      width: calc(100% - var(--pm-sidebar-width) - (2 * var(--pm-content-padding)));
       height: 600px;
       display: flex;
       flex-direction: column;
@@ -52,7 +52,7 @@ styles.replaceSync(`
       display: flex;
       flex-shrink: 0;
       gap: 4px;
-      border-bottom: 1px solid var(--pm-border, #2e3250);
+      border-bottom: 1px solid var(--pm-border);
       margin-bottom: 20px;
     }
     .wizard__tab {
@@ -62,7 +62,7 @@ styles.replaceSync(`
       padding: 10px 16px;
       font-size: 14px;
       font-weight: 600;
-      color: var(--pm-text-muted, #9194a6);
+      color: var(--pm-text-muted);
       cursor: pointer;
     }
     .wizard__tab--active {

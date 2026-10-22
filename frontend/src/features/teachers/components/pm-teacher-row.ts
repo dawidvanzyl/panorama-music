@@ -44,7 +44,7 @@ styles.replaceSync(`
        teacher should read the same in the list and on their record. */
     .teacher-row__chip--status-inactive {
       background: rgba(224, 82, 82, 0.15);
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .teacher-row__actions {
       text-align: right;
