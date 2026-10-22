@@ -1143,6 +1143,26 @@ describe('pm-student-wizard-modal — create confirm action loading state', { ta
     expect(requests).toHaveLength(1);
   });
 
+  it('disables Previous while the enrolled create request runs and restores it when it fails', () => {
+    openEnrolledCreateOnFinalStep();
+    stageChoir();
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(true);
+
+    modal.showStudentError('Could not create');
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(false);
+  });
+
+  it('disables Previous while the capture request runs and restores it when it fails', () => {
+    openCaptureOnFinalStep();
+
+    byId<HTMLButtonElement>('saveBtn').click();
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(true);
+
+    modal.showWaitingListError('Could not capture');
+    expect(byId<HTMLButtonElement>('previousBtn').disabled).toBe(false);
+  });
   it('stays idle when nothing is staged', () => {
     openEnrolledCreateOnFinalStep();
     const requests = collectEvents('student-create-requested');

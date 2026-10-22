@@ -360,6 +360,7 @@ export class PmStudentWizardModal extends HTMLElement {
   private setStudentSaveBusy(busy: boolean): void {
     setButtonsBusy(this.saveBtn!, this.cancelBtn!, busy);
     setButtonsBusy(this.studentSaveBtn!, this.studentCancelBtn!, busy);
+    this.previousBtn!.disabled = busy;
   }
 
   private setEntrySaveBusy(busy: boolean): void {
