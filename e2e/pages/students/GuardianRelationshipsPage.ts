@@ -13,8 +13,9 @@ export class GuardianRelationshipsPage extends BasePage {
     this.relationshipList = page.locator('#list');
     // Scoped to the page's own component: the account menu's Active Sessions
     // dialog is mounted on the document and carries an `#error` of its own, so
-    // an unscoped id matches twice and trips Playwright's strict mode.
-    this.errorBanner = page.locator('pm-guardian-relationships-page #error');
+    // an unscoped id matches twice and trips Playwright's strict mode. The class
+    // also keeps it apart from the delete modal's own error line.
+    this.errorBanner = page.locator('pm-guardian-relationships-page .guardian-relationships__error');
     this.deleteModal = page.locator('#deleteModal');
   }
 
