@@ -1201,6 +1201,86 @@ describe('pm-student-wizard-modal — create confirm action loading state', { ta
   });
 });
 
+describe(
+  'pm-student-wizard-modal — the open step cannot change while a create request runs',
+  { tags: ['379UC6'] },
+  () => {
+    const modes = [
+      {
+        name: 'enrolled create',
+        finalStep: 'stepExtraCurriculars',
+        open: () => {
+          openEnrolledCreateOnFinalStep();
+          stageChoir();
+          byId<HTMLButtonElement>('saveBtn').click();
+        },
+        fail: () => modal.showStudentError('Could not create'),
+        errorLine: () => byId('extraCurricularsStep').shadowRoot!.getElementById('message')!,
+      },
+      {
+        name: 'capture',
+        finalStep: 'stepWaitingList',
+        open: () => {
+          openCaptureOnFinalStep();
+          byId<HTMLButtonElement>('saveBtn').click();
+        },
+        fail: () => modal.showWaitingListError('Could not create'),
+        errorLine: () => byId('waitingListStep').shadowRoot!.getElementById('message')!,
+      },
+    ];
+
+    function expectStillOnFinalStep(finalStep: string): void {
+      expect(byId(finalStep).classList.contains('wizard__step--visible')).toBe(true);
+      expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(false);
+    }
+
+    describe.each(modes)('', (mode) => {
+      it('ignores a click on the Student tab', () => {
+        mode.open();
+        byId<HTMLButtonElement>('tabStudent').click();
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a click on Previous', () => {
+        mode.open();
+        byId<HTMLButtonElement>('previousBtn').click();
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a click on Next and requests no guardian preview', () => {
+        mode.open();
+        const previews = collectEvents('create-guardians-preview-requested');
+        byId<HTMLButtonElement>('nextBtn').click();
+        expectStillOnFinalStep(mode.finalStep);
+        expect(previews).toHaveLength(0);
+      });
+
+      it('ignores a click on every other tab', () => {
+        mode.open();
+        for (const tab of ['tabSiblings', 'tabGuardians', 'tabCourses', 'tabExtraCurriculars', 'tabWaitingList']) {
+          byId<HTMLButtonElement>(tab).click();
+        }
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('ignores a phase change announced by the Student step', () => {
+        mode.open();
+        choosePhase('');
+        expectStillOnFinalStep(mode.finalStep);
+      });
+
+      it('shows a failure on the step that is still open and unlocks the steps', () => {
+        mode.open();
+        byId<HTMLButtonElement>('tabStudent').click();
+        mode.fail();
+
+        expect(mode.errorLine().textContent).toBe('Could not create');
+        byId<HTMLButtonElement>('tabStudent').click();
+        expect(byId('stepStudent').classList.contains('wizard__step--visible')).toBe(true);
+      });
+    });
+  },
+);
 describe('pm-student-wizard-modal — create failure and reset', { tags: ['379UC7'] }, () => {
   it('restores the enrolled create buttons and shows the error on Extra-Curriculars without changing step', () => {
     openEnrolledCreateOnFinalStep();

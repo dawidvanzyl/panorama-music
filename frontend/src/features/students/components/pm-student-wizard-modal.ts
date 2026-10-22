@@ -197,6 +197,8 @@ export class PmStudentWizardModal extends HTMLElement {
   private _phase: PhaseType | null = null;
   /** Whether the form's grade is Private, whose student has no phase and is offered every phase. */
   private _privateGrade = false;
+  /** Set while a create request runs, so the open step, which an error is shown on, cannot change. */
+  private _stepsLocked = false;
 
   constructor() {
     super();
@@ -264,6 +266,7 @@ export class PmStudentWizardModal extends HTMLElement {
    * since a waiting-list student holds neither.
    */
   openForCreate(candidates: SiblingStudentResult[], wizardMode: WizardMode = 'enrolled'): void {
+    this._stepsLocked = false;
     this.enrollments = [];
     this.extraCurriculars = [];
     this._mode = 'create';
@@ -291,6 +294,7 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   openForEdit(student: StudentResult): void {
+    this._stepsLocked = false;
     this.enrollments = [];
     this.extraCurriculars = [];
     this._mode = 'edit';
@@ -317,6 +321,7 @@ export class PmStudentWizardModal extends HTMLElement {
    * name is not a reason to revisit the entry's own fields.
    */
   openForWaitingListEdit(student: StudentResult, entry: WaitingListEditTarget): void {
+    this._stepsLocked = false;
     this._mode = 'edit';
     this._wizardMode = 'waitingList';
     this._studentId = student.studentId;
@@ -361,6 +366,7 @@ export class PmStudentWizardModal extends HTMLElement {
     setButtonsBusy(this.saveBtn!, this.cancelBtn!, busy);
     setButtonsBusy(this.studentSaveBtn!, this.studentCancelBtn!, busy);
     this.previousBtn!.disabled = busy;
+    this._stepsLocked = busy && this._mode === 'create';
   }
 
   private setEntrySaveBusy(busy: boolean): void {
@@ -540,6 +546,7 @@ export class PmStudentWizardModal extends HTMLElement {
    */
   private handlePhaseChanged = (event: Event): void => {
     const { phase, privateGrade } = (event as CustomEvent<{ phase: PhaseType | null; privateGrade: boolean }>).detail;
+    if (this._stepsLocked) return;
     if (phase === this._phase && privateGrade === this._privateGrade) return;
 
     this.applyPhase(phase, privateGrade);
@@ -583,6 +590,7 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   private goToStep(step: Step): void {
+    if (this._stepsLocked) return;
     this._activeStep = step;
 
     this.stepStudentEl!.classList.toggle('wizard__step--visible', step === 'student');
@@ -710,6 +718,7 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   private handleNext(): void {
+    if (this._stepsLocked) return;
     if (this._activeStep === 'student') {
       if (!this.studentStep!.reportValidity()) return;
       this.goToStep('siblings');
