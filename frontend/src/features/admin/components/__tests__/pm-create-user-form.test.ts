@@ -72,3 +72,77 @@ describe('pm-create-user-form — Banking Coordinator role', { tags: ['287UC3'] 
     expect(checkbox.checked).toBe(false);
   });
 });
+
+describe('pm-create-user-form — loading state of Create User', { tags: ['378UC1'] }, () => {
+  let el: PmCreateUserForm;
+
+  beforeEach(() => {
+    el = new PmCreateUserForm();
+    document.body.appendChild(el);
+    mockCreateUser.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function submit(): void {
+    const shadow = el.shadowRoot!;
+    (shadow.getElementById('email') as HTMLInputElement).value = 'new@test.com';
+    shadow.getElementById('createUserForm')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  }
+
+  it('disables Create User, keeps its label and shows the loading icon while the request runs', async () => {
+    mockCreateUser.mockReturnValue(new Promise(() => undefined));
+
+    submit();
+
+    const button = el.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.textContent).toContain('Create User');
+    expect((button.firstElementChild as HTMLElement).dataset.testid).toBe('button-loading-icon');
+  });
+
+  it('does not enter the loading state when no role is selected', () => {
+    el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((box) => (box.checked = false));
+
+    submit();
+
+    const button = el.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(button.hasAttribute('aria-busy')).toBe(false);
+  });
+});
+
+describe('pm-create-user-form — Create User is ready again when the request ends', { tags: ['378UC2'] }, () => {
+  let el: PmCreateUserForm;
+
+  beforeEach(() => {
+    el = new PmCreateUserForm();
+    document.body.appendChild(el);
+    mockCreateUser.mockReset();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it.each([
+    ['succeeds', () => mockCreateUser.mockResolvedValue({ userId: 'u1', inviteUrl: '/#/register?token=abc' })],
+    ['fails', () => mockCreateUser.mockRejectedValue(new Error('Refused.'))],
+  ])('when the request %s', async (_outcome, arrange) => {
+    arrange();
+    const shadow = el.shadowRoot!;
+    (shadow.getElementById('email') as HTMLInputElement).value = 'new@test.com';
+
+    shadow.getElementById('createUserForm')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const button = shadow.getElementById('submitBtn') as HTMLButtonElement;
+      expect(button.disabled).toBe(false);
+      expect(button.hasAttribute('aria-busy')).toBe(false);
+      expect(button.querySelector('[data-testid="button-loading-icon"]')).toBeNull();
+    });
+  });
+});

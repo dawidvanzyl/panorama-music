@@ -136,6 +136,7 @@ export class PmSaveReportModal extends HTMLElement {
   private handleSave = (): void => {
     if (!canSaveName(this.nameInput!.value)) return;
 
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('save-report-confirmed', {
         bubbles: true,

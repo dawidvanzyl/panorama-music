@@ -291,3 +291,50 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
     expect(deleteModalOf(el).hasAttribute('open')).toBe(false);
   });
 });
+
+describe('pm-guardian-relationships-page — loading state of Create Relationship', { tags: ['378UC2'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function createButtonOf(page: HTMLElement): HTMLButtonElement {
+    return formOf(page).shadowRoot!.getElementById('saveBtn') as HTMLButtonElement;
+  }
+
+  it('is ready again with the typed name kept when the create fails', async () => {
+    vi.mocked(createGuardianRelationship).mockRejectedValue(
+      new GuardiansError("Guardian relationship 'Mother' already exists.", 400),
+    );
+    el = await mountPage();
+
+    await submitCreateForm(el, 'Mother');
+
+    expect(createButtonOf(el).disabled).toBe(false);
+    expect(createButtonOf(el).hasAttribute('aria-busy')).toBe(false);
+    expect(nameInputOf(el).value).toBe('Mother');
+  });
+
+  it('is busy while the create runs and ready again after it succeeds', async () => {
+    let resolveCreate: (value: GuardianRelationship) => void = () => undefined;
+    vi.mocked(createGuardianRelationship).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    el = await mountPage();
+
+    nameInputOf(el).value = 'Aunt';
+    createButtonOf(el).dispatchEvent(new MouseEvent('click'));
+    await flush();
+    expect(createButtonOf(el).getAttribute('aria-busy')).toBe('true');
+    expect(createButtonOf(el).disabled).toBe(true);
+
+    resolveCreate({ guardianRelationshipId: 'r9', name: 'Aunt' });
+    await flush();
+
+    expect(createButtonOf(el).hasAttribute('aria-busy')).toBe(false);
+    expect(createButtonOf(el).disabled).toBe(false);
+  });
+});
