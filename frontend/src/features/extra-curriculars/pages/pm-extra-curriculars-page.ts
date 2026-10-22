@@ -229,6 +229,7 @@ export class PmExtraCurricularsPage extends HTMLElement {
 
     try {
       await addPracticeTime(detail.extraCurricularId, { day: detail.day, startTime: detail.startTime });
+      this.activityTable!.setPanelBusy(false);
       await this.loadExtraCurriculars();
     } catch (err) {
       // The reason belongs on the panel, beside the controls that produced it —

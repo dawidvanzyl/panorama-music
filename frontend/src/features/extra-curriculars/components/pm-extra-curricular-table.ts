@@ -266,6 +266,10 @@ export class PmExtraCurricularTable extends HTMLElement {
     this.panel?.showError(message);
   }
 
+  setPanelBusy(busy: boolean): void {
+    this.panel?.setBusy(busy);
+  }
+
   /**
    * Reports a refused save or delete against the row it concerns. A row being
    * edited stays in edit mode holding the entered values, so the change can be

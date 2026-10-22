@@ -5,6 +5,8 @@ import {
   isValidCost,
   lessonStructureOptionLabel,
 } from '../services/course-display';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { appendOptions } from '../../../components/select-options';
 import type { CourseType, LessonStructure } from '../services/courses';
 
@@ -75,23 +77,10 @@ styles.replaceSync(`
     .course-form__error--visible {
       display: flex;
     }
-    .course-form__submit {
+    .course-form__row > .form-btn {
       /* Sits in the input row rather than under it, so it lines up with the
          controls' bottom edge below the labels. */
       align-self: end;
-      height: 44px;
-      padding: 0 24px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .course-form__submit:hover {
-      filter: brightness(1.1);
     }
   `);
 
@@ -114,7 +103,7 @@ template.innerHTML = `
         <option value="">Select a lesson structure</option>
       </select>
     </div>
-    <button type="button" class="course-form__submit" id="createBtn">Create Course</button>
+    <button type="button" class="form-btn form-btn--primary" id="createBtn">Create Course</button>
   </div>
   <div class="course-form__error" id="error"></div>
 `;
@@ -132,7 +121,7 @@ export class PmCourseForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -165,11 +154,17 @@ export class PmCourseForm extends HTMLElement {
     this.costInput!.value = '';
     this.structureSelect!.value = '';
     this.clearError();
+    this.setBusy(false);
   }
 
   showError(message: string): void {
     this.errorSlot!.textContent = message;
     this.errorSlot!.classList.add('course-form__error--visible');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.createBtn!, null, busy);
   }
 
   clearError(): void {
@@ -206,6 +201,7 @@ export class PmCourseForm extends HTMLElement {
     }
 
     this.clearError();
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('course-form-submitted', {
         bubbles: true,

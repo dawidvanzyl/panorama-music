@@ -232,6 +232,7 @@ export class PmTeacherProfileSection extends HTMLElement {
   closeEdit(): void {
     this.readView!.hidden = false;
     this.editForm!.hidden = true;
+    this.editForm!.setBusy(false);
     this.editBtn!.hidden = false;
   }
 
