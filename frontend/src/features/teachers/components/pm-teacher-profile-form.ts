@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import type { TeacherProfileInput, TeacherResult } from '../services/teachers';
 
 const styles = new CSSStyleSheet();
@@ -39,30 +41,10 @@ styles.replaceSync(`
     .profile-form__error:empty {
       display: none;
     }
-    .profile-form__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .form-actions {
       /* The error line above collapses when empty, so without this the buttons
          sit flush against the inputs. */
-      margin-top: 16px;
-    }
-    button {
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      padding: 8px 20px;
-      cursor: pointer;
-    }
-    .profile-form__save {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .profile-form__cancel {
-      border: 1px solid var(--pm-border);
-      background: transparent;
-      color: var(--pm-text);
+      margin-top: 24px;
     }
   `);
 
@@ -84,9 +66,9 @@ template.innerHTML = `
     </div>
   </div>
   <div class="profile-form__error" id="formError"></div>
-  <div class="profile-form__actions">
-    <button type="button" class="profile-form__cancel" id="cancelBtn">Cancel</button>
-    <button type="button" class="profile-form__save" id="saveBtn">Save</button>
+  <div class="form-actions" data-testid="form-actions">
+    <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+    <button type="button" class="form-btn form-btn--primary" id="saveBtn">Save</button>
   </div>
 `;
 
@@ -103,7 +85,7 @@ export class PmTeacherProfileForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -130,10 +112,16 @@ export class PmTeacherProfileForm extends HTMLElement {
     this.firstNameInput!.value = teacher.firstName;
     this.surnameInput!.value = teacher.surname;
     this.clearErrors();
+    this.setBusy(false);
   }
 
   showError(message: string): void {
     this.formError!.textContent = message;
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.saveBtn!, this.cancelBtn!, busy);
   }
 
   private clearErrors(): void {
@@ -164,6 +152,7 @@ export class PmTeacherProfileForm extends HTMLElement {
     if (!valid || !this._teacherId) return;
 
     const input: TeacherProfileInput = { firstName, surname };
+    this.setBusy(true);
 
     this.dispatchEvent(
       new CustomEvent<{ teacherId: string; input: TeacherProfileInput }>('teacher-profile-update-requested', {

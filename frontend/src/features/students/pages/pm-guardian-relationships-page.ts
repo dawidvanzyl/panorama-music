@@ -99,6 +99,7 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
       this.relationshipForm!.reset();
       await this.loadRelationships();
     } catch (err) {
+      this.relationshipForm!.setBusy(false);
       this.showError(err);
     }
   };

@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { canSaveName } from '../state/report-builder-state';
 
@@ -37,14 +39,6 @@ styles.replaceSync(`
       font-family: inherit;
       box-sizing: border-box;
     }
-    .modal__btn--save {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-    }
-    .modal__btn--save:hover:not(:disabled) {
-      opacity: 0.9;
-    }
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
@@ -69,9 +63,9 @@ template.innerHTML = `
         <input class="modal__input" id="nameInput" type="text" maxlength="100" placeholder="e.g. Grade 4 Contacts" />
         <p class="modal__error" id="error" data-testid="save-report-error"></p>
       </div>
-      <div class="modal__actions">
-        <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--save" id="saveBtn" type="button">Save report</button>
+      <div class="form-actions" data-testid="form-actions">
+        <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
+        <button class="form-btn form-btn--primary" id="saveBtn" type="button">Save report</button>
       </div>
     </div>
   </div>
@@ -88,7 +82,7 @@ export class PmSaveReportModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -112,8 +106,7 @@ export class PmSaveReportModal extends HTMLElement {
   show(initialName = ''): void {
     this.nameInput!.value = initialName;
     this.errorEl!.textContent = '';
-    this._busy = false;
-    this.updateSaveButton();
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
@@ -128,7 +121,7 @@ export class PmSaveReportModal extends HTMLElement {
   setBusy(busy: boolean): void {
     this._busy = busy;
     this.nameInput!.disabled = busy;
-    this.cancelButton!.disabled = busy;
+    setButtonsBusy(this.saveButton!, this.cancelButton!, busy);
     this.updateSaveButton();
   }
 
@@ -143,6 +136,7 @@ export class PmSaveReportModal extends HTMLElement {
   private handleSave = (): void => {
     if (!canSaveName(this.nameInput!.value)) return;
 
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('save-report-confirmed', {
         bubbles: true,

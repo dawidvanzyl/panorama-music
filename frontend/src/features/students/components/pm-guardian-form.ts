@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { addPlaceholderOption } from './student-options';
 import type { GuardianInput, GuardianRelationship } from '../services/guardians';
 
@@ -62,29 +64,8 @@ styles.replaceSync(`
       border: 1px solid var(--pm-danger);
       color: var(--pm-danger);
     }
-    .guardian-form__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .form-actions {
       margin-top: 20px;
-    }
-    .guardian-form__btn {
-      height: 40px;
-      padding: 0 20px;
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .guardian-form__btn--cancel {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .guardian-form__btn--primary {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
     }
   `);
 
@@ -129,9 +110,9 @@ template.innerHTML = `
       </div>
     </div>
     <div class="guardian-form__message" id="message"></div>
-    <div class="guardian-form__actions">
-      <button type="button" class="guardian-form__btn guardian-form__btn--cancel" id="cancelBtn">Cancel</button>
-      <button type="button" class="guardian-form__btn guardian-form__btn--primary" id="confirmBtn">Add</button>
+    <div class="form-actions" data-testid="form-actions">
+      <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+      <button type="button" class="form-btn form-btn--primary" id="confirmBtn">Create Guardian</button>
     </div>
   </form>
 `;
@@ -154,7 +135,7 @@ export class PmGuardianForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -194,11 +175,17 @@ export class PmGuardianForm extends HTMLElement {
     this.form!.reset();
     addPlaceholderOption(this.relationshipSelect!, 'Select relationship');
     this.relationshipSelect!.value = '';
+    this.setBusy(false);
   }
 
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('guardian-form__message--error');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.confirmBtn!, this.cancelBtn!, busy);
   }
 
   clearError(): void {

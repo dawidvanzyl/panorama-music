@@ -225,7 +225,7 @@ describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC
     expect(byId('note').textContent).toBe(PHASE_RESTRICTION_NOTE);
     expect(byId('note').hidden).toBe(false);
     expect(byId('cancelBtn').textContent).toBe('Cancel');
-    expect(byId('assignBtn').textContent).toBe('Assign');
+    expect(byId('assignBtn').textContent).toBe('Assign Activity');
   });
 
   it('hides the phase note for a student with no phase', () => {

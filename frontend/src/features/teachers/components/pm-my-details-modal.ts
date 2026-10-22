@@ -230,6 +230,7 @@ export class PmMyDetailsModal extends HTMLElement {
     if (!this.readView) return;
     this.readView.hidden = false;
     this.editForm!.hidden = true;
+    this.editForm!.setBusy(false);
     this.editBtn!.hidden = false;
   }
 

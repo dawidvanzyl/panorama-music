@@ -743,7 +743,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
     expect(formPanel.hasAttribute('inert')).toBe(false);
     expect(guardianListEl.hidden).toBe(false);
-    expect(confirmBtn.textContent).toBe('Add');
+    expect(confirmBtn.textContent).toBe('Create Guardian');
     expect(addBtn.hidden).toBe(true);
 
     (

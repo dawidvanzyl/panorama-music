@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import type { SiblingStudentResult } from '../services/students';
 import { buildPopulationIcon, populationIconStyles } from './student-population';
 
@@ -9,6 +11,7 @@ styles.replaceSync(`
     }
     .search-select__row {
       display: flex;
+      align-items: center;
       gap: 8px;
     }
     .search-select__input-wrap {
@@ -51,21 +54,6 @@ styles.replaceSync(`
       font-size: 20px;
       line-height: 1;
       color: #fff;
-    }
-    .search-select__add-btn {
-      height: 40px;
-      padding: 0 20px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .search-select__add-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
     }
     .search-select__results {
       display: flex;
@@ -110,7 +98,7 @@ template.innerHTML = `
         <span class="search-select__clear-icon">cancel</span>
       </button>
     </div>
-    <button class="search-select__add-btn" id="addBtn" type="button" disabled>Add</button>
+    <button class="form-btn form-btn--primary" id="addBtn" type="button" disabled>Link Student</button>
   </div>
   <div class="search-select__results" id="results"></div>
 `;
@@ -122,11 +110,12 @@ export class PmStudentSearchSelect extends HTMLElement {
   private addBtn: HTMLButtonElement | null = null;
   private _candidates: SiblingStudentResult[] = [];
   private _selectedId: string | null = null;
+  private busy = false;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [populationIconStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [populationIconStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -149,11 +138,19 @@ export class PmStudentSearchSelect extends HTMLElement {
 
   set candidates(value: SiblingStudentResult[]) {
     this._candidates = value;
+    this.setBusy(false);
     this.reset();
   }
 
   get candidates(): SiblingStudentResult[] {
     return this._candidates;
+  }
+
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+    if (!this.addBtn) return;
+    setButtonsBusy(this.addBtn, null, busy);
+    this.updateAddButtonState();
   }
 
   reset(): void {
@@ -216,7 +213,7 @@ export class PmStudentSearchSelect extends HTMLElement {
   }
 
   private updateAddButtonState(): void {
-    this.addBtn!.disabled = !this._selectedId;
+    this.addBtn!.disabled = this.busy || !this._selectedId;
   }
 
   private handleClear = (): void => {

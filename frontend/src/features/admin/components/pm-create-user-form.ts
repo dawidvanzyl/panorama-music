@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { createUser, AdminError, ALL_ROLES, roleLabel, type UserRole } from '../services/admin';
 
 const styles = new CSSStyleSheet();
@@ -61,24 +63,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       cursor: pointer;
     }
-    .create-user__submit {
-      height: 44px;
-      padding: 0 24px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .create-user__submit:hover {
-      filter: brightness(1.1);
-    }
-    .create-user__submit:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-    }
     .create-user__message {
       margin-top: 16px;
       padding: 12px 16px;
@@ -123,7 +107,7 @@ template.innerHTML = `
           <div class="create-user__roles">${rolesMarkup}
           </div>
         </div>
-        <button type="submit" class="create-user__submit" id="submitBtn">Create User</button>
+        <button type="submit" class="form-btn form-btn--primary" id="submitBtn">Create User</button>
       </div>
     </form>
     <div class="create-user__message" id="message">
@@ -143,7 +127,7 @@ export class PmCreateUserForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -171,16 +155,15 @@ export class PmCreateUserForm extends HTMLElement {
   private handleSubmit = async (e: Event): Promise<void> => {
     e.preventDefault();
     this.message!.className = 'create-user__message';
-    this.submitBtn!.disabled = true;
 
     const roles = this.getSelectedRoles();
     if (roles.length === 0) {
       this.messageText!.textContent = 'At least one role must be selected.';
       this.message!.classList.add('create-user__message--error');
-      this.submitBtn!.disabled = false;
       return;
     }
 
+    setButtonsBusy(this.submitBtn!, null, true);
     try {
       const result = await createUser(this.emailInput!.value, roles);
       this.form!.reset();
@@ -196,7 +179,7 @@ export class PmCreateUserForm extends HTMLElement {
       this.messageText!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
       this.message!.classList.add('create-user__message--error');
     } finally {
-      this.submitBtn!.disabled = false;
+      setButtonsBusy(this.submitBtn!, null, false);
     }
   };
 }

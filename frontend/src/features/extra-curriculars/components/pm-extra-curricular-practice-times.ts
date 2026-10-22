@@ -7,6 +7,8 @@ import {
   practiceTimesHeading,
   startTimeText,
 } from '../services/extra-curricular-display';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { appendOptions } from '../../../components/select-options';
 import type { DayType, ExtraCurricular } from '../services/extra-curriculars';
 
@@ -106,17 +108,7 @@ styles.replaceSync(`
     .ec-panel__time--error {
       border-color: var(--pm-danger);
     }
-    .ec-panel__add-button {
-      height: 38px;
-      padding: 0 16px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
+    .ec-panel__add .form-btn {
       justify-self: start;
     }
     [hidden] {
@@ -145,7 +137,7 @@ template.innerHTML = `
     <div class="ec-panel__add" id="add" hidden>
       <select class="ec-panel__select" id="day" aria-label="Day"></select>
       <input class="ec-panel__time" type="time" id="startTime" aria-label="Start Time" />
-      <button type="button" class="ec-panel__add-button" id="addBtn">Add</button>
+      <button type="button" class="form-btn form-btn--primary" id="addBtn">Create Practice Time</button>
     </div>
   </div>
 `;
@@ -187,7 +179,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
 
     this.heading = this.shadowRoot!.getElementById('title') as HTMLElement;
@@ -244,6 +236,11 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
   showError(message: string): void {
     this.errorText!.textContent = message;
     this.errorBanner!.classList.add('ec-panel__error--visible');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.addBtn!, null, busy);
   }
 
   clearError(): void {
@@ -324,6 +321,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
     }
 
     this.clearError();
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-practice-time-add-requested', {
         bubbles: true,

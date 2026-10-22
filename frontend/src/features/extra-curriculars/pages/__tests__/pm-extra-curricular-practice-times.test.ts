@@ -452,3 +452,54 @@ describe('practice-times panel — read-only for a Teacher', { tags: ['276UC17']
     expect(panelOf(el)!.shadowRoot!.querySelectorAll('.ec-panel__remove')).toHaveLength(0);
   });
 });
+
+describe('practice-times panel — loading state of Create Practice Time', { tags: ['378UC2'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  function isBusy(): boolean {
+    return inPanel(el, 'addBtn').getAttribute('aria-busy') === 'true';
+  }
+
+  it('is busy while the request runs and ready again after it succeeds and the table re-renders', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Junior Choir');
+    let resolveAdd: (value: { practiceTimeId: string; day: 'Thursday'; startTime: string }) => void = () => undefined;
+    vi.mocked(addPracticeTime).mockReturnValue(
+      new Promise((resolve) => {
+        resolveAdd = resolve;
+      }),
+    );
+    thenCatalogueIs(
+      marimba,
+      withSlots(choir, choir.practiceTimes[0], { practiceTimeId: 'pt5', day: 'Thursday', startTime: '16:00:00' }),
+    );
+
+    (inPanel(el, 'day') as HTMLSelectElement).value = 'Thursday';
+    (inPanel(el, 'startTime') as HTMLInputElement).value = '16:00';
+    inPanel(el, 'addBtn').dispatchEvent(new MouseEvent('click'));
+    await flush();
+
+    expect(isBusy()).toBe(true);
+    expect((inPanel(el, 'addBtn') as HTMLButtonElement).disabled).toBe(true);
+
+    resolveAdd({ practiceTimeId: 'pt5', day: 'Thursday', startTime: '16:00:00' });
+    await flush();
+    await flush();
+
+    expect(isBusy()).toBe(false);
+    expect((inPanel(el, 'addBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('is ready again after the server refuses the slot', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Junior Choir');
+    vi.mocked(addPracticeTime).mockRejectedValue(new ExtraCurricularsError('Extra-curricular was not found.', 404));
+
+    await pressAdd(el, 'Thursday', '16:00');
+
+    expect(isBusy()).toBe(false);
+    expect((inPanel(el, 'addBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+});

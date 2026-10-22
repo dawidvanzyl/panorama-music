@@ -1,3 +1,6 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
+
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
@@ -43,21 +46,6 @@ styles.replaceSync(`
       border-color: transparent;
       box-shadow: 0 0 0 2px var(--pm-accent);
     }
-    .relationship-form__submit {
-      height: 44px;
-      padding: 0 24px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .relationship-form__submit:hover {
-      filter: brightness(1.1);
-    }
   `);
 
 const template = document.createElement('template');
@@ -69,7 +57,7 @@ template.innerHTML = `
         <label class="relationship-form__label" for="name">Name</label>
         <input class="relationship-form__input" type="text" id="name" required maxlength="50" />
       </div>
-      <button type="button" class="relationship-form__submit" id="saveBtn">Create Relationship</button>
+      <button type="button" class="form-btn form-btn--primary" id="saveBtn">Create Relationship</button>
     </div>
   </form>
 `;
@@ -82,7 +70,7 @@ export class PmRelationshipForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -100,10 +88,17 @@ export class PmRelationshipForm extends HTMLElement {
 
   reset(): void {
     this.form?.reset();
+    if (this.saveBtn) this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.saveBtn!, null, busy);
   }
 
   private handleSave = (): void => {
     if (!this.form!.reportValidity()) return;
+
+    this.setBusy(true);
 
     this.dispatchEvent(
       new CustomEvent('relationship-form-submitted', {
