@@ -465,8 +465,9 @@ export class WaitingListPage extends BasePage {
   /**
    * Dismisses the wizard however the current mode offers it: capture mode and
    * the tabs that write their own changes (Siblings, Guardians) carry a Cancel
-   * or Close in the shared footer, while the Waiting List tab in edit mode
-   * replaces the footer with its own Close. Same shape as
+   * in the shared footer, while the Waiting List tab in edit mode replaces the
+   * footer with its own Cancel (the button id is still `waitingListCloseBtn`).
+   * Same shape as
    * StudentsPage.closeWizard.
    */
   async closeWizard(): Promise<void> {
