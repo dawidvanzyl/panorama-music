@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
+import { WizardActionRows } from './WizardActionRows';
 
 export type Grade =
   | 'Grade1'
@@ -71,6 +72,37 @@ export class StudentsPage extends BasePage {
 
   async gotoStudents(): Promise<void> {
     await this.goto('/#/students');
+  }
+
+  /** The wizard's footer and step action rows. */
+  actionRows(): WizardActionRows {
+    return new WizardActionRows(this.wizardModal);
+  }
+
+  /** A wizard tab, addressed by its label. */
+  tab(name: 'Student' | 'Siblings' | 'Guardians' | 'Courses' | 'Extra-Curriculars'): Locator {
+    const ids = {
+      Student: '#tabStudent',
+      Siblings: '#tabSiblings',
+      Guardians: '#tabGuardians',
+      Courses: '#tabCourses',
+      'Extra-Curriculars': '#tabExtraCurriculars',
+    };
+    return this.wizardModal.locator(ids[name]);
+  }
+
+  /**
+   * Opens the create wizard with valid student fields and steps it to its last
+   * step, staging the first offered course on the way. Nothing is saved.
+   */
+  async reachLastCreateStep(input: StudentInput): Promise<void> {
+    await this.startCreatingStudent(input);
+    await this.goToNextStep(); // Student -> Siblings
+    await this.goToNextStep(); // Siblings -> Guardians
+    await this.goToNextStep(); // Guardians -> Courses
+    await this.enrollInCourse();
+    await this.goToNextStep(); // Courses -> Extra-Curriculars
+    await expect(this.tab('Extra-Curriculars')).toHaveClass(/wizard__tab--active/);
   }
 
   /** The wizard's own tab strip, restricted to the tabs currently offered (not `hidden`). */

@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import type { StudentInput } from './StudentsPage';
+import { WizardActionRows } from './WizardActionRows';
 
 export type OccurrenceLabel = 'During School' | 'After School';
 export type LessonLabel = 'Individual' | 'Group';
@@ -50,6 +51,11 @@ export class WaitingListPage extends BasePage {
     // `#deleteModal`.
     this.deleteModal = page.locator('pm-waiting-list-page #deleteModal');
     this.enrolModal = page.locator('pm-waiting-list-page #enrolModal');
+  }
+
+  /** The wizard's footer and step action rows. */
+  actionRows(): WizardActionRows {
+    return new WizardActionRows(this.wizardModal);
   }
 
   async gotoWaitingList(): Promise<void> {
