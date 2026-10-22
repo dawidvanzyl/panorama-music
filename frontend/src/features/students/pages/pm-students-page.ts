@@ -423,12 +423,15 @@ export class PmStudentsPage extends HTMLElement {
     this.clearError();
     try {
       await deleteStudent(studentId);
-      this._allStudents = this._allStudents.filter((s) => s.studentId !== studentId);
-      this._siblingCandidates = this._siblingCandidates.filter((s) => s.studentId !== studentId);
-      this.applyFilters();
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    this._allStudents = this._allStudents.filter((s) => s.studentId !== studentId);
+    this._siblingCandidates = this._siblingCandidates.filter((s) => s.studentId !== studentId);
+    this.applyFilters();
   };
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
@@ -587,12 +590,13 @@ export class PmStudentsPage extends HTMLElement {
       } else {
         await unlinkGuardian(studentId, guardianId);
       }
-      await this.refreshWizardGuardians(studentId);
     } catch (err) {
-      this.wizardModal!.showGuardiansError(
-        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
-      );
+      this.deleteGuardianModal!.setBusy(false);
+      this.deleteGuardianModal!.showError(err instanceof GuardiansError ? err.message : 'An unexpected error occurred');
+      return;
     }
+    this.deleteGuardianModal!.close();
+    await this.refreshWizardGuardians(studentId);
   };
 
   private handleGuardiansSyncRequested = async (event: Event): Promise<void> => {
@@ -682,17 +686,20 @@ export class PmStudentsPage extends HTMLElement {
       .detail;
     try {
       await withdrawEnrollment(studentId, studentCourseId);
-      await this.reloadRoster();
-      await this.refreshWizardEnrollments(studentId);
-      // Another row may have been open for editing when this withdrawal was
-      // confirmed; the refreshed list would otherwise re-seed it from server
-      // data and drop the selections made in it without saying so.
-      this.wizardModal!.closeEnrollmentForm();
     } catch (err) {
-      this.wizardModal!.showCoursesError(
+      this.withdrawEnrollmentModal!.setBusy(false);
+      this.withdrawEnrollmentModal!.showError(
         err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
       );
+      return;
     }
+    this.withdrawEnrollmentModal!.close();
+    await this.reloadRoster();
+    await this.refreshWizardEnrollments(studentId);
+    // Another row may have been open for editing when this withdrawal was
+    // confirmed; the refreshed list would otherwise re-seed it from server
+    // data and drop the selections made in it without saying so.
+    this.wizardModal!.closeEnrollmentForm();
   };
 
   private handleExtraCurricularsTabActivated = async (event: Event): Promise<void> => {
@@ -873,14 +880,17 @@ export class PmStudentsPage extends HTMLElement {
     this.studentsTable!.students = filterStudents(this._allStudents, this._currentFilters);
   }
 
-  private showError(err: unknown): void {
-    this.errorBanner!.textContent =
-      err instanceof StudentsError ||
+  private messageOf(err: unknown): string {
+    return err instanceof StudentsError ||
       err instanceof GuardiansError ||
       err instanceof EnrollmentsError ||
       err instanceof StudentExtraCurricularsError
-        ? err.message
-        : 'An unexpected error occurred';
+      ? err.message
+      : 'An unexpected error occurred';
+  }
+
+  private showError(err: unknown): void {
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('students-page__error--visible');
   }
 

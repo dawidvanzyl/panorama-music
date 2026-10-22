@@ -187,16 +187,22 @@ export class PmAdminSessionsPage extends HTMLElement {
     this.revokeAllBtn!.disabled = true;
     try {
       await revokeAllSessions();
+      this.revokeAllModal!.close();
       await this.loadSessions();
     } catch (err) {
-      this.showError(err);
+      this.revokeAllModal!.setBusy(false);
+      this.revokeAllModal!.showError(this.messageOf(err));
     } finally {
       this.revokeAllBtn!.disabled = false;
     }
   };
 
+  private messageOf(err: unknown): string {
+    return err instanceof SessionError ? err.message : 'An unexpected error occurred';
+  }
+
   private showError(err: unknown): void {
-    this.errorBanner!.textContent = err instanceof SessionError ? err.message : 'An unexpected error occurred';
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('admin-sessions-page__error--visible');
   }
 

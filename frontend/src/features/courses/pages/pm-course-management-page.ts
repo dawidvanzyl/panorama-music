@@ -188,13 +188,17 @@ export class PmCourseManagementPage extends HTMLElement {
 
     try {
       await deleteCourse(courseId);
-      // Dropped from the list rather than re-read, for the same reason a cost
-      // update is applied in place.
-      this.courses = this.courses.filter((course) => course.courseId !== courseId);
-      this.renderCourses();
     } catch (err) {
-      this.courseTable!.showRowError(courseId, this.messageFor(err));
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageFor(err));
+      return;
     }
+
+    this.deleteModal!.close();
+    // Dropped from the list rather than re-read, for the same reason a cost
+    // update is applied in place.
+    this.courses = this.courses.filter((course) => course.courseId !== courseId);
+    this.renderCourses();
   };
 
   private handleFilterChanged = (event: Event): void => {

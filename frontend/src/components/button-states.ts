@@ -13,11 +13,7 @@ function createLoadingIcon(): HTMLSpanElement {
  * Puts a confirm button and its dismiss button into, or out of, the loading state.
  * The label text of the confirm button is never touched.
  */
-export function setButtonsBusy(
-  confirm: HTMLButtonElement,
-  dismiss: HTMLButtonElement | null,
-  busy: boolean,
-): void {
+export function setButtonsBusy(confirm: HTMLButtonElement, dismiss: HTMLButtonElement | null, busy: boolean): void {
   confirm.disabled = busy;
   if (dismiss) {
     dismiss.disabled = busy;
@@ -39,9 +35,7 @@ export function setButtonsBusy(
  * label layout and the loading icon.
  */
 export function buttonStateRules(buttonSelector: string, pressVariantSelectors: string[]): string {
-  const press = pressVariantSelectors
-    .map((selector) => `${selector}:active:not(:disabled)`)
-    .join(',\n    ');
+  const press = pressVariantSelectors.map((selector) => `${selector}:active:not(:disabled)`).join(',\n    ');
   return `
     ${buttonSelector} {
       display: inline-flex;

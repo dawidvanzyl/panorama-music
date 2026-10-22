@@ -445,11 +445,14 @@ export class PmWaitingListPage extends HTMLElement {
     this.clearError();
     try {
       await removeWaitingListStudent(studentId);
-      await this.loadWaitingList();
-      this.showSuccess(`${name} and their waiting-list entry were removed.`);
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    await this.loadWaitingList();
+    this.showSuccess(`${name} and their waiting-list entry were removed.`);
   };
 
   private handleSiblingsTabActivated = async (event: Event): Promise<void> => {
@@ -552,12 +555,13 @@ export class PmWaitingListPage extends HTMLElement {
       } else {
         await unlinkGuardian(studentId, guardianId);
       }
-      await this.refreshWizardGuardians(studentId);
     } catch (err) {
-      this.wizardModal!.showGuardiansError(
-        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
-      );
+      this.deleteGuardianModal!.setBusy(false);
+      this.deleteGuardianModal!.showError(err instanceof GuardiansError ? err.message : 'An unexpected error occurred');
+      return;
     }
+    this.deleteGuardianModal!.close();
+    await this.refreshWizardGuardians(studentId);
   };
 
   private handleGuardiansSyncRequested = async (event: Event): Promise<void> => {
@@ -649,14 +653,17 @@ export class PmWaitingListPage extends HTMLElement {
     return merged;
   }
 
-  private showError(err: unknown): void {
-    this.errorBanner!.textContent =
-      err instanceof WaitingListError ||
+  private messageOf(err: unknown): string {
+    return err instanceof WaitingListError ||
       err instanceof StudentsError ||
       err instanceof GuardiansError ||
       err instanceof EnrollmentsError
-        ? err.message
-        : 'An unexpected error occurred';
+      ? err.message
+      : 'An unexpected error occurred';
+  }
+
+  private showError(err: unknown): void {
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('waiting-list-page__error--visible');
   }
 
