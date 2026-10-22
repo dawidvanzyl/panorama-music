@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import {
   NO_ACTIVITIES_ASSIGNED,
   PHASE_LABELS,
@@ -92,29 +94,8 @@ styles.replaceSync(`
       letter-spacing: 0.02em;
       color: var(--pm-text-muted);
     }
-    .ec-step__panel-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .form-actions {
       margin-top: 20px;
-    }
-    .ec-step__panel-btn {
-      height: 40px;
-      padding: 0 20px;
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .ec-step__panel-btn--cancel {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .ec-step__panel-btn--assign {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
     }
     .ec-step__table-wrap {
       flex: 1;
@@ -210,9 +191,9 @@ template.innerHTML = `
           </div>
         </div>
         <p class="ec-step__note" id="note"></p>
-        <div class="ec-step__panel-actions">
-          <button type="button" class="ec-step__panel-btn ec-step__panel-btn--cancel" id="cancelBtn">Cancel</button>
-          <button type="button" class="ec-step__panel-btn ec-step__panel-btn--assign" id="assignBtn">Assign</button>
+        <div class="form-actions" data-testid="form-actions">
+          <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+          <button type="button" class="form-btn form-btn--primary" id="assignBtn">Assign Activity</button>
         </div>
       </div>
     </div>
@@ -262,7 +243,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -398,6 +379,11 @@ export class PmExtraCurricularsStep extends HTMLElement {
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('ec-step__message--error');
+    this.setAssignBusy(false);
+  }
+
+  private setAssignBusy(busy: boolean): void {
+    setButtonsBusy(this.assignBtn!, this.cancelBtn!, busy);
   }
 
   clearError(): void {
@@ -407,6 +393,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
 
   /** Collapses the Add Activity panel (if open) and returns to the table. */
   closePanel(): void {
+    this.setAssignBusy(false);
     this.panel!.classList.remove('ec-step__panel--expanded');
     this.panel!.setAttribute('inert', '');
     this.addBtn!.hidden = false;
@@ -459,6 +446,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
       return;
     }
 
+    this.setAssignBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-assign-requested', {
         bubbles: true,
