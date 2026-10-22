@@ -232,7 +232,7 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
     expect(rowNamesOf(el)).toContain('Mother');
   });
 
-  it('surfaces the server rejection if a guardian is assigned after the check', async () => {
+  it('shows the server rejection in the confirmation if a guardian is assigned after the check', async () => {
     vi.mocked(deleteGuardianRelationship).mockRejectedValue(
       new GuardiansError("Guardian relationship 'Mother' is assigned to 2 guardian(s) and cannot be deleted.", 400),
     );
@@ -240,9 +240,25 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
     await confirmDeleteOf(el, mother);
     await flush();
 
-    expect(errorBannerOf(el).textContent).toContain('cannot be deleted');
+    expect(deleteModalOf(el).shadowRoot!.getElementById('error')!.textContent).toContain('cannot be deleted');
     expect(rowNamesOf(el)).toContain('Mother');
   });
+
+  it(
+    'keeps the confirmation open and restores its buttons when the delete is refused',
+    { tags: ['377UC2'] },
+    async () => {
+      vi.mocked(deleteGuardianRelationship).mockRejectedValue(new GuardiansError('Refused.', 400));
+
+      await confirmDeleteOf(el, mother);
+      await flush();
+
+      const modal = deleteModalOf(el);
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    },
+  );
 
   it('cancelling the confirmation modal deletes nothing', async () => {
     clickDeleteOn(el, father);
@@ -263,5 +279,15 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
 
     expect(deleteGuardianRelationship).toHaveBeenCalledWith('r2');
     expect(rowNamesOf(el)).toEqual(['Mother']);
+  });
+
+  it('closes the confirmation once the delete has succeeded', { tags: ['377UC2'] }, async () => {
+    vi.mocked(deleteGuardianRelationship).mockResolvedValue(undefined);
+    mockGetGuardianRelationships.mockResolvedValue([mother]);
+
+    await confirmDeleteOf(el, father);
+    await flush();
+
+    expect(deleteModalOf(el).hasAttribute('open')).toBe(false);
   });
 });

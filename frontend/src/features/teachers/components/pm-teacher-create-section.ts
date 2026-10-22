@@ -50,7 +50,7 @@ styles.replaceSync(`
     }
     .create-section__error {
       font-size: 12px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     /* Collapse while empty so the classification box, which has no error line
        of its own, still bottom-aligns with the two inputs beside it. */

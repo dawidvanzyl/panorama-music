@@ -48,7 +48,7 @@ styles.replaceSync(`
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .modal__error:empty {
       display: none;

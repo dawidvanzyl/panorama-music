@@ -19,6 +19,8 @@ const mockRemoveWaitingListStudent = vi.fn();
 const mockGetStudentById = vi.fn();
 const mockEnrolWaitingListStudent = vi.fn();
 const mockGetAssignableTeachers = vi.fn();
+const mockDeleteGuardian = vi.fn();
+const mockUnlinkGuardian = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
   const actual = await vi.importActual<typeof import('../../services/waiting-list')>('../../services/waiting-list');
@@ -60,6 +62,8 @@ vi.mock('../../services/guardians', async () => {
     getGuardianRelationships: () => mockGetGuardianRelationships(),
     getGuardians: (...args: unknown[]) => mockGetGuardians(...args),
     addGuardian: (...args: unknown[]) => mockAddGuardian(...args),
+    deleteGuardian: (...args: unknown[]) => mockDeleteGuardian(...args),
+    unlinkGuardian: (...args: unknown[]) => mockUnlinkGuardian(...args),
   };
 });
 
@@ -1107,3 +1111,71 @@ describe('pm-waiting-list-page — the candidate list follows the page', { tags:
     expect(mockGetSiblingCandidates).not.toHaveBeenCalled();
   });
 });
+
+describe(
+  'pm-waiting-list-page — confirmations close on success and report failures in the modal',
+  { tags: ['377UC2'] },
+  () => {
+    async function confirm(modalId: string, show: (modal: HTMLElement) => void): Promise<HTMLElement> {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValue(bothGroups);
+      const el = await mountPage();
+      const modal = el.shadowRoot!.getElementById(modalId)!;
+      show(modal);
+      (modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
+      await flush();
+      await flush();
+      return modal;
+    }
+
+    const showEntry = (modal: HTMLElement): void =>
+      (modal as unknown as { show(id: string, name: string): void }).show('s1', 'Amara Pillay');
+    const showGuardian = (modal: HTMLElement): void =>
+      (modal as unknown as { show(s: string, g: string, n: string, shared: boolean): void }).show(
+        's1',
+        'g1',
+        'Nomvula',
+        false,
+      );
+
+    it('removing an entry keeps the modal open with the message and restores the buttons on failure', async () => {
+      const { WaitingListError } = await import('../../services/waiting-list');
+      mockRemoveWaitingListStudent.mockRejectedValueOnce(new WaitingListError('Entry refused', 409));
+
+      const modal = await confirm('deleteModal', showEntry);
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Entry refused');
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('removing an entry closes the modal on success', async () => {
+      mockRemoveWaitingListStudent.mockResolvedValueOnce(undefined);
+
+      const modal = await confirm('deleteModal', showEntry);
+
+      expect(modal.hasAttribute('open')).toBe(false);
+    });
+
+    it('deleting a guardian keeps the modal open with the message and restores the buttons on failure', async () => {
+      const { GuardiansError } = await import('../../services/guardians');
+      mockUnlinkGuardian.mockRejectedValueOnce(new GuardiansError('Guardian refused', 409));
+
+      const modal = await confirm('deleteGuardianModal', showGuardian);
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Guardian refused');
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('deleting a guardian closes the modal on success', async () => {
+      mockUnlinkGuardian.mockResolvedValueOnce(undefined);
+
+      const modal = await confirm('deleteGuardianModal', showGuardian);
+
+      expect(modal.hasAttribute('open')).toBe(false);
+    });
+  },
+);

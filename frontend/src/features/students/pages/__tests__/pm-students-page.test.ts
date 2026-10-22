@@ -16,6 +16,7 @@ import {
   updateGuardian,
   unlinkGuardian,
   deleteGuardian,
+  GuardiansError,
   isGuardianShared,
   syncGuardians,
   getMissingSiblingGuardians,
@@ -77,6 +78,7 @@ import {
   enrollStudent,
   updateEnrollment,
   withdrawEnrollment,
+  EnrollmentsError,
   getEnrollableCourses,
   getAssignableTeachers,
   type AssignableTeacher,
@@ -2363,3 +2365,76 @@ describe('pm-students-page — the roster is read again after an enrollment writ
     expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1', 's3']);
   });
 });
+
+describe(
+  'pm-students-page — confirmations close on success and report failures in the modal',
+  { tags: ['377UC2'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    const confirmations: Array<
+      [string, string, string, () => ReturnType<typeof vi.fn>, () => Error, (m: HTMLElement) => void]
+    > = [
+      [
+        'delete student',
+        'deleteModal',
+        'deleteBtn',
+        () => vi.mocked(deleteStudent),
+        () => new StudentsError('Student refused', 409),
+        (m) => (m as unknown as PmDeleteStudentModal).show('s2', 'Julian Thorne'),
+      ],
+      [
+        'delete guardian',
+        'deleteGuardianModal',
+        'deleteBtn',
+        () => vi.mocked(unlinkGuardian),
+        () => new GuardiansError('Guardian refused', 409),
+        (m) => (m as unknown as PmDeleteGuardianModal).show('s1', 'g1', 'Nomvula', false),
+      ],
+      [
+        'withdraw enrollment',
+        'withdrawEnrollmentModal',
+        'withdrawBtn',
+        () => vi.mocked(withdrawEnrollment),
+        () => new EnrollmentsError('Withdraw refused', 409),
+        (m) => (m as unknown as PmWithdrawEnrollmentModal).show('s1', 'sc1', 'Alice', 'Piano'),
+      ],
+    ];
+
+    it.each(confirmations)(
+      '%s keeps its modal open with the message and restores the buttons on failure',
+      async (_n, modalId, buttonId, service, makeError, show) => {
+        service().mockRejectedValue(makeError());
+        const modal = el.shadowRoot!.getElementById(modalId)!;
+        show(modal);
+        modal.shadowRoot!.getElementById(buttonId)!.click();
+        await flush();
+
+        expect(modal.hasAttribute('open')).toBe(true);
+        expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe(makeError().message);
+        expect((modal.shadowRoot!.getElementById(buttonId) as HTMLButtonElement).disabled).toBe(false);
+        expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+      },
+    );
+
+    it.each(confirmations)(
+      '%s closes its modal on success',
+      async (_n, modalId, buttonId, _service, _makeError, show) => {
+        const modal = el.shadowRoot!.getElementById(modalId)!;
+        show(modal);
+        modal.shadowRoot!.getElementById(buttonId)!.click();
+        await flush();
+
+        expect(modal.hasAttribute('open')).toBe(false);
+      },
+    );
+  },
+);

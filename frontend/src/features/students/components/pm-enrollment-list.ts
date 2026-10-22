@@ -99,7 +99,7 @@ styles.replaceSync(`
     }
     .enrollment-list__btn--remove,
     .enrollment-list__btn--withdraw {
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .enrollment-list__btn--remove:hover:not(:disabled),
     .enrollment-list__btn--withdraw:hover:not(:disabled) {

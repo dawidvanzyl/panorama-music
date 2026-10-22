@@ -63,8 +63,8 @@ styles.replaceSync(`
       padding: 6px 12px;
       cursor: pointer;
       background: transparent;
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
     }
     .sessions-table__btn:hover {
       background: rgba(224, 82, 82, 0.1);

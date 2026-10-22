@@ -77,7 +77,7 @@ styles.replaceSync(`
     }
     .profile-section__classification-error {
       font-size: 12px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       min-height: 16px;
     }
     label {

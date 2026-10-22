@@ -597,6 +597,17 @@ describe('pm-course-management-page — deletes on confirmation', { tags: ['258U
     expect(rowTextsOf(el)).toHaveLength(1);
     expect(rowTextsOf(el)[0]).toContain('Theory');
   });
+
+  it('closes the confirmation once the delete has succeeded', { tags: ['377UC2'] }, async () => {
+    vi.mocked(deleteCourse).mockResolvedValue(undefined);
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+    await clickModalButton(el, 'deleteBtn');
+
+    expect((deleteModalOf(el) as unknown as HTMLElement).hasAttribute('open')).toBe(false);
+  });
 });
 
 describe('pm-course-management-page — leaves the course alone on cancel', { tags: ['258UC15'] }, () => {
@@ -622,7 +633,7 @@ describe('pm-course-management-page — reports a refused deletion against its r
 
   afterEach(() => document.body.removeChild(el));
 
-  it('shows the reason against the row and leaves the course listed', async () => {
+  it('shows the reason in the confirmation and leaves the course listed', async () => {
     vi.mocked(deleteCourse).mockRejectedValue(new CoursesError('Course c2 was not found.', 404));
     el = await mountPage();
 
@@ -630,7 +641,24 @@ describe('pm-course-management-page — reports a refused deletion against its r
     await flush();
     await clickModalButton(el, 'deleteBtn');
 
-    expect(rowErrorOf(el)).toContain('was not found');
+    const modal = deleteModalOf(el) as unknown as HTMLElement;
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Course c2 was not found.');
+    expect(rowErrorOf(el)).toBeNull();
     expect(rowTextsOf(el)).toHaveLength(2);
+  });
+
+  it('keeps the confirmation open and restores its buttons', { tags: ['377UC2'] }, async () => {
+    vi.mocked(deleteCourse).mockRejectedValue(new CoursesError('Course c2 was not found.', 404));
+    el = await mountPage();
+
+    clickRowAction(el, 1, 'Delete');
+    await flush();
+    await clickModalButton(el, 'deleteBtn');
+
+    const modal = deleteModalOf(el) as unknown as HTMLElement;
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect(modal.shadowRoot!.getElementById('deleteBtn')!.hasAttribute('aria-busy')).toBe(false);
   });
 });

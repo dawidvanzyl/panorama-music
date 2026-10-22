@@ -32,7 +32,7 @@ styles.replaceSync(`
     }
     .profile-form__error {
       font-size: 12px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     /* Collapse while empty so the inputs sit directly above the actions —
        reserving a blank error line would open a gap the design does not have. */

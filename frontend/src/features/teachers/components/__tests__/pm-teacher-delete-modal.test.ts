@@ -44,6 +44,6 @@ describe('pm-teacher-delete-modal — the confirmation states the removal is per
     (element.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
 
     expect(confirmed).toHaveBeenCalledTimes(1);
-    expect(element.hasAttribute('open')).toBe(false);
+    expect(element.hasAttribute('open')).toBe(true);
   });
 });

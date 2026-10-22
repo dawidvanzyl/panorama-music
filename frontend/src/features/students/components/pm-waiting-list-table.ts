@@ -134,8 +134,8 @@ styles.replaceSync(`
       color: var(--pm-accent);
     }
     .wl-table__btn--danger {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border-color: var(--pm-danger);
       color: #fff;
     }
     .wl-table__empty {

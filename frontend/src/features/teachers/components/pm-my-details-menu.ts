@@ -222,10 +222,13 @@ export class PmMyDetailsMenu extends HTMLElement {
     this.clearError();
     try {
       await deleteOwnBankingDetails();
-      this.applyTeacher({ ...this._teacher!, banking: null });
     } catch (err) {
-      this.showError(err);
+      this.bankingDeleteModal!.setBusy(false);
+      this.bankingDeleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.bankingDeleteModal!.close();
+    this.applyTeacher({ ...this._teacher!, banking: null });
   };
 
   /**

@@ -50,7 +50,7 @@ styles.replaceSync(`
     }
     .header__chip--deactivated {
       background: rgba(224, 82, 82, 0.15);
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     /* The classification chip carries the same two treatments the roster row
        uses, so a teacher reads the same in the list and on their record. */
@@ -106,8 +106,8 @@ styles.replaceSync(`
        an outlined red deactivate, an outlined green activate, and a filled red
        delete. Ending a record should read the same whichever record it is. */
     .header__btn--deactivate {
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
     }
     .header__btn--deactivate:hover {
       background: rgba(224, 82, 82, 0.1);
@@ -120,8 +120,8 @@ styles.replaceSync(`
       background: rgba(143, 212, 78, 0.1);
     }
     .header__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .header__btn--delete:hover {

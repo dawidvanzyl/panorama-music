@@ -127,14 +127,14 @@ describe('pm-deactivate-user-modal — deactivate confirmation', { tags: ['M1.1U
     vi.clearAllMocks();
   });
 
-  it('clicking Deactivate closes the modal and emits user-deactivate-confirmed for the page to act on', () => {
+  it('clicking Deactivate emits user-deactivate-confirmed and keeps the modal open for the page to close', () => {
     const events: CustomEvent[] = [];
     modal.addEventListener('user-deactivate-confirmed', (e) => events.push(e as CustomEvent));
 
     modal.show('user-id-1', 'teacher@test.com');
     modal.shadowRoot!.getElementById('deactivateBtn')!.click();
 
-    expect(modal.hasAttribute('open')).toBe(false);
+    expect(modal.hasAttribute('open')).toBe(true);
     expect(events).toHaveLength(1);
     expect(events[0].detail.userId).toBe('user-id-1');
   });

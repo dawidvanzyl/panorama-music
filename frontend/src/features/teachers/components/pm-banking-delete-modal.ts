@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__last4 {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -28,9 +21,10 @@ template.innerHTML = `
       <p class="modal__body">
         This action <strong>cannot be undone</strong>. The banking details ending <span class="modal__last4" id="modalLast4"></span> will be permanently removed.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
       </div>
     </div>
   </div>
@@ -61,23 +55,38 @@ export class PmBankingDeleteModal extends HTMLElement {
 
   show(accountNumberLast4: string): void {
     this.shadowRoot!.getElementById('modalLast4')!.textContent = accountNumberLast4;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
   close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleCancel = (): void => this.close();
 
   private handleDelete = (): void => {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('teacher-banking-delete-confirmed', {
         bubbles: true,
         composed: true,
       }),
     );
-    this.close();
   };
 }
 

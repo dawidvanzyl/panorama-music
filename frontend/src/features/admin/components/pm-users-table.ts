@@ -77,7 +77,7 @@ styles.replaceSync(`
     }
     .users-table__status--deactivated {
       background: rgba(224, 82, 82, 0.1);
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .users-table__btn {
       border-radius: var(--pm-radius);
@@ -95,8 +95,8 @@ styles.replaceSync(`
     }
     .users-table__btn--deactivate {
       background: transparent;
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
+      border: 1px solid var(--pm-danger);
+      color: var(--pm-danger);
     }
     .users-table__btn--deactivate:hover {
       background: rgba(224, 82, 82, 0.1);
@@ -110,8 +110,8 @@ styles.replaceSync(`
       background: rgba(143, 212, 78, 0.1);
     }
     .users-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border: 1px solid var(--pm-danger);
       color: #fff;
     }
     .users-table__btn--delete:hover {

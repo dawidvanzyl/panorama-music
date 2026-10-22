@@ -79,7 +79,7 @@ styles.replaceSync(`
       box-sizing: border-box;
       height: 44px;
       padding: 0 12px;
-      background: var(--pm-surface-alt, #22263a);
+      background: var(--pm-surface-2);
       border: 1px solid var(--pm-border);
       border-radius: var(--pm-radius);
       color: var(--pm-text);

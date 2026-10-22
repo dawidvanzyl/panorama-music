@@ -57,7 +57,7 @@ styles.replaceSync(`
     }
     .relationship-list__btn--delete {
       border: none;
-      background: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
       color: #fff;
     }
     .relationship-list__btn--delete:hover:not(:disabled) {

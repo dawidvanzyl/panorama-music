@@ -103,8 +103,8 @@ styles.replaceSync(`
       background: rgba(79, 124, 255, 0.1);
     }
     .course-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
+      background: var(--pm-danger);
+      border-color: var(--pm-danger);
       color: #fff;
     }
     .course-table__btn--save {

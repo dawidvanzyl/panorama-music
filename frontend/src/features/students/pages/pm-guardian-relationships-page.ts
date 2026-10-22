@@ -145,10 +145,13 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
 
     try {
       await deleteGuardianRelationship(guardianRelationshipId);
-      await this.loadRelationships();
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    await this.loadRelationships();
   };
 
   private loadRelationships = async (): Promise<void> => {
@@ -159,8 +162,12 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
     }
   };
 
+  private messageOf(err: unknown): string {
+    return err instanceof GuardiansError ? err.message : 'An unexpected error occurred';
+  }
+
   private showError(err: unknown): void {
-    this.showErrorMessage(err instanceof GuardiansError ? err.message : 'An unexpected error occurred');
+    this.showErrorMessage(this.messageOf(err));
   }
 
   private showErrorMessage(message: string): void {

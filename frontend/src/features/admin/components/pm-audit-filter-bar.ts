@@ -87,7 +87,7 @@ styles.replaceSync(`
       color: #fff;
     }
     .filter-bar__btn--apply:hover {
-      background: var(--pm-accent-hover);
+      background: var(--pm-accent-solid);
     }
   `);
 
