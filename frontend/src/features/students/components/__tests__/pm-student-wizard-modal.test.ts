@@ -1115,6 +1115,19 @@ describe('pm-student-wizard-modal — footer anatomy', { tags: ['379UC5'] }, () 
   });
 });
 
+describe('pm-student-wizard-modal — Cancel and Previous keep the secondary look', { tags: ['387UC4'] }, () => {
+  it('gives the footer, student step and waiting list dismiss buttons no warning variant', () => {
+    mountModal();
+    modal.openForCreate([]);
+
+    for (const id of ['cancelBtn', 'previousBtn', 'studentCancelBtn', 'waitingListCloseBtn']) {
+      const button = byId(id);
+      expect(button.classList.contains('form-btn--secondary'), id).toBe(true);
+      expect(button.classList.contains('form-btn--warning'), id).toBe(false);
+    }
+  });
+});
+
 describe('pm-student-wizard-modal — create confirm action loading state', { tags: ['379UC6'] }, () => {
   it('puts the enrolled create confirm action and Cancel into the loading state once', () => {
     openEnrolledCreateOnFinalStep();

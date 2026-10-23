@@ -34,6 +34,13 @@ compactButtonStyles.replaceSync(`
     .compact-btn--destructive:hover:not(:disabled) {
       background: var(--pm-danger-soft);
     }
+    .compact-btn--warning {
+      border-color: var(--pm-warning);
+      color: var(--pm-warning);
+    }
+    .compact-btn--warning:hover:not(:disabled) {
+      background: var(--pm-warning-soft);
+    }
     ${buttonStateRules('.compact-btn', ['.compact-btn--destructive'])}
     @media print {
       .compact-btn,

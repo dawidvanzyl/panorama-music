@@ -219,7 +219,7 @@ template.innerHTML = `
       </p>
       <div class="banking__error" id="formError"></div>
       <div class="form-actions" data-testid="form-actions">
-        <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+        <button type="button" class="form-btn form-btn--secondary form-btn--warning" id="cancelBtn">Cancel</button>
         <button type="submit" class="form-btn form-btn--primary" id="submitBtn">Save</button>
       </div>
     </form>

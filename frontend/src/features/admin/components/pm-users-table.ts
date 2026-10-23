@@ -373,7 +373,7 @@ export class PmUsersTable extends HTMLElement {
     actionsCell.appendChild(actions);
 
     if (isEditing) {
-      const cancelBtn = this.createActionButton('Cancel', 'users-table__btn--cancel');
+      const cancelBtn = this.createActionButton('Cancel', 'users-table__btn--cancel', 'warning');
       cancelBtn.addEventListener('click', () => this.handleCancel());
 
       const saveBtn = this.createActionButton('Save', 'users-table__btn--save');
@@ -388,7 +388,7 @@ export class PmUsersTable extends HTMLElement {
       const editBtn = this.createActionButton('Edit', 'users-table__btn--edit');
       editBtn.addEventListener('click', () => this.handleEdit(user));
 
-      const deactivateBtn = this.createActionButton('Deactivate', 'users-table__btn--deactivate');
+      const deactivateBtn = this.createActionButton('Deactivate', 'users-table__btn--deactivate', 'warning');
       deactivateBtn.addEventListener('click', () => this.handleDeactivate(user.userId, user.email));
 
       actions.append(editBtn, deactivateBtn);
@@ -396,7 +396,11 @@ export class PmUsersTable extends HTMLElement {
       const placeholder = this.createActionButton('Edit', 'users-table__btn--edit');
       placeholder.style.visibility = 'hidden';
 
-      const deactivatePlaceholder = this.createActionButton('Deactivate', 'users-table__btn--deactivate');
+      const deactivatePlaceholder = this.createActionButton(
+        'Deactivate',
+        'users-table__btn--deactivate',
+        'warning',
+      );
       deactivatePlaceholder.style.visibility = 'hidden';
 
       actions.append(placeholder, deactivatePlaceholder);
@@ -416,7 +420,7 @@ export class PmUsersTable extends HTMLElement {
       const reactivateBtn = this.createActionButton('Reactivate', 'users-table__btn--reactivate');
       reactivateBtn.addEventListener('click', () => this.handleActivate(user.userId));
 
-      const deleteBtn = this.createActionButton('Delete', 'users-table__btn--delete', true);
+      const deleteBtn = this.createActionButton('Delete', 'users-table__btn--delete', 'destructive');
       deleteBtn.addEventListener('click', () => this.handleDelete(user.userId, user.email));
 
       actions.append(reactivateBtn, deleteBtn);
@@ -426,11 +430,13 @@ export class PmUsersTable extends HTMLElement {
     return row;
   }
 
-  private createActionButton(label: string, hookClass: string, destructive = false): HTMLButtonElement {
+  private createActionButton(label: string, hookClass: string,
+    variant: 'default' | 'warning' | 'destructive' = 'default',
+  ): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.classList.add('compact-btn', hookClass);
-    if (destructive) button.classList.add('compact-btn--destructive');
+    if (variant !== 'default') button.classList.add(`compact-btn--${variant}`);
     button.textContent = label;
     return button;
   }
