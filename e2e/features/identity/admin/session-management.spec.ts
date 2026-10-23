@@ -97,7 +97,7 @@ test.describe('Global Session Management', () => {
   );
 
   test(
-    '"Revoke All (Global)" ends every other session but keeps the admin\'s own current session valid',
+    '"Revoke All" ends every other session but keeps the admin\'s own current session valid',
     { tag: '@M1.4IT7' },
     async ({ page, browser }) => {
       const email = uniqueTestEmail('revoke-all-global');
