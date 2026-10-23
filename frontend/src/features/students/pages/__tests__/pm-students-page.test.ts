@@ -663,7 +663,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     document.body.removeChild(el);
   });
 
-  it('submitting the Add Guardian form calls addGuardian and the new guardian appears in the list', async () => {
+  it('submitting the Create Guardian form calls addGuardian and the new guardian appears in the list', async () => {
     vi.mocked(getGuardians).mockReset();
     vi.mocked(getGuardians).mockResolvedValueOnce([]).mockResolvedValueOnce([nomvula]);
     vi.mocked(addGuardian).mockResolvedValue(nomvula);
@@ -724,7 +724,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
   });
 
-  it('expands the Add Guardian form under the button with the list still visible, and collapses on Cancel', async () => {
+  it('expands the Create Guardian form under the button with the list still visible, and collapses on Cancel', async () => {
     const wizard = wizardModalOf(el);
     wizard.openForEdit(alice);
     const wizardShadow = wizard.shadowRoot!;
@@ -809,7 +809,7 @@ describe('pm-students-page — edits a guardian from the Guardians tab', { tags:
     expect(addBtn.hidden).toBe(false);
   });
 
-  it('cancelling an inline edit discards the row changes and restores the Add Guardian button', async () => {
+  it('cancelling an inline edit discards the row changes and restores the Create Guardian button', async () => {
     vi.mocked(getGuardians).mockReset();
     vi.mocked(getGuardians).mockResolvedValue([nomvula]);
 
@@ -1746,7 +1746,7 @@ function extraCurricularRowsOf(wizard: PmStudentWizardModal): HTMLTableRowElemen
   return [...extraCurricularsStepShadowOf(wizard).querySelectorAll('tbody tr')] as HTMLTableRowElement[];
 }
 
-/** Opens the Add Activity panel, chooses an activity and presses Assign. */
+/** Opens the Assign Activity panel, chooses an activity and presses Assign. */
 async function assignViaPanel(wizard: PmStudentWizardModal, extraCurricularId: string): Promise<void> {
   const stepShadow = extraCurricularsStepShadowOf(wizard);
   (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
@@ -2029,7 +2029,7 @@ describe('pm-students-page — expanding a Private-grade row', { tags: ['344UC6'
   });
 });
 
-describe('pm-students-page — Add Activity asks for the right phases', { tags: ['344UC7', '344UC8'] }, () => {
+describe('pm-students-page — Assign Activity asks for the right phases', { tags: ['344UC7', '344UC8'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {

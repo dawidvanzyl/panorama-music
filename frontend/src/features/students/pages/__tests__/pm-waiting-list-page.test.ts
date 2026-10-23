@@ -364,7 +364,7 @@ describe('pm-waiting-list-page — a row shows no course type', { tags: ['292UC1
 });
 
 describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['292UC16'] }, () => {
-  it('shows no Capture Student button and a read-only marker instead of row actions', async () => {
+  it('shows no Create Waiting List Entry button and a read-only marker instead of row actions', async () => {
     mockHasAnyRole.mockReturnValue(false);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
@@ -378,14 +378,14 @@ describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['2
 });
 
 describe('pm-waiting-list-page — a Coordinator sees the full action set', { tags: ['292UC17'] }, () => {
-  it('shows the Capture Student button and the Enrol, Edit and Remove row actions', async () => {
+  it('shows the Create Waiting List Entry button and the Enrol, Edit and Remove row actions', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
     const el = await mountPage();
 
     expect(captureBtnOf(el).hidden).toBe(false);
-    expect(captureBtnOf(el).textContent).toContain('Capture Student');
+    expect(captureBtnOf(el).textContent).toContain('Create Waiting List Entry');
     const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
     const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
     expect(buttons).toEqual(['Enrol', 'Edit', 'Remove']);
@@ -1183,3 +1183,25 @@ describe(
     });
   },
 );
+
+describe('pm-waiting-list-page — the entry point', { tags: ['381UC10'] }, () => {
+  it('reads Create Waiting List Entry as a primary page button for a user who can capture', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(false);
+    expect(captureBtnOf(el).textContent!.trim()).toBe('Create Waiting List Entry');
+    expect(captureBtnOf(el).classList.contains('page-btn--primary')).toBe(true);
+  });
+
+  it('keeps the entry point hidden for a user who cannot capture', async () => {
+    mockHasAnyRole.mockReturnValue(false);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(true);
+  });
+});

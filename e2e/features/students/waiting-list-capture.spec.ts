@@ -184,7 +184,7 @@ test.describe('A captured waiting-list student is absent from the Students scree
 
 test.describe("A Teacher's capture attempt is refused", { tag: '@272IT29' }, () => {
   test('the request is refused as an authorisation failure and no student record is created', async ({ page }) => {
-    // The Waiting List page offers no Capture Student action to a Teacher at
+    // The Waiting List page offers no Create Waiting List Entry action to a Teacher at
     // all (272IT26), so the attempt is made the same way IT5 reaches its
     // boundary — a direct request from the signed-in session.
     const waitingListPage = await goToWaitingListPage(page, ['Teacher']);

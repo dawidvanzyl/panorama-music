@@ -13,7 +13,7 @@ export class AdminSessionsPage extends BasePage {
     super(page);
     this.heading = page.getByRole('heading', { name: 'User Sessions' });
     this.filterInput = page.locator('#filterInput');
-    this.revokeAllBtn = page.getByRole('button', { name: 'Revoke All (Global)' });
+    this.revokeAllBtn = page.getByRole('button', { name: 'Revoke All', exact: true });
     this.rows = page.locator('table tbody tr');
     this.revokeAllModalConfirmInput = page.locator('#revokeAllModal').locator('#confirmInput');
     this.revokeAllModalConfirmButton = page.locator('#revokeAllModal').locator('#revokeAllBtn');

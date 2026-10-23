@@ -1,4 +1,6 @@
 import { completeRegistration, AuthError } from '../../../services/auth';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { evaluatePasswordPolicy } from '../../../services/password-policy';
 import { PmPasswordStrengthIndicator } from '../../../components/pm-password-strength-indicator';
 
@@ -28,13 +30,6 @@ styles.replaceSync(`
       word-wrap: normal;
       direction: ltr;
       -webkit-font-smoothing: antialiased;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .registration__spinner {
-      animation: spin 0.7s linear infinite;
     }
 
     .registration__glow {
@@ -255,35 +250,7 @@ styles.replaceSync(`
 
     .registration__submit {
       width: 100%;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       margin-top: 20px;
-      border: none;
-      border-radius: 9999px;
-      background: var(--pm-accent);
-      color: #00297b;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 1.4;
-      letter-spacing: -0.01em;
-      cursor: pointer;
-      transition: all 0.15s;
-      box-shadow: var(--pm-shadow);
-    }
-    .registration__submit:hover {
-      filter: brightness(1.1);
-    }
-    .registration__submit:active {
-      transform: scale(0.98);
-    }
-    .registration__submit:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      transform: none;
-      filter: none;
     }
 
     .registration__footer {
@@ -354,10 +321,7 @@ template.innerHTML = `
           <span class="registration__success-text" id="successText">Account activated! Redirecting...</span>
         </div>
 
-        <button type="submit" class="registration__submit" id="submitBtn">
-          <span id="submitLabel">Complete Setup</span>
-          <span class="material-symbols-outlined registration__submit-icon">arrow_forward</span>
-        </button>
+        <button type="submit" class="form-btn form-btn--primary registration__submit" id="submitBtn">Complete Setup</button>
       </form>
     </div>
 
@@ -372,8 +336,7 @@ export class PmRegistrationPage extends HTMLElement {
   private passwordInput: HTMLInputElement | null = null;
   private confirmInput: HTMLInputElement | null = null;
   private submitBtn: HTMLButtonElement | null = null;
-  private submitLabel: HTMLElement | null = null;
-  private submitIcon: HTMLElement | null = null;
+  private _submitting = false;
   private errorBanner: HTMLElement | null = null;
   private errorText: HTMLElement | null = null;
   private successBanner: HTMLElement | null = null;
@@ -389,7 +352,7 @@ export class PmRegistrationPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -398,8 +361,6 @@ export class PmRegistrationPage extends HTMLElement {
     this.passwordInput = this.shadowRoot!.getElementById('password') as HTMLInputElement;
     this.confirmInput = this.shadowRoot!.getElementById('confirmPassword') as HTMLInputElement;
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
-    this.submitLabel = this.shadowRoot!.getElementById('submitLabel') as HTMLElement;
-    this.submitIcon = this.shadowRoot!.querySelector('.registration__submit-icon') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('errorMsg') as HTMLElement;
     this.errorText = this.shadowRoot!.getElementById('errorText') as HTMLElement;
     this.successBanner = this.shadowRoot!.getElementById('successMsg') as HTMLElement;
@@ -459,6 +420,7 @@ export class PmRegistrationPage extends HTMLElement {
 
   private handleSubmit = async (e: Event): Promise<void> => {
     e.preventDefault();
+    if (this._submitting) return;
     this.errorBanner!.classList.remove('registration__error-banner--visible');
     this.successBanner!.classList.remove('registration__success-banner--visible');
 
@@ -468,12 +430,8 @@ export class PmRegistrationPage extends HTMLElement {
       return;
     }
 
-    this.submitBtn!.disabled = true;
-    const originalLabel = this.submitLabel!.textContent;
-    const originalIcon = this.submitIcon!.textContent;
-    this.submitLabel!.textContent = 'Activating...';
-    this.submitIcon!.textContent = 'progress_activity';
-    this.submitIcon!.classList.add('registration__spinner');
+    this._submitting = true;
+    setButtonsBusy(this.submitBtn!, null, true);
 
     try {
       await completeRegistration(this.inviteToken!, this.passwordInput!.value);
@@ -492,10 +450,8 @@ export class PmRegistrationPage extends HTMLElement {
       }
       this.errorBanner!.classList.add('registration__error-banner--visible');
     } finally {
-      this.submitBtn!.disabled = false;
-      this.submitLabel!.textContent = originalLabel;
-      this.submitIcon!.textContent = originalIcon!;
-      this.submitIcon!.classList.remove('registration__spinner');
+      this._submitting = false;
+      setButtonsBusy(this.submitBtn!, null, false);
     }
   };
 }

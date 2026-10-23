@@ -95,7 +95,7 @@ describe('pm-admin-sessions-page — filter control', { tags: ['M1.4UC8'] }, () 
   });
 });
 
-describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { tags: ['M1.4UC9'] }, () => {
+describe('pm-admin-sessions-page — Revoke All confirmation modal', { tags: ['M1.4UC9'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -113,7 +113,7 @@ describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { 
     document.body.removeChild(el);
   });
 
-  it('clicking Revoke All (Global) opens the custom modal instead of calling the API directly', () => {
+  it('clicking Revoke All opens the custom modal instead of calling the API directly', () => {
     const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
 
@@ -172,5 +172,35 @@ describe('pm-admin-sessions-page — Revoke All failure', { tags: ['377UC2'] }, 
     expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Revocation refused');
     expect((modal.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement).disabled).toBe(false);
     expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe('pm-admin-sessions-page — the global revoke button', { tags: ['381UC12'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockResolvedValue(sessions);
+    el = document.createElement('pm-admin-sessions-page');
+    document.body.appendChild(el);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('reads Revoke All as a destructive page button and opens the modal on click', () => {
+    const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
+    const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
+
+    expect(revokeAllBtn.textContent!.trim()).toBe('Revoke All');
+    expect(revokeAllBtn.classList.contains('page-btn')).toBe(true);
+    expect(revokeAllBtn.classList.contains('page-btn--destructive')).toBe(true);
+
+    revokeAllBtn.click();
+
+    expect(modal.hasAttribute('open')).toBe(true);
   });
 });

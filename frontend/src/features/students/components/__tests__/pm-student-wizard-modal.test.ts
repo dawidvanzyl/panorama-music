@@ -195,7 +195,7 @@ describe('pm-student-wizard-modal — Extra-Curriculars is the create wizard fin
     expect(byId('stepCourses').classList.contains('wizard__step--visible')).toBe(true);
   });
 
-  it("asks for the activities of the student's own phase when Add Activity is chosen", () => {
+  it("asks for the activities of the student's own phase when Assign Activity is chosen", () => {
     mountModal();
     modal.openForCreate([]);
     fillStudentStep();
@@ -385,7 +385,7 @@ describe('pm-student-wizard-modal — a Private-grade student in edit mode', { t
     expect(byId('stepExtraCurriculars').classList.contains('wizard__step--visible')).toBe(true);
   });
 
-  it('asks for the activities of every phase when Add Activity is chosen', () => {
+  it('asks for the activities of every phase when Assign Activity is chosen', () => {
     mountModal();
     modal.openForEdit({ ...alice, grade: 'Private', class: null, phase: null });
     byId<HTMLButtonElement>('tabExtraCurriculars').click();

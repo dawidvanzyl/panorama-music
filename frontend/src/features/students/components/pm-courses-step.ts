@@ -1,3 +1,4 @@
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import './pm-enrollment-form';
 import './pm-enrollment-list';
 import type {
@@ -37,21 +38,6 @@ styles.replaceSync(`
       flex-shrink: 0;
       gap: 12px;
       justify-content: flex-end;
-    }
-    .courses-step__btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .courses-step__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
     }
     .courses-step__form-panel {
       flex-shrink: 0;
@@ -93,7 +79,7 @@ template.innerHTML = `
   <div class="courses-step__section" id="section">
     <div class="courses-step__message" id="message"></div>
     <div class="courses-step__toolbar" id="listToolbar">
-      <button type="button" class="courses-step__btn" id="enrollBtn">Enroll in Course</button>
+      <button type="button" class="page-btn page-btn--primary" id="enrollBtn">Enrol Student</button>
     </div>
     <div class="courses-step__form-panel" id="formPanel">
       <pm-enrollment-form id="enrollmentForm"></pm-enrollment-form>
@@ -122,7 +108,7 @@ export class PmCoursesStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

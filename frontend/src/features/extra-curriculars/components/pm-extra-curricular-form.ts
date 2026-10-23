@@ -11,6 +11,7 @@ import {
 } from '../services/extra-curricular-display';
 import { setButtonsBusy } from '../../../components/button-states';
 import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { appendOptions } from '../../../components/select-options';
 import type { DayType, PhaseType, PracticeTimeInput } from '../services/extra-curriculars';
 
@@ -87,21 +88,6 @@ styles.replaceSync(`
       grid-template-columns: 1fr 1fr auto;
       gap: 20px;
       align-items: end;
-    }
-    .ec-form__add {
-      height: 44px;
-      padding: 0 20px;
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      border-radius: var(--pm-radius);
-      color: var(--pm-accent);
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .ec-form__add:hover {
-      background: rgba(79, 124, 255, 0.1);
     }
     .ec-form__chips {
       display: flex;
@@ -192,7 +178,7 @@ template.innerHTML = `
         <label class="ec-form__label" for="startTime">Start Time</label>
         <input class="ec-form__input" type="time" id="startTime" />
       </div>
-      <button type="button" class="ec-form__add" id="addBtn">Add Practice Time</button>
+      <button type="button" class="page-btn page-btn--secondary" id="addBtn">Create Practice Time</button>
     </div>
 
     <div class="ec-form__chips" id="chips"></div>
@@ -221,7 +207,7 @@ export class PmExtraCurricularForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

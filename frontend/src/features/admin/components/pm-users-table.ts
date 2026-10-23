@@ -9,6 +9,7 @@ import {
 } from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
 import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
@@ -88,25 +89,7 @@ styles.replaceSync(`
       margin-bottom: 16px;
     }
     .users-table__filter-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 12px;
-      border: 1px solid var(--pm-border);
-      border-radius: 9999px;
-      background: transparent;
-      color: var(--pm-text-muted);
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
       position: relative;
-    }
-    .users-table__filter-btn:hover {
-      background: var(--pm-surface-2);
-    }
-    .users-table__filter-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 16px;
     }
     .users-table__dropdown {
       display: none;
@@ -227,9 +210,8 @@ template.innerHTML = `
     <div class="users-table__header">
       <h2 class="users-table__title">User Directory</h2>
       <div class="users-table__filter-wrap">
-        <button type="button" class="users-table__filter-btn" id="filterBtn">
+        <button type="button" class="page-btn page-btn--secondary users-table__filter-btn" id="filterBtn">
           <span id="filterLabel">Status</span>
-          <span class="users-table__filter-icon">expand_more</span>
         </button>
         <div class="users-table__dropdown" id="filterDropdown">
           <button type="button" class="users-table__dropdown-item users-table__dropdown-item--active" data-value="all">All</button>
@@ -277,7 +259,7 @@ export class PmUsersTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

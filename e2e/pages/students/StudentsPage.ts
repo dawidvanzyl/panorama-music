@@ -683,7 +683,7 @@ export class StudentsPage extends BasePage {
     };
   }
 
-  /** Opens the Add Guardian form without filling or submitting it. */
+  /** Opens the Create Guardian form without filling or submitting it. */
   async openAddGuardianForm(): Promise<void> {
     await this.wizardModal.locator('#guardiansStep').locator('#addBtn').click();
   }
@@ -696,7 +696,7 @@ export class StudentsPage extends BasePage {
       .locator('#relationship');
   }
 
-  /** Dismisses the Add Guardian form without creating a guardian. */
+  /** Dismisses the Create Guardian form without creating a guardian. */
   async cancelGuardianForm(): Promise<void> {
     await this.wizardModal
       .locator('#guardiansStep')
@@ -734,7 +734,7 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * Opens the Add Activity panel. Waits first for any previous panel to have
+   * Opens the Assign Activity panel. Waits first for any previous panel to have
    * fully collapsed (its 220ms CSS transition settled, not merely its class
    * toggled) — clicking `#addBtn` while that transition is still in flight
    * can leave Playwright's own actionability check treating the button as
@@ -767,7 +767,7 @@ export class StudentsPage extends BasePage {
   }
 
   /**
-   * The Add Activity panel's picker. Options read `{description} ({phase})` —
+   * The Assign Activity panel's picker. Options read `{description} ({phase})` —
    * a student is assigned to an activity, never to one of its practice
    * times, so no slot is named.
    */
@@ -786,13 +786,13 @@ export class StudentsPage extends BasePage {
     return texts.map((text) => text.trim());
   }
 
-  /** Any control or label in the Add Activity panel named "Phase". */
+  /** Any control or label in the Assign Activity panel named "Phase". */
   activityPanelPhaseControl(): Locator {
     return this.extraCurricularsStep().locator('#panel').getByLabel('Phase', { exact: true });
   }
 
   /**
-   * Opens the Add Activity panel, chooses the activity by its picker option
+   * Opens the Assign Activity panel, chooses the activity by its picker option
    * label, and presses Assign. In edit mode this writes immediately; in
    * create mode it stages the activity in the wizard's memory. Always opens
    * the panel itself rather than checking whether one is already open — the
