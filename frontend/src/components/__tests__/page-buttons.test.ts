@@ -209,7 +209,7 @@ const hosts: HostCase[] = [
       ['#clearBtn', 'secondary'],
       ['#applyBtn', 'primary'],
     ],
-    deletedClasses: ['filter-bar__btn', 'filter-bar__actions'],
+    deletedClasses: ['filter-bar__btn'],
   },
   {
     tag: 'pm-audit-event-table',

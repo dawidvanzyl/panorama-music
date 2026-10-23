@@ -62,6 +62,9 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
+    .filter-bar__actions {
+      margin-left: auto;
+    }
   `);
 
 const template = document.createElement('template');
@@ -85,7 +88,7 @@ template.innerHTML = `
       <label class="filter-bar__label" for="to">To</label>
       <input type="date" id="to" class="filter-bar__input" />
     </div>
-    <div class="page-actions">
+    <div class="page-actions filter-bar__actions">
       <button type="button" class="page-btn page-btn--secondary" id="clearBtn">Clear</button>
       <button type="button" class="page-btn page-btn--primary" id="applyBtn">Apply</button>
     </div>
