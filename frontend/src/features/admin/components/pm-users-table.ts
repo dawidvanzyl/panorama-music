@@ -269,6 +269,9 @@ export class PmUsersTable extends HTMLElement {
   private _editingUserId: string | null = null;
   private _rolesDraft: UserRole[] = [];
   private _savingUserIds = new Set<string>();
+  private _regeneratingUserIds = new Set<string>();
+  private _regenerateErrors = new Map<string, string>();
+  private _rowErrors = new Map<string, string>();
   private _statusFilter: 'all' | 'active' | 'pending' = 'all';
 
   constructor() {
@@ -300,6 +303,8 @@ export class PmUsersTable extends HTMLElement {
   set users(value: GetUserResult[]) {
     this._users = value;
     this._editingUserId = null;
+    this._rowErrors.clear();
+    this._regenerateErrors.clear();
     this.render();
   }
 
@@ -322,6 +327,8 @@ export class PmUsersTable extends HTMLElement {
 
     for (const user of visible) {
       const isEditing = this._editingUserId === user.userId;
+      const rowError = this._rowErrors.get(user.userId);
+      if (rowError !== undefined) this.rowsBody.appendChild(this.buildErrorRow(user.userId, rowError));
       const row = this.buildRow(user, isEditing);
       this.rowsBody.appendChild(row);
     }
@@ -413,8 +420,16 @@ export class PmUsersTable extends HTMLElement {
       actions.append(placeholder, deactivatePlaceholder);
     } else if (!user.isActive && !user.hasCompletedRegistration) {
       const regenerateBtn = this.createActionButton('Regenerate', 'users-table__regenerate');
-      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
+      regenerateBtn.disabled = this._regeneratingUserIds.has(user.userId);
+      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId));
       actions.appendChild(regenerateBtn);
+      const regenerateError = this._regenerateErrors.get(user.userId);
+      if (regenerateError !== undefined) {
+        const error = document.createElement('span');
+        error.classList.add('users-table__error');
+        error.textContent = regenerateError;
+        actionsCell.appendChild(error);
+      }
     } else {
       const reactivateBtn = this.createActionButton('Reactivate', 'users-table__btn--reactivate');
       reactivateBtn.addEventListener('click', () => this.handleActivate(user.userId));
@@ -524,13 +539,8 @@ export class PmUsersTable extends HTMLElement {
     this.render();
   }
 
-  private findUserRow(userId: string): HTMLTableRowElement | null {
-    const rows = this.rowsBody?.querySelectorAll<HTMLTableRowElement>('tr[data-user-id]') ?? [];
-    return Array.from(rows).find((row) => row.dataset.userId === userId) ?? null;
-  }
-
   private handleSave = async (userId: string): Promise<void> => {
-    this.clearRowError(userId);
+    this._rowErrors.delete(userId);
 
     if (this._rolesDraft.length === 0) {
       this.showRowError(userId, 'At least one role must be selected.');
@@ -558,21 +568,20 @@ export class PmUsersTable extends HTMLElement {
       if (this._editingUserId === userId) {
         this._rolesDraft = [...(this._users.find((u) => u.userId === userId)?.roles ?? [])] as UserRole[];
       }
-      this.render();
       this.showRowError(userId, err instanceof AdminError ? err.message : 'An unexpected error occurred');
     }
   };
 
+  private showRowError(userId: string, message: string): void {
+    this._rowErrors.set(userId, message);
+    this.render();
+  }
+
   /**
-   * Inserts the banner as its own row above the user it concerns, spanning
+   * Builds the banner as its own row above the user it concerns, spanning
    * every column, and dismissible so it need not sit there until the next save.
    */
-  private showRowError(userId: string, message: string): void {
-    const userRow = this.findUserRow(userId);
-    if (!userRow) return;
-
-    this.clearRowError(userId);
-
+  private buildErrorRow(userId: string, message: string): HTMLTableRowElement {
     const errorRow = document.createElement('tr');
     errorRow.classList.add('users-table__error-row');
 
@@ -591,27 +600,22 @@ export class PmUsersTable extends HTMLElement {
     dismissBtn.classList.add('users-table__row-error-dismiss');
     dismissBtn.textContent = 'close';
     dismissBtn.setAttribute('aria-label', 'Dismiss error');
-    dismissBtn.addEventListener('click', () => errorRow.remove());
+    dismissBtn.addEventListener('click', () => {
+      this._rowErrors.delete(userId);
+      errorRow.remove();
+    });
 
     banner.append(messageText, dismissBtn);
     errorCell.appendChild(banner);
     errorRow.appendChild(errorCell);
-    userRow.parentElement?.insertBefore(errorRow, userRow);
+    return errorRow;
   }
 
-  private clearRowError(userId: string): void {
-    const previous = this.findUserRow(userId)?.previousElementSibling;
-
-    if (previous?.classList.contains('users-table__error-row')) previous.remove();
-  }
-
-  private handleRegenerate = async (
-    userId: string,
-    actionsCell: HTMLElement,
-    button: HTMLButtonElement,
-  ): Promise<void> => {
-    button.disabled = true;
-    actionsCell.querySelector('.users-table__error')?.remove();
+  private handleRegenerate = async (userId: string): Promise<void> => {
+    if (this._regeneratingUserIds.has(userId)) return;
+    this._regenerateErrors.delete(userId);
+    this._regeneratingUserIds.add(userId);
+    this.render();
 
     try {
       const result = await regenerateInvite(userId);
@@ -623,12 +627,10 @@ export class PmUsersTable extends HTMLElement {
         }),
       );
     } catch (err) {
-      const error = document.createElement('span');
-      error.classList.add('users-table__error');
-      error.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
-      actionsCell.appendChild(error);
+      this._regenerateErrors.set(userId, err instanceof AdminError ? err.message : 'An unexpected error occurred');
     } finally {
-      button.disabled = false;
+      this._regeneratingUserIds.delete(userId);
+      this.render();
     }
   };
 }

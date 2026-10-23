@@ -25,6 +25,7 @@ import type { PmSiblingList } from '../../features/students/components/pm-siblin
 import type { PmBankingSection } from '../../features/teachers/components/pm-banking-section';
 
 const mockUpdateUserRoles = vi.fn();
+const mockRegenerateInvite = vi.fn();
 vi.mock('../../features/admin/services/admin', async () => {
   const actual = await vi.importActual<typeof import('../../features/admin/services/admin')>(
     '../../features/admin/services/admin',
@@ -32,6 +33,7 @@ vi.mock('../../features/admin/services/admin', async () => {
   return {
     ...actual,
     updateUserRoles: (userId: string, roles: string[]) => mockUpdateUserRoles(userId, roles),
+    regenerateInvite: (userId: string) => mockRegenerateInvite(userId),
   };
 });
 
@@ -1155,5 +1157,81 @@ describe('tables and lists adopt the compact stylesheet and label the Actions co
 
   beforeEach(() => {
     mockUpdateUserRoles.mockReset();
+  });
+});
+
+describe('users table keeps in-flight state per user across re-renders', () => {
+  function deferred(): { promise: Promise<unknown>; resolve: (v: unknown) => void; reject: (e: unknown) => void } {
+    let resolve: (v: unknown) => void = () => undefined;
+    let reject: (e: unknown) => void = () => undefined;
+    const promise = new Promise<unknown>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  const pendingUser = (): GetUserResult =>
+    user({ userId: 'u2', email: 'pending@test.com', isActive: false, hasCompletedRegistration: false });
+
+  function regenerateButton(root: ShadowRoot): HTMLButtonElement {
+    return buttonNamed(root.querySelector('tr[data-user-id="u2"]')!, 'Regenerate');
+  }
+
+  it(
+    'keeps Regenerate disabled and shows its failure when another row saves and fails',
+    { tags: ['380UC13'] },
+    async () => {
+      mockUpdateUserRoles.mockReset();
+      mockRegenerateInvite.mockReset();
+      const save = deferred();
+      const regenerate = deferred();
+      mockUpdateUserRoles.mockReturnValue(save.promise);
+      mockRegenerateInvite.mockReturnValue(regenerate.promise);
+      const table = mount<PmUsersTable>('pm-users-table');
+      table.users = [user(), pendingUser()];
+      const root = table.shadowRoot!;
+
+      buttonNamed(root.querySelector('tr[data-user-id="u1"]')!, 'Edit').click();
+      buttonNamed(root, 'Save').click();
+      regenerateButton(root).click();
+      expect(regenerateButton(root).disabled).toBe(true);
+
+      save.reject(new AdminError('Refused.', 400));
+      await tick();
+      expect(regenerateButton(root).disabled).toBe(true);
+      regenerateButton(root).click();
+      expect(mockRegenerateInvite).toHaveBeenCalledTimes(1);
+
+      regenerate.reject(new AdminError('Invite failed.', 500));
+      await tick();
+
+      expect(regenerateButton(root).disabled).toBe(false);
+      expect(root.querySelector('tr[data-user-id="u2"] .users-table__error')!.textContent).toBe('Invite failed.');
+    },
+  );
+
+  it('keeps a role error on screen when another row regenerates', { tags: ['380UC14'] }, async () => {
+    mockUpdateUserRoles.mockReset();
+    mockRegenerateInvite.mockReset();
+    const regenerate = deferred();
+    mockUpdateUserRoles.mockRejectedValue(new AdminError('Refused.', 400));
+    mockRegenerateInvite.mockReturnValue(regenerate.promise);
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user(), pendingUser()];
+    const root = table.shadowRoot!;
+
+    buttonNamed(root.querySelector('tr[data-user-id="u1"]')!, 'Edit').click();
+    buttonNamed(root, 'Save').click();
+    await tick();
+    expect(root.querySelector('.users-table__error-row')).not.toBeNull();
+
+    regenerateButton(root).click();
+    expect(root.querySelector('.users-table__error-row')!.textContent).toContain('Refused.');
+    regenerate.resolve({ inviteUrl: 'https://example.test/invite' });
+    await tick();
+
+    expect(root.querySelector('.users-table__error-row')!.textContent).toContain('Refused.');
+    expect(regenerateButton(root).disabled).toBe(false);
   });
 });
