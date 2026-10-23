@@ -396,11 +396,7 @@ export class PmUsersTable extends HTMLElement {
       const placeholder = this.createActionButton('Edit', 'users-table__btn--edit');
       placeholder.style.visibility = 'hidden';
 
-      const deactivatePlaceholder = this.createActionButton(
-        'Deactivate',
-        'users-table__btn--deactivate',
-        'warning',
-      );
+      const deactivatePlaceholder = this.createActionButton('Deactivate', 'users-table__btn--deactivate', 'warning');
       deactivatePlaceholder.style.visibility = 'hidden';
 
       actions.append(placeholder, deactivatePlaceholder);
@@ -430,7 +426,9 @@ export class PmUsersTable extends HTMLElement {
     return row;
   }
 
-  private createActionButton(label: string, hookClass: string,
+  private createActionButton(
+    label: string,
+    hookClass: string,
     variant: 'default' | 'warning' | 'destructive' = 'default',
   ): HTMLButtonElement {
     const button = document.createElement('button');
