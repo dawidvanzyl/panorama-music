@@ -7,7 +7,9 @@ import { ReportBuilderPage } from '../../pages/reports/ReportBuilderPage';
 async function openNewReport(page: import('@playwright/test').Page): Promise<ReportBuilderPage> {
   await goToReportsPage(page);
   const builder = new ReportBuilderPage(page);
+  const fieldsLoaded = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/reports/fields');
   await builder.gotoNewReport();
+  await fieldsLoaded;
   await expect(builder.filtersEmptyMessage).toBeVisible();
   return builder;
 }

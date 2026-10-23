@@ -34,10 +34,8 @@ test.describe(
 
     test('it still opens the form', async ({ page }) => {
       const detailPage = await openNewTeacher(page, await goToTeachersPageAsBankingCoordinator(page));
-      const entryPoint = detailPage.bankingSection.getByRole('button', {
-        name: 'Create Banking Details',
-        exact: true,
-      });
+      const entryPoint = detailPage.bankingAddButton;
+      await expect(entryPoint).toHaveAccessibleName('Create Banking Details');
 
       await entryPoint.click();
 

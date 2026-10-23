@@ -15,7 +15,7 @@ test.describe(
 
       await entryPoint.click();
 
-      await expect(waitingListPage.wizardModal).toBeVisible();
+      await expect(waitingListPage.wizardModal).toHaveAttribute('open', '');
     });
 
     test('a Teacher is not offered it', async ({ page }) => {

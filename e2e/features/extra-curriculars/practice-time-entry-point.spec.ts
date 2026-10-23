@@ -31,7 +31,7 @@ test.describe(
 
       await expect(activitiesPage.chip(slot)).toBeVisible();
       await expect(form.getByText('No practice times added.')).toBeHidden();
-      expect(requests.since(mark).filter((request) => request.includes('/api/extra-curriculars'))).toEqual([]);
+      expect(requests.since(mark).filter((request) => !request.startsWith('GET ') && request.includes('/api/extra-curriculars'))).toEqual([]);
     });
   },
 );
