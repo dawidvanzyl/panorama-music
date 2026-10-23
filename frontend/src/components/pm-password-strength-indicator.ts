@@ -37,7 +37,7 @@ styles.replaceSync(`
 
     .strength-rule__icon {
       font-size: 16px;
-      color: var(--pm-text-muted, #8d90a0);
+      color: var(--pm-text-muted);
       transition: color 0.15s;
     }
 
@@ -52,7 +52,7 @@ styles.replaceSync(`
       font-weight: 400;
       line-height: 1.2;
       letter-spacing: 0.02em;
-      color: var(--pm-text-muted, #8d90a0);
+      color: var(--pm-text-muted);
       transition: color 0.15s;
     }
 

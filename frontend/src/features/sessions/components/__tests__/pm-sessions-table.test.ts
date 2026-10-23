@@ -34,7 +34,7 @@ describe('pm-sessions-table — current session distinguishability', { tags: ['M
     document.body.removeChild(el);
   });
 
-  it('marks the current session row distinctly and disables its Revoke button', () => {
+  it('marks the current session row distinctly and offers no Revoke button on it', () => {
     el.sessions = [currentSession, otherSession];
 
     const rows = el.shadowRoot!.querySelectorAll('tbody tr');
@@ -42,7 +42,7 @@ describe('pm-sessions-table — current session distinguishability', { tags: ['M
 
     const currentRow = [...rows].find((r) => r.classList.contains('sessions-table__row--current'))!;
     expect(currentRow.textContent).toContain('Current Session');
-    expect(currentRow.querySelector('button')!.disabled).toBe(true);
+    expect(currentRow.querySelector('button')).toBeNull();
 
     const otherRow = [...rows].find((r) => !r.classList.contains('sessions-table__row--current'))!;
     expect(otherRow.textContent).not.toContain('Current Session');

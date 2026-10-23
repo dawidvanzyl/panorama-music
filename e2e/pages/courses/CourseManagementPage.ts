@@ -91,7 +91,7 @@ export class CourseManagementPage extends BasePage {
   }
 
   async startCostEdit(row: Locator): Promise<void> {
-    await row.getByRole('button', { name: 'Edit Cost' }).click();
+    await row.getByRole('button', { name: 'Edit', exact: true }).click();
   }
 
   /**
@@ -121,5 +121,28 @@ export class CourseManagementPage extends BasePage {
 
   async cancelDelete(): Promise<void> {
     await this.deleteModal.locator('#cancelBtn').click();
+  }
+
+  /** The delete modal's action row, holding Cancel and the confirm action. */
+  modalActions(): Locator {
+    return this.deleteModal.getByTestId('modal-actions');
+  }
+
+  /** The line a failed confirmation writes its message to, inside the modal. */
+  modalError(): Locator {
+    return this.deleteModal.getByTestId('modal-error');
+  }
+
+  modalConfirmButton(): Locator {
+    return this.deleteModal.getByRole('button', { name: 'Delete', exact: true });
+  }
+
+  modalCancelButton(): Locator {
+    return this.deleteModal.getByRole('button', { name: 'Cancel', exact: true });
+  }
+
+  /** The spinner a busy button shows before its label; hidden from the accessible name. */
+  loadingIcon(button: Locator): Locator {
+    return button.getByTestId('button-loading-icon');
   }
 }

@@ -1,6 +1,7 @@
 import './pm-teacher-profile-form';
 import './pm-banking-section';
 import './pm-linked-account-badge';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import type { PmBankingSection } from './pm-banking-section';
 import type { PmLinkedAccountBadge } from './pm-linked-account-badge';
@@ -51,16 +52,6 @@ styles.replaceSync(`
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--pm-text);
-    }
-    .my-details__edit-btn {
-      border: 1px solid var(--pm-accent);
-      background: transparent;
-      color: var(--pm-accent);
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 6px 16px;
-      cursor: pointer;
     }
     .my-details__read-grid {
       display: grid;
@@ -121,7 +112,7 @@ template.innerHTML = `
 
       <div class="my-details__section-header">
         <h3 class="my-details__section-title">Profile</h3>
-        <button type="button" class="my-details__edit-btn" id="editBtn">Edit</button>
+        <button type="button" class="compact-btn my-details__edit-btn" id="editBtn">Edit</button>
       </div>
       <div class="my-details__read-grid" id="readView">
         <div class="my-details__field">
@@ -174,7 +165,7 @@ export class PmMyDetailsModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -230,6 +221,7 @@ export class PmMyDetailsModal extends HTMLElement {
     if (!this.readView) return;
     this.readView.hidden = false;
     this.editForm!.hidden = true;
+    this.editForm!.setBusy(false);
     this.editBtn!.hidden = false;
   }
 

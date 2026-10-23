@@ -1,5 +1,6 @@
 import { formatLastRun } from '../services/report-date-format';
 import type { SavedReportSummary } from '../models/report';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -41,40 +42,6 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       width: 200px;
     }
-    .saved-reports-table__actions-wrap {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-    }
-    .saved-reports-table__run,
-    .saved-reports-table__edit,
-    .saved-reports-table__delete {
-      display: inline-flex;
-      align-items: center;
-      height: 38px;
-      padding: 0 20px;
-      border-radius: 9999px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .saved-reports-table__run {
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .saved-reports-table__edit {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .saved-reports-table__delete {
-      background: var(--pm-danger, #e05252);
-      border: none;
-      color: #fff;
-    }
   `);
 
 const template = document.createElement('template');
@@ -86,7 +53,7 @@ template.innerHTML = `
           <th>Report name</th>
           <th class="saved-reports-table__muted">Created by</th>
           <th class="saved-reports-table__last-run">Last run</th>
-          <th></th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -101,7 +68,7 @@ export class PmSavedReportsTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -142,12 +109,14 @@ export class PmSavedReportsTable extends HTMLElement {
       row.appendChild(lastRunCell);
 
       const actionsCell = document.createElement('td');
+      actionsCell.className = 'compact-actions-col';
       const actionsWrap = document.createElement('div');
-      actionsWrap.className = 'saved-reports-table__actions-wrap';
+      actionsWrap.className = 'compact-actions';
+      actionsWrap.dataset.testid = 'row-actions';
       actionsCell.appendChild(actionsWrap);
       const runButton = document.createElement('button');
       runButton.type = 'button';
-      runButton.className = 'saved-reports-table__run';
+      runButton.className = 'compact-btn saved-reports-table__run';
       runButton.textContent = 'Run';
       runButton.addEventListener('click', () => {
         this.dispatchEvent(
@@ -163,7 +132,7 @@ export class PmSavedReportsTable extends HTMLElement {
       if (report.isOwner) {
         const editButton = document.createElement('button');
         editButton.type = 'button';
-        editButton.className = 'saved-reports-table__edit';
+        editButton.className = 'compact-btn saved-reports-table__edit';
         editButton.textContent = 'Edit';
         editButton.addEventListener('click', () => {
           this.dispatchEvent(
@@ -178,7 +147,7 @@ export class PmSavedReportsTable extends HTMLElement {
 
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
-        deleteButton.className = 'saved-reports-table__delete';
+        deleteButton.className = 'compact-btn compact-btn--destructive saved-reports-table__delete';
         deleteButton.textContent = 'Delete';
         deleteButton.addEventListener('click', () => {
           this.dispatchEvent(

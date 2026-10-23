@@ -185,15 +185,18 @@ export class PmExtraCurricularsPage extends HTMLElement {
 
     try {
       await deleteExtraCurricular(extraCurricularId);
-      // Dropped from the list rather than re-read, for the same reason an update
-      // is applied in place.
-      this.extraCurriculars = this.extraCurriculars.filter(
-        (activity) => activity.extraCurricularId !== extraCurricularId,
-      );
-      this.renderExtraCurriculars();
     } catch (err) {
-      this.activityTable!.showRowError(extraCurricularId, this.messageFor(err));
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageFor(err));
+      return;
     }
+    this.deleteModal!.close();
+    // Dropped from the list rather than re-read, for the same reason an update
+    // is applied in place.
+    this.extraCurriculars = this.extraCurriculars.filter(
+      (activity) => activity.extraCurricularId !== extraCurricularId,
+    );
+    this.renderExtraCurriculars();
   };
 
   private handleFormSubmitted = async (event: Event): Promise<void> => {
@@ -226,6 +229,7 @@ export class PmExtraCurricularsPage extends HTMLElement {
 
     try {
       await addPracticeTime(detail.extraCurricularId, { day: detail.day, startTime: detail.startTime });
+      this.activityTable!.setPanelBusy(false);
       await this.loadExtraCurriculars();
     } catch (err) {
       // The reason belongs on the panel, beside the controls that produced it —

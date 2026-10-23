@@ -156,7 +156,7 @@ export interface CaptureAttemptResult {
  * lesson-structure reference that does not exist — every real
  * occurrence/lesson/duration triple is offered by the wizard, so this
  * boundary can only be produced by naming a bad id directly — and 272IT29
- * (S8), a Teacher, who the Waiting List page never offers a Capture Student
+ * (S8), a Teacher, who the Waiting List page never offers a Create Waiting List Entry
  * action to in the first place. Mirrors `seedWaitingListEntry`'s own
  * `page.evaluate`-carries-the-bearer-token pattern.
  */

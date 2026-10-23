@@ -1,14 +1,15 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__email {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
     }
     .modal__confirm-label {
       font-size: 13px;
-      color: var(--pm-text-muted, #9194a6);
+      color: var(--pm-text-muted);
       margin-bottom: 6px;
       display: block;
     }
@@ -16,24 +17,16 @@ styles.replaceSync(`
       width: 100%;
       box-sizing: border-box;
       padding: 8px 12px;
-      border-radius: var(--pm-radius, 6px);
-      border: 1px solid var(--pm-border, #2e3250);
-      background: var(--pm-surface-2, #22263a);
-      color: var(--pm-text, #e2e1ed);
+      border-radius: var(--pm-radius);
+      border: 1px solid var(--pm-border);
+      background: var(--pm-surface-2);
+      color: var(--pm-text);
       font-size: 13px;
       margin-bottom: 24px;
       outline: none;
     }
     .modal__confirm-input:focus {
-      border-color: var(--pm-danger, #e05252);
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
+      border-color: var(--pm-danger);
     }
   `);
 
@@ -51,9 +44,10 @@ template.innerHTML = `
       </p>
       <label class="modal__confirm-label" for="confirmInput">Type the user's email to confirm</label>
       <input class="modal__confirm-input" id="confirmInput" type="text" autocomplete="off" />
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button" disabled>Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button" disabled>Delete</button>
       </div>
     </div>
   </div>
@@ -62,6 +56,7 @@ template.innerHTML = `
 export class PmDeleteUserModal extends HTMLElement {
   private _userId: string = '';
   private _email: string = '';
+  private busy = false;
 
   constructor() {
     super();
@@ -81,21 +76,38 @@ export class PmDeleteUserModal extends HTMLElement {
     this._email = email;
     this.shadowRoot!.getElementById('modalEmail')!.textContent = email;
     (this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement).value = '';
-    (this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled = true;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+    this.checkConfirmation();
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private checkConfirmation(): void {
     const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
     const deleteBtn = this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
-    deleteBtn.disabled = input.value !== this._email;
+    deleteBtn.disabled = this.busy || input.value !== this._email;
   }
 
   private handleDelete(): void {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('user-delete-confirmed', {
         bubbles: true,
@@ -103,7 +115,6 @@ export class PmDeleteUserModal extends HTMLElement {
         detail: { userId: this._userId },
       }),
     );
-    this.close();
   }
 }
 

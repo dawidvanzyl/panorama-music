@@ -7,6 +7,9 @@ import {
   practiceTimesHeading,
   startTimeText,
 } from '../services/extra-curricular-display';
+import { setButtonsBusy } from '../../../components/button-states';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { appendOptions } from '../../../components/select-options';
 import type { DayType, ExtraCurricular } from '../services/extra-curriculars';
 
@@ -70,20 +73,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       border-bottom: 1px solid var(--pm-border);
     }
-    .ec-panel__actions-header,
-    .ec-panel__actions {
-      text-align: right;
-    }
-    .ec-panel__remove {
-      background: transparent;
-      border: none;
-      padding: 4px 8px;
-      border-radius: var(--pm-radius);
-      color: var(--pm-danger);
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-    }
     .ec-panel__add {
       display: grid;
       grid-template-columns: 220px 160px auto;
@@ -106,17 +95,7 @@ styles.replaceSync(`
     .ec-panel__time--error {
       border-color: var(--pm-danger);
     }
-    .ec-panel__add-button {
-      height: 38px;
-      padding: 0 16px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
+    .ec-panel__add .form-btn {
       justify-self: start;
     }
     [hidden] {
@@ -137,7 +116,7 @@ template.innerHTML = `
         <tr>
           <th>Day</th>
           <th>Start Time</th>
-          <th class="ec-panel__actions-header" id="actionsHeader" hidden>Actions</th>
+          <th class="compact-actions-col" id="actionsHeader" hidden>Actions</th>
         </tr>
       </thead>
       <tbody id="slots"></tbody>
@@ -145,7 +124,7 @@ template.innerHTML = `
     <div class="ec-panel__add" id="add" hidden>
       <select class="ec-panel__select" id="day" aria-label="Day"></select>
       <input class="ec-panel__time" type="time" id="startTime" aria-label="Start Time" />
-      <button type="button" class="ec-panel__add-button" id="addBtn">Add</button>
+      <button type="button" class="form-btn form-btn--primary" id="addBtn">Create Practice Time</button>
     </div>
   </div>
 `;
@@ -187,7 +166,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
 
     this.heading = this.shadowRoot!.getElementById('title') as HTMLElement;
@@ -244,6 +223,11 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
   showError(message: string): void {
     this.errorText!.textContent = message;
     this.errorBanner!.classList.add('ec-panel__error--visible');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.addBtn!, null, busy);
   }
 
   clearError(): void {
@@ -288,15 +272,19 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
 
     if (this._showActions) {
       const actionsCell = document.createElement('td');
-      actionsCell.classList.add('ec-panel__actions');
+      actionsCell.classList.add('compact-actions-col');
+      const actions = document.createElement('div');
+      actions.classList.add('compact-actions');
+      actions.dataset.testid = 'row-actions';
 
       const remove = document.createElement('button');
       remove.type = 'button';
-      remove.classList.add('ec-panel__remove');
+      remove.classList.add('compact-btn', 'compact-btn--destructive', 'ec-panel__remove');
       remove.textContent = 'Remove';
       remove.addEventListener('click', () => this.handleRemove(slot.practiceTimeId));
 
-      actionsCell.appendChild(remove);
+      actions.appendChild(remove);
+      actionsCell.appendChild(actions);
       row.appendChild(actionsCell);
     }
 
@@ -324,6 +312,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
     }
 
     this.clearError();
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-practice-time-add-requested', {
         bubbles: true,

@@ -156,6 +156,7 @@ export class PmSiblingsStep extends HTMLElement {
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('siblings-step__message--error');
+    this.searchSelect!.setBusy(false);
   }
 
   clearError(): void {
@@ -167,6 +168,7 @@ export class PmSiblingsStep extends HTMLElement {
     const { siblingId } = (event as CustomEvent<{ siblingId: string }>).detail;
 
     if (this._mode === 'edit' && this._studentId) {
+      this.searchSelect!.setBusy(true);
       this.dispatchEvent(
         new CustomEvent('sibling-add-requested', {
           bubbles: true,

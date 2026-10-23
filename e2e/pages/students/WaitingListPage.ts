@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import type { StudentInput } from './StudentsPage';
+import { WizardActionRows } from './WizardActionRows';
 
 export type OccurrenceLabel = 'During School' | 'After School';
 export type LessonLabel = 'Individual' | 'Group';
@@ -50,6 +51,11 @@ export class WaitingListPage extends BasePage {
     // `#deleteModal`.
     this.deleteModal = page.locator('pm-waiting-list-page #deleteModal');
     this.enrolModal = page.locator('pm-waiting-list-page #enrolModal');
+  }
+
+  /** The wizard's footer and step action rows. */
+  actionRows(): WizardActionRows {
+    return new WizardActionRows(this.wizardModal);
   }
 
   async gotoWaitingList(): Promise<void> {
@@ -301,8 +307,8 @@ export class WaitingListPage extends BasePage {
     return row.getByRole('button', { name: 'Edit' });
   }
 
-  deleteButton(row: Locator): Locator {
-    return row.getByRole('button', { name: 'Delete' });
+  removeButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Remove', exact: true });
   }
 
   // --- Edit wizard (the same shared modal, opened on an existing entry) ---
@@ -459,8 +465,9 @@ export class WaitingListPage extends BasePage {
   /**
    * Dismisses the wizard however the current mode offers it: capture mode and
    * the tabs that write their own changes (Siblings, Guardians) carry a Cancel
-   * or Close in the shared footer, while the Waiting List tab in edit mode
-   * replaces the footer with its own Close. Same shape as
+   * in the shared footer, while the Waiting List tab in edit mode replaces the
+   * footer with its own Cancel (the button id is still `waitingListCloseBtn`).
+   * Same shape as
    * StudentsPage.closeWizard.
    */
   async closeWizard(): Promise<void> {
@@ -682,7 +689,7 @@ export class WaitingListPage extends BasePage {
   // --- Removal confirmation ---
 
   async openDeleteConfirmation(row: Locator): Promise<void> {
-    await this.deleteButton(row).click();
+    await this.removeButton(row).click();
     await this.deleteConfirmationMessage().waitFor({ state: 'visible' });
   }
 

@@ -4,6 +4,7 @@ import '../components/pm-delete-waiting-list-entry-modal';
 import '../components/pm-delete-guardian-modal';
 import '../components/pm-enrol-waiting-list-student-modal';
 import { hasAnyRole } from '../../../services/token-storage';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import {
   getWaitingList,
   getOfferedLessonStructures,
@@ -72,22 +73,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       margin: 0;
     }
-    .waiting-list-page__capture-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 24px;
-      border: none;
-      border-radius: 9999px;
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .waiting-list-page__capture-btn:hover {
-      filter: brightness(1.1);
-    }
     .waiting-list-page__error {
       padding: 12px 16px;
       border-radius: var(--pm-radius);
@@ -122,7 +107,7 @@ template.innerHTML = `
 
   <div class="waiting-list-page__header">
     <h1 class="waiting-list-page__title">Waiting List</h1>
-    <button type="button" class="waiting-list-page__capture-btn" id="captureBtn" hidden>Capture Student</button>
+    <button type="button" class="page-btn page-btn--primary" id="captureBtn" hidden>Create Waiting List Entry</button>
   </div>
   <div class="waiting-list-page__success" id="success"></div>
   <div class="waiting-list-page__error" id="error"></div>
@@ -148,7 +133,7 @@ export class PmWaitingListPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -445,11 +430,14 @@ export class PmWaitingListPage extends HTMLElement {
     this.clearError();
     try {
       await removeWaitingListStudent(studentId);
-      await this.loadWaitingList();
-      this.showSuccess(`${name} and their waiting-list entry were removed.`);
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    await this.loadWaitingList();
+    this.showSuccess(`${name} and their waiting-list entry were removed.`);
   };
 
   private handleSiblingsTabActivated = async (event: Event): Promise<void> => {
@@ -552,12 +540,13 @@ export class PmWaitingListPage extends HTMLElement {
       } else {
         await unlinkGuardian(studentId, guardianId);
       }
-      await this.refreshWizardGuardians(studentId);
     } catch (err) {
-      this.wizardModal!.showGuardiansError(
-        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
-      );
+      this.deleteGuardianModal!.setBusy(false);
+      this.deleteGuardianModal!.showError(err instanceof GuardiansError ? err.message : 'An unexpected error occurred');
+      return;
     }
+    this.deleteGuardianModal!.close();
+    await this.refreshWizardGuardians(studentId);
   };
 
   private handleGuardiansSyncRequested = async (event: Event): Promise<void> => {
@@ -649,14 +638,17 @@ export class PmWaitingListPage extends HTMLElement {
     return merged;
   }
 
-  private showError(err: unknown): void {
-    this.errorBanner!.textContent =
-      err instanceof WaitingListError ||
+  private messageOf(err: unknown): string {
+    return err instanceof WaitingListError ||
       err instanceof StudentsError ||
       err instanceof GuardiansError ||
       err instanceof EnrollmentsError
-        ? err.message
-        : 'An unexpected error occurred';
+      ? err.message
+      : 'An unexpected error occurred';
+  }
+
+  private showError(err: unknown): void {
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('waiting-list-page__error--visible');
   }
 

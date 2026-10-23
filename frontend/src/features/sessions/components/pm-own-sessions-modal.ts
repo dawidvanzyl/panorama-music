@@ -12,7 +12,7 @@ styles.replaceSync(`
     .modal__card {
       box-sizing: border-box;
       max-width: none;
-      width: calc(100% - var(--pm-sidebar-width, 240px) - (2 * var(--pm-content-padding, 1cm)));
+      width: calc(100% - var(--pm-sidebar-width) - (2 * var(--pm-content-padding)));
       max-height: calc(100vh - 64px);
       overflow-y: auto;
     }

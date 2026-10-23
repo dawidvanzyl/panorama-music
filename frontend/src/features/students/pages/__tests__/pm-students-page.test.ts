@@ -16,6 +16,7 @@ import {
   updateGuardian,
   unlinkGuardian,
   deleteGuardian,
+  GuardiansError,
   isGuardianShared,
   syncGuardians,
   getMissingSiblingGuardians,
@@ -77,6 +78,7 @@ import {
   enrollStudent,
   updateEnrollment,
   withdrawEnrollment,
+  EnrollmentsError,
   getEnrollableCourses,
   getAssignableTeachers,
   type AssignableTeacher,
@@ -536,6 +538,11 @@ describe('pm-students-page — creates a student from the wizard modal', { tags:
 
     const message = studentStepMessageOf(wizardModalOf(el));
     expect(message.textContent).toBe('First name is required');
+    const wizardShadow = wizardModalOf(el).shadowRoot!;
+    const confirm = wizardShadow.getElementById('saveBtn') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(false);
+    expect(confirm.hasAttribute('aria-busy')).toBe(false);
+    expect((wizardShadow.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
@@ -656,7 +663,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     document.body.removeChild(el);
   });
 
-  it('submitting the Add Guardian form calls addGuardian and the new guardian appears in the list', async () => {
+  it('submitting the Create Guardian form calls addGuardian and the new guardian appears in the list', async () => {
     vi.mocked(getGuardians).mockReset();
     vi.mocked(getGuardians).mockResolvedValueOnce([]).mockResolvedValueOnce([nomvula]);
     vi.mocked(addGuardian).mockResolvedValue(nomvula);
@@ -717,7 +724,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
   });
 
-  it('expands the Add Guardian form under the button with the list still visible, and collapses on Cancel', async () => {
+  it('expands the Create Guardian form under the button with the list still visible, and collapses on Cancel', async () => {
     const wizard = wizardModalOf(el);
     wizard.openForEdit(alice);
     const wizardShadow = wizard.shadowRoot!;
@@ -741,7 +748,7 @@ describe('pm-students-page — adds a guardian from the Guardians tab', { tags: 
     expect(formPanel.classList.contains('guardians-step__form-panel--expanded')).toBe(true);
     expect(formPanel.hasAttribute('inert')).toBe(false);
     expect(guardianListEl.hidden).toBe(false);
-    expect(confirmBtn.textContent).toBe('Add');
+    expect(confirmBtn.textContent).toBe('Create Guardian');
     expect(addBtn.hidden).toBe(true);
 
     (
@@ -802,7 +809,7 @@ describe('pm-students-page — edits a guardian from the Guardians tab', { tags:
     expect(addBtn.hidden).toBe(false);
   });
 
-  it('cancelling an inline edit discards the row changes and restores the Add Guardian button', async () => {
+  it('cancelling an inline edit discards the row changes and restores the Create Guardian button', async () => {
     vi.mocked(getGuardians).mockReset();
     vi.mocked(getGuardians).mockResolvedValue([nomvula]);
 
@@ -829,6 +836,39 @@ describe('pm-students-page — edits a guardian from the Guardians tab', { tags:
     expect(addBtn.hidden).toBe(false);
     expect(guardianListShadow.querySelector('.guardian-list__btn--edit')).not.toBeNull();
   });
+
+  it(
+    'a rejected inline update leaves the row in edit with its entries and Save enabled',
+    { tags: ['380UC11'] },
+    async () => {
+      vi.mocked(getGuardians).mockReset();
+      vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+      vi.mocked(updateGuardian).mockRejectedValue(new Error('refused'));
+
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      (wizard.shadowRoot!.getElementById('tabGuardians') as HTMLButtonElement).click();
+      await flush();
+
+      const guardianListShadow = guardiansStepShadowOf(wizard).getElementById('guardianList')!.shadowRoot!;
+      (guardianListShadow.querySelector('.guardian-list__btn--edit') as HTMLButtonElement).click();
+      const surnameInput = guardianListShadow.querySelectorAll<HTMLInputElement>('.guardian-list__edit-name input')[1];
+      surnameInput.value = 'Khumalo';
+      surnameInput.dispatchEvent(new Event('input'));
+      (guardianListShadow.querySelector('.guardian-list__btn--save') as HTMLButtonElement).click();
+      await flush();
+
+      const save = guardianListShadow.querySelector('.guardian-list__btn--save') as HTMLButtonElement;
+      expect(save.disabled).toBe(false);
+      expect(save.hasAttribute('aria-busy')).toBe(false);
+      expect((guardianListShadow.querySelector('.guardian-list__btn--cancel') as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+      expect(guardianListShadow.querySelectorAll<HTMLInputElement>('.guardian-list__edit-name input')[1].value).toBe(
+        'Khumalo',
+      );
+    },
+  );
 });
 
 describe('pm-students-page — scoped guardian delete from the Guardians tab', { tags: ['212UC17'] }, () => {
@@ -1150,12 +1190,12 @@ describe(
       expect(guardianList.guardians.map((g) => g.readOnly ?? false)).toEqual([true, false]);
 
       // Create mode: the pending own guardian is only staged in memory, so its row
-      // uses "Change"/"Remove" (borderless) rather than the persisted "Edit"/"Delete".
+      // reads "Edit"/"Remove" rather than the persisted "Edit"/"Delete".
       const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
       const ownRow = [...guardianListShadow.querySelectorAll('tbody tr')].find((row) =>
         row.textContent!.includes('Newly'),
       )!;
-      expect(ownRow.querySelector('.guardian-list__btn--change')?.textContent).toBe('Change');
+      expect(ownRow.querySelector('.guardian-list__btn--change')?.textContent).toBe('Edit');
       expect(ownRow.querySelector('.guardian-list__btn--remove')?.textContent).toBe('Remove');
       expect(ownRow.querySelector('.guardian-list__btn--edit')).toBeNull();
       expect(ownRow.querySelector('.guardian-list__btn--delete')).toBeNull();
@@ -1255,6 +1295,29 @@ describe('pm-students-page — corrects an enrollment from the Courses tab', { t
       'Guitar',
       '3B',
     ]);
+  });
+
+  it('a rejected update leaves the row in edit with its entries and Save enabled', { tags: ['380UC11'] }, async () => {
+    vi.mocked(updateEnrollment).mockRejectedValue(new Error('refused'));
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
+
+    const editRow = enrollmentRowsOf(wizard)[0];
+    const [, instrumentSelect] = [...editRow.querySelectorAll('select')];
+    instrumentSelect.value = 'Guitar';
+    instrumentSelect.dispatchEvent(new Event('change'));
+    (editRow.querySelector('.enrollment-list__btn--save') as HTMLButtonElement).click();
+    await flush();
+
+    const rejectedRow = enrollmentRowsOf(wizard)[0];
+    const save = rejectedRow.querySelector('.enrollment-list__btn--save') as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+    expect(save.hasAttribute('aria-busy')).toBe(false);
+    expect((rejectedRow.querySelector('.enrollment-list__btn--cancel') as HTMLButtonElement).disabled).toBe(false);
+    expect([...rejectedRow.querySelectorAll('select')][1].value).toBe('Guitar');
   });
 });
 
@@ -1683,7 +1746,7 @@ function extraCurricularRowsOf(wizard: PmStudentWizardModal): HTMLTableRowElemen
   return [...extraCurricularsStepShadowOf(wizard).querySelectorAll('tbody tr')] as HTMLTableRowElement[];
 }
 
-/** Opens the Add Activity panel, chooses an activity and presses Assign. */
+/** Opens the Assign Activity panel, chooses an activity and presses Assign. */
 async function assignViaPanel(wizard: PmStudentWizardModal, extraCurricularId: string): Promise<void> {
   const stepShadow = extraCurricularsStepShadowOf(wizard);
   (stepShadow.getElementById('addBtn') as HTMLButtonElement).click();
@@ -1966,7 +2029,7 @@ describe('pm-students-page — expanding a Private-grade row', { tags: ['344UC6'
   });
 });
 
-describe('pm-students-page — Add Activity asks for the right phases', { tags: ['344UC7', '344UC8'] }, () => {
+describe('pm-students-page — Assign Activity asks for the right phases', { tags: ['344UC7', '344UC8'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -2363,3 +2426,76 @@ describe('pm-students-page — the roster is read again after an enrollment writ
     expect(tableOf(el).students.map((s) => s.studentId)).toEqual(['s1', 's3']);
   });
 });
+
+describe(
+  'pm-students-page — confirmations close on success and report failures in the modal',
+  { tags: ['377UC2'] },
+  () => {
+    let el: HTMLElement;
+
+    beforeEach(async () => {
+      el = await mountPage();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    const confirmations: Array<
+      [string, string, string, () => ReturnType<typeof vi.fn>, () => Error, (m: HTMLElement) => void]
+    > = [
+      [
+        'delete student',
+        'deleteModal',
+        'deleteBtn',
+        () => vi.mocked(deleteStudent),
+        () => new StudentsError('Student refused', 409),
+        (m) => (m as unknown as PmDeleteStudentModal).show('s2', 'Julian Thorne'),
+      ],
+      [
+        'delete guardian',
+        'deleteGuardianModal',
+        'deleteBtn',
+        () => vi.mocked(unlinkGuardian),
+        () => new GuardiansError('Guardian refused', 409),
+        (m) => (m as unknown as PmDeleteGuardianModal).show('s1', 'g1', 'Nomvula', false),
+      ],
+      [
+        'withdraw enrollment',
+        'withdrawEnrollmentModal',
+        'withdrawBtn',
+        () => vi.mocked(withdrawEnrollment),
+        () => new EnrollmentsError('Withdraw refused', 409),
+        (m) => (m as unknown as PmWithdrawEnrollmentModal).show('s1', 'sc1', 'Alice', 'Piano'),
+      ],
+    ];
+
+    it.each(confirmations)(
+      '%s keeps its modal open with the message and restores the buttons on failure',
+      async (_n, modalId, buttonId, service, makeError, show) => {
+        service().mockRejectedValue(makeError());
+        const modal = el.shadowRoot!.getElementById(modalId)!;
+        show(modal);
+        modal.shadowRoot!.getElementById(buttonId)!.click();
+        await flush();
+
+        expect(modal.hasAttribute('open')).toBe(true);
+        expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe(makeError().message);
+        expect((modal.shadowRoot!.getElementById(buttonId) as HTMLButtonElement).disabled).toBe(false);
+        expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+      },
+    );
+
+    it.each(confirmations)(
+      '%s closes its modal on success',
+      async (_n, modalId, buttonId, _service, _makeError, show) => {
+        const modal = el.shadowRoot!.getElementById(modalId)!;
+        show(modal);
+        modal.shadowRoot!.getElementById(buttonId)!.click();
+        await flush();
+
+        expect(modal.hasAttribute('open')).toBe(false);
+      },
+    );
+  },
+);

@@ -1,6 +1,7 @@
 import '../components/pm-report-filters-panel';
 import '../components/pm-report-columns-panel';
 import '../components/pm-save-report-modal';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import type { PmReportFiltersPanel } from '../components/pm-report-filters-panel';
 import type { PmReportColumnsPanel } from '../components/pm-report-columns-panel';
 import type { PmSaveReportModal } from '../components/pm-save-report-modal';
@@ -36,12 +37,6 @@ styles.replaceSync(`
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
     }
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
-      font-size: 18px;
-      line-height: 1;
-    }
     .builder-page__breadcrumb {
       font-size: 12px;
       color: var(--pm-text-muted);
@@ -53,42 +48,7 @@ styles.replaceSync(`
       cursor: pointer;
     }
     .builder-page__toolbar {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
       margin-bottom: 16px;
-    }
-    .builder-page__clear,
-    .builder-page__save,
-    .builder-page__run {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      height: 38px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .builder-page__clear,
-    .builder-page__save {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .builder-page__run {
-      background: var(--pm-accent);
-      border: none;
-      color: white;
-    }
-    .builder-page__run:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .builder-page__save[hidden] {
-      display: none;
     }
     .builder-page__body {
       display: flex;
@@ -106,12 +66,6 @@ styles.replaceSync(`
     }
     .builder-page__retry {
       margin-left: 12px;
-      background: none;
-      border: none;
-      color: var(--pm-danger);
-      text-decoration: underline;
-      cursor: pointer;
-      font: inherit;
     }
   `);
 
@@ -120,15 +74,15 @@ template.innerHTML = `
   <div class="builder-page__breadcrumb">
     <a id="backLink">Reports</a> &rsaquo; <span data-testid="builder-breadcrumb-name">New report</span>
   </div>
-  <div class="builder-page__toolbar">
-    <button type="button" class="builder-page__clear" id="clear">Clear</button>
-    <button type="button" class="builder-page__save" id="save" data-testid="builder-save">
-      <span class="material-symbols-outlined" aria-hidden="true">save</span>
+  <div class="builder-page__toolbar page-actions">
+    <button type="button" class="page-btn page-btn--secondary" id="clear">Clear</button>
+    <button type="button" class="page-btn page-btn--secondary" id="save" data-testid="builder-save">
+      <span class="page-btn__icon" aria-hidden="true">save</span>
       Save
     </button>
-    <button type="button" class="builder-page__run" id="run">
-      <span class="material-symbols-outlined">play_arrow</span>
-      Run report
+    <button type="button" class="page-btn page-btn--primary" id="run">
+      <span class="page-btn__icon" aria-hidden="true">play_arrow</span>
+      Run Report
     </button>
   </div>
   <div class="builder-page__error" id="error" hidden></div>
@@ -160,7 +114,7 @@ export class PmReportBuilderPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -259,7 +213,7 @@ export class PmReportBuilderPage extends HTMLElement {
     if (withRetry) {
       const retry = document.createElement('button');
       retry.type = 'button';
-      retry.className = 'builder-page__retry';
+      retry.className = 'page-btn page-btn--secondary builder-page__retry';
       retry.textContent = 'Retry';
       retry.addEventListener('click', () => void (this._reportId ? this.loadEditing(this._reportId) : this.load()));
       this.errorBanner.appendChild(retry);

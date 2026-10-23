@@ -1,18 +1,11 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__name {
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       font-weight: 500;
-    }
-    .modal__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .modal__btn--delete:hover:not(:disabled) {
-      opacity: 0.9;
     }
   `);
 
@@ -28,9 +21,10 @@ template.innerHTML = `
       <p class="modal__body">
         Are you sure you want to remove <span class="modal__name" id="modalName"></span> from the waiting list? This will delete their student record and <strong>cannot be undone</strong>.
       </p>
-      <div class="modal__actions">
+      <p class="modal__error" id="error" data-testid="modal-error"></p>
+      <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--delete" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Remove</button>
       </div>
     </div>
   </div>
@@ -62,14 +56,30 @@ export class PmDeleteWaitingListEntryModal extends HTMLElement {
     this._studentId = studentId;
     this._name = name;
     this.shadowRoot!.getElementById('modalName')!.textContent = name;
+    this.showError('');
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
-  private close(): void {
+  close(): void {
     this.removeAttribute('open');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(
+      this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
+      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      busy,
+    );
+  }
+
+  showError(message: string): void {
+    this.shadowRoot!.getElementById('error')!.textContent = message;
   }
 
   private handleDelete(): void {
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('waiting-list-student-remove-confirmed', {
         bubbles: true,
@@ -77,7 +87,6 @@ export class PmDeleteWaitingListEntryModal extends HTMLElement {
         detail: { studentId: this._studentId, name: this._name },
       }),
     );
-    this.close();
   }
 }
 

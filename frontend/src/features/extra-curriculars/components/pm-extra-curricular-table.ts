@@ -2,6 +2,8 @@ import './pm-extra-curricular-practice-times';
 import { MISSING_ERROR, PHASES, PHASE_LABELS, practiceTimesText } from '../services/extra-curricular-display';
 import type { ExtraCurricular, PhaseType } from '../services/extra-curriculars';
 import type { PmExtraCurricularPracticeTimes } from './pm-extra-curricular-practice-times';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -62,7 +64,6 @@ styles.replaceSync(`
     }
     .ec-table__actions-header,
     .ec-table__actions {
-      text-align: right;
       width: 160px;
     }
     .ec-table__badge {
@@ -116,50 +117,6 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
-    .ec-table__btn {
-      border: 1px solid transparent;
-      border-radius: var(--pm-radius);
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .ec-table__btn + .ec-table__btn {
-      margin-left: 6px;
-    }
-    .ec-table__btn--edit {
-      background: transparent;
-      border-color: var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .ec-table__btn--edit:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .ec-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .ec-table__btn--save {
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .ec-table__btn--cancel {
-      background: transparent;
-      color: var(--pm-text-muted);
-    }
-    .ec-table__btn--cancel:hover {
-      background: var(--pm-surface-2);
-    }
-    .ec-table__btn--delete:hover:not(:disabled),
-    .ec-table__btn--save:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-    .ec-table__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
   `);
 
 const template = document.createElement('template');
@@ -173,7 +130,7 @@ template.innerHTML = `
           <th>Description</th>
           <th>Phase</th>
           <th>Practice Times</th>
-          <th class="ec-table__actions-header" id="actionsHeader" hidden>Actions</th>
+          <th class="compact-actions-col ec-table__actions-header" id="actionsHeader" hidden>Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -209,7 +166,7 @@ export class PmExtraCurricularTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -264,6 +221,10 @@ export class PmExtraCurricularTable extends HTMLElement {
    */
   showPanelError(message: string): void {
     this.panel?.showError(message);
+  }
+
+  setPanelBusy(busy: boolean): void {
+    this.panel?.setBusy(busy);
   }
 
   /**
@@ -451,43 +412,54 @@ export class PmExtraCurricularTable extends HTMLElement {
 
   private buildDisplayActions(extraCurricular: ExtraCurricular): HTMLTableCellElement {
     const cell = document.createElement('td');
-    cell.classList.add('ec-table__actions');
+    cell.classList.add('compact-actions-col', 'ec-table__actions');
+    const actions = this.buildActionsContainer();
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.classList.add('ec-table__btn', 'ec-table__btn--edit');
+    editBtn.classList.add('compact-btn', 'ec-table__btn--edit');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => this.handleEditClicked(extraCurricular));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.classList.add('ec-table__btn', 'ec-table__btn--delete');
+    deleteBtn.classList.add('compact-btn', 'compact-btn--destructive', 'ec-table__btn--delete');
     deleteBtn.textContent = 'Delete';
     deleteBtn.addEventListener('click', () => this.handleDeleteClicked(extraCurricular));
 
-    cell.append(editBtn, deleteBtn);
+    actions.append(editBtn, deleteBtn);
+    cell.appendChild(actions);
     return cell;
+  }
+
+  private buildActionsContainer(): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    return actions;
   }
 
   private buildEditActions(extraCurricular: ExtraCurricular): HTMLTableCellElement {
     const cell = document.createElement('td');
-    cell.classList.add('ec-table__actions');
-
-    const saveBtn = document.createElement('button');
-    saveBtn.type = 'button';
-    saveBtn.classList.add('ec-table__btn', 'ec-table__btn--save');
-    saveBtn.textContent = 'Save';
-    saveBtn.disabled = this.saving;
-    saveBtn.addEventListener('click', () => this.handleSaveClicked(extraCurricular));
+    cell.classList.add('compact-actions-col', 'ec-table__actions');
+    const actions = this.buildActionsContainer();
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('ec-table__btn', 'ec-table__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'compact-btn--warning', 'ec-table__btn--cancel');
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.disabled = this.saving;
     cancelBtn.addEventListener('click', () => this.handleCancelClicked());
 
-    cell.append(saveBtn, cancelBtn);
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.classList.add('compact-btn', 'ec-table__btn--save');
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', () => this.handleSaveClicked(extraCurricular));
+
+    if (this.saving) setButtonsBusy(saveBtn, cancelBtn, true);
+
+    actions.append(cancelBtn, saveBtn);
+    cell.appendChild(actions);
     return cell;
   }
 

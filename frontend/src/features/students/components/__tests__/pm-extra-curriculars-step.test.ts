@@ -56,7 +56,7 @@ function isPanelOpen(): boolean {
   return byId('panel').classList.contains('ec-step__panel--expanded');
 }
 
-/** Opens the Add Activity panel and answers the request it makes with `offered`. */
+/** Opens the Assign Activity panel and answers the request it makes with `offered`. */
 function openPanel(offered: StudentExtraCurricular[]): void {
   byId<HTMLButtonElement>('addBtn').click();
   step.assignable = offered;
@@ -208,13 +208,13 @@ describe('pm-extra-curriculars-step — the row names the times', { tags: ['278U
   });
 });
 
-describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC14'] }, () => {
+describe('pm-extra-curriculars-step — the Assign Activity panel', { tags: ['277UC14'] }, () => {
   beforeEach(() => {
     step.activate('s1', 'Junior');
     step.assigned = [];
   });
 
-  it('opens on Add Activity offering a picker, the phase note and Cancel and Assign', () => {
+  it('opens on Assign Activity offering a picker, the phase note and Cancel and Assign', () => {
     expect(isPanelOpen()).toBe(false);
 
     openPanel([orchestra]);
@@ -225,7 +225,7 @@ describe('pm-extra-curriculars-step — the Add Activity panel', { tags: ['277UC
     expect(byId('note').textContent).toBe(PHASE_RESTRICTION_NOTE);
     expect(byId('note').hidden).toBe(false);
     expect(byId('cancelBtn').textContent).toBe('Cancel');
-    expect(byId('assignBtn').textContent).toBe('Assign');
+    expect(byId('assignBtn').textContent).toBe('Assign Activity');
   });
 
   it('hides the phase note for a student with no phase', () => {

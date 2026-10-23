@@ -46,6 +46,6 @@ describe('pm-teacher-deactivate-modal — the confirmation warns about the banki
     (element.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement).click();
 
     expect(confirmed).toHaveBeenCalledTimes(1);
-    expect(element.hasAttribute('open')).toBe(false);
+    expect(element.hasAttribute('open')).toBe(true);
   });
 });

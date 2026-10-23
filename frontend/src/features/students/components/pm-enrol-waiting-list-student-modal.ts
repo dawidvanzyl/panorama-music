@@ -1,3 +1,5 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { addPlaceholderOption, populateSelectOptions } from './student-options';
 import {
@@ -59,12 +61,12 @@ styles.replaceSync(`
     .enrol__title {
       font-size: 18px;
       font-weight: 700;
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
       margin: 0 0 4px;
     }
     .enrol__notice {
       font-size: 13px;
-      color: var(--pm-text-muted, #9194a6);
+      color: var(--pm-text-muted);
       margin: 0 0 20px;
     }
     .enrol__grid {
@@ -86,17 +88,17 @@ styles.replaceSync(`
     .enrol__label {
       font-size: 13px;
       font-weight: 500;
-      color: var(--pm-text, #e2e1ed);
+      color: var(--pm-text);
     }
     .enrol__input,
     .enrol__select {
       box-sizing: border-box;
       height: 44px;
       padding: 0 12px;
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      border-radius: var(--pm-radius, 10px);
-      color: var(--pm-text, #e2e1ed);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text);
       font-size: 14px;
       font-family: inherit;
     }
@@ -107,10 +109,10 @@ styles.replaceSync(`
       align-items: center;
       justify-content: space-between;
       padding: 0 12px;
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      border-radius: var(--pm-radius, 10px);
-      color: var(--pm-text-muted, #9194a6);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      border-radius: var(--pm-radius);
+      color: var(--pm-text-muted);
       font-size: 14px;
     }
     .enrol__locked {
@@ -118,10 +120,10 @@ styles.replaceSync(`
     }
     .enrol__notice-empty {
       padding: 12px 16px;
-      border-radius: var(--pm-radius, 10px);
-      background: var(--pm-surface-2, #22263a);
-      border: 1px solid var(--pm-border, #2e3250);
-      color: var(--pm-text-muted, #9194a6);
+      border-radius: var(--pm-radius);
+      background: var(--pm-surface-2);
+      border: 1px solid var(--pm-border);
+      color: var(--pm-text-muted);
       font-size: 13px;
       margin: 0;
     }
@@ -134,19 +136,14 @@ styles.replaceSync(`
     .enrol__error {
       margin: 16px 0 0;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       display: none;
     }
     .enrol__error--visible {
       display: block;
     }
-    .modal__actions {
+    .form-actions {
       margin-top: 24px;
-    }
-    .modal__btn--primary {
-      background: var(--pm-accent, #6c5ce7);
-      border: 1px solid var(--pm-accent, #6c5ce7);
-      color: #fff;
     }
   `);
 
@@ -195,9 +192,9 @@ template.innerHTML = `
         </div>
       </form>
       <p class="enrol__error" id="error"></p>
-      <div class="modal__actions">
-        <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--primary" id="confirmBtn" type="button">Enrol</button>
+      <div class="form-actions" data-testid="form-actions">
+        <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
+        <button class="form-btn form-btn--primary" id="confirmBtn" type="button">Enrol</button>
       </div>
     </div>
   </div>
@@ -232,6 +229,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private noOfferedStructuresNotice: HTMLElement | null = null;
   private entryStructureNotOfferedNotice: HTMLElement | null = null;
   private confirmButton: HTMLButtonElement | null = null;
+  private cancelButton: HTMLButtonElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
   private _teachers: AssignableTeacher[] = [];
@@ -246,7 +244,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -273,7 +271,8 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     addPlaceholderOption(this.stepSelect, 'Select step');
 
     this.confirmButton = this.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
-    this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
+    this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    this.cancelButton.addEventListener('click', this.handleCancel);
     this.confirmButton.addEventListener('click', this.handleConfirm);
     this.lessonTypeSelect.addEventListener('change', this.handleLessonTypeChange);
   }
@@ -315,6 +314,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this._entryDurationType = entry.durationType;
 
     this.clearError();
+    this.setBusy(false);
     this.notice!.textContent = `${this._studentName} will be removed from the waiting list once enrolled.`;
     this.occurrenceTypeValue!.textContent = OCCURRENCE_TYPE_LABELS[occurrenceType];
     this.renderStructureOptions();
@@ -334,12 +334,19 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   }
 
   close(): void {
+    this.setBusy(false);
     this.removeAttribute('open');
   }
 
   showError(message: string): void {
     this.errorMessage!.textContent = message;
     this.errorMessage!.classList.add('enrol__error--visible');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    if (!this.confirmButton || !this.cancelButton) return;
+    setButtonsBusy(this.confirmButton, this.cancelButton, busy);
   }
 
   private clearError(): void {
@@ -444,6 +451,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     }
 
     this.clearError();
+    this.setBusy(true);
 
     const input: WaitingListEnrolmentInput = {
       lessonStructureId: lessonStructure.lessonStructureId,

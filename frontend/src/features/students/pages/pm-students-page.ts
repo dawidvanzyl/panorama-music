@@ -57,6 +57,7 @@ import {
   type PhaseType,
   type StudentExtraCurricular,
 } from '../services/student-extra-curriculars';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { courseLabel, todayIsoDate } from '../components/enrollment-options';
 import { filterStudents, type StudentFilters } from '../services/filter-students';
 import type { PmStudentFilterBar } from '../components/pm-student-filter-bar';
@@ -86,22 +87,6 @@ styles.replaceSync(`
       font-weight: 700;
       color: var(--pm-text);
       margin: 0;
-    }
-    .students-page__create-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 24px;
-      border: none;
-      border-radius: 9999px;
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .students-page__create-btn:hover {
-      filter: brightness(1.1);
     }
     .students-page__error {
       margin-top: 16px;
@@ -135,7 +120,7 @@ template.innerHTML = `
   <div class="students-page__container">
     <div class="students-page__header">
       <h1 class="students-page__title">Students</h1>
-      <button type="button" class="students-page__create-btn" id="createBtn">Create Student</button>
+      <button type="button" class="page-btn page-btn--primary" id="createBtn">Create Student</button>
     </div>
     <pm-student-filter-bar id="filterBar"></pm-student-filter-bar>
     <div class="students-page__error" id="error"></div>
@@ -173,7 +158,7 @@ export class PmStudentsPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -423,12 +408,15 @@ export class PmStudentsPage extends HTMLElement {
     this.clearError();
     try {
       await deleteStudent(studentId);
-      this._allStudents = this._allStudents.filter((s) => s.studentId !== studentId);
-      this._siblingCandidates = this._siblingCandidates.filter((s) => s.studentId !== studentId);
-      this.applyFilters();
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    this._allStudents = this._allStudents.filter((s) => s.studentId !== studentId);
+    this._siblingCandidates = this._siblingCandidates.filter((s) => s.studentId !== studentId);
+    this.applyFilters();
   };
 
   private handleRowExpanded = async (event: Event): Promise<void> => {
@@ -587,12 +575,13 @@ export class PmStudentsPage extends HTMLElement {
       } else {
         await unlinkGuardian(studentId, guardianId);
       }
-      await this.refreshWizardGuardians(studentId);
     } catch (err) {
-      this.wizardModal!.showGuardiansError(
-        err instanceof GuardiansError ? err.message : 'An unexpected error occurred',
-      );
+      this.deleteGuardianModal!.setBusy(false);
+      this.deleteGuardianModal!.showError(err instanceof GuardiansError ? err.message : 'An unexpected error occurred');
+      return;
     }
+    this.deleteGuardianModal!.close();
+    await this.refreshWizardGuardians(studentId);
   };
 
   private handleGuardiansSyncRequested = async (event: Event): Promise<void> => {
@@ -682,17 +671,20 @@ export class PmStudentsPage extends HTMLElement {
       .detail;
     try {
       await withdrawEnrollment(studentId, studentCourseId);
-      await this.reloadRoster();
-      await this.refreshWizardEnrollments(studentId);
-      // Another row may have been open for editing when this withdrawal was
-      // confirmed; the refreshed list would otherwise re-seed it from server
-      // data and drop the selections made in it without saying so.
-      this.wizardModal!.closeEnrollmentForm();
     } catch (err) {
-      this.wizardModal!.showCoursesError(
+      this.withdrawEnrollmentModal!.setBusy(false);
+      this.withdrawEnrollmentModal!.showError(
         err instanceof EnrollmentsError ? err.message : 'An unexpected error occurred',
       );
+      return;
     }
+    this.withdrawEnrollmentModal!.close();
+    await this.reloadRoster();
+    await this.refreshWizardEnrollments(studentId);
+    // Another row may have been open for editing when this withdrawal was
+    // confirmed; the refreshed list would otherwise re-seed it from server
+    // data and drop the selections made in it without saying so.
+    this.wizardModal!.closeEnrollmentForm();
   };
 
   private handleExtraCurricularsTabActivated = async (event: Event): Promise<void> => {
@@ -726,7 +718,7 @@ export class PmStudentsPage extends HTMLElement {
   };
 
   /**
-   * The picker's options, asked for each time the Add Activity panel opens. Both
+   * The picker's options, asked for each time the Assign Activity panel opens. Both
    * modes read by the phase the form currently holds, never by the stored
    * student: an unsaved phase is the whole point — editing a Private-grade
    * student into a graded one has to offer that phase's activities before
@@ -873,14 +865,17 @@ export class PmStudentsPage extends HTMLElement {
     this.studentsTable!.students = filterStudents(this._allStudents, this._currentFilters);
   }
 
-  private showError(err: unknown): void {
-    this.errorBanner!.textContent =
-      err instanceof StudentsError ||
+  private messageOf(err: unknown): string {
+    return err instanceof StudentsError ||
       err instanceof GuardiansError ||
       err instanceof EnrollmentsError ||
       err instanceof StudentExtraCurricularsError
-        ? err.message
-        : 'An unexpected error occurred';
+      ? err.message
+      : 'An unexpected error occurred';
+  }
+
+  private showError(err: unknown): void {
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('students-page__error--visible');
   }
 

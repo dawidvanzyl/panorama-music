@@ -141,9 +141,11 @@ export class PmAdminUsersPage extends HTMLElement {
     this.clearError();
     try {
       await deactivateUser(userId);
+      this.deactivateModal!.close();
       await this.loadUsers();
     } catch (err) {
-      this.showError(err);
+      this.deactivateModal!.setBusy(false);
+      this.deactivateModal!.showError(this.messageOf(err));
     } finally {
       this._deactivatingUserId = null;
     }
@@ -161,9 +163,11 @@ export class PmAdminUsersPage extends HTMLElement {
     this.clearError();
     try {
       await deleteUser(userId);
+      this.deleteModal!.close();
       this.usersTable!.removeUser(userId);
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
     } finally {
       this._deletingUserId = null;
     }
@@ -179,8 +183,12 @@ export class PmAdminUsersPage extends HTMLElement {
     }
   };
 
+  private messageOf(err: unknown): string {
+    return err instanceof AdminError ? err.message : 'An unexpected error occurred';
+  }
+
   private showError(err: unknown): void {
-    this.errorBanner!.textContent = err instanceof AdminError ? err.message : 'An unexpected error occurred';
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('admin-users__error--visible');
   }
 

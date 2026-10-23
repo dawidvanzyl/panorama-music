@@ -2,6 +2,7 @@ import '../components/pm-saved-reports-table';
 import '../components/pm-delete-report-modal';
 import type { PmSavedReportsTable } from '../components/pm-saved-reports-table';
 import type { PmDeleteReportModal } from '../components/pm-delete-report-modal';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { clearBuilderState } from '../state/report-builder-state';
 import { deleteReport, listSavedReports, ReportsError } from '../services/reports';
 import type { SavedReportSummary } from '../models/report';
@@ -12,12 +13,6 @@ styles.replaceSync(`
       display: block;
       flex: 1;
       font-family: 'Inter', system-ui, sans-serif;
-    }
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      font-family: 'Material Symbols Outlined', system-ui, sans-serif;
-      font-size: 18px;
-      line-height: 1;
     }
     .reports-page__header {
       display: flex;
@@ -35,24 +30,6 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       font-size: 13px;
       margin: 0 0 24px;
-    }
-    .reports-page__create {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      height: 38px;
-      padding: 0 16px;
-      background: var(--pm-accent);
-      border: none;
-      border-radius: var(--pm-radius);
-      color: white;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .reports-page__create:hover {
-      background: var(--pm-accent-hover);
     }
     .reports-page__empty {
       background: var(--pm-surface);
@@ -74,12 +51,6 @@ styles.replaceSync(`
     }
     .reports-page__retry {
       margin-left: 12px;
-      background: none;
-      border: none;
-      color: var(--pm-danger);
-      text-decoration: underline;
-      cursor: pointer;
-      font: inherit;
     }
   `);
 
@@ -90,9 +61,9 @@ template.innerHTML = `
       <div>
         <h1 class="reports-page__title">Reports</h1>
       </div>
-      <button type="button" class="reports-page__create" id="create">
-        <span class="material-symbols-outlined">add</span>
-        Create report
+      <button type="button" class="page-btn page-btn--primary" id="create">
+        <span class="page-btn__icon" aria-hidden="true">add</span>
+        Create Report
       </button>
     </div>
     <p class="reports-page__subtitle">Saved student reports.</p>
@@ -112,7 +83,7 @@ export class PmReportsPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -163,7 +134,7 @@ export class PmReportsPage extends HTMLElement {
     this.errorBanner!.textContent = 'Could not load saved reports. Try again.';
     const retry = document.createElement('button');
     retry.type = 'button';
-    retry.className = 'reports-page__retry';
+    retry.className = 'page-btn page-btn--secondary reports-page__retry';
     retry.textContent = 'Retry';
     retry.addEventListener('click', () => void this.load());
     this.errorBanner!.appendChild(retry);

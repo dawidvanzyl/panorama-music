@@ -1,4 +1,6 @@
 import { resetPassword, AuthError } from '../../../services/auth';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { evaluatePasswordPolicy } from '../../../services/password-policy';
 import { PmPasswordStrengthIndicator } from '../../../components/pm-password-strength-indicator';
 
@@ -28,13 +30,6 @@ styles.replaceSync(`
       word-wrap: normal;
       direction: ltr;
       -webkit-font-smoothing: antialiased;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .reset__spinner {
-      animation: spin 0.7s linear infinite;
     }
 
     .reset__glow {
@@ -231,29 +226,7 @@ styles.replaceSync(`
 
     .reset__submit {
       width: 100%;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       margin-top: 20px;
-      border: none;
-      border-radius: 9999px;
-      background: var(--pm-accent);
-      color: #00297b;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      box-shadow: var(--pm-shadow);
-    }
-    .reset__submit:hover { filter: brightness(1.1); }
-    .reset__submit:active { transform: scale(0.98); }
-    .reset__submit:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      transform: none;
-      filter: none;
     }
 
     .reset__footer {
@@ -328,10 +301,7 @@ template.innerHTML = `
             <span class="reset__error-text" id="errorText">Passwords do not match</span>
           </div>
 
-          <button type="submit" class="reset__submit" id="submitBtn">
-            <span id="submitLabel">Reset Password</span>
-            <span class="material-symbols-outlined reset__submit-icon">arrow_forward</span>
-          </button>
+          <button type="submit" class="form-btn form-btn--primary reset__submit" id="submitBtn">Complete Password Reset</button>
         </form>
       </div>
     </div>
@@ -347,8 +317,7 @@ export class PmResetPasswordPage extends HTMLElement {
   private passwordInput: HTMLInputElement | null = null;
   private confirmInput: HTMLInputElement | null = null;
   private submitBtn: HTMLButtonElement | null = null;
-  private submitLabel: HTMLElement | null = null;
-  private submitIcon: HTMLElement | null = null;
+  private _submitting = false;
   private errorBanner: HTMLElement | null = null;
   private errorText: HTMLElement | null = null;
   private invalidBanner: HTMLElement | null = null;
@@ -364,7 +333,7 @@ export class PmResetPasswordPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -373,8 +342,6 @@ export class PmResetPasswordPage extends HTMLElement {
     this.passwordInput = this.shadowRoot!.getElementById('password') as HTMLInputElement;
     this.confirmInput = this.shadowRoot!.getElementById('confirmPassword') as HTMLInputElement;
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
-    this.submitLabel = this.shadowRoot!.getElementById('submitLabel') as HTMLElement;
-    this.submitIcon = this.shadowRoot!.querySelector('.reset__submit-icon') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('errorMsg') as HTMLElement;
     this.errorText = this.shadowRoot!.getElementById('errorText') as HTMLElement;
     this.invalidBanner = this.shadowRoot!.getElementById('invalidBanner') as HTMLElement;
@@ -436,6 +403,7 @@ export class PmResetPasswordPage extends HTMLElement {
 
   private handleSubmit = async (e: Event): Promise<void> => {
     e.preventDefault();
+    if (this._submitting) return;
     this.errorBanner!.classList.remove('reset__error-banner--visible');
 
     if (this.passwordInput!.value !== this.confirmInput!.value) {
@@ -444,12 +412,8 @@ export class PmResetPasswordPage extends HTMLElement {
       return;
     }
 
-    this.submitBtn!.disabled = true;
-    const originalLabel = this.submitLabel!.textContent;
-    const originalIcon = this.submitIcon!.textContent;
-    this.submitLabel!.textContent = 'Resetting...';
-    this.submitIcon!.textContent = 'progress_activity';
-    this.submitIcon!.classList.add('reset__spinner');
+    this._submitting = true;
+    setButtonsBusy(this.submitBtn!, null, true);
 
     try {
       await resetPassword(this.resetToken!, this.passwordInput!.value);
@@ -465,12 +429,8 @@ export class PmResetPasswordPage extends HTMLElement {
       }
       this.errorBanner!.classList.add('reset__error-banner--visible');
     } finally {
-      if (this.submitBtn) {
-        this.submitBtn.disabled = false;
-        this.submitLabel!.textContent = originalLabel;
-        this.submitIcon!.textContent = originalIcon!;
-        this.submitIcon!.classList.remove('reset__spinner');
-      }
+      this._submitting = false;
+      setButtonsBusy(this.submitBtn!, null, false);
     }
   };
 }

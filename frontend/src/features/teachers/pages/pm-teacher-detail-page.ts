@@ -234,11 +234,16 @@ export class PmTeacherDetailPage extends HTMLElement {
 
   private handleAccountUnlinkConfirmed = async (): Promise<void> => {
     this.clearError();
+    let teacher: TeacherResult;
     try {
-      this.applyTeacher(await unlinkTeacherAccount(this._teacherId!));
+      teacher = await unlinkTeacherAccount(this._teacherId!);
     } catch (err) {
-      this.showError(err);
+      this.unlinkModal!.setBusy(false);
+      this.unlinkModal!.showError(this.messageOf(err));
+      return;
     }
+    this.unlinkModal!.close();
+    this.applyTeacher(teacher);
   };
 
   private handleBankingSaveRequested = async (event: Event): Promise<void> => {
@@ -267,10 +272,13 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.clearError();
     try {
       await deleteBankingDetails(this._teacherId!);
-      this.applyTeacher({ ...this._teacher!, banking: null });
     } catch (err) {
-      this.showError(err);
+      this.bankingDeleteModal!.setBusy(false);
+      this.bankingDeleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.bankingDeleteModal!.close();
+    this.applyTeacher({ ...this._teacher!, banking: null });
   };
 
   /**
@@ -303,11 +311,16 @@ export class PmTeacherDetailPage extends HTMLElement {
 
   private handleDeactivateConfirmed = async (): Promise<void> => {
     this.clearError();
+    let teacher: TeacherResult;
     try {
-      this.applyTeacher(await deactivateTeacher(this._teacherId!));
+      teacher = await deactivateTeacher(this._teacherId!);
     } catch (err) {
-      this.showError(err);
+      this.deactivateModal!.setBusy(false);
+      this.deactivateModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deactivateModal!.close();
+    this.applyTeacher(teacher);
   };
 
   private handleReactivateRequested = async (): Promise<void> => {
@@ -328,10 +341,13 @@ export class PmTeacherDetailPage extends HTMLElement {
     this.clearError();
     try {
       await deleteTeacher(this._teacherId!);
-      window.location.hash = '#/teachers';
     } catch (err) {
-      this.showError(err);
+      this.deleteModal!.setBusy(false);
+      this.deleteModal!.showError(this.messageOf(err));
+      return;
     }
+    this.deleteModal!.close();
+    window.location.hash = '#/teachers';
   };
 
   private teacherName(): string {

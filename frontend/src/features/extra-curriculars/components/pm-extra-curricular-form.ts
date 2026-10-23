@@ -9,6 +9,9 @@ import {
   duplicatePracticeTimeError,
   practiceTimeText,
 } from '../services/extra-curricular-display';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { appendOptions } from '../../../components/select-options';
 import type { DayType, PhaseType, PracticeTimeInput } from '../services/extra-curriculars';
 
@@ -86,21 +89,6 @@ styles.replaceSync(`
       gap: 20px;
       align-items: end;
     }
-    .ec-form__add {
-      height: 44px;
-      padding: 0 20px;
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      border-radius: var(--pm-radius);
-      color: var(--pm-accent);
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .ec-form__add:hover {
-      background: rgba(79, 124, 255, 0.1);
-    }
     .ec-form__chips {
       display: flex;
       flex-wrap: wrap;
@@ -153,25 +141,8 @@ styles.replaceSync(`
       display: flex;
     }
     .ec-form__footer {
-      display: flex;
-      justify-content: flex-end;
       padding: 16px 24px;
       border-top: 1px solid var(--pm-border);
-    }
-    .ec-form__submit {
-      height: 44px;
-      padding: 0 24px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .ec-form__submit:hover {
-      filter: brightness(1.1);
     }
   `);
 
@@ -207,7 +178,7 @@ template.innerHTML = `
         <label class="ec-form__label" for="startTime">Start Time</label>
         <input class="ec-form__input" type="time" id="startTime" />
       </div>
-      <button type="button" class="ec-form__add" id="addBtn">Add Practice Time</button>
+      <button type="button" class="page-btn page-btn--secondary" id="addBtn">Create Practice Time</button>
     </div>
 
     <div class="ec-form__chips" id="chips"></div>
@@ -215,8 +186,8 @@ template.innerHTML = `
 
     <div class="ec-form__error" id="error"></div>
   </div>
-  <div class="ec-form__footer">
-    <button type="button" class="ec-form__submit" id="createBtn">Create Activity</button>
+  <div class="ec-form__footer form-actions" data-testid="form-actions">
+    <button type="button" class="form-btn form-btn--primary" id="createBtn">Create Activity</button>
   </div>
 `;
 
@@ -236,7 +207,7 @@ export class PmExtraCurricularForm extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -277,11 +248,17 @@ export class PmExtraCurricularForm extends HTMLElement {
     this.stagedSlots = [];
     this.clearError();
     this.renderChips();
+    this.setBusy(false);
   }
 
   showError(message: string): void {
     this.errorSlot!.textContent = message;
     this.errorSlot!.classList.add('ec-form__error--visible');
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.createBtn!, null, busy);
   }
 
   clearError(): void {
@@ -369,6 +346,7 @@ export class PmExtraCurricularForm extends HTMLElement {
     }
 
     this.clearError();
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-form-submitted', {
         bubbles: true,

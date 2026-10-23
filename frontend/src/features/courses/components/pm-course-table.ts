@@ -7,6 +7,8 @@ import {
   lessonStructureColumnText,
 } from '../services/course-display';
 import type { Course } from '../services/courses';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -46,11 +48,7 @@ styles.replaceSync(`
     }
     .course-table__actions-header,
     .course-table__actions {
-      text-align: right;
       width: 220px;
-    }
-    .course-table__actions {
-      white-space: nowrap;
     }
     /* The reason a save or delete failed sits inside the row it concerns,
        above its cells, so it is never mistaken for another row's. */
@@ -82,50 +80,6 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
-    .course-table__btn {
-      border: 1px solid transparent;
-      border-radius: var(--pm-radius);
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .course-table__btn + .course-table__btn {
-      margin-left: 6px;
-    }
-    .course-table__btn--edit {
-      background: transparent;
-      border-color: var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .course-table__btn--edit:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .course-table__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .course-table__btn--save {
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .course-table__btn--cancel {
-      background: transparent;
-      color: var(--pm-text-muted);
-    }
-    .course-table__btn--cancel:hover {
-      background: var(--pm-surface-2);
-    }
-    .course-table__btn--delete:hover:not(:disabled),
-    .course-table__btn--save:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-    .course-table__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
     .course-table__empty {
       color: var(--pm-text-muted);
       font-size: 14px;
@@ -144,7 +98,7 @@ template.innerHTML = `
           <th>Lesson Structure</th>
           <th>Occurrence</th>
           <th>Cost</th>
-          <th class="course-table__actions-header" id="actionsHeader" hidden>Actions</th>
+          <th class="compact-actions-col course-table__actions-header" id="actionsHeader" hidden>Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -170,7 +124,7 @@ export class PmCourseTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -328,49 +282,61 @@ export class PmCourseTable extends HTMLElement {
 
   private buildDisplayActions(course: Course): HTMLTableCellElement {
     const cell = document.createElement('td');
-    cell.classList.add('course-table__actions');
+    cell.classList.add('compact-actions-col', 'course-table__actions');
+    const actions = this.buildActionsContainer();
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.classList.add('course-table__btn', 'course-table__btn--edit');
-    editBtn.textContent = 'Edit Cost';
+    editBtn.classList.add('compact-btn', 'course-table__btn--edit');
+    editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => this.handleEditClicked(course));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.classList.add('course-table__btn', 'course-table__btn--delete');
+    deleteBtn.classList.add('compact-btn', 'compact-btn--destructive', 'course-table__btn--delete');
     deleteBtn.textContent = 'Delete';
     deleteBtn.addEventListener('click', () => this.handleDeleteClicked(course));
 
-    cell.append(editBtn, deleteBtn);
+    actions.append(editBtn, deleteBtn);
+    cell.appendChild(actions);
     return cell;
+  }
+
+  private buildActionsContainer(): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    return actions;
   }
 
   private buildEditActions(course: Course): HTMLTableCellElement {
     const cell = document.createElement('td');
-    cell.classList.add('course-table__actions');
-
-    const saveBtn = document.createElement('button');
-    saveBtn.type = 'button';
-    saveBtn.classList.add('course-table__btn', 'course-table__btn--save');
-    saveBtn.textContent = 'Save';
-    saveBtn.disabled = this._saving;
-    saveBtn.addEventListener('click', () => this.handleSaveClicked(course));
+    cell.classList.add('compact-actions-col', 'course-table__actions');
+    const actions = this.buildActionsContainer();
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('course-table__btn', 'course-table__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'compact-btn--warning', 'course-table__btn--cancel');
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.disabled = this._saving;
     cancelBtn.addEventListener('click', () => this.handleCancelClicked());
 
-    cell.append(saveBtn, cancelBtn);
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.classList.add('compact-btn', 'course-table__btn--save');
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', () => this.handleSaveClicked(course));
+
+    if (this._saving) setButtonsBusy(saveBtn, cancelBtn, true);
+
+    actions.append(cancelBtn, saveBtn);
+    cell.appendChild(actions);
     return cell;
   }
 
   private handleEditClicked(course: Course): void {
     this._editingCourseId = course.courseId;
     this._costDraft = course.cost;
+    this._saving = false;
     this.clearRowError();
     this.render();
   }

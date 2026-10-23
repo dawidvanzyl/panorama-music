@@ -19,6 +19,8 @@ const mockRemoveWaitingListStudent = vi.fn();
 const mockGetStudentById = vi.fn();
 const mockEnrolWaitingListStudent = vi.fn();
 const mockGetAssignableTeachers = vi.fn();
+const mockDeleteGuardian = vi.fn();
+const mockUnlinkGuardian = vi.fn();
 
 vi.mock('../../services/waiting-list', async () => {
   const actual = await vi.importActual<typeof import('../../services/waiting-list')>('../../services/waiting-list');
@@ -60,6 +62,8 @@ vi.mock('../../services/guardians', async () => {
     getGuardianRelationships: () => mockGetGuardianRelationships(),
     getGuardians: (...args: unknown[]) => mockGetGuardians(...args),
     addGuardian: (...args: unknown[]) => mockAddGuardian(...args),
+    deleteGuardian: (...args: unknown[]) => mockDeleteGuardian(...args),
+    unlinkGuardian: (...args: unknown[]) => mockUnlinkGuardian(...args),
   };
 });
 
@@ -360,7 +364,7 @@ describe('pm-waiting-list-page — a row shows no course type', { tags: ['292UC1
 });
 
 describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['292UC16'] }, () => {
-  it('shows no Capture Student button and a read-only marker instead of row actions', async () => {
+  it('shows no Create Waiting List Entry button and a read-only marker instead of row actions', async () => {
     mockHasAnyRole.mockReturnValue(false);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
@@ -374,17 +378,17 @@ describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['2
 });
 
 describe('pm-waiting-list-page — a Coordinator sees the full action set', { tags: ['292UC17'] }, () => {
-  it('shows the Capture Student button and the Enrol, Edit and Delete row actions', async () => {
+  it('shows the Create Waiting List Entry button and the Enrol, Edit and Remove row actions', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
     const el = await mountPage();
 
     expect(captureBtnOf(el).hidden).toBe(false);
-    expect(captureBtnOf(el).textContent).toContain('Capture Student');
+    expect(captureBtnOf(el).textContent).toContain('Create Waiting List Entry');
     const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
     const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
-    expect(buttons).toEqual(['Enrol', 'Edit', 'Delete']);
+    expect(buttons).toEqual(['Enrol', 'Edit', 'Remove']);
   });
 });
 
@@ -523,6 +527,10 @@ describe('pm-waiting-list-page — a successful capture', { tags: ['293UC22'] },
     expect(wizard.hasAttribute('open')).toBe(true);
     const waitingListStepShadow = wizard.shadowRoot!.getElementById('waitingListStep')!.shadowRoot!;
     expect(waitingListStepShadow.getElementById('message')!.textContent).toContain('Lesson structure does not exist.');
+    const confirm = wizard.shadowRoot!.getElementById('saveBtn') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(false);
+    expect(confirm.hasAttribute('aria-busy')).toBe(false);
+    expect((wizard.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 
   // Reviewer finding on PR #298: the student and their waiting-list entry are
@@ -627,7 +635,7 @@ describe(
       mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       const modal = deleteModalOf(el);
 
       expect(modal.hasAttribute('open')).toBe(true);
@@ -642,7 +650,7 @@ describe(
       mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       const modal = deleteModalOf(el);
       (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
       await flush();
@@ -663,7 +671,7 @@ describe(
       mockRemoveWaitingListStudent.mockResolvedValueOnce(undefined);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       (deleteModalOf(el).shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
       await flush();
       await flush();
@@ -1105,5 +1113,95 @@ describe('pm-waiting-list-page — the candidate list follows the page', { tags:
     // A Teacher gets the listing and no capture action, so the candidate read
     // is one the page has no use for and never makes.
     expect(mockGetSiblingCandidates).not.toHaveBeenCalled();
+  });
+});
+
+describe(
+  'pm-waiting-list-page — confirmations close on success and report failures in the modal',
+  { tags: ['377UC2'] },
+  () => {
+    async function confirm(modalId: string, show: (modal: HTMLElement) => void): Promise<HTMLElement> {
+      mockHasAnyRole.mockReturnValue(true);
+      mockGetWaitingList.mockResolvedValue(bothGroups);
+      const el = await mountPage();
+      const modal = el.shadowRoot!.getElementById(modalId)!;
+      show(modal);
+      (modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
+      await flush();
+      await flush();
+      return modal;
+    }
+
+    const showEntry = (modal: HTMLElement): void =>
+      (modal as unknown as { show(id: string, name: string): void }).show('s1', 'Amara Pillay');
+    const showGuardian = (modal: HTMLElement): void =>
+      (modal as unknown as { show(s: string, g: string, n: string, shared: boolean): void }).show(
+        's1',
+        'g1',
+        'Nomvula',
+        false,
+      );
+
+    it('removing an entry keeps the modal open with the message and restores the buttons on failure', async () => {
+      const { WaitingListError } = await import('../../services/waiting-list');
+      mockRemoveWaitingListStudent.mockRejectedValueOnce(new WaitingListError('Entry refused', 409));
+
+      const modal = await confirm('deleteModal', showEntry);
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Entry refused');
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('removing an entry closes the modal on success', async () => {
+      mockRemoveWaitingListStudent.mockResolvedValueOnce(undefined);
+
+      const modal = await confirm('deleteModal', showEntry);
+
+      expect(modal.hasAttribute('open')).toBe(false);
+    });
+
+    it('deleting a guardian keeps the modal open with the message and restores the buttons on failure', async () => {
+      const { GuardiansError } = await import('../../services/guardians');
+      mockUnlinkGuardian.mockRejectedValueOnce(new GuardiansError('Guardian refused', 409));
+
+      const modal = await confirm('deleteGuardianModal', showGuardian);
+
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Guardian refused');
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('deleting a guardian closes the modal on success', async () => {
+      mockUnlinkGuardian.mockResolvedValueOnce(undefined);
+
+      const modal = await confirm('deleteGuardianModal', showGuardian);
+
+      expect(modal.hasAttribute('open')).toBe(false);
+    });
+  },
+);
+
+describe('pm-waiting-list-page — the entry point', { tags: ['381UC10'] }, () => {
+  it('reads Create Waiting List Entry as a primary page button for a user who can capture', async () => {
+    mockHasAnyRole.mockReturnValue(true);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(false);
+    expect(captureBtnOf(el).textContent!.trim()).toBe('Create Waiting List Entry');
+    expect(captureBtnOf(el).classList.contains('page-btn--primary')).toBe(true);
+  });
+
+  it('keeps the entry point hidden for a user who cannot capture', async () => {
+    mockHasAnyRole.mockReturnValue(false);
+    mockGetWaitingList.mockResolvedValueOnce(bothGroups);
+
+    const el = await mountPage();
+
+    expect(captureBtnOf(el).hidden).toBe(true);
   });
 });

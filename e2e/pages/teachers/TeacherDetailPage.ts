@@ -6,6 +6,13 @@ export class TeacherDetailPage extends BasePage {
   readonly profileSection: Locator;
   readonly editButton: Locator;
   readonly editForm: Locator;
+  readonly profileFormActions: Locator;
+  readonly profileSaveButton: Locator;
+  readonly profileCancelButton: Locator;
+  readonly profileSaveLoadingIcon: Locator;
+  readonly profileFormError: Locator;
+  readonly bankingFormActions: Locator;
+  readonly bankingFormConfirm: Locator;
   readonly privateToggle: Locator;
   readonly classificationError: Locator;
   readonly accountBadge: Locator;
@@ -47,6 +54,11 @@ export class TeacherDetailPage extends BasePage {
     this.profileSection = page.locator('#profileSection');
     this.editButton = this.profileSection.locator('#editBtn');
     this.editForm = this.profileSection.locator('#editForm');
+    this.profileFormActions = this.editForm.getByTestId('form-actions');
+    this.profileSaveButton = this.editForm.getByRole('button', { name: 'Save', exact: true });
+    this.profileCancelButton = this.editForm.getByRole('button', { name: 'Cancel', exact: true });
+    this.profileSaveLoadingIcon = this.profileSaveButton.getByTestId('button-loading-icon');
+    this.profileFormError = this.editForm.locator('#formError');
     this.privateToggle = this.profileSection.locator('#private');
     this.classificationError = this.profileSection.locator('#classificationError');
     this.accountBadge = this.header.locator('#accountBadge');
@@ -68,6 +80,8 @@ export class TeacherDetailPage extends BasePage {
     this.bankingRevealNote = this.bankingSection.locator('#revealNote');
     this.bankingAccountNumber = this.bankingSection.locator('#accountNumberValue');
     this.bankingForm = this.bankingSection.locator('#formView');
+    this.bankingFormActions = this.bankingForm.getByTestId('form-actions');
+    this.bankingFormConfirm = this.bankingForm.locator('#submitBtn');
     this.bankingDeleteModal = page.locator('#bankingDeleteModal');
     this.bankingDeleteModalConfirm = this.bankingDeleteModal.locator('#deleteBtn');
     this.bankingActivityButton = this.header.locator('#bankingActivityBtn');

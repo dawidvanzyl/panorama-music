@@ -127,7 +127,7 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] },
     vi.clearAllMocks();
   });
 
-  it('clicking Delete closes the modal and emits user-delete-confirmed for the page to act on', () => {
+  it('clicking Delete emits user-delete-confirmed and keeps the modal open for the page to close', () => {
     const events: CustomEvent[] = [];
     modal.addEventListener('user-delete-confirmed', (e) => events.push(e as CustomEvent));
 
@@ -137,7 +137,7 @@ describe('pm-delete-user-modal — delete confirmation', { tags: ['M1.1UC30'] },
     input.dispatchEvent(new Event('input'));
     modal.shadowRoot!.getElementById('deleteBtn')!.click();
 
-    expect(modal.hasAttribute('open')).toBe(false);
+    expect(modal.hasAttribute('open')).toBe(true);
     expect(events).toHaveLength(1);
     expect(events[0].detail.userId).toBe('user-id-1');
   });

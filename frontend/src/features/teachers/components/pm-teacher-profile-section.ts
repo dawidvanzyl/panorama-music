@@ -1,6 +1,7 @@
 import './pm-teacher-profile-form';
 import type { TeacherResult } from '../services/teachers';
 import type { PmTeacherProfileForm } from './pm-teacher-profile-form';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -26,16 +27,6 @@ styles.replaceSync(`
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--pm-text);
-    }
-    .profile-section__edit-btn {
-      border: 1px solid var(--pm-accent);
-      background: transparent;
-      color: var(--pm-accent);
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 6px 16px;
-      cursor: pointer;
     }
     .profile-section__read-grid {
       display: grid;
@@ -77,7 +68,7 @@ styles.replaceSync(`
     }
     .profile-section__classification-error {
       font-size: 12px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       min-height: 16px;
     }
     label {
@@ -148,7 +139,7 @@ template.innerHTML = `
   <div class="profile-section__card">
     <div class="profile-section__header">
       <h2 class="profile-section__title">Profile</h2>
-      <button type="button" class="profile-section__edit-btn" id="editBtn">Edit</button>
+      <button type="button" class="compact-btn profile-section__edit-btn" id="editBtn">Edit</button>
     </div>
     <div id="readView" class="profile-section__read-grid">
       <div class="profile-section__field">
@@ -189,7 +180,7 @@ export class PmTeacherProfileSection extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -232,6 +223,7 @@ export class PmTeacherProfileSection extends HTMLElement {
   closeEdit(): void {
     this.readView!.hidden = false;
     this.editForm!.hidden = true;
+    this.editForm!.setBusy(false);
     this.editBtn!.hidden = false;
   }
 

@@ -1,3 +1,4 @@
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import './pm-enrollment-form';
 import './pm-enrollment-list';
 import type {
@@ -37,21 +38,6 @@ styles.replaceSync(`
       flex-shrink: 0;
       gap: 12px;
       justify-content: flex-end;
-    }
-    .courses-step__btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .courses-step__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
     }
     .courses-step__form-panel {
       flex-shrink: 0;
@@ -93,7 +79,7 @@ template.innerHTML = `
   <div class="courses-step__section" id="section">
     <div class="courses-step__message" id="message"></div>
     <div class="courses-step__toolbar" id="listToolbar">
-      <button type="button" class="courses-step__btn" id="enrollBtn">Enroll in Course</button>
+      <button type="button" class="page-btn page-btn--primary" id="enrollBtn">Enrol Student</button>
     </div>
     <div class="courses-step__form-panel" id="formPanel">
       <pm-enrollment-form id="enrollmentForm"></pm-enrollment-form>
@@ -122,7 +108,7 @@ export class PmCoursesStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -181,7 +167,6 @@ export class PmCoursesStep extends HTMLElement {
     this._pendingCounter = 0;
     this.clearError();
     this.enrollmentList!.isPersisted = false;
-    this.enrollmentForm!.isPersisted = false;
     this.showListView();
     this.renderPendingList();
 
@@ -194,7 +179,6 @@ export class PmCoursesStep extends HTMLElement {
     this._studentId = studentId;
     this.clearError();
     this.enrollmentList!.isPersisted = true;
-    this.enrollmentForm!.isPersisted = true;
     this.showListView();
 
     this.enrollmentList!.enrollments = [];
@@ -233,6 +217,12 @@ export class PmCoursesStep extends HTMLElement {
   }
 
   showError(message: string): void {
+    this.showMessage(message);
+    this.enrollmentForm!.setBusy(false);
+    this.enrollmentList!.endSave();
+  }
+
+  private showMessage(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('courses-step__message--error');
   }
@@ -247,6 +237,7 @@ export class PmCoursesStep extends HTMLElement {
   }
 
   private showListView(): void {
+    this.enrollmentForm!.setBusy(false);
     this.collapseFormPanelOnly();
     this.enrollBtn!.hidden = false;
     this.enrollmentList!.exitEditMode();
@@ -282,6 +273,7 @@ export class PmCoursesStep extends HTMLElement {
       return;
     }
 
+    this.enrollmentForm!.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('enrollment-add-requested', {
         bubbles: true,
@@ -343,7 +335,7 @@ export class PmCoursesStep extends HTMLElement {
     const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
 
     if (this.enrollmentList!.enrollments.length <= 1 && !this._holdsExtraCurricular) {
-      this.showError(COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW);
+      this.showMessage(COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW);
       return;
     }
 

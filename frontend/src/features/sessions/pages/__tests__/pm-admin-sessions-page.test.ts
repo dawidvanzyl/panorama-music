@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { AdminSessionResult } from '../../services/sessions';
-import { revokeAllSessions } from '../../services/sessions';
+import { revokeAllSessions, SessionError } from '../../services/sessions';
 
 const mockGetAllSessions = vi.fn();
 vi.mock('../../services/sessions', async () => {
@@ -95,7 +95,7 @@ describe('pm-admin-sessions-page — filter control', { tags: ['M1.4UC8'] }, () 
   });
 });
 
-describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { tags: ['M1.4UC9'] }, () => {
+describe('pm-admin-sessions-page — Revoke All confirmation modal', { tags: ['M1.4UC9'] }, () => {
   let el: HTMLElement;
 
   beforeEach(async () => {
@@ -113,7 +113,7 @@ describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { 
     document.body.removeChild(el);
   });
 
-  it('clicking Revoke All (Global) opens the custom modal instead of calling the API directly', () => {
+  it('clicking Revoke All opens the custom modal instead of calling the API directly', () => {
     const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
 
@@ -137,5 +137,70 @@ describe('pm-admin-sessions-page — Revoke All (Global) confirmation modal', { 
 
     expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledTimes(1);
     expect(modal.hasAttribute('open')).toBe(false);
+  });
+});
+
+describe('pm-admin-sessions-page — Revoke All failure', { tags: ['377UC2'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockResolvedValue(sessions);
+    vi.mocked(revokeAllSessions).mockReset();
+    el = document.createElement('pm-admin-sessions-page');
+    document.body.appendChild(el);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('keeps the modal open with the message and restores its buttons', async () => {
+    vi.mocked(revokeAllSessions).mockRejectedValue(new SessionError('Revocation refused', 500));
+    const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
+
+    modal.show();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'REVOKE ALL';
+    input.dispatchEvent(new Event('input'));
+    modal.shadowRoot!.getElementById('revokeAllBtn')!.click();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Revocation refused');
+    expect((modal.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe('pm-admin-sessions-page — the global revoke button', { tags: ['381UC12'] }, () => {
+  let el: HTMLElement;
+
+  beforeEach(async () => {
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockResolvedValue(sessions);
+    el = document.createElement('pm-admin-sessions-page');
+    document.body.appendChild(el);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('reads Revoke All as a destructive page button and opens the modal on click', () => {
+    const revokeAllBtn = el.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
+    const modal = el.shadowRoot!.getElementById('revokeAllModal') as unknown as PmRevokeAllSessionsModal;
+
+    expect(revokeAllBtn.textContent!.trim()).toBe('Revoke All');
+    expect(revokeAllBtn.classList.contains('page-btn')).toBe(true);
+    expect(revokeAllBtn.classList.contains('page-btn--destructive')).toBe(true);
+
+    revokeAllBtn.click();
+
+    expect(modal.hasAttribute('open')).toBe(true);
   });
 });

@@ -7,6 +7,7 @@ import {
   SessionError,
   type AdminSessionResult,
 } from '../services/sessions';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import type { PmSessionsTable } from '../components/pm-sessions-table';
 import type { PmRevokeAllSessionsModal } from '../components/pm-revoke-all-sessions-modal';
 
@@ -35,24 +36,6 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       font-size: 14px;
       max-width: 40em;
-    }
-    .admin-sessions-page__revoke-all {
-      background: transparent;
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
-      border-radius: var(--pm-radius);
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .admin-sessions-page__revoke-all:hover {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .admin-sessions-page__revoke-all:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
     }
     .admin-sessions-page__error {
       margin-bottom: 16px;
@@ -94,7 +77,7 @@ template.innerHTML = `
         <h1 class="admin-sessions-page__title">User Sessions</h1>
         <p class="admin-sessions-page__subtitle">Oversee and manage all active user sessions across the entire system.</p>
       </div>
-      <button type="button" class="admin-sessions-page__revoke-all" id="revokeAllBtn">Revoke All (Global)</button>
+      <button type="button" class="page-btn page-btn--destructive" id="revokeAllBtn">Revoke All</button>
     </div>
     <div class="admin-sessions-page__error" id="error"></div>
     <div class="admin-sessions-page__filter">
@@ -122,7 +105,7 @@ export class PmAdminSessionsPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -187,16 +170,22 @@ export class PmAdminSessionsPage extends HTMLElement {
     this.revokeAllBtn!.disabled = true;
     try {
       await revokeAllSessions();
+      this.revokeAllModal!.close();
       await this.loadSessions();
     } catch (err) {
-      this.showError(err);
+      this.revokeAllModal!.setBusy(false);
+      this.revokeAllModal!.showError(this.messageOf(err));
     } finally {
       this.revokeAllBtn!.disabled = false;
     }
   };
 
+  private messageOf(err: unknown): string {
+    return err instanceof SessionError ? err.message : 'An unexpected error occurred';
+  }
+
   private showError(err: unknown): void {
-    this.errorBanner!.textContent = err instanceof SessionError ? err.message : 'An unexpected error occurred';
+    this.errorBanner!.textContent = this.messageOf(err);
     this.errorBanner!.classList.add('admin-sessions-page__error--visible');
   }
 

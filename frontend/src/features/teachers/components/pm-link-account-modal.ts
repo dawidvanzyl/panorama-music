@@ -1,4 +1,6 @@
 import './pm-account-link-picker';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import type { LinkableAccount } from '../services/teachers';
 import type { PmAccountLinkPicker } from './pm-account-link-picker';
@@ -12,18 +14,10 @@ styles.replaceSync(`
     .modal__title {
       color: var(--pm-accent);
     }
-    .modal__btn--link {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-    }
-    .modal__btn--link:hover:not(:disabled) {
-      opacity: 0.9;
-    }
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .modal__error:empty {
       display: none;
@@ -47,9 +41,9 @@ template.innerHTML = `
         ></pm-account-link-picker>
         <p class="modal__error" id="error"></p>
       </div>
-      <div class="modal__actions">
-        <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--link" id="linkBtn" type="button">Link account</button>
+      <div class="form-actions" data-testid="form-actions">
+        <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
+        <button class="form-btn form-btn--primary" id="linkBtn" type="button">Link account</button>
       </div>
     </div>
   </div>
@@ -59,40 +53,52 @@ template.innerHTML = `
 export class PmLinkAccountModal extends HTMLElement {
   private picker: PmAccountLinkPicker | null = null;
   private errorEl: HTMLElement | null = null;
+  private linkButton: HTMLButtonElement | null = null;
+  private cancelButton: HTMLButtonElement | null = null;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback(): void {
     this.picker = this.shadowRoot!.getElementById('picker') as unknown as PmAccountLinkPicker;
     this.errorEl = this.shadowRoot!.getElementById('error') as HTMLElement;
-    this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
-    this.shadowRoot!.getElementById('linkBtn')!.addEventListener('click', this.handleLink);
+    this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    this.linkButton = this.shadowRoot!.getElementById('linkBtn') as HTMLButtonElement;
+    this.cancelButton.addEventListener('click', this.handleCancel);
+    this.linkButton.addEventListener('click', this.handleLink);
   }
 
   disconnectedCallback(): void {
-    this.shadowRoot!.getElementById('cancelBtn')?.removeEventListener('click', this.handleCancel);
-    this.shadowRoot!.getElementById('linkBtn')?.removeEventListener('click', this.handleLink);
+    this.cancelButton?.removeEventListener('click', this.handleCancel);
+    this.linkButton?.removeEventListener('click', this.handleLink);
   }
 
   show(accounts: LinkableAccount[]): void {
     this.picker!.accounts = accounts;
     this.picker!.reset();
     this.errorEl!.textContent = '';
+    this.setBusy(false);
     this.setAttribute('open', '');
   }
 
   close(): void {
+    this.setBusy(false);
     this.removeAttribute('open');
   }
 
   /** Keeps the modal open so the account can be re-chosen after a rejection. */
   showError(message: string): void {
     this.errorEl!.textContent = message;
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    if (!this.linkButton || !this.cancelButton) return;
+    setButtonsBusy(this.linkButton, this.cancelButton, busy);
   }
 
   private handleCancel = (): void => this.close();
@@ -105,6 +111,7 @@ export class PmLinkAccountModal extends HTMLElement {
     }
 
     this.errorEl!.textContent = '';
+    this.setBusy(true);
     this.dispatchEvent(
       new CustomEvent('teacher-account-link-confirmed', {
         bubbles: true,

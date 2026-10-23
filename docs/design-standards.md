@@ -1,6 +1,6 @@
 ---
 name: Panorama Music UI Design Standard
-version: 1.1
+version: 1.3
 status: normative
 theme: dark (default), print (light override)
 colors:
@@ -20,6 +20,8 @@ colors:
   danger-solid: "#c93c3c"
   danger-solid-hover: "#b83232"
   danger-soft: "rgba(224, 82, 82, 0.10)"
+  warning: "#ffb305"
+  warning-soft: "rgba(255, 179, 5, 0.10)"
   success: "#8fd44e"
   success-soft: "rgba(143, 212, 78, 0.10)"
   scrim: "rgba(0, 0, 0, 0.60)"
@@ -33,6 +35,7 @@ colors-print:
   text-muted: "#555555"
   accent-text: "#2f55d4"
   danger-text: "#b83232"
+  warning: "#946200"
   success: "#3f7a10"
   success-soft: "rgba(63, 122, 16, 0.10)"
 typography:
@@ -114,6 +117,7 @@ This document is the rulebook for every button, form and modal in Panorama Music
 | Compact button | The button size used for table row actions and for record actions inside a card. |
 | Page button | A button at page level: page header, card header, filter, section entry point, or auth page submit. |
 | Entity name | The name, email or title of the record that the action changes. |
+| Warning action | One of these buttons: 1. the Cancel of an inline form on a page or in a card; 2. the Cancel of an inline row edit in a table or list on a page; 3. the Cancel of the teacher profile form and of the banking details form, wherever they are mounted, including inside the My details modal; 4. the Deactivate row action in a table or list, unless it uses the destructive family (MTX-2). No other button is a warning action. A Cancel in a confirmation modal, in the action row of a form modal, in the student wizard, or in a form or row inside a wizard step is not a warning action. |
 
 **Which button standard applies.** The content decides.
 
@@ -172,6 +176,8 @@ All colours are CSS custom properties on `:root`. Components read tokens. They d
 | `--pm-danger-solid` | `#c93c3c` | `#c93c3c` | Fill of destructive buttons. |
 | `--pm-danger-solid-hover` | `#b83232` | `#b83232` | Hover fill of destructive buttons. |
 | `--pm-danger-soft` | `rgba(224,82,82,.10)` | `rgba(224,82,82,.10)` | Error banner fill, hover tint of destructive outline buttons. |
+| `--pm-warning` | `#ffb305` | `#946200` | Border and text of a warning action. |
+| `--pm-warning-soft` | `rgba(255,179,5,.10)` | `rgba(255,179,5,.10)` | Hover fill of a warning action. |
 | `--pm-success` | `#8fd44e` | `#3f7a10` | Success text and icons. |
 | `--pm-success-soft` | `rgba(143,212,78,.10)` | `rgba(63,122,16,.10)` | Success banner fill. |
 | `--pm-scrim` | `rgba(0,0,0,.6)` | not printed | Modal backdrop. |
@@ -185,6 +191,8 @@ All colours are CSS custom properties on `:root`. Components read tokens. They d
 | Add `--pm-danger-solid` (`#c93c3c`). White text on `#e05252` is 3.8:1. On `#c93c3c` it is 5.0:1. | Same reason. |
 | Add `--pm-danger-text` (`#ea6a6a`). `#e05252` text on `--pm-surface` is 4.4:1. `#ea6a6a` is 5.5:1. | Error text MUST reach 4.5:1. |
 | Add `--pm-accent-text` (`#6b92ff`). `#4f7cff` text on `--pm-surface-2` is 4.0:1. `#6b92ff` is 5.1:1. | Outline button hover sits on `--pm-surface-2`. |
+| Add `--pm-warning` (`#ffb305`, print `#946200`). On `--pm-surface` it is about 9.4:1. In print it is about 5.2:1 on white. | A warning action stands apart from Edit and Save. Text MUST reach 4.5:1 (COL-3). |
+| Add `--pm-warning-soft`. | Hover fill of a warning action. Danger tokens are for destructive actions only (COL-5). |
 | Add `--pm-success`, `-soft`, `--pm-scrim`. | These values exist in the design spec and in inline code. They get names. |
 | Remove all fallback values in `var()`. Current fallbacks are `#9194a6`, `#e2e1ed` and `#6c5ce7`. They differ from the token values. | One value for one token. |
 | Add `--pm-radius-sm` (4px), `--pm-radius-lg` (12px), `--pm-radius-full` (9999px), `--pm-shadow-dropdown`, `--pm-shadow-modal`, `--pm-modal-width-sm`, `-md`, `-lg` (420, 520, 720px) and `--pm-modal-body-gap` (24px). | These values repeat in code as literals. Each gets a name. |
@@ -311,7 +319,7 @@ Use the spacing scale only: 4, 8, 12, 16, 20, 24, 32 px.
 | SHP-1 | Modal buttons MUST use `--pm-radius-full`. |
 | SHP-2 | Form buttons and compact buttons MUST use `--pm-radius`. |
 | SHP-3 | Inputs and selects MUST use `--pm-radius`. |
-| SHP-4 | Borders MUST be 1px. A coloured border is allowed only for focus, error and destructive states. |
+| SHP-4 | Borders MUST be 1px. A coloured border is allowed only for focus, error, destructive and warning states. The warning state is the warning variant of a warning action (Section 0). |
 
 **Why two button shapes.** The modal pill marks a short decision. The form button shares its radius and height with the inputs next to it.
 
@@ -361,27 +369,29 @@ Used in confirmation modals only.
 | Height | Set by padding (about 41px) | 40px fixed | Testable value. |
 | Padding | `10px 24px` | `0 24px` | Height now fixed. |
 | Hover | `opacity: .9` | Darker fill | Opacity lowers contrast. |
-| Cancel text | `--pm-text-muted` | `--pm-text` | Same as the form Cancel. One Cancel look. |
+| Cancel text | `--pm-text-muted` | `--pm-text` | Same as every Cancel that is not a warning action (Section 0). A warning action uses the warning variant (Sections 7.3, 7.4). |
 | Destructive fill | `#e05252` | `--pm-danger-solid` | Contrast 5.0:1. |
 
 ### 7.3 Form buttons
 
 Used in every action row that is not in a confirmation modal.
 
-| Property | Primary | Secondary |
-|---|---|---|
-| Height | 44px | 44px |
-| Padding | `0 24px` | `0 24px` |
-| Radius | `--pm-radius` | `--pm-radius` |
-| Typography | Button role | Button role |
-| Min width | 96px | 96px |
-| Background | `--pm-accent-solid` | `transparent` |
-| Border | `1px solid --pm-accent-solid` | `1px solid --pm-border` |
-| Text | `--pm-on-solid` | `--pm-text` |
-| Hover | bg and border `--pm-accent-solid-hover` | bg `--pm-surface-2` |
-| Disabled / Loading | state table | state table |
+| Property | Primary | Secondary | Warning |
+|---|---|---|---|
+| Height | 44px | 44px | 44px |
+| Padding | `0 24px` | `0 24px` | `0 24px` |
+| Radius | `--pm-radius` | `--pm-radius` | `--pm-radius` |
+| Typography | Button role | Button role | Button role |
+| Min width | 96px | 96px | 96px |
+| Background | `--pm-accent-solid` | `transparent` | `transparent` |
+| Border | `1px solid --pm-accent-solid` | `1px solid --pm-border` | `1px solid --pm-warning` |
+| Text | `--pm-on-solid` | `--pm-text` | `--pm-warning` |
+| Hover | bg and border `--pm-accent-solid-hover` | bg `--pm-surface-2` | bg `--pm-warning-soft` |
+| Disabled / Loading | state table | state table | state table |
 
 There is no destructive form button. A destructive action MUST be confirmed in a destructive confirmation modal.
+
+Warning is used only for a Cancel that is a warning action (Section 0, FRM-8). Every other Cancel uses Secondary.
 
 **Changes.**
 
@@ -396,17 +406,19 @@ There is no destructive form button. A destructive action MUST be confirmed in a
 
 Used for table row actions and for record actions inside a card (for example Edit and Delete beside saved details).
 
-| Property | Default | Destructive |
-|---|---|---|
-| Height | 32px | 32px |
-| Padding | `0 12px` | `0 12px` |
-| Radius | `--pm-radius` | `--pm-radius` |
-| Typography | Compact button role | Compact button role |
-| Background | `transparent` | `transparent` |
-| Border | `1px solid --pm-accent` | `1px solid --pm-danger` |
-| Text | `--pm-accent-text` | `--pm-danger-text` |
-| Hover | bg `--pm-accent-soft` | bg `--pm-danger-soft` |
-| Disabled / Loading | state table | state table |
+| Property | Default | Destructive | Warning |
+|---|---|---|---|
+| Height | 32px | 32px | 32px |
+| Padding | `0 12px` | `0 12px` | `0 12px` |
+| Radius | `--pm-radius` | `--pm-radius` | `--pm-radius` |
+| Typography | Compact button role | Compact button role | Compact button role |
+| Background | `transparent` | `transparent` | `transparent` |
+| Border | `1px solid --pm-accent` | `1px solid --pm-danger` | `1px solid --pm-warning` |
+| Text | `--pm-accent-text` | `--pm-danger-text` | `--pm-warning` |
+| Hover | bg `--pm-accent-soft` | bg `--pm-danger-soft` | bg `--pm-warning-soft` |
+| Disabled / Loading | state table | state table | state table |
+
+Warning is used only for a compact button that is a warning action (Section 0, ROW-6).
 
 **Changes.**
 
@@ -587,6 +599,7 @@ For modals that hold fields, a wizard, or information.
 | FRM-5 | A form MUST show a request error in the error line above the action row. |
 | FRM-6 | The confirm action MUST be disabled while the request is in progress. |
 | FRM-7 | An action row of a form MUST NOT contain a destructive button. A compact destructive button MAY sit elsewhere in the same card. |
+| FRM-8 | A Cancel that is a warning action (Section 0) MUST be the form warning button. Every other Cancel MUST be the form secondary button. |
 
 ### 7.12 Table row actions
 
@@ -597,7 +610,7 @@ For modals that hold fields, a wizard, or information.
 | ROW-3 | Row actions MUST be right-aligned in a flex row with `gap: 8px`. |
 | ROW-4 | Order, left to right: non-destructive actions, then reversible state changes, then destructive actions. The destructive action MUST be last. |
 | ROW-5 | The label MUST be the verb only, equal to the confirm label of the modal that it opens (Section 8). |
-| ROW-6 | A row action that uses the destructive family MUST use the destructive compact variant. All other row actions MUST use the default variant. |
+| ROW-6 | A row action that uses the destructive family MUST use the destructive compact variant. A row button that is a warning action (Section 0) MUST use the warning compact variant. All other row actions MUST use the default variant. |
 | ROW-7 | A row action that uses the destructive family MUST open a destructive confirmation modal. It MUST NOT act on the first click. |
 | ROW-8 | A row action MAY act on the first click if it is reversible (reactivate, print). |
 | ROW-9 | A row action MUST NOT contain an icon. |
@@ -666,9 +679,11 @@ For modals that hold fields, a wizard, or information.
 | save | `Save {Noun}` (see LBL-6) | One sentence on where the saved item appears. | `Save {Noun}` | none | Yes (by delete) |
 | link | `Link {Noun}` | One sentence on the limits of the link. | `Link {Noun}` | none | Yes (by unlink) |
 | enrol | `Enrol {Noun}` | One sentence on the consequence. | `Enrol {Noun}` | none | Yes (by withdraw) |
+| assign | `Assign {Noun}` | One sentence on the consequence. | `Assign {Noun}` | none | Yes (by remove) |
 | sign in | Page heading (not set by this standard) | None. | `Sign In` | none | Yes (by sign out) |
 | request reset | Page heading (not set by this standard) | None. | `Send Reset Link` | none | n/a |
 | register | Page heading (not set by this standard) | None. | `Complete Setup` | none | n/a |
+| reset password | Page heading (not set by this standard) | None. | `Complete Password Reset` | none | n/a |
 
 ### 8.4 Label rules
 
@@ -678,15 +693,16 @@ For modals that hold fields, a wizard, or information.
 | LBL-2 | A label MUST use Title Case. |
 | LBL-3 | A label MUST NOT end with a full stop, ellipsis or colon. |
 | LBL-4 | A confirm label in a confirmation modal MUST be the verb only. The title already names the noun. |
-| LBL-5 | A confirm label in a form that creates, links or enrols MUST be `{Verb} {Noun}`. The noun is REQUIRED, because the page can hold several forms. The auth page submit labels in Section 8.3 ("Sign In", "Send Reset Link", "Complete Setup") are exempt from LBL-5, LBL-11 and LBL-12, because an auth page has one form. |
+| LBL-5 | A confirm label in a form that creates, links, enrols or assigns MUST be `{Verb} {Noun}`. The noun is REQUIRED, because the page can hold several forms. The auth page submit labels in Section 8.3 ("Sign In", "Send Reset Link", "Complete Password Reset", "Complete Setup") are exempt from LBL-5, LBL-11 and LBL-12, because an auth page has one form. |
 | LBL-6 | A confirm label in a form that edits MUST be "Save" with no noun. "Save {Noun}" is allowed only when the form saves a result that does not exist yet, for example a built report. |
 | LBL-7 | A table row action label MUST be the verb only (ROW-5). |
 | LBL-8 | The dismiss label MUST be "Cancel" (ACT-9). |
-| LBL-9 | A label MUST NOT use these words: Add, Submit, OK, Yes, No, Confirm, Activate, Discard, Close, Done. Use the verb in Section 8.2 or 8.3. |
+| LBL-9 | A label MUST NOT use these words: Add, Submit, OK, Yes, No, Confirm, Activate, Discard, Close, Done, except as LBL-14 allows. Use the verb in Section 8.2 or 8.3. |
 | LBL-10 | The wizard labels MUST be "Previous" and "Next". |
 | LBL-11 | A noun in a label MUST match the noun in the title of the same form or modal. |
-| LBL-12 | The noun MUST be the product term for the record: Student, Guardian, Teacher, User, Course, Activity, Relationship, Report, Banking Details, Waiting List Entry, Account, Session. |
+| LBL-12 | The noun MUST be the product term for the record: Student, Guardian, Teacher, User, Course, Activity, Relationship, Report, Banking Details, Waiting List Entry, Account, Session, Practice Time. |
 | LBL-13 | A label MUST have one verb and at most one noun. The noun is a product term from LBL-12 and can have several words. The revoke labels in MTX-4 are the only exception. |
+| LBL-14 | "Add" is allowed only on a button that adds an item to a list without creating a record, for example a report filter. |
 
 ---
 
@@ -716,7 +732,7 @@ A reviewer approves a change only if every item is "yes". One "no" rejects the c
 | 11 | The confirm action is the last control, at the right edge (ACT-4). |
 | 12 | There is one confirm action (ACT-5). |
 | 13 | Gap is 12px and the row is right-aligned. The wizard row follows WIZ-3 (ACT-1, ACT-2). |
-| 14 | The dismiss label is "Cancel" (ACT-9). |
+| 14 | The dismiss label is "Cancel" (ACT-9). A Cancel that is a warning action uses the warning variant; every other Cancel does not (Section 0, FRM-8, ROW-6). |
 | 15 | The confirm action enters loading and the Cancel button is disabled while the request runs (BTN-1). |
 
 ### 9.3 Any form
@@ -751,7 +767,7 @@ A reviewer approves a change only if every item is "yes". One "no" rejects the c
 |---|---|
 | 32 | The button is compact (ROW-1). |
 | 33 | The label is the verb of the modal that it opens (ROW-5). |
-| 34 | The destructive action is last and uses the destructive variant (ROW-4, ROW-6). |
+| 34 | The destructive action is last and uses the destructive variant. A warning action uses the warning variant (Section 0, ROW-4, ROW-6). |
 | 35 | An action that uses the destructive family opens a destructive confirmation modal (ROW-7). |
 | 36 | The Actions column is hidden in print mode (ROW-10). |
 
@@ -810,14 +826,14 @@ This appendix is not part of the rules. It lists today's components, the target 
 |---|---|---|
 | `pm-teacher-profile-form` | Own `save` / `cancel` rules. | Form buttons. Cancel, "Save". |
 | `pm-guardian-form` | 40px. "Add Guardian". | Form buttons, 44px. "Create Guardian". |
-| `pm-banking-section` (form part) | `6px 16px`, "Save banking details", ghost Cancel. | Form buttons. "Save". Cancel is form secondary. |
+| `pm-banking-section` (form part) | `6px 16px`, "Save banking details", ghost Cancel. | Form buttons. "Save". Cancel is form warning. |
 | `pm-course-form` | 44px. "Create Course". | Form buttons. Label stays. |
 | `pm-relationship-form` | Own submit rule. | Form buttons. "Create Relationship". |
 | `pm-teacher-create-section` | Own save rule. | Form buttons. "Create Teacher". |
 | `pm-create-user-form` | Own submit rule. | Form buttons. "Create User". |
 | `pm-extra-curricular-form` | Not reviewed. | Form buttons. "Create Activity" or "Save". |
 | `pm-enrollment-form` | Not reviewed. | Form buttons. "Enrol Student" or "Save". |
-| Login, registration, forgot-password and reset-password pages | Own button rules. A trailing icon (`login`, `arrow_forward`). The label is replaced while busy ("Authenticating...", "Sending...", "Activating..."). Hover uses `brightness`. | Form primary button, full width (PGB-4). Remove the icon (BTN-3). Keep the label while busy and show the loading icon (Section 7.1, LBL-3). Hover is a darker fill. Labels: "Sign In", "Send Reset Link", "Complete Setup". Check the reset-password label against Section 8.4. |
+| Login, registration, forgot-password and reset-password pages | Own button rules. A trailing icon (`login`, `arrow_forward`). The label is replaced while busy ("Authenticating...", "Sending...", "Activating..."). Hover uses `brightness`. | Form primary button, full width (PGB-4). Remove the icon (BTN-3). Keep the label while busy and show the loading icon (Section 7.1, LBL-3). Hover is a darker fill. Labels: "Sign In", "Send Reset Link", "Complete Password Reset", "Complete Setup". |
 | Label "Add" (banking, other) | "Add" | "Create {Noun}" (LBL-9). |
 
 ### A.4 Table row and list row actions
@@ -825,7 +841,7 @@ This appendix is not part of the rules. It lists today's components, the target 
 | Component | Current labels | Target |
 |---|---|---|
 | `pm-students-table` | Edit, Print, Delete (filled red) | Edit, Print, Delete. Delete is outline destructive. |
-| `pm-users-table` | Edit, Deactivate, Activate, Delete | Edit, Deactivate, Reactivate, Delete. |
+| `pm-users-table` | Edit, Deactivate, Activate, Delete | Edit, Deactivate, Reactivate, Delete. Deactivate is warning compact. |
 | `pm-course-table` | Edit Cost, Delete | Edit, Delete. |
 | `pm-extra-curricular-table` | Edit, Delete | Same labels. |
 | `pm-saved-reports-table` | Edit, Delete | Same labels. |

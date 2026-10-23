@@ -1,3 +1,5 @@
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     :host {
@@ -63,30 +65,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       word-break: break-all;
     }
-    .banner__copy {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 24px;
-      border: none;
-      border-radius: var(--pm-radius);
-      background: var(--pm-accent);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .banner__copy:hover {
-      filter: brightness(1.1);
-    }
-    .banner__copy:active {
-      transform: scale(0.97);
-    }
-    .banner__copy-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
-    }
   `);
 
 const template = document.createElement('template');
@@ -104,10 +82,7 @@ template.innerHTML = `
     </div>
     <div class="banner__link-row">
       <div class="banner__link-box" id="inviteUrl"></div>
-      <button type="button" class="banner__copy" id="copyBtn">
-        <span class="banner__copy-icon">content_copy</span>
-        Copy Link
-      </button>
+      <button type="button" class="compact-btn banner__copy" id="copyBtn">Copy Link</button>
     </div>
   </div>
 `;
@@ -120,7 +95,7 @@ export class PmUserCreatedBanner extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

@@ -1,6 +1,7 @@
 import './pm-teacher-row';
 import type { TeacherResult } from '../services/teachers';
 import type { PmTeacherRow } from './pm-teacher-row';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -31,9 +32,6 @@ styles.replaceSync(`
     }
     .teacher-table__col-actions {
       width: 120px;
-    }
-    .teacher-table__actions-header {
-      text-align: right;
     }
     .teacher-table__empty {
       color: var(--pm-text-muted);
@@ -66,7 +64,7 @@ template.innerHTML = `
           <th>Status</th>
           <th>Linked Account</th>
           <th>Banking details</th>
-          <th class="teacher-table__actions-header">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -87,7 +85,7 @@ export class PmTeacherTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

@@ -1,4 +1,6 @@
 import './pm-account-link-picker';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 import type { LinkableAccount, TeacherInput } from '../services/teachers';
 import type { PmAccountLinkPicker } from './pm-account-link-picker';
 
@@ -50,7 +52,7 @@ styles.replaceSync(`
     }
     .create-section__error {
       font-size: 12px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     /* Collapse while empty so the classification box, which has no error line
        of its own, still bottom-aligns with the two inputs beside it. */
@@ -148,23 +150,8 @@ styles.replaceSync(`
       outline: 2px solid var(--pm-accent);
       outline-offset: 2px;
     }
-    .create-section__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 20px;
-    }
-    button {
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      padding: 8px 20px;
-      cursor: pointer;
-    }
-    .create-section__save {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
+    .form-actions {
+      margin-top: 24px;
     }
   `);
 
@@ -200,8 +187,8 @@ template.innerHTML = `
       <pm-account-link-picker class="create-section__field--full" id="accountPicker"></pm-account-link-picker>
     </div>
     <div class="create-section__error" id="formError"></div>
-    <div class="create-section__actions">
-      <button type="button" class="create-section__save" id="saveBtn">Create Teacher</button>
+    <div class="form-actions" data-testid="form-actions">
+      <button type="button" class="form-btn form-btn--primary" id="saveBtn">Create Teacher</button>
     </div>
   </div>
 `;
@@ -221,7 +208,7 @@ export class PmTeacherCreateSection extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -267,10 +254,16 @@ export class PmTeacherCreateSection extends HTMLElement {
     this.accountPicker!.reset();
     this.updateToggleHelp();
     this.clearErrors();
+    this.setBusy(false);
   }
 
   showError(message: string): void {
     this.formError!.textContent = message;
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    setButtonsBusy(this.saveBtn!, null, busy);
   }
 
   private updateToggleHelp = (): void => {
@@ -300,6 +293,7 @@ export class PmTeacherCreateSection extends HTMLElement {
     }
     if (!valid) return;
 
+    this.setBusy(true);
     const input: TeacherInput = {
       firstName,
       surname,

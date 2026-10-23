@@ -1,3 +1,7 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import {
   NO_ACTIVITIES_ASSIGNED,
   PHASE_LABELS,
@@ -35,17 +39,6 @@ styles.replaceSync(`
       flex-shrink: 0;
       justify-content: flex-end;
     }
-    .ec-step__btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
     .ec-step__panel {
       flex-shrink: 0;
       max-height: 0;
@@ -79,7 +72,7 @@ styles.replaceSync(`
       box-sizing: border-box;
       height: 44px;
       padding: 0 12px;
-      background: var(--pm-surface-alt, #22263a);
+      background: var(--pm-surface-2);
       border: 1px solid var(--pm-border);
       border-radius: var(--pm-radius);
       color: var(--pm-text);
@@ -92,29 +85,8 @@ styles.replaceSync(`
       letter-spacing: 0.02em;
       color: var(--pm-text-muted);
     }
-    .ec-step__panel-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    .form-actions {
       margin-top: 20px;
-    }
-    .ec-step__panel-btn {
-      height: 40px;
-      padding: 0 20px;
-      border-radius: var(--pm-radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .ec-step__panel-btn--cancel {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .ec-step__panel-btn--assign {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
     }
     .ec-step__table-wrap {
       flex: 1;
@@ -146,17 +118,7 @@ styles.replaceSync(`
     }
     .ec-step__actions-header,
     .ec-step__actions {
-      text-align: right;
       width: 120px;
-    }
-    .ec-step__remove {
-      background: transparent;
-      border: none;
-      padding: 0;
-      color: var(--pm-danger);
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
     }
     .ec-step__badge {
       display: inline-block;
@@ -199,7 +161,7 @@ template.innerHTML = `
   <div class="ec-step__section" id="section">
     <div class="ec-step__message" id="message"></div>
     <div class="ec-step__toolbar" id="toolbar">
-      <button type="button" class="ec-step__btn" id="addBtn">Add Activity</button>
+      <button type="button" class="page-btn page-btn--primary" id="addBtn">Assign Activity</button>
     </div>
     <div class="ec-step__panel" id="panel">
       <div class="ec-step__panel-inner">
@@ -210,9 +172,9 @@ template.innerHTML = `
           </div>
         </div>
         <p class="ec-step__note" id="note"></p>
-        <div class="ec-step__panel-actions">
-          <button type="button" class="ec-step__panel-btn ec-step__panel-btn--cancel" id="cancelBtn">Cancel</button>
-          <button type="button" class="ec-step__panel-btn ec-step__panel-btn--assign" id="assignBtn">Assign</button>
+        <div class="form-actions" data-testid="form-actions">
+          <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
+          <button type="button" class="form-btn form-btn--primary" id="assignBtn">Assign Activity</button>
         </div>
       </div>
     </div>
@@ -223,7 +185,7 @@ template.innerHTML = `
             <th>Activity</th>
             <th>Phase</th>
             <th>Practice Times</th>
-            <th class="ec-step__actions-header">Actions</th>
+            <th class="compact-actions-col ec-step__actions-header">Actions</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -262,7 +224,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -398,6 +360,11 @@ export class PmExtraCurricularsStep extends HTMLElement {
   showError(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('ec-step__message--error');
+    this.setAssignBusy(false);
+  }
+
+  private setAssignBusy(busy: boolean): void {
+    setButtonsBusy(this.assignBtn!, this.cancelBtn!, busy);
   }
 
   clearError(): void {
@@ -405,8 +372,9 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.message!.className = 'ec-step__message';
   }
 
-  /** Collapses the Add Activity panel (if open) and returns to the table. */
+  /** Collapses the Assign Activity panel (if open) and returns to the table. */
   closePanel(): void {
+    this.setAssignBusy(false);
     this.panel!.classList.remove('ec-step__panel--expanded');
     this.panel!.setAttribute('inert', '');
     this.addBtn!.hidden = false;
@@ -459,6 +427,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
       return;
     }
 
+    this.setAssignBusy(true);
     this.dispatchEvent(
       new CustomEvent('extra-curricular-assign-requested', {
         bubbles: true,
@@ -534,13 +503,17 @@ export class PmExtraCurricularsStep extends HTMLElement {
     practiceTimes.textContent = practiceTimesText(activity);
 
     const actions = document.createElement('td');
-    actions.classList.add('ec-step__actions');
+    actions.classList.add('compact-actions-col', 'ec-step__actions');
+    const actionRow = document.createElement('div');
+    actionRow.classList.add('compact-actions');
+    actionRow.dataset.testid = 'row-actions';
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.classList.add('ec-step__remove');
+    remove.classList.add('compact-btn', 'compact-btn--destructive', 'ec-step__remove');
     remove.textContent = 'Remove';
     remove.addEventListener('click', () => this.handleRemoveClicked(activity));
-    actions.appendChild(remove);
+    actionRow.appendChild(remove);
+    actions.appendChild(actionRow);
 
     row.append(description, phase, practiceTimes, actions);
     return row;

@@ -204,6 +204,47 @@ describe('pm-guardian-relationships-page — renames a relationship type', { tag
     expect(renameGuardianRelationship).toHaveBeenCalledWith('r2', 'Stepfather');
     expect(rowNamesOf(el)).toEqual(['Mother', 'Stepfather']);
   });
+
+  function startRename(): { save: () => HTMLButtonElement; nameInput: () => HTMLInputElement } {
+    const root = listOf(el).shadowRoot!;
+    const rows = root.querySelectorAll('tbody tr');
+    (rows[1].querySelector('.relationship-list__btn--edit') as HTMLButtonElement).click();
+    const nameInput = (): HTMLInputElement => root.querySelector('.relationship-list__edit-input') as HTMLInputElement;
+    nameInput().value = 'Stepfather';
+    nameInput().dispatchEvent(new Event('input'));
+    (root.querySelector('.relationship-list__btn--save') as HTMLButtonElement).click();
+    return { save: () => root.querySelector('.relationship-list__btn--save') as HTMLButtonElement, nameInput };
+  }
+
+  it('leaves Save enabled with the entered name when the rename is refused', { tags: ['380UC11'] }, async () => {
+    vi.mocked(renameGuardianRelationship).mockRejectedValue(new GuardiansError('Refused.', 400));
+
+    const { save, nameInput } = startRename();
+    expect(save().disabled).toBe(true);
+    await flush();
+
+    expect(save().disabled).toBe(false);
+    expect(save().hasAttribute('aria-busy')).toBe(false);
+    expect(nameInput().value).toBe('Stepfather');
+    expect(errorBannerOf(el).textContent).toContain('Refused.');
+  });
+
+  it(
+    'leaves Save enabled with the saved name when the rename succeeds but the reload fails',
+    { tags: ['380UC11'] },
+    async () => {
+      vi.mocked(renameGuardianRelationship).mockResolvedValue({ guardianRelationshipId: 'r2', name: 'Stepfather' });
+      mockGetGuardianRelationships.mockRejectedValue(new GuardiansError('Could not reload.', 500));
+
+      const { save, nameInput } = startRename();
+      await flush();
+
+      expect(save().disabled).toBe(false);
+      expect(save().hasAttribute('aria-busy')).toBe(false);
+      expect(nameInput().value).toBe('Stepfather');
+      expect(errorBannerOf(el).textContent).toContain('Could not reload.');
+    },
+  );
 });
 
 describe('pm-guardian-relationships-page — blocks deleting a type in use', { tags: ['214UC10'] }, () => {
@@ -232,7 +273,7 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
     expect(rowNamesOf(el)).toContain('Mother');
   });
 
-  it('surfaces the server rejection if a guardian is assigned after the check', async () => {
+  it('shows the server rejection in the confirmation if a guardian is assigned after the check', async () => {
     vi.mocked(deleteGuardianRelationship).mockRejectedValue(
       new GuardiansError("Guardian relationship 'Mother' is assigned to 2 guardian(s) and cannot be deleted.", 400),
     );
@@ -240,9 +281,25 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
     await confirmDeleteOf(el, mother);
     await flush();
 
-    expect(errorBannerOf(el).textContent).toContain('cannot be deleted');
+    expect(deleteModalOf(el).shadowRoot!.getElementById('error')!.textContent).toContain('cannot be deleted');
     expect(rowNamesOf(el)).toContain('Mother');
   });
+
+  it(
+    'keeps the confirmation open and restores its buttons when the delete is refused',
+    { tags: ['377UC2'] },
+    async () => {
+      vi.mocked(deleteGuardianRelationship).mockRejectedValue(new GuardiansError('Refused.', 400));
+
+      await confirmDeleteOf(el, mother);
+      await flush();
+
+      const modal = deleteModalOf(el);
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect((modal.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).disabled).toBe(false);
+      expect((modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).disabled).toBe(false);
+    },
+  );
 
   it('cancelling the confirmation modal deletes nothing', async () => {
     clickDeleteOn(el, father);
@@ -263,5 +320,62 @@ describe('pm-guardian-relationships-page — blocks deleting a type in use', { t
 
     expect(deleteGuardianRelationship).toHaveBeenCalledWith('r2');
     expect(rowNamesOf(el)).toEqual(['Mother']);
+  });
+
+  it('closes the confirmation once the delete has succeeded', { tags: ['377UC2'] }, async () => {
+    vi.mocked(deleteGuardianRelationship).mockResolvedValue(undefined);
+    mockGetGuardianRelationships.mockResolvedValue([mother]);
+
+    await confirmDeleteOf(el, father);
+    await flush();
+
+    expect(deleteModalOf(el).hasAttribute('open')).toBe(false);
+  });
+});
+
+describe('pm-guardian-relationships-page — loading state of Create Relationship', { tags: ['378UC2'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function createButtonOf(page: HTMLElement): HTMLButtonElement {
+    return formOf(page).shadowRoot!.getElementById('saveBtn') as HTMLButtonElement;
+  }
+
+  it('is ready again with the typed name kept when the create fails', async () => {
+    vi.mocked(createGuardianRelationship).mockRejectedValue(
+      new GuardiansError("Guardian relationship 'Mother' already exists.", 400),
+    );
+    el = await mountPage();
+
+    await submitCreateForm(el, 'Mother');
+
+    expect(createButtonOf(el).disabled).toBe(false);
+    expect(createButtonOf(el).hasAttribute('aria-busy')).toBe(false);
+    expect(nameInputOf(el).value).toBe('Mother');
+  });
+
+  it('is busy while the create runs and ready again after it succeeds', async () => {
+    let resolveCreate: (value: GuardianRelationship) => void = () => undefined;
+    vi.mocked(createGuardianRelationship).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+    el = await mountPage();
+
+    nameInputOf(el).value = 'Aunt';
+    createButtonOf(el).dispatchEvent(new MouseEvent('click'));
+    await flush();
+    expect(createButtonOf(el).getAttribute('aria-busy')).toBe('true');
+    expect(createButtonOf(el).disabled).toBe(true);
+
+    resolveCreate({ guardianRelationshipId: 'r9', name: 'Aunt' });
+    await flush();
+
+    expect(createButtonOf(el).hasAttribute('aria-busy')).toBe(false);
+    expect(createButtonOf(el).disabled).toBe(false);
   });
 });

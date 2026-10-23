@@ -1,3 +1,7 @@
+import { setButtonsBusy } from '../../../components/button-states';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { hasRole } from '../../../services/token-storage';
 import { ACCOUNT_TYPE_LABELS, BANK_LABELS, maskAccountNumber } from '../services/banking-display';
 import type { Bank, BankAccountType, BankingDetails, BankingDetailsInput, TeacherResult } from '../services/teachers';
@@ -43,39 +47,6 @@ styles.replaceSync(`
       font-size: 13px;
       color: var(--pm-text-muted);
     }
-    .banking__actions {
-      display: flex;
-      gap: 8px;
-    }
-    .banking__btn {
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 6px 16px;
-      cursor: pointer;
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    /* Filled red with white text, the same destructive treatment the delete and
-       unlink confirmations use — a delete should read the same wherever it is. */
-    .banking__btn--danger {
-      background: var(--pm-danger, #e05252);
-      border-color: var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .banking__btn--danger:hover {
-      opacity: 0.9;
-    }
-    .banking__btn--primary {
-      background: var(--pm-accent);
-      border-color: var(--pm-accent);
-      color: #fff;
-    }
-    .banking__btn--ghost {
-      border-color: var(--pm-border);
-      color: var(--pm-text-muted);
-    }
     .banking__read-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -114,20 +85,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.06em;
-    }
-    .banking__account-actions {
-      display: flex;
-      gap: 8px;
-    }
-    /* Same icon treatment as the header's link/unlink actions. */
-    .banking__btn--icon {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .banking__btn-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
     }
     .banking__note {
       margin: 16px 0 0;
@@ -171,21 +128,16 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
     }
     .banking__hint--error {
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     .banking__error {
       margin-top: 8px;
       font-size: 13px;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       min-height: 18px;
     }
-    .banking__form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      /* The error line above already reserves its own height, so the actions
-         only need enough of a gap to read as a separate row. */
-      margin-top: 8px;
+    .form-actions {
+      margin-top: 24px;
     }
     [hidden] {
       display: none !important;
@@ -197,9 +149,9 @@ template.innerHTML = `
   <div class="banking__card" id="card">
     <div class="banking__header">
       <h2 class="banking__title">Banking details</h2>
-      <div class="banking__actions" id="readActions">
-        <button type="button" class="banking__btn" id="editBtn">Edit</button>
-        <button type="button" class="banking__btn banking__btn--danger" id="deleteBtn">Delete</button>
+      <div class="compact-actions" id="readActions" data-testid="row-actions">
+        <button type="button" class="compact-btn" id="editBtn">Edit</button>
+        <button type="button" class="compact-btn compact-btn--destructive" id="deleteBtn">Delete</button>
       </div>
     </div>
     <p class="banking__caption" id="caption"></p>
@@ -224,15 +176,9 @@ template.innerHTML = `
           <span class="banking__field-label">Account number</span>
           <span class="banking__account-number" id="accountNumberValue"></span>
         </div>
-        <div class="banking__account-actions">
-          <button type="button" class="banking__btn banking__btn--icon" id="revealBtn">
-            <span class="banking__btn-icon" aria-hidden="true" id="revealIcon">visibility</span>
-            <span id="revealLabel">Reveal</span>
-          </button>
-          <button type="button" class="banking__btn banking__btn--icon" id="activityBtn" hidden>
-            <span class="banking__btn-icon" aria-hidden="true">receipt_long</span>
-            <span>Activity</span>
-          </button>
+        <div class="compact-actions">
+          <button type="button" class="compact-btn" id="revealBtn">Reveal</button>
+          <button type="button" class="compact-btn" id="activityBtn" hidden>Activity</button>
         </div>
       </div>
       <p class="banking__note" id="revealNote"></p>
@@ -240,7 +186,7 @@ template.innerHTML = `
 
     <div id="emptyView" hidden>
       <p class="banking__empty">No banking details captured.</p>
-      <button type="button" class="banking__btn" id="addBtn">Add banking details</button>
+      <button type="button" class="page-btn page-btn--primary" id="addBtn">Create Banking Details</button>
     </div>
 
     <form id="formView" hidden>
@@ -272,9 +218,9 @@ template.innerHTML = `
         The account number is encrypted before it is stored and is never written to logs or audit entries &mdash; only its last four digits are.
       </p>
       <div class="banking__error" id="formError"></div>
-      <div class="banking__form-actions">
-        <button type="button" class="banking__btn banking__btn--ghost" id="cancelBtn">Cancel</button>
-        <button type="submit" class="banking__btn banking__btn--primary" id="submitBtn">Save banking details</button>
+      <div class="form-actions" data-testid="form-actions">
+        <button type="button" class="form-btn form-btn--secondary form-btn--warning" id="cancelBtn">Cancel</button>
+        <button type="submit" class="form-btn form-btn--primary" id="submitBtn">Save</button>
       </div>
     </form>
   </div>
@@ -325,11 +271,12 @@ export class PmBankingSection extends HTMLElement {
   private mode: 'read' | 'create' | 'edit' = 'read';
   private revealedNumber: string | null = null;
   private revealTimer: ReturnType<typeof setTimeout> | null = null;
+  private busy = false;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -406,11 +353,18 @@ export class PmBankingSection extends HTMLElement {
 
   closeForm(): void {
     this.mode = 'read';
+    this.setBusy(false);
     this.render();
   }
 
   showFormError(message: string): void {
     this.byId<HTMLElement>('formError').textContent = message;
+    this.setBusy(false);
+  }
+
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+    setButtonsBusy(this.byId<HTMLButtonElement>('submitBtn'), this.byId<HTMLButtonElement>('cancelBtn'), busy);
   }
 
   /**
@@ -479,14 +433,14 @@ export class PmBankingSection extends HTMLElement {
       this.byId<HTMLElement>('branchCodeValue').textContent = banking.branchCode;
       this.byId<HTMLElement>('accountNumberValue').textContent =
         this.revealedNumber ?? maskAccountNumber(banking.accountNumberLast4);
-      this.byId<HTMLElement>('revealLabel').textContent = this.revealedNumber ? 'Hide' : 'Reveal';
-      this.byId<HTMLElement>('revealIcon').textContent = this.revealedNumber ? 'visibility_off' : 'visibility';
+      this.byId<HTMLElement>('revealBtn').textContent = this.revealedNumber ? 'Hide' : 'Reveal';
     }
 
     if (editing) {
       const creating = this.mode === 'create';
       this.byId<HTMLElement>('accountHint').textContent = creating ? CREATE_ACCOUNT_HINT : EDIT_ACCOUNT_HINT;
-      this.byId<HTMLButtonElement>('submitBtn').textContent = creating ? 'Save banking details' : 'Save changes';
+      this.byId<HTMLButtonElement>('submitBtn').textContent = creating ? 'Create Banking Details' : 'Save';
+      this.setBusy(this.busy);
       this.byId<HTMLInputElement>('accountNumberInput').placeholder = creating
         ? '6 to 12 digits'
         : 'Leave blank to keep the stored number';
@@ -517,6 +471,7 @@ export class PmBankingSection extends HTMLElement {
     this.byId<HTMLElement>('formError').textContent = '';
     this.byId<HTMLElement>('branchHint').hidden = true;
     this.byId<HTMLElement>('accountHint').classList.remove('banking__hint--error');
+    this.setBusy(false);
 
     this.render();
   }
@@ -593,6 +548,7 @@ export class PmBankingSection extends HTMLElement {
 
     const input: BankingDetailsInput = { bank, accountType, branchCode };
     if (!accountNumberOmitted) input.accountNumber = accountNumber;
+    this.setBusy(true);
 
     this.dispatchEvent(
       new CustomEvent<{ teacherId: string; mode: 'create' | 'edit'; input: BankingDetailsInput }>(

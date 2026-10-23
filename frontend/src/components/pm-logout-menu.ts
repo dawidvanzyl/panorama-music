@@ -18,7 +18,7 @@ styles.replaceSync(`
       border: none;
       border-radius: var(--pm-radius);
       background: transparent;
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
       font-family: inherit;
       font-size: 14px;
       font-weight: 600;

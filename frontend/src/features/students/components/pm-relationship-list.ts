@@ -1,4 +1,6 @@
 import type { GuardianRelationship } from '../services/guardians';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -32,51 +34,6 @@ styles.replaceSync(`
       letter-spacing: 0.04em;
       color: var(--pm-text-muted);
     }
-    .relationship-list__actions {
-      text-align: right;
-      white-space: nowrap;
-    }
-    .relationship-list__btn {
-      background: transparent;
-      border: 1px solid currentColor;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--pm-radius);
-      font-family: inherit;
-    }
-    .relationship-list__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-    .relationship-list__btn--edit {
-      color: var(--pm-accent);
-    }
-    .relationship-list__btn--edit:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .relationship-list__btn--delete {
-      border: none;
-      background: var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .relationship-list__btn--delete:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    .relationship-list__btn--cancel {
-      color: var(--pm-text);
-    }
-    .relationship-list__btn--cancel:hover {
-      background: var(--pm-surface-2);
-    }
-    .relationship-list__btn--save {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .relationship-list__actions .relationship-list__btn + .relationship-list__btn {
-      margin-left: 8px;
-    }
     .relationship-list__edit-input {
       box-sizing: border-box;
       width: 100%;
@@ -106,7 +63,7 @@ template.innerHTML = `
     <thead>
       <tr>
         <th>Name</th>
-        <th class="relationship-list__actions">Actions</th>
+        <th class="compact-actions-col">Actions</th>
       </tr>
     </thead>
     <tbody id="rows"></tbody>
@@ -119,11 +76,13 @@ export class PmRelationshipList extends HTMLElement {
   private emptyMessage: HTMLElement | null = null;
   private _relationships: GuardianRelationship[] = [];
   private _editingRelationshipId: string | null = null;
+  private _nameDraft = '';
+  private _saving = false;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -136,6 +95,8 @@ export class PmRelationshipList extends HTMLElement {
   set relationships(value: GuardianRelationship[]) {
     this._relationships = value;
     this._editingRelationshipId = null;
+    this._nameDraft = '';
+    this._saving = false;
     this.render();
   }
 
@@ -162,28 +123,36 @@ export class PmRelationshipList extends HTMLElement {
     nameCell.textContent = relationship.name;
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('relationship-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = this.buildActionsContainer();
 
     const isAnotherRowEditing = this._editingRelationshipId !== null;
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.classList.add('relationship-list__btn', 'relationship-list__btn--edit');
+    editBtn.classList.add('compact-btn', 'relationship-list__btn--edit');
     editBtn.textContent = 'Edit';
     editBtn.disabled = isAnotherRowEditing;
     editBtn.addEventListener('click', () => this.handleEditClicked(relationship));
-    actionsCell.appendChild(editBtn);
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.classList.add('relationship-list__btn', 'relationship-list__btn--delete');
+    deleteBtn.classList.add('compact-btn', 'compact-btn--destructive', 'relationship-list__btn--delete');
     deleteBtn.textContent = 'Delete';
     deleteBtn.disabled = isAnotherRowEditing;
     deleteBtn.addEventListener('click', () => this.handleDelete(relationship));
-    actionsCell.appendChild(deleteBtn);
 
+    actions.append(editBtn, deleteBtn);
+    actionsCell.appendChild(actions);
     row.append(nameCell, actionsCell);
     return row;
+  }
+
+  private buildActionsContainer(): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    return actions;
   }
 
   private buildEditableRow(relationship: GuardianRelationship): HTMLTableRowElement {
@@ -192,56 +161,74 @@ export class PmRelationshipList extends HTMLElement {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.classList.add('relationship-list__edit-input');
-    nameInput.value = relationship.name;
+    nameInput.value = this._nameDraft;
     nameInput.required = true;
     nameInput.maxLength = 50;
+    nameInput.addEventListener('input', () => {
+      this._nameDraft = nameInput.value;
+    });
 
     const nameCell = document.createElement('td');
     nameCell.appendChild(nameInput);
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('relationship-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = this.buildActionsContainer();
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('relationship-list__btn', 'relationship-list__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'compact-btn--warning', 'relationship-list__btn--cancel');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', () => this.handleEditCancelled());
-    actionsCell.appendChild(cancelBtn);
 
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
-    saveBtn.classList.add('relationship-list__btn', 'relationship-list__btn--save');
+    saveBtn.classList.add('compact-btn', 'relationship-list__btn--save');
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => this.handleEditSaved(relationship.guardianRelationshipId, nameInput));
-    actionsCell.appendChild(saveBtn);
 
+    if (this._saving) setButtonsBusy(saveBtn, cancelBtn, true);
+
+    actions.append(cancelBtn, saveBtn);
+    actionsCell.appendChild(actions);
     row.append(nameCell, actionsCell);
     return row;
   }
 
   private handleEditClicked(relationship: GuardianRelationship): void {
     this._editingRelationshipId = relationship.guardianRelationshipId;
+    this._nameDraft = relationship.name;
+    this._saving = false;
     this.render();
   }
 
   private handleEditCancelled(): void {
     this._editingRelationshipId = null;
+    this._nameDraft = '';
+    this._saving = false;
+    this.render();
+  }
+
+  endSave(): void {
+    if (!this._saving) return;
+    this._saving = false;
     this.render();
   }
 
   private handleEditSaved(guardianRelationshipId: string, nameInput: HTMLInputElement): void {
-    if (!nameInput.reportValidity()) return;
+    if (this._saving || !nameInput.reportValidity()) return;
 
+    const name = nameInput.value.trim();
+    this._saving = true;
+    this.render();
     this.dispatchEvent(
       new CustomEvent('relationship-edit-saved', {
         bubbles: true,
         composed: true,
-        detail: { guardianRelationshipId, name: nameInput.value.trim() },
+        detail: { guardianRelationshipId, name },
       }),
     );
   }
-
   private handleDelete(relationship: GuardianRelationship): void {
     this.dispatchEvent(
       new CustomEvent('relationship-delete-clicked', {

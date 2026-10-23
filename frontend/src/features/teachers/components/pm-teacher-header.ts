@@ -1,5 +1,6 @@
 import './pm-linked-account-badge';
 import { hasRole } from '../../../services/token-storage';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import type { TeacherResult } from '../services/teachers';
 import type { PmLinkedAccountBadge } from './pm-linked-account-badge';
 
@@ -50,7 +51,7 @@ styles.replaceSync(`
     }
     .header__chip--deactivated {
       background: rgba(224, 82, 82, 0.15);
-      color: var(--pm-danger, #e05252);
+      color: var(--pm-danger);
     }
     /* The classification chip carries the same two treatments the roster row
        uses, so a teacher reads the same in the list and on their record. */
@@ -62,75 +63,6 @@ styles.replaceSync(`
       background: rgba(124, 58, 237, 0.12);
       color: #7c3aed;
     }
-    .header__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-    /* Same metrics as the Create Teacher button, so the record's primary
-       actions read as one family. Both carry a permanent border. */
-    .header__btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 20px;
-      border-radius: var(--pm-radius);
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      background: transparent;
-    }
-    .header__btn[hidden] {
-      display: none;
-    }
-    .header__btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .header__btn--link {
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .header__btn--link:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .header__btn--unlink {
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text-muted);
-    }
-    .header__btn--unlink:hover {
-      background: var(--pm-surface-2);
-    }
-    /* The lifecycle actions carry the same treatments the User Directory's do:
-       an outlined red deactivate, an outlined green activate, and a filled red
-       delete. Ending a record should read the same whichever record it is. */
-    .header__btn--deactivate {
-      border: 1px solid var(--pm-danger, #e05252);
-      color: var(--pm-danger, #e05252);
-    }
-    .header__btn--deactivate:hover {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .header__btn--reactivate {
-      border: 1px solid #8fd44e;
-      color: #8fd44e;
-    }
-    .header__btn--reactivate:hover {
-      background: rgba(143, 212, 78, 0.1);
-    }
-    .header__btn--delete {
-      background: var(--pm-danger, #e05252);
-      border: 1px solid var(--pm-danger, #e05252);
-      color: #fff;
-    }
-    .header__btn--delete:hover {
-      opacity: 0.9;
-    }
-    .header__btn-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
-    }
   `);
 
 const template = document.createElement('template');
@@ -139,24 +71,24 @@ template.innerHTML = `
   <a href="#/teachers" class="header__back">&larr; All teachers</a>
   <div class="header__title-row">
     <h1 class="header__name" id="name"></h1>
-    <div class="header__actions">
-      <button type="button" class="header__btn header__btn--unlink" id="bankingActivityBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">receipt_long</span>Banking activity
+    <div class="page-actions">
+      <button type="button" class="page-btn page-btn--secondary" id="bankingActivityBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">receipt_long</span>Banking Activity
       </button>
-      <button type="button" class="header__btn header__btn--link" id="linkBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">link</span>Link account
+      <button type="button" class="page-btn page-btn--secondary" id="linkBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">link</span>Link Account
       </button>
-      <button type="button" class="header__btn header__btn--unlink" id="unlinkBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">link_off</span>Unlink account
+      <button type="button" class="page-btn page-btn--secondary" id="unlinkBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">link_off</span>Unlink Account
       </button>
-      <button type="button" class="header__btn header__btn--deactivate" id="deactivateBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">person_off</span>Deactivate
+      <button type="button" class="page-btn page-btn--destructive" id="deactivateBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">person_off</span>Deactivate
       </button>
-      <button type="button" class="header__btn header__btn--reactivate" id="reactivateBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">person_check</span>Reactivate
+      <button type="button" class="page-btn page-btn--secondary" id="reactivateBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">person_check</span>Reactivate
       </button>
-      <button type="button" class="header__btn header__btn--delete" id="deleteBtn" hidden>
-        <span class="header__btn-icon" aria-hidden="true">delete</span>Delete
+      <button type="button" class="page-btn page-btn--destructive" id="deleteBtn" hidden>
+        <span class="page-btn__icon" aria-hidden="true">delete</span>Delete
       </button>
     </div>
   </div>
@@ -183,7 +115,7 @@ export class PmTeacherHeader extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
