@@ -1,6 +1,7 @@
 import { setButtonsBusy } from '../../../components/button-states';
 import { compactButtonStyles } from '../../../components/compact-button-styles';
 import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import {
   NO_ACTIVITIES_ASSIGNED,
   PHASE_LABELS,
@@ -37,17 +38,6 @@ styles.replaceSync(`
       display: flex;
       flex-shrink: 0;
       justify-content: flex-end;
-    }
-    .ec-step__btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
     }
     .ec-step__panel {
       flex-shrink: 0;
@@ -171,7 +161,7 @@ template.innerHTML = `
   <div class="ec-step__section" id="section">
     <div class="ec-step__message" id="message"></div>
     <div class="ec-step__toolbar" id="toolbar">
-      <button type="button" class="ec-step__btn" id="addBtn">Add Activity</button>
+      <button type="button" class="page-btn page-btn--primary" id="addBtn">Assign Activity</button>
     </div>
     <div class="ec-step__panel" id="panel">
       <div class="ec-step__panel-inner">
@@ -234,7 +224,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, compactButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -382,7 +372,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
     this.message!.className = 'ec-step__message';
   }
 
-  /** Collapses the Add Activity panel (if open) and returns to the table. */
+  /** Collapses the Assign Activity panel (if open) and returns to the table. */
   closePanel(): void {
     this.setAssignBusy(false);
     this.panel!.classList.remove('ec-step__panel--expanded');

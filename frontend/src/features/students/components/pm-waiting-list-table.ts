@@ -164,7 +164,7 @@ export class PmWaitingListTable extends HTMLElement {
 
   /**
    * Whether this viewer may maintain the list. A Teacher gets the read-only
-   * marker in place of the row actions, and no Capture Student button — that
+   * marker in place of the row actions, and no Create Waiting List Entry button — that
    * part is the page's concern, not this table's.
    */
   set showActions(value: boolean) {

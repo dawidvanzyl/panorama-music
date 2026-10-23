@@ -1,3 +1,4 @@
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import './pm-guardian-form';
 import './pm-guardian-list';
 import type { GuardianInput, GuardianRelationship, GuardianResult } from '../services/guardians';
@@ -34,26 +35,6 @@ styles.replaceSync(`
       flex-shrink: 0;
       gap: 12px;
       justify-content: flex-end;
-    }
-    .guardians-step__btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--pm-border);
-      background: transparent;
-      color: var(--pm-text);
-    }
-    .guardians-step__btn--primary {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .guardians-step__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
     }
     .guardians-step__form-panel {
       flex-shrink: 0;
@@ -99,8 +80,8 @@ template.innerHTML = `
   <div class="guardians-step__section" id="section">
     <div class="guardians-step__message" id="message"></div>
     <div class="guardians-step__toolbar" id="listToolbar">
-      <button type="button" class="guardians-step__btn" id="syncBtn" hidden>Sync Guardians</button>
-      <button type="button" class="guardians-step__btn guardians-step__btn--primary" id="addBtn">Add Guardian</button>
+      <button type="button" class="page-btn page-btn--secondary" id="syncBtn" hidden>Sync Guardians</button>
+      <button type="button" class="page-btn page-btn--primary" id="addBtn">Create Guardian</button>
     </div>
     <div class="guardians-step__form-panel" id="formPanel">
       <pm-guardian-form id="guardianForm"></pm-guardian-form>
@@ -130,7 +111,7 @@ export class PmGuardiansStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -293,7 +274,7 @@ export class PmGuardiansStep extends HTMLElement {
     this.formPanel!.setAttribute('inert', '');
   }
 
-  /** Hides Add Guardian and (if it would otherwise be shown) Sync Guardians, for whichever editing surface is active. */
+  /** Hides Create Guardian and (if it would otherwise be shown) Sync Guardians, for whichever editing surface is active. */
   private hideToolbarButtons(): void {
     this.addBtn!.hidden = true;
     this.syncBtn!.hidden = true;

@@ -1,4 +1,5 @@
 import { AUDIT_EVENT_TYPE_GROUPS } from '../services/audit';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 
 export interface AuditFilterValues {
   actor: string;
@@ -61,34 +62,6 @@ styles.replaceSync(`
       font-size: 14px;
       font-family: inherit;
     }
-    .filter-bar__actions {
-      display: flex;
-      gap: 8px;
-    }
-    .filter-bar__btn {
-      padding: 8px 16px;
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .filter-bar__btn--clear {
-      background: transparent;
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .filter-bar__btn--clear:hover {
-      background: var(--pm-surface-2);
-    }
-    .filter-bar__btn--apply {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-    }
-    .filter-bar__btn--apply:hover {
-      background: var(--pm-accent-solid);
-    }
   `);
 
 const template = document.createElement('template');
@@ -112,9 +85,9 @@ template.innerHTML = `
       <label class="filter-bar__label" for="to">To</label>
       <input type="date" id="to" class="filter-bar__input" />
     </div>
-    <div class="filter-bar__actions">
-      <button type="button" class="filter-bar__btn filter-bar__btn--clear" id="clearBtn">Clear</button>
-      <button type="button" class="filter-bar__btn filter-bar__btn--apply" id="applyBtn">Apply</button>
+    <div class="page-actions">
+      <button type="button" class="page-btn page-btn--secondary" id="clearBtn">Clear</button>
+      <button type="button" class="page-btn page-btn--primary" id="applyBtn">Apply</button>
     </div>
   </div>
 `;
@@ -130,7 +103,7 @@ export class PmAuditFilterBar extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

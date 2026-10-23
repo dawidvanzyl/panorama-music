@@ -1,4 +1,5 @@
 import type { AuditEventSummary } from '../services/audit';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 
 // Date.toISOString() always forces UTC ("Z") — there's no built-in way to get
 // an ISO 8601 string in the viewer's own local timezone, so it's built here
@@ -94,26 +95,6 @@ styles.replaceSync(`
       font-size: 12px;
       color: var(--pm-text-muted);
     }
-    .audit-table__footer-nav {
-      display: flex;
-      gap: 8px;
-    }
-    .audit-table__page-btn {
-      padding: 6px 12px;
-      border-radius: var(--pm-radius);
-      border: 1px solid var(--pm-border);
-      background: transparent;
-      color: var(--pm-text);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .audit-table__page-btn:hover:not(:disabled) {
-      background: var(--pm-surface-2);
-    }
-    .audit-table__page-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   `);
 
 const template = document.createElement('template');
@@ -147,9 +128,9 @@ template.innerHTML = `
     <p class="audit-table__empty" id="empty" hidden>No audit events match the current filters.</p>
     <div class="audit-table__footer" id="footer" hidden>
       <span class="audit-table__footer-label" id="footerLabel"></span>
-      <div class="audit-table__footer-nav">
-        <button type="button" class="audit-table__page-btn" id="prevBtn">Previous</button>
-        <button type="button" class="audit-table__page-btn" id="nextBtn">Next</button>
+      <div class="page-actions">
+        <button type="button" class="page-btn page-btn--secondary" id="prevBtn">Previous</button>
+        <button type="button" class="page-btn page-btn--secondary" id="nextBtn">Next</button>
       </div>
     </div>
   </div>
@@ -171,7 +152,7 @@ export class PmAuditEventTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

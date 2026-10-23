@@ -1,4 +1,5 @@
 import './pm-report-filter-row';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import type { PmReportFilterRow } from './pm-report-filter-row';
 import type { ReportFieldsModel, ReportFilterModel } from '../models/report';
 
@@ -39,19 +40,6 @@ styles.replaceSync(`
     }
     .filters-panel__add {
       margin-top: 8px;
-      height: 36px;
-      padding: 0 14px;
-      background: transparent;
-      border: 1px dashed var(--pm-border);
-      border-radius: var(--pm-radius);
-      color: var(--pm-text-muted);
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .filters-panel__add:hover {
-      color: var(--pm-text);
-      border-color: var(--pm-accent);
     }
   `);
 
@@ -64,7 +52,7 @@ template.innerHTML = `
     </div>
     <div class="filters-panel__empty" id="empty">No filters applied — all students will appear.</div>
     <div id="rows"></div>
-    <button type="button" class="filters-panel__add" id="add">+ Add filter</button>
+    <button type="button" class="page-btn page-btn--secondary filters-panel__add" id="add">Add Filter</button>
   </div>
 `;
 
@@ -80,7 +68,7 @@ export class PmReportFiltersPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

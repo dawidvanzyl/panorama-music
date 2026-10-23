@@ -1,6 +1,7 @@
 import { setButtonsBusy } from '../../../components/button-states';
 import { compactButtonStyles } from '../../../components/compact-button-styles';
 import { formButtonStyles } from '../../../components/form-button-styles';
+import { pageButtonStyles } from '../../../components/page-button-styles';
 import { hasRole } from '../../../services/token-storage';
 import { ACCOUNT_TYPE_LABELS, BANK_LABELS, maskAccountNumber } from '../services/banking-display';
 import type { Bank, BankAccountType, BankingDetails, BankingDetailsInput, TeacherResult } from '../services/teachers';
@@ -45,16 +46,6 @@ styles.replaceSync(`
       margin: 0 0 16px;
       font-size: 13px;
       color: var(--pm-text-muted);
-    }
-    .banking__btn {
-      border-radius: var(--pm-radius);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 6px 16px;
-      cursor: pointer;
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
     }
     .banking__read-grid {
       display: grid;
@@ -195,7 +186,7 @@ template.innerHTML = `
 
     <div id="emptyView" hidden>
       <p class="banking__empty">No banking details captured.</p>
-      <button type="button" class="banking__btn" id="addBtn">Add banking details</button>
+      <button type="button" class="page-btn page-btn--primary" id="addBtn">Create Banking Details</button>
     </div>
 
     <form id="formView" hidden>
@@ -285,7 +276,7 @@ export class PmBankingSection extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, compactButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [pageButtonStyles, formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

@@ -469,7 +469,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.coursesStep!.holdsExtraCurricular = value.length > 0;
   }
 
-  /** The Add Activity picker's options, fetched when the panel is opened. */
+  /** The Assign Activity picker's options, fetched when the panel is opened. */
   set assignableExtraCurriculars(value: StudentExtraCurricular[]) {
     this.extraCurricularsStep!.assignable = value;
   }

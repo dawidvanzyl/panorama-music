@@ -50,6 +50,9 @@ pageButtonStyles.replaceSync(`
       background: var(--pm-danger-soft);
     }
     ${buttonStateRules('.page-btn', ['.page-btn--primary', '.page-btn--destructive'])}
+    .page-btn[hidden] {
+      display: none;
+    }
     @media print {
       .page-btn,
       .page-actions {
