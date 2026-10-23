@@ -44,3 +44,14 @@ describe('button stylesheets hide buttons and action rows in print', { tags: ['3
     expect(selectors).toContain(rowClass);
   });
 });
+
+describe('the page button stylesheet keeps a hidden page button hidden', { tags: ['381UC13'] }, () => {
+  it('has a .page-btn[hidden] rule with display none', () => {
+    const rule = Array.from(pageButtonStyles.cssRules).find(
+      (candidate): candidate is CSSStyleRule =>
+        'selectorText' in candidate && candidate.selectorText === '.page-btn[hidden]',
+    );
+
+    expect(rule?.style.display).toBe('none');
+  });
+});

@@ -100,7 +100,7 @@ describe('pm-teacher-detail-page — a linked account is shown, not re-pickable'
     expect(vi.mocked(getLinkableAccounts)).not.toHaveBeenCalled();
   });
 
-  it('unlinking is confirmed in a modal, then clears the account and offers Link account', async () => {
+  it('unlinking is confirmed in a modal, then clears the account and offers Link Account', async () => {
     vi.mocked(getTeacherById).mockResolvedValue(linkedAlice);
     vi.mocked(unlinkTeacherAccount).mockResolvedValue(alice);
 
@@ -123,7 +123,7 @@ describe('pm-teacher-detail-page — a linked account is shown, not re-pickable'
     expect(el.shadowRoot!.getElementById('linkNotice')!.hasAttribute('hidden')).toBe(true);
   });
 
-  it('Link account opens the modal with the eligible accounts and links the chosen one', async () => {
+  it('Link Account opens the modal with the eligible accounts and links the chosen one', async () => {
     vi.mocked(getTeacherById).mockResolvedValue(alice);
     vi.mocked(linkTeacherAccount).mockResolvedValue(linkedAlice);
 
