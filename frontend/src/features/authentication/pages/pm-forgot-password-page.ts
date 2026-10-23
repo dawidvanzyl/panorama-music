@@ -1,4 +1,6 @@
 import { forgotPassword, AuthError } from '../../../services/auth';
+import { setButtonsBusy } from '../../../components/button-states';
+import { formButtonStyles } from '../../../components/form-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -26,13 +28,6 @@ styles.replaceSync(`
       word-wrap: normal;
       direction: ltr;
       -webkit-font-smoothing: antialiased;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .forgot__spinner {
-      animation: spin 0.7s linear infinite;
     }
 
     .forgot__glow {
@@ -214,29 +209,7 @@ styles.replaceSync(`
 
     .forgot__submit {
       width: 100%;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       margin-top: 20px;
-      border: none;
-      border-radius: 9999px;
-      background: var(--pm-accent);
-      color: #00297b;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      box-shadow: var(--pm-shadow);
-    }
-    .forgot__submit:hover { filter: brightness(1.1); }
-    .forgot__submit:active { transform: scale(0.98); }
-    .forgot__submit:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      transform: none;
-      filter: none;
     }
 
     .forgot__back-link {
@@ -308,10 +281,7 @@ template.innerHTML = `
           <span class="forgot__success-text">If that email is registered, a reset link has been sent.</span>
         </div>
 
-        <button type="submit" class="forgot__submit" id="submitBtn">
-          <span id="submitLabel">Send Reset Link</span>
-          <span class="material-symbols-outlined forgot__submit-icon">arrow_forward</span>
-        </button>
+        <button type="submit" class="form-btn form-btn--primary forgot__submit" id="submitBtn">Send Reset Link</button>
       </form>
 
       <a class="forgot__back-link" id="backToLogin" href="#/login">
@@ -330,8 +300,7 @@ export class PmForgotPasswordPage extends HTMLElement {
   private form: HTMLFormElement | null = null;
   private emailInput: HTMLInputElement | null = null;
   private submitBtn: HTMLButtonElement | null = null;
-  private submitLabel: HTMLElement | null = null;
-  private submitIcon: HTMLElement | null = null;
+  private _submitting = false;
   private errorBanner: HTMLElement | null = null;
   private errorText: HTMLElement | null = null;
   private successBanner: HTMLElement | null = null;
@@ -339,7 +308,7 @@ export class PmForgotPasswordPage extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -347,8 +316,6 @@ export class PmForgotPasswordPage extends HTMLElement {
     this.form = this.shadowRoot!.getElementById('forgotForm') as HTMLFormElement;
     this.emailInput = this.shadowRoot!.getElementById('email') as HTMLInputElement;
     this.submitBtn = this.shadowRoot!.getElementById('submitBtn') as HTMLButtonElement;
-    this.submitLabel = this.shadowRoot!.getElementById('submitLabel') as HTMLElement;
-    this.submitIcon = this.shadowRoot!.querySelector('.forgot__submit-icon') as HTMLElement;
     this.errorBanner = this.shadowRoot!.getElementById('errorMsg') as HTMLElement;
     this.errorText = this.shadowRoot!.getElementById('errorText') as HTMLElement;
     this.successBanner = this.shadowRoot!.getElementById('successMsg') as HTMLElement;
@@ -362,15 +329,12 @@ export class PmForgotPasswordPage extends HTMLElement {
 
   private handleSubmit = async (e: Event): Promise<void> => {
     e.preventDefault();
+    if (this._submitting) return;
     this.errorBanner!.classList.remove('forgot__error-banner--visible');
     this.successBanner!.classList.remove('forgot__success-banner--visible');
 
-    this.submitBtn!.disabled = true;
-    const originalLabel = this.submitLabel!.textContent;
-    const originalIcon = this.submitIcon!.textContent;
-    this.submitLabel!.textContent = 'Sending...';
-    this.submitIcon!.textContent = 'progress_activity';
-    this.submitIcon!.classList.add('forgot__spinner');
+    this._submitting = true;
+    setButtonsBusy(this.submitBtn!, null, true);
 
     try {
       await forgotPassword(this.emailInput!.value);
@@ -381,10 +345,8 @@ export class PmForgotPasswordPage extends HTMLElement {
       this.errorText!.textContent = message;
       this.errorBanner!.classList.add('forgot__error-banner--visible');
     } finally {
-      this.submitBtn!.disabled = false;
-      this.submitLabel!.textContent = originalLabel;
-      this.submitIcon!.textContent = originalIcon!;
-      this.submitIcon!.classList.remove('forgot__spinner');
+      this._submitting = false;
+      setButtonsBusy(this.submitBtn!, null, false);
     }
   };
 }

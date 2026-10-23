@@ -478,7 +478,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.extraCurricularsStep!.showError(message);
   }
 
-  /** Collapses the Extra-Curriculars tab's Add Activity panel (if open). */
+  /** Collapses the Extra-Curriculars tab's Assign Activity panel (if open). */
   closeExtraCurricularPanel(): void {
     this.extraCurricularsStep!.closePanel();
   }
