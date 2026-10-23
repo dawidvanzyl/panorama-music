@@ -262,6 +262,7 @@ export class PmGuardiansStep extends HTMLElement {
     this.message!.textContent = message;
     this.message!.classList.add('guardians-step__message--error');
     this.guardianForm!.setBusy(false);
+    this.guardianList!.endSave();
   }
 
   clearError(): void {

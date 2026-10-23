@@ -1,5 +1,6 @@
 import { bankingColumnText } from '../services/banking-display';
 import type { TeacherResult } from '../services/teachers';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -46,21 +47,6 @@ styles.replaceSync(`
       background: rgba(224, 82, 82, 0.15);
       color: var(--pm-danger);
     }
-    .teacher-row__actions {
-      text-align: right;
-    }
-    .teacher-row__btn {
-      border-radius: var(--pm-radius);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .teacher-row__btn:hover {
-      background: rgba(79, 124, 255, 0.1);
-    }
     .teacher-row__account {
       color: var(--pm-text-muted);
     }
@@ -76,7 +62,7 @@ template.innerHTML = `
   <td><span class="teacher-row__chip" id="statusChip"></span></td>
   <td><span class="teacher-row__account" id="account"></span></td>
   <td><span class="teacher-row__banking" id="banking"></span></td>
-  <td class="teacher-row__actions"><button type="button" class="teacher-row__btn" id="openBtn">Open</button></td>
+  <td class="compact-actions-col"><div class="compact-actions" data-testid="row-actions"><button type="button" class="compact-btn teacher-row__btn" id="openBtn">Open</button></div></td>
 `;
 
 export class PmTeacherRow extends HTMLElement {
@@ -91,7 +77,7 @@ export class PmTeacherRow extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

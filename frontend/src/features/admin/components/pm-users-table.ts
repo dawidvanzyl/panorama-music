@@ -8,6 +8,8 @@ import {
   type UserRole,
 } from '../services/admin';
 import { getUserId } from '../../../services/token-storage';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -78,80 +80,6 @@ styles.replaceSync(`
     .users-table__status--deactivated {
       background: rgba(224, 82, 82, 0.1);
       color: var(--pm-danger);
-    }
-    .users-table__btn {
-      border-radius: var(--pm-radius);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-    }
-    .users-table__btn--edit {
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .users-table__btn--edit:hover {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .users-table__btn--deactivate {
-      background: transparent;
-      border: 1px solid var(--pm-danger);
-      color: var(--pm-danger);
-    }
-    .users-table__btn--deactivate:hover {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .users-table__btn--activate {
-      background: transparent;
-      border: 1px solid #8fd44e;
-      color: #8fd44e;
-    }
-    .users-table__btn--activate:hover {
-      background: rgba(143, 212, 78, 0.1);
-    }
-    .users-table__btn--delete {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .users-table__btn--delete:hover {
-      opacity: 0.9;
-    }
-    .users-table__btn--save {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-    }
-    .users-table__btn--save:hover {
-      filter: brightness(1.1);
-    }
-    .users-table__btn--cancel {
-      background: var(--pm-surface-2);
-      border: 1px solid var(--pm-border);
-      color: var(--pm-text);
-    }
-    .users-table__btn--cancel:hover {
-      background: var(--pm-border);
-    }
-    .users-table__btn:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-    }
-    .users-table__regenerate {
-      border: 1px solid var(--pm-border);
-      border-radius: var(--pm-radius);
-      background: var(--pm-surface-2);
-      color: var(--pm-text);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-    }
-    .users-table__regenerate:hover {
-      background: var(--pm-border);
-    }
-    .users-table__regenerate:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
     }
     .users-table__header {
       display: flex;
@@ -284,17 +212,8 @@ styles.replaceSync(`
       color: var(--pm-text);
       cursor: pointer;
     }
-    .users-table__actions {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-      align-items: center;
-    }
     .users-table__filter-wrap {
       position: relative;
-    }
-    .users-table__actions-header {
-      text-align: right;
     }
   `);
 
@@ -331,7 +250,7 @@ template.innerHTML = `
           <th>Email</th>
           <th>Roles</th>
           <th>Status</th>
-          <th class="users-table__actions-header">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -348,12 +267,14 @@ export class PmUsersTable extends HTMLElement {
   private filterLabel: HTMLElement | null = null;
   private _users: GetUserResult[] = [];
   private _editingUserId: string | null = null;
+  private _rolesDraft: UserRole[] = [];
+  private _savingUserIds = new Set<string>();
   private _statusFilter: 'all' | 'active' | 'pending' = 'all';
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -431,13 +352,14 @@ export class PmUsersTable extends HTMLElement {
 
   private buildRow(user: GetUserResult, isEditing: boolean): HTMLTableRowElement {
     const row = document.createElement('tr');
+    row.dataset.userId = user.userId;
 
     const emailCell = document.createElement('td');
     emailCell.textContent = user.email;
 
     const rolesCell = document.createElement('td');
     if (isEditing) {
-      rolesCell.appendChild(this.buildRoleCheckboxes(user.roles));
+      rolesCell.appendChild(this.buildRoleCheckboxes(this._rolesDraft));
     } else {
       rolesCell.appendChild(this.buildRoleBadges(user.roles));
     }
@@ -455,75 +377,65 @@ export class PmUsersTable extends HTMLElement {
     statusCell.appendChild(statusBadge);
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('users-table__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    actionsCell.appendChild(actions);
 
     if (isEditing) {
-      const saveBtn = document.createElement('button');
-      saveBtn.type = 'button';
-      saveBtn.classList.add('users-table__btn', 'users-table__btn--save');
-      saveBtn.textContent = 'Save';
-      saveBtn.addEventListener('click', () => this.handleSave(user.userId, rolesCell, saveBtn, cancelBtn));
-
-      const cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.classList.add('users-table__btn', 'users-table__btn--cancel');
-      cancelBtn.textContent = 'Cancel';
+      const cancelBtn = this.createActionButton('Cancel', 'users-table__btn--cancel');
       cancelBtn.addEventListener('click', () => this.handleCancel());
 
-      actionsCell.append(saveBtn, cancelBtn);
+      const saveBtn = this.createActionButton('Save', 'users-table__btn--save');
+      saveBtn.addEventListener('click', () => this.handleSave(user.userId));
+
+      if (this._savingUserIds.has(user.userId)) {
+        setButtonsBusy(saveBtn, cancelBtn, true);
+      }
+
+      actions.append(cancelBtn, saveBtn);
     } else if (user.isActive && !user.isProtected && user.userId !== getUserId()) {
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.classList.add('users-table__btn', 'users-table__btn--edit');
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => this.handleEdit(user.userId));
-      actionsCell.appendChild(editBtn);
+      const editBtn = this.createActionButton('Edit', 'users-table__btn--edit');
+      editBtn.addEventListener('click', () => this.handleEdit(user));
 
-      const deactivateBtn = document.createElement('button');
-      deactivateBtn.type = 'button';
-      deactivateBtn.classList.add('users-table__btn', 'users-table__btn--deactivate');
-      deactivateBtn.textContent = 'Deactivate';
+      const deactivateBtn = this.createActionButton('Deactivate', 'users-table__btn--deactivate');
       deactivateBtn.addEventListener('click', () => this.handleDeactivate(user.userId, user.email));
-      actionsCell.appendChild(deactivateBtn);
+
+      actions.append(editBtn, deactivateBtn);
     } else if (user.isActive) {
-      const placeholder = document.createElement('button');
-      placeholder.type = 'button';
-      placeholder.classList.add('users-table__btn', 'users-table__btn--edit');
-      placeholder.textContent = 'Edit';
+      const placeholder = this.createActionButton('Edit', 'users-table__btn--edit');
       placeholder.style.visibility = 'hidden';
-      actionsCell.appendChild(placeholder);
 
-      const deactivatePlaceholder = document.createElement('button');
-      deactivatePlaceholder.type = 'button';
-      deactivatePlaceholder.classList.add('users-table__btn', 'users-table__btn--deactivate');
-      deactivatePlaceholder.textContent = 'Deactivate';
+      const deactivatePlaceholder = this.createActionButton('Deactivate', 'users-table__btn--deactivate');
       deactivatePlaceholder.style.visibility = 'hidden';
-      actionsCell.appendChild(deactivatePlaceholder);
-    } else if (!user.isActive && !user.hasCompletedRegistration) {
-      const regenerateBtn = document.createElement('button');
-      regenerateBtn.type = 'button';
-      regenerateBtn.classList.add('users-table__regenerate');
-      regenerateBtn.textContent = 'Regenerate Invite';
-      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
-      actionsCell.appendChild(regenerateBtn);
-    } else {
-      const activateBtn = document.createElement('button');
-      activateBtn.type = 'button';
-      activateBtn.classList.add('users-table__btn', 'users-table__btn--activate');
-      activateBtn.textContent = 'Activate';
-      activateBtn.addEventListener('click', () => this.handleActivate(user.userId));
-      actionsCell.appendChild(activateBtn);
 
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.classList.add('users-table__btn', 'users-table__btn--delete');
-      deleteBtn.textContent = 'Delete';
+      actions.append(placeholder, deactivatePlaceholder);
+    } else if (!user.isActive && !user.hasCompletedRegistration) {
+      const regenerateBtn = this.createActionButton('Regenerate', 'users-table__regenerate');
+      regenerateBtn.addEventListener('click', () => this.handleRegenerate(user.userId, actionsCell, regenerateBtn));
+      actions.appendChild(regenerateBtn);
+    } else {
+      const reactivateBtn = this.createActionButton('Reactivate', 'users-table__btn--reactivate');
+      reactivateBtn.addEventListener('click', () => this.handleActivate(user.userId));
+
+      const deleteBtn = this.createActionButton('Delete', 'users-table__btn--delete', true);
       deleteBtn.addEventListener('click', () => this.handleDelete(user.userId, user.email));
-      actionsCell.appendChild(deleteBtn);
+
+      actions.append(reactivateBtn, deleteBtn);
     }
 
     row.append(emailCell, rolesCell, statusCell, actionsCell);
     return row;
+  }
+
+  private createActionButton(label: string, hookClass: string, destructive = false): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add('compact-btn', hookClass);
+    if (destructive) button.classList.add('compact-btn--destructive');
+    button.textContent = label;
+    return button;
   }
 
   private buildRoleBadges(roles: string[]): HTMLElement {
@@ -549,6 +461,9 @@ export class PmUsersTable extends HTMLElement {
       checkbox.type = 'checkbox';
       checkbox.value = role;
       checkbox.checked = currentRoles.includes(role);
+      checkbox.addEventListener('change', () => {
+        this._rolesDraft = this.getCheckedRoles(wrap);
+      });
 
       label.append(checkbox, document.createTextNode(roleLabel(role)));
       wrap.appendChild(label);
@@ -568,8 +483,9 @@ export class PmUsersTable extends HTMLElement {
     this.render();
   }
 
-  private handleEdit(userId: string): void {
-    this._editingUserId = userId;
+  private handleEdit(user: GetUserResult): void {
+    this._editingUserId = user.userId;
+    this._rolesDraft = [...user.roles] as UserRole[];
     this.render();
   }
 
@@ -608,22 +524,21 @@ export class PmUsersTable extends HTMLElement {
     this.render();
   }
 
-  private handleSave = async (
-    userId: string,
-    rolesCell: HTMLElement,
-    saveBtn: HTMLButtonElement,
-    cancelBtn: HTMLButtonElement,
-  ): Promise<void> => {
-    const roles = this.getCheckedRoles(rolesCell);
-    this.clearRowError(rolesCell);
+  private findUserRow(userId: string): HTMLTableRowElement | null {
+    return this.rowsBody?.querySelector<HTMLTableRowElement>(`tr[data-user-id="${CSS.escape(userId)}"]`) ?? null;
+  }
 
-    if (roles.length === 0) {
-      this.showRowError(rolesCell, 'At least one role must be selected.');
+  private handleSave = async (userId: string): Promise<void> => {
+    this.clearRowError(userId);
+
+    if (this._rolesDraft.length === 0) {
+      this.showRowError(userId, 'At least one role must be selected.');
       return;
     }
 
-    saveBtn.disabled = true;
-    cancelBtn.disabled = true;
+    const roles = [...this._rolesDraft];
+    this._savingUserIds.add(userId);
+    this.render();
 
     try {
       const updated = await updateUserRoles(userId, roles);
@@ -631,16 +546,19 @@ export class PmUsersTable extends HTMLElement {
       if (userIndex !== -1) {
         this._users[userIndex] = { ...this._users[userIndex], roles: updated.roles };
       }
-      this._editingUserId = null;
+      this._savingUserIds.delete(userId);
+      if (this._editingUserId === userId) this._editingUserId = null;
       this.render();
     } catch (err) {
       // A rejected change never took effect, so the checkboxes go back to the
       // roles the server still holds rather than leaving the refused selection
       // on screen as though it had been accepted.
-      this.restoreRoleSelection(rolesCell, userId);
-      this.showRowError(rolesCell, err instanceof AdminError ? err.message : 'An unexpected error occurred');
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
+      this._savingUserIds.delete(userId);
+      if (this._editingUserId === userId) {
+        this._rolesDraft = [...(this._users.find((u) => u.userId === userId)?.roles ?? [])] as UserRole[];
+      }
+      this.render();
+      this.showRowError(userId, err instanceof AdminError ? err.message : 'An unexpected error occurred');
     }
   };
 
@@ -648,11 +566,11 @@ export class PmUsersTable extends HTMLElement {
    * Inserts the banner as its own row above the user it concerns, spanning
    * every column, and dismissible so it need not sit there until the next save.
    */
-  private showRowError(rolesCell: HTMLElement, message: string): void {
-    const userRow = rolesCell.closest('tr');
+  private showRowError(userId: string, message: string): void {
+    const userRow = this.findUserRow(userId);
     if (!userRow) return;
 
-    this.clearRowError(rolesCell);
+    this.clearRowError(userId);
 
     const errorRow = document.createElement('tr');
     errorRow.classList.add('users-table__error-row');
@@ -680,19 +598,10 @@ export class PmUsersTable extends HTMLElement {
     userRow.parentElement?.insertBefore(errorRow, userRow);
   }
 
-  private clearRowError(rolesCell: HTMLElement): void {
-    const userRow = rolesCell.closest('tr');
-    const previous = userRow?.previousElementSibling;
+  private clearRowError(userId: string): void {
+    const previous = this.findUserRow(userId)?.previousElementSibling;
 
     if (previous?.classList.contains('users-table__error-row')) previous.remove();
-  }
-
-  private restoreRoleSelection(rolesCell: HTMLElement, userId: string): void {
-    const persistedRoles = this._users.find((u) => u.userId === userId)?.roles ?? [];
-
-    for (const checkbox of rolesCell.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
-      checkbox.checked = persistedRoles.includes(checkbox.value);
-    }
   }
 
   private handleRegenerate = async (

@@ -7,6 +7,10 @@ compactButtonStyles.replaceSync(`
       justify-content: flex-end;
       gap: 8px;
     }
+    .compact-actions-col {
+      text-align: right;
+      white-space: nowrap;
+    }
     .compact-btn {
       box-sizing: border-box;
       height: 32px;
@@ -33,7 +37,8 @@ compactButtonStyles.replaceSync(`
     ${buttonStateRules('.compact-btn', ['.compact-btn--destructive'])}
     @media print {
       .compact-btn,
-      .compact-actions {
+      .compact-actions,
+      .compact-actions-col {
         display: none;
       }
     }

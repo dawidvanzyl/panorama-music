@@ -1,4 +1,5 @@
 import { setButtonsBusy } from '../../../components/button-states';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 import { formButtonStyles } from '../../../components/form-button-styles';
 import {
   NO_ACTIVITIES_ASSIGNED,
@@ -127,17 +128,7 @@ styles.replaceSync(`
     }
     .ec-step__actions-header,
     .ec-step__actions {
-      text-align: right;
       width: 120px;
-    }
-    .ec-step__remove {
-      background: transparent;
-      border: none;
-      padding: 0;
-      color: var(--pm-danger);
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
     }
     .ec-step__badge {
       display: inline-block;
@@ -204,7 +195,7 @@ template.innerHTML = `
             <th>Activity</th>
             <th>Phase</th>
             <th>Practice Times</th>
-            <th class="ec-step__actions-header">Actions</th>
+            <th class="compact-actions-col ec-step__actions-header">Actions</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -243,7 +234,7 @@ export class PmExtraCurricularsStep extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -522,13 +513,17 @@ export class PmExtraCurricularsStep extends HTMLElement {
     practiceTimes.textContent = practiceTimesText(activity);
 
     const actions = document.createElement('td');
-    actions.classList.add('ec-step__actions');
+    actions.classList.add('compact-actions-col', 'ec-step__actions');
+    const actionRow = document.createElement('div');
+    actionRow.classList.add('compact-actions');
+    actionRow.dataset.testid = 'row-actions';
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.classList.add('ec-step__remove');
+    remove.classList.add('compact-btn', 'compact-btn--destructive', 'ec-step__remove');
     remove.textContent = 'Remove';
     remove.addEventListener('click', () => this.handleRemoveClicked(activity));
-    actions.appendChild(remove);
+    actionRow.appendChild(remove);
+    actions.appendChild(actionRow);
 
     row.append(description, phase, practiceTimes, actions);
     return row;
