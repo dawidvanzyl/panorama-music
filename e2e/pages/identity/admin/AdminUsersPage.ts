@@ -89,7 +89,7 @@ export class AdminUsersPage extends BasePage {
   }
 
   async activateUser(email: string): Promise<void> {
-    await this.row(email).locator('.users-table__btn--activate').click();
+    await this.row(email).getByRole('button', { name: 'Reactivate', exact: true }).click();
   }
 
   async permanentlyDeleteUser(email: string): Promise<void> {

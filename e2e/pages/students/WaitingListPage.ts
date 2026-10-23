@@ -307,8 +307,8 @@ export class WaitingListPage extends BasePage {
     return row.getByRole('button', { name: 'Edit' });
   }
 
-  deleteButton(row: Locator): Locator {
-    return row.getByRole('button', { name: 'Delete' });
+  removeButton(row: Locator): Locator {
+    return row.getByRole('button', { name: 'Remove', exact: true });
   }
 
   // --- Edit wizard (the same shared modal, opened on an existing entry) ---
@@ -689,7 +689,7 @@ export class WaitingListPage extends BasePage {
   // --- Removal confirmation ---
 
   async openDeleteConfirmation(row: Locator): Promise<void> {
-    await this.deleteButton(row).click();
+    await this.removeButton(row).click();
     await this.deleteConfirmationMessage().waitFor({ state: 'visible' });
   }
 

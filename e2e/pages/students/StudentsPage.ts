@@ -235,6 +235,16 @@ export class StudentsPage extends BasePage {
     return this.page.locator('tr').filter({ hasText: name });
   }
 
+  /** The student's roster row, which carries the row actions; an expanded summary row never does. */
+  rosterRow(name: string): Locator {
+    return this.row(name).filter({ has: this.page.getByTestId('row-actions') });
+  }
+
+  /** The Actions column head of the students table. */
+  actionsColumnHead(): Locator {
+    return this.page.locator('pm-students-table').getByRole('columnheader', { name: 'Actions' });
+  }
+
   async editStudent(currentName: string, changes: Partial<StudentInput>): Promise<void> {
     await this.row(currentName).locator('.students-table__btn--edit').click();
     await this.fillStudentFields(changes);
@@ -372,7 +382,7 @@ export class StudentsPage extends BasePage {
   }
 
   async removeSibling(siblingName: string): Promise<void> {
-    await this.siblingListRow(siblingName).locator('.sibling-list__remove-btn').click();
+    await this.siblingListRow(siblingName).getByRole('button', { name: 'Unlink', exact: true }).click();
   }
 
   siblingListRow(siblingName: string): Locator {
