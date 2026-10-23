@@ -293,3 +293,14 @@ describe('confirmation modal action rows', { tags: ['377UC4'] }, () => {
     expect(row.lastElementChild).toBe(confirm);
   });
 });
+
+describe('confirmation modals keep their Cancel and confirm look', { tags: ['387UC4'] }, () => {
+  it.each(cases)('$tag has no warning variant on Cancel or the confirm action', (testCase) => {
+    const { confirm, cancel } = open(testCase);
+
+    for (const button of [cancel, confirm]) {
+      expect(Array.from(button.classList).some((name) => name.endsWith('--warning'))).toBe(false);
+    }
+    expect(confirm.classList.contains('modal__btn--destructive')).toBe(true);
+  });
+});

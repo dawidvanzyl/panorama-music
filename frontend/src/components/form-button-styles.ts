@@ -36,6 +36,13 @@ formButtonStyles.replaceSync(`
     .form-btn--secondary:hover:not(:disabled) {
       background: var(--pm-surface-2);
     }
+    .form-btn--warning {
+      border-color: var(--pm-warning);
+      color: var(--pm-warning);
+    }
+    .form-btn--warning:hover:not(:disabled) {
+      background: var(--pm-warning-soft);
+    }
     ${buttonStateRules('.form-btn', ['.form-btn--primary'])}
     @media print {
       .form-btn,

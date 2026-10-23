@@ -177,7 +177,7 @@ export class PmRelationshipList extends HTMLElement {
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('compact-btn', 'relationship-list__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'compact-btn--warning', 'relationship-list__btn--cancel');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', () => this.handleEditCancelled());
 

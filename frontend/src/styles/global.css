@@ -21,6 +21,8 @@
   --pm-danger-solid: #c93c3c;
   --pm-danger-solid-hover: #b83232;
   --pm-danger-soft: rgba(224, 82, 82, 0.1);
+  --pm-warning: #ffb305;
+  --pm-warning-soft: rgba(255, 179, 5, 0.1);
   --pm-success: #8fd44e;
   --pm-success-soft: rgba(143, 212, 78, 0.1);
   --pm-scrim: rgba(0, 0, 0, 0.6);
@@ -131,6 +133,7 @@ main {
     --pm-text-muted: #555;
     --pm-accent-text: #2f55d4;
     --pm-danger-text: #b83232;
+    --pm-warning: #946200;
     --pm-success: #3f7a10;
     --pm-success-soft: rgba(63, 122, 16, 0.1);
     --pm-shadow: none;
