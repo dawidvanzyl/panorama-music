@@ -16,6 +16,7 @@ import '../../features/reports/components/pm-save-report-modal';
 import '../../features/teachers/components/pm-link-account-modal';
 import '../../features/teachers/components/pm-banking-activity-modal';
 import '../../features/admin/components/pm-create-user-form';
+import '../../features/teachers/components/pm-my-details-modal';
 
 interface Harness {
   host: HTMLElement;
@@ -772,5 +773,62 @@ describe('forms adopt the shared form button stylesheet', { tags: ['378UC11'] },
     expect(form.shadowRoot!.adoptedStyleSheets).toContain(formButtonStyles);
     check(form);
     expect(byId(form.shadowRoot!, 'submitBtn').classList.contains('form-btn--primary')).toBe(true);
+  });
+});
+
+describe('inline forms give Cancel the warning variant', { tags: ['387UC1'] }, () => {
+  const warningCases = cases.filter((c) => ['teacher profile form', 'banking details form'].includes(c.name));
+
+  it.each(warningCases)('$name Cancel is a secondary warning form button', (testCase) => {
+    const harness = testCase.mount();
+
+    expect(harness.cancel!.className).toBe('form-btn form-btn--secondary form-btn--warning');
+  });
+
+  it('keeps the warning variant on the teacher profile form Cancel while the form is busy', () => {
+    const harness = warningCases[0].mount();
+
+    call(harness.host, 'setBusy', true);
+
+    expect(harness.cancel!.disabled).toBe(true);
+    expect(harness.cancel!.classList.contains('form-btn--warning')).toBe(true);
+  });
+
+  it('gives Cancel the warning variant in the teacher profile form and banking section inside My details', () => {
+    const modal = create('pm-my-details-modal') as HTMLElement & { show(teacher: unknown): void };
+    modal.show(teacher);
+    const root = modal.shadowRoot!;
+    const profile = byId<HTMLElement>(root, 'editForm').shadowRoot!;
+    const bankingRoot = byId<HTMLElement>(root, 'bankingSection').shadowRoot!;
+    byId<HTMLButtonElement>(bankingRoot, 'editBtn').click();
+
+    expect(byId(profile, 'cancelBtn').classList.contains('form-btn--warning')).toBe(true);
+    expect(byId(bankingRoot, 'cancelBtn').classList.contains('form-btn--warning')).toBe(true);
+  });
+});
+
+describe('Cancel in a form modal or a wizard step form keeps the secondary look', { tags: ['387UC4'] }, () => {
+  const keeping = cases.filter((c) =>
+    [
+      'guardian form in the guardians step',
+      'enrollment form in the courses step',
+      'assign panel in the extra-curriculars step',
+      'enrol waiting-list student modal',
+      'save report modal',
+      'link account modal',
+    ].includes(c.name),
+  );
+
+  it.each(keeping)('$name Cancel has no warning variant', (testCase) => {
+    const harness = testCase.mount();
+
+    expect(harness.cancel!.classList.contains('form-btn--secondary')).toBe(true);
+    expect(harness.cancel!.classList.contains('form-btn--warning')).toBe(false);
+  });
+
+  it('the banking activity modal dismiss button has no warning variant', () => {
+    const modal = create('pm-banking-activity-modal');
+
+    expect(byId(modal.shadowRoot!, 'closeBtn').classList.contains('form-btn--warning')).toBe(false);
   });
 });

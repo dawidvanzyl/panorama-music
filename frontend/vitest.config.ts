@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    css: { include: [/global\.css/] },
     tags: [
       { name: 'M1UC35', description: 'Login stores tokens and redirects user' },
       { name: 'M1UC36', description: 'Registration completes and redirects to login' },
@@ -416,6 +417,11 @@ export default defineConfig({
       { name: '381UC11', description: 'The report filters panel entry point reads Add Filter with no plus sign' },
       { name: '381UC12', description: 'The admin sessions global revoke button reads Revoke All' },
       { name: '381UC13', description: 'Every page with page buttons adopts the shared page button stylesheet and keeps a hidden page button hidden' },
+      { name: '387UC1', description: 'A Cancel in an inline form on a page or card, including the My details forms, uses the form warning variant in every state' },
+      { name: '387UC2', description: 'The Cancel of an inline row edit in a table or list uses the compact warning variant in every state' },
+      { name: '387UC3', description: 'A Deactivate row action uses the compact warning variant while Edit keeps the accent colour' },
+      { name: '387UC4', description: 'A Cancel or Deactivate in a confirmation modal, a form modal or the student wizard keeps its current look' },
+      { name: '387UC5', description: 'The warning token has a print value and the buttons that carry it stay hidden in print' },
     ],
   },
 })

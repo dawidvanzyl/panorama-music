@@ -1282,3 +1282,129 @@ describe('users table clears a role error when its edit ends or restarts', () =>
     expect(buttonNamed(root.querySelector('tr[data-user-id="u2"]')!, 'Regenerate').disabled).toBe(true);
   });
 });
+
+function isWarning(button: Element): boolean {
+  return button.classList.contains('compact-btn--warning');
+}
+
+describe('inline row edit Cancel uses the compact warning variant', { tags: ['387UC2'] }, () => {
+  function editing(): Array<[string, ShadowRoot]> {
+    const course1 = mount<PmCourseTable>('pm-course-table');
+    course1.showActions = true;
+    course1.courses = [course];
+    const ec = mount<PmExtraCurricularTable>('pm-extra-curricular-table');
+    ec.showActions = true;
+    ec.extraCurriculars = [choir];
+    const users = mount<PmUsersTable>('pm-users-table');
+    users.users = [user()];
+    const relationships = mount<PmRelationshipList>('pm-relationship-list');
+    relationships.relationships = [mother];
+    const roots: Array<[string, ShadowRoot]> = [
+      ['course table', course1.shadowRoot!],
+      ['extra-curricular table', ec.shadowRoot!],
+      ['users table', users.shadowRoot!],
+      ['relationship list', relationships.shadowRoot!],
+    ];
+    for (const [, root] of roots) buttonNamed(root, 'Edit').click();
+    return roots;
+  }
+
+  it('carries compact-btn compact-btn--warning on Cancel and neither warning nor destructive on Save', () => {
+    for (const [name, root] of editing()) {
+      const cancel = buttonNamed(root, 'Cancel');
+      const save = buttonNamed(root, 'Save');
+      expect(cancel.classList.contains('compact-btn'), name).toBe(true);
+      expect(isWarning(cancel), name).toBe(true);
+      expect(isWarning(save), name).toBe(false);
+      expect(isDestructive(save), name).toBe(false);
+    }
+  });
+
+  it('keeps the warning variant on the disabled Cancel of a users table row while its save is pending', () => {
+    mockUpdateUserRoles.mockReset();
+    mockUpdateUserRoles.mockReturnValue(new Promise(() => undefined));
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user()];
+    const root = table.shadowRoot!;
+    buttonNamed(root, 'Edit').click();
+    root.querySelector<HTMLInputElement>('input[type="checkbox"][value="Coordinator"]')!.click();
+    buttonNamed(root, 'Save').click();
+
+    const cancel = buttonNamed(root, 'Cancel');
+    expect(cancel.disabled).toBe(true);
+    expect(isWarning(cancel)).toBe(true);
+  });
+
+  it('keeps the warning variant on the disabled Cancel of a course table row while its save is pending', () => {
+    const table = mount<PmCourseTable>('pm-course-table');
+    table.showActions = true;
+    table.courses = [course];
+    const root = table.shadowRoot!;
+    buttonNamed(root, 'Edit').click();
+    type(root.querySelector<HTMLInputElement>('#costInput')!, '150.00');
+    buttonNamed(root, 'Save').click();
+
+    const cancel = buttonNamed(root, 'Cancel');
+    expect(cancel.disabled).toBe(true);
+    expect(isWarning(cancel)).toBe(true);
+  });
+});
+
+describe('Deactivate row action uses the compact warning variant', { tags: ['387UC3'] }, () => {
+  it('gives Deactivate the warning variant and leaves Edit default on an editable active user', () => {
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user()];
+
+    const [edit, deactivate] = Array.from(firstRowActions(table.shadowRoot!).querySelectorAll('button'));
+    expect(labelOf(deactivate)).toBe('Deactivate');
+    expect(isWarning(deactivate)).toBe(true);
+    expect(isDestructive(deactivate)).toBe(false);
+    expect(edit.classList.contains('compact-btn')).toBe(true);
+    expect(isWarning(edit)).toBe(false);
+    expect(isDestructive(edit)).toBe(false);
+  });
+
+  it('gives the hidden Deactivate placeholder of a protected user the warning variant and not the Edit placeholder', () => {
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user({ isProtected: true })];
+
+    const [edit, deactivate] = Array.from(firstRowActions(table.shadowRoot!).querySelectorAll('button'));
+    expect(deactivate.style.visibility).toBe('hidden');
+    expect(isWarning(deactivate)).toBe(true);
+    expect(edit.style.visibility).toBe('hidden');
+    expect(isWarning(edit)).toBe(false);
+  });
+
+  it('keeps Delete destructive without warning and Reactivate default on a deactivated user', () => {
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user({ isActive: false })];
+
+    const [reactivate, del] = Array.from(firstRowActions(table.shadowRoot!).querySelectorAll('button'));
+    expect(isDestructive(del)).toBe(true);
+    expect(isWarning(del)).toBe(false);
+    expect(isWarning(reactivate)).toBe(false);
+    expect(isDestructive(reactivate)).toBe(false);
+  });
+});
+
+describe('inline row edit Cancel inside a wizard step keeps the default compact look', { tags: ['387UC4'] }, () => {
+  it('in the guardian list', () => {
+    const list = mount<PmGuardianList>('pm-guardian-list');
+    list.relationships = [mother];
+    list.isPersisted = true;
+    list.guardians = [guardian];
+    buttonNamed(list.shadowRoot!, 'Edit').click();
+
+    expect(isWarning(buttonNamed(list.shadowRoot!, 'Cancel'))).toBe(false);
+  });
+
+  it('in the enrollment list', () => {
+    const list = mount<PmEnrollmentList>('pm-enrollment-list');
+    list.teachers = [thabo, lindiwe];
+    list.isPersisted = true;
+    list.enrollments = [enrollment];
+    buttonNamed(list.shadowRoot!, 'Edit').click();
+
+    expect(isWarning(buttonNamed(list.shadowRoot!, 'Cancel'))).toBe(false);
+  });
+});
