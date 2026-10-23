@@ -24,7 +24,7 @@ template.innerHTML = `
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
+        <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Remove</button>
       </div>
     </div>
   </div>

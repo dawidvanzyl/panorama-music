@@ -287,7 +287,7 @@ describe('pm-courses-step empty state', { tags: ['268UC15'] }, () => {
 });
 
 describe('pm-courses-step stages enrollments in create mode', { tags: ['268UC21'] }, () => {
-  it('renders staged rows with Change and Remove and sends nothing', () => {
+  it('renders staged rows with Edit and Remove and sends nothing', () => {
     const requests: Event[] = [];
     step.addEventListener('enrollment-add-requested', (event) => requests.push(event));
 
@@ -302,7 +302,7 @@ describe('pm-courses-step stages enrollments in create mode', { tags: ['268UC21'
       'Piano',
       '2A',
     ]);
-    expect(rows()[0].querySelector('.enrollment-list__btn--change')!.textContent).toBe('Change');
+    expect(rows()[0].querySelector('.enrollment-list__btn--change')!.textContent).toBe('Edit');
     expect(rows()[0].querySelector('.enrollment-list__btn--remove')!.textContent).toBe('Remove');
     expect(step.pendingEnrollments).toEqual([
       expect.objectContaining({ courseId: instrumentCourse.courseId, teacherId: thabo.teacherId }),

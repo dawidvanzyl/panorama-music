@@ -1,4 +1,6 @@
 import type { GuardianInput, GuardianRelationship, GuardianResult } from '../services/guardians';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -54,67 +56,6 @@ styles.replaceSync(`
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--pm-text-muted);
-    }
-    .guardian-list__actions {
-      text-align: right;
-      white-space: nowrap;
-    }
-    .guardian-list__btn {
-      background: transparent;
-      border: 1px solid currentColor;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--pm-radius);
-    }
-    .guardian-list__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-    .guardian-list__btn--edit {
-      color: var(--pm-accent);
-    }
-    .guardian-list__btn--edit:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .guardian-list__btn--delete {
-      border: none;
-      background: var(--pm-danger);
-      color: #fff;
-    }
-    .guardian-list__btn--delete:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    .guardian-list__btn--change {
-      border: none;
-      color: var(--pm-accent);
-    }
-    .guardian-list__btn--change:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .guardian-list__btn--remove {
-      border: none;
-      color: var(--pm-danger);
-    }
-    .guardian-list__btn--remove:hover:not(:disabled) {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .guardian-list__btn--cancel {
-      color: var(--pm-text);
-    }
-    .guardian-list__btn--cancel:hover {
-      background: var(--pm-surface-2);
-    }
-    .guardian-list__btn--save {
-      border: none;
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .guardian-list__btn--save:hover {
-      opacity: 0.85;
-    }
-    .guardian-list__actions .guardian-list__btn + .guardian-list__btn {
-      margin-left: 8px;
     }
     .guardian-list__readonly-tag {
       font-size: 11px;
@@ -186,7 +127,7 @@ template.innerHTML = `
           <th>Receives Correspondence</th>
           <th>Responsible for Payment</th>
           <th>Married</th>
-          <th class="guardian-list__actions">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -223,11 +164,13 @@ export class PmGuardianList extends HTMLElement {
   private _relationships: GuardianRelationship[] = [];
   private _editingGuardianId: string | null = null;
   private _isPersisted = true;
+  private _draft: GuardianInput | null = null;
+  private _saving = false;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -253,9 +196,9 @@ export class PmGuardianList extends HTMLElement {
 
   /**
    * Whether these guardians are already persisted (edit mode) or only staged
-   * in memory until the student is saved (create mode). Governs the entry/removal
-   * button wording and style: "Edit"/"Delete" for persisted data, vs. borderless
-   * "Change"/"Remove" (matching the sibling list's in-memory styling) otherwise.
+   * in memory until the student is saved (create mode). Governs the removal
+   * label and whether saving a row edit sends a request: "Delete" and a request
+   * for persisted data, "Remove" and no request otherwise.
    */
   set isPersisted(value: boolean) {
     this._isPersisted = value;
@@ -264,8 +207,17 @@ export class PmGuardianList extends HTMLElement {
 
   /** Exits inline row-edit mode (if any) without saving. Safe to call even when no row is being edited. */
   exitEditMode(): void {
+    this._saving = false;
+    this._draft = null;
     if (this._editingGuardianId === null) return;
     this._editingGuardianId = null;
+    this.render();
+  }
+
+  /** Ends the saving state after a failed save, keeping the row in edit with its entered values. */
+  endSave(): void {
+    if (!this._saving) return;
+    this._saving = false;
     this.render();
   }
 
@@ -310,7 +262,7 @@ export class PmGuardianList extends HTMLElement {
     marriedCell.textContent = guardian.married ? 'Yes' : '—';
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('guardian-list__actions');
+    actionsCell.classList.add('compact-actions-col');
 
     if (guardian.readOnly) {
       const tag = document.createElement('span');
@@ -318,6 +270,7 @@ export class PmGuardianList extends HTMLElement {
       tag.textContent = 'Inherited';
       actionsCell.appendChild(tag);
     } else {
+      const actions = this.buildActionsContainer();
       const isAnotherRowEditing = this._editingGuardianId !== null;
 
       // A restricted guardian gets the explanation in place of the edit
@@ -325,30 +278,32 @@ export class PmGuardianList extends HTMLElement {
       // it from this student changes only this student's link, so that action
       // stays.
       if (guardian.restricted) {
-        actionsCell.appendChild(this.buildInfoAffordance());
+        actions.appendChild(this.buildInfoAffordance());
       } else {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.classList.add(
-          'guardian-list__btn',
+          'compact-btn',
           this._isPersisted ? 'guardian-list__btn--edit' : 'guardian-list__btn--change',
         );
-        editBtn.textContent = this._isPersisted ? 'Edit' : 'Change';
+        editBtn.textContent = 'Edit';
         editBtn.disabled = isAnotherRowEditing;
         editBtn.addEventListener('click', () => this.handleEditClicked(guardian));
-        actionsCell.appendChild(editBtn);
+        actions.appendChild(editBtn);
       }
 
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.classList.add(
-        'guardian-list__btn',
+        'compact-btn',
+        'compact-btn--destructive',
         this._isPersisted ? 'guardian-list__btn--delete' : 'guardian-list__btn--remove',
       );
       deleteBtn.textContent = this._isPersisted ? 'Delete' : 'Remove';
       deleteBtn.disabled = isAnotherRowEditing;
       deleteBtn.addEventListener('click', () => this.handleDelete(guardian));
-      actionsCell.appendChild(deleteBtn);
+      actions.appendChild(deleteBtn);
+      actionsCell.appendChild(actions);
     }
 
     row.append(
@@ -364,6 +319,13 @@ export class PmGuardianList extends HTMLElement {
     return row;
   }
 
+  private buildActionsContainer(): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    return actions;
+  }
+
   /** The reason travels on the icon itself, surfacing on hover rather than crowding the row. */
   private buildInfoAffordance(): HTMLButtonElement {
     const icon = document.createElement('button');
@@ -376,20 +338,40 @@ export class PmGuardianList extends HTMLElement {
     return icon;
   }
 
+  private draftOf(guardian: GuardianListItem): GuardianInput {
+    return {
+      guardianRelationshipId: guardian.guardianRelationshipId,
+      firstName: guardian.firstName,
+      surname: guardian.surname,
+      cell: guardian.cell ?? null,
+      email: guardian.email ?? null,
+      receivesCorrespondence: guardian.receivesCorrespondence,
+      responsibleForPayment: guardian.responsibleForPayment,
+      married: guardian.married,
+    };
+  }
+
   private buildEditableRow(guardian: GuardianListItem): HTMLTableRowElement {
     const row = document.createElement('tr');
+    const draft = (this._draft ??= this.draftOf(guardian));
 
     const firstNameInput = document.createElement('input');
     firstNameInput.type = 'text';
     firstNameInput.classList.add('guardian-list__edit-input');
-    firstNameInput.value = guardian.firstName;
+    firstNameInput.value = draft.firstName;
     firstNameInput.required = true;
+    firstNameInput.addEventListener('input', () => {
+      draft.firstName = firstNameInput.value;
+    });
 
     const surnameInput = document.createElement('input');
     surnameInput.type = 'text';
     surnameInput.classList.add('guardian-list__edit-input');
-    surnameInput.value = guardian.surname;
+    surnameInput.value = draft.surname;
     surnameInput.required = true;
+    surnameInput.addEventListener('input', () => {
+      draft.surname = surnameInput.value;
+    });
 
     const nameCell = document.createElement('td');
     const nameWrap = document.createElement('div');
@@ -406,42 +388,60 @@ export class PmGuardianList extends HTMLElement {
       option.textContent = relationship.name;
       relationshipSelect.appendChild(option);
     }
-    relationshipSelect.value = guardian.guardianRelationshipId;
+    relationshipSelect.value = draft.guardianRelationshipId;
+    relationshipSelect.addEventListener('change', () => {
+      draft.guardianRelationshipId = relationshipSelect.value;
+    });
     const relationshipCell = document.createElement('td');
     relationshipCell.appendChild(relationshipSelect);
 
     const cellInput = document.createElement('input');
     cellInput.type = 'text';
     cellInput.classList.add('guardian-list__edit-input');
-    cellInput.value = guardian.cell ?? '';
+    cellInput.value = draft.cell ?? '';
+    cellInput.addEventListener('input', () => {
+      draft.cell = cellInput.value || null;
+    });
     const cellCell = document.createElement('td');
     cellCell.appendChild(cellInput);
 
     const emailInput = document.createElement('input');
     emailInput.type = 'email';
     emailInput.classList.add('guardian-list__edit-input');
-    emailInput.value = guardian.email ?? '';
+    emailInput.value = draft.email ?? '';
+    emailInput.addEventListener('input', () => {
+      draft.email = emailInput.value || null;
+    });
     const emailCell = document.createElement('td');
     emailCell.appendChild(emailInput);
 
     const receivesCorrespondenceInput = document.createElement('input');
     receivesCorrespondenceInput.type = 'checkbox';
     receivesCorrespondenceInput.classList.add('guardian-list__edit-checkbox');
-    receivesCorrespondenceInput.checked = guardian.receivesCorrespondence;
+    receivesCorrespondenceInput.checked = draft.receivesCorrespondence;
+    receivesCorrespondenceInput.addEventListener('change', () => {
+      draft.receivesCorrespondence = receivesCorrespondenceInput.checked;
+    });
     const receivesCorrespondenceCell = document.createElement('td');
     receivesCorrespondenceCell.appendChild(receivesCorrespondenceInput);
 
     const responsibleForPaymentInput = document.createElement('input');
     responsibleForPaymentInput.type = 'checkbox';
     responsibleForPaymentInput.classList.add('guardian-list__edit-checkbox');
-    responsibleForPaymentInput.checked = guardian.responsibleForPayment;
+    responsibleForPaymentInput.checked = draft.responsibleForPayment;
+    responsibleForPaymentInput.addEventListener('change', () => {
+      draft.responsibleForPayment = responsibleForPaymentInput.checked;
+    });
     const responsibleForPaymentCell = document.createElement('td');
     responsibleForPaymentCell.appendChild(responsibleForPaymentInput);
 
     const marriedInput = document.createElement('input');
     marriedInput.type = 'checkbox';
     marriedInput.classList.add('guardian-list__edit-checkbox');
-    marriedInput.checked = guardian.married;
+    marriedInput.checked = draft.married;
+    marriedInput.addEventListener('change', () => {
+      draft.married = marriedInput.checked;
+    });
     const marriedCell = document.createElement('td');
     marriedCell.appendChild(marriedInput);
 
@@ -457,21 +457,25 @@ export class PmGuardianList extends HTMLElement {
     };
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('guardian-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = this.buildActionsContainer();
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('guardian-list__btn', 'guardian-list__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'guardian-list__btn--cancel');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', () => this.handleEditCancelled());
-    actionsCell.appendChild(cancelBtn);
 
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
-    saveBtn.classList.add('guardian-list__btn', 'guardian-list__btn--save');
+    saveBtn.classList.add('compact-btn', 'guardian-list__btn--save');
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => this.handleEditSaved(guardian.guardianId, inputs));
-    actionsCell.appendChild(saveBtn);
+
+    if (this._saving) setButtonsBusy(saveBtn, cancelBtn, true);
+
+    actions.append(cancelBtn, saveBtn);
+    actionsCell.appendChild(actions);
 
     row.append(
       nameCell,
@@ -488,17 +492,23 @@ export class PmGuardianList extends HTMLElement {
 
   private handleEditClicked(guardian: GuardianListItem): void {
     this._editingGuardianId = guardian.guardianId;
+    this._draft = this.draftOf(guardian);
+    this._saving = false;
     this.render();
     this.dispatchEvent(new CustomEvent('guardian-edit-started', { bubbles: true, composed: true }));
   }
 
   private handleEditCancelled(): void {
     this._editingGuardianId = null;
+    this._draft = null;
+    this._saving = false;
     this.render();
     this.dispatchEvent(new CustomEvent('guardian-edit-cancelled', { bubbles: true, composed: true }));
   }
 
   private handleEditSaved(guardianId: string, inputs: EditRowInputs): void {
+    if (this._saving) return;
+
     const isValid = [inputs.firstNameInput, inputs.surnameInput, inputs.relationshipSelect].every((el) =>
       el.reportValidity(),
     );
@@ -515,6 +525,11 @@ export class PmGuardianList extends HTMLElement {
       married: inputs.marriedInput.checked,
     };
 
+    if (this._isPersisted) {
+      this._saving = true;
+      this.render();
+    }
+
     this.dispatchEvent(
       new CustomEvent('guardian-edit-saved', {
         bubbles: true,
@@ -523,7 +538,6 @@ export class PmGuardianList extends HTMLElement {
       }),
     );
   }
-
   private handleDelete(guardian: GuardianResult): void {
     this.dispatchEvent(
       new CustomEvent('guardian-delete-clicked', {

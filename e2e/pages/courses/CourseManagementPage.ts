@@ -91,7 +91,7 @@ export class CourseManagementPage extends BasePage {
   }
 
   async startCostEdit(row: Locator): Promise<void> {
-    await row.getByRole('button', { name: 'Edit Cost' }).click();
+    await row.getByRole('button', { name: 'Edit', exact: true }).click();
   }
 
   /**

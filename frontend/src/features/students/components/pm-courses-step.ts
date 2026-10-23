@@ -231,9 +231,14 @@ export class PmCoursesStep extends HTMLElement {
   }
 
   showError(message: string): void {
+    this.showMessage(message);
+    this.enrollmentForm!.setBusy(false);
+    this.enrollmentList!.endSave();
+  }
+
+  private showMessage(message: string): void {
     this.message!.textContent = message;
     this.message!.classList.add('courses-step__message--error');
-    this.enrollmentForm!.setBusy(false);
   }
 
   clearError(): void {
@@ -344,7 +349,7 @@ export class PmCoursesStep extends HTMLElement {
     const { enrollment } = (event as CustomEvent<{ enrollment: EnrollmentResult }>).detail;
 
     if (this.enrollmentList!.enrollments.length <= 1 && !this._holdsExtraCurricular) {
-      this.showError(COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW);
+      this.showMessage(COURSE_OR_EXTRA_CURRICULAR_TO_WITHDRAW);
       return;
     }
 

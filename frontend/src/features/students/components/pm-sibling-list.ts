@@ -1,6 +1,7 @@
 import type { SiblingStudentResult } from '../services/students';
 import { buildPopulationIcon, populationIconStyles } from './student-population';
 import { gradeLabel } from './student-options';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -33,21 +34,6 @@ styles.replaceSync(`
       letter-spacing: 0.04em;
       color: var(--pm-text-muted);
     }
-    .sibling-list__actions {
-      text-align: right;
-    }
-    .sibling-list__remove-btn {
-      background: transparent;
-      border: none;
-      color: var(--pm-danger);
-      font-size: 12px;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--pm-radius);
-    }
-    .sibling-list__remove-btn:hover {
-      background: rgba(224, 82, 82, 0.1);
-    }
     .sibling-list__name {
       display: flex;
       align-items: center;
@@ -69,7 +55,7 @@ template.innerHTML = `
           <th>Name</th>
           <th>Grade</th>
           <th>Class</th>
-          <th class="sibling-list__actions">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -86,7 +72,7 @@ export class PmSiblingList extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [populationIconStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, populationIconStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -138,14 +124,18 @@ export class PmSiblingList extends HTMLElement {
     classCell.textContent = sibling.class ?? '—';
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('sibling-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
 
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.classList.add('sibling-list__remove-btn');
-    removeBtn.textContent = 'Remove';
-    removeBtn.addEventListener('click', () => this.handleRemove(sibling));
-    actionsCell.appendChild(removeBtn);
+    const unlinkBtn = document.createElement('button');
+    unlinkBtn.type = 'button';
+    unlinkBtn.classList.add('compact-btn', 'sibling-list__unlink-btn');
+    unlinkBtn.textContent = 'Unlink';
+    unlinkBtn.addEventListener('click', () => this.handleRemove(sibling));
+    actions.appendChild(unlinkBtn);
+    actionsCell.appendChild(actions);
 
     row.append(nameCell, gradeCell, classCell, actionsCell);
     return row;

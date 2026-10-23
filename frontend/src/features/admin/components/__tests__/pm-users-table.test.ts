@@ -41,25 +41,25 @@ describe('pm-users-table — deactivated user row', { tags: ['M1.1UC38', 'M1.1UC
     document.body.removeChild(el);
   });
 
-  it('deactivated user row renders Activate button to the left of Delete', () => {
+  it('deactivated user row renders Reactivate button to the left of Delete', () => {
     el.users = [deactivatedUser];
 
-    const activateBtn = el.shadowRoot!.querySelector('.users-table__btn--activate');
+    const activateBtn = el.shadowRoot!.querySelector('.users-table__btn--reactivate');
     const deleteBtn = el.shadowRoot!.querySelector('.users-table__btn--delete');
 
     expect(activateBtn).not.toBeNull();
-    expect(activateBtn!.textContent).toBe('Activate');
+    expect(activateBtn!.textContent).toBe('Reactivate');
     expect(deleteBtn).not.toBeNull();
     expect(deleteBtn!.textContent).toBe('Delete');
 
-    const actionsCell = el.shadowRoot!.querySelector('.users-table__actions')!;
+    const actionsCell = el.shadowRoot!.querySelector('.compact-actions')!;
     const buttons = actionsCell.querySelectorAll('button');
-    const activateIndex = [...buttons].findIndex((b) => b.classList.contains('users-table__btn--activate'));
+    const activateIndex = [...buttons].findIndex((b) => b.classList.contains('users-table__btn--reactivate'));
     const deleteIndex = [...buttons].findIndex((b) => b.classList.contains('users-table__btn--delete'));
     expect(activateIndex).toBeLessThan(deleteIndex);
   });
 
-  it('clicking Activate dispatches user-activate-requested with the correct userId', () => {
+  it('clicking Reactivate dispatches user-activate-requested with the correct userId', () => {
     el.users = [deactivatedUser];
 
     let capturedEvent: CustomEvent<{ userId: string }> | null = null;
@@ -67,7 +67,7 @@ describe('pm-users-table — deactivated user row', { tags: ['M1.1UC38', 'M1.1UC
       capturedEvent = e as CustomEvent<{ userId: string }>;
     });
 
-    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--activate')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--reactivate')!.click();
 
     expect(capturedEvent).not.toBeNull();
     expect(capturedEvent!.detail.userId).toBe(deactivatedUser.userId);
@@ -351,6 +351,7 @@ describe('pm-users-table — a rejected role removal', { tags: ['232UC11'] }, ()
     const checkboxes = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
     const teacherCheckbox = checkboxes.find((cb) => cb.value === 'Teacher')!;
     teacherCheckbox.checked = false;
+    teacherCheckbox.dispatchEvent(new Event('change'));
 
     el.shadowRoot!.querySelector<HTMLButtonElement>('.users-table__btn--save')!.click();
     await flush();
@@ -362,7 +363,10 @@ describe('pm-users-table — a rejected role removal', { tags: ['232UC11'] }, ()
     const errorRow = rowError.closest('tr')!;
     expect(errorRow.querySelector('td')!.colSpan).toBe(4);
     expect(errorRow.nextElementSibling!.textContent).toContain(linkedTeacher.email);
-    expect(teacherCheckbox.checked).toBe(true);
+    const restoredCheckbox = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(
+      (cb) => cb.value === 'Teacher',
+    )!;
+    expect(restoredCheckbox.checked).toBe(true);
     // Still in edit mode, so the admin can act on the message without re-entering it.
     expect(el.shadowRoot!.querySelector('.users-table__btn--save')).not.toBeNull();
   });

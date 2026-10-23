@@ -114,6 +114,8 @@ export class PmGuardianRelationshipsPage extends HTMLElement {
       await this.loadRelationships();
     } catch (err) {
       this.showError(err);
+    } finally {
+      this.relationshipList!.endSave();
     }
   };
 

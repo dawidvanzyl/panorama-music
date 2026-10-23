@@ -12,6 +12,7 @@ import type { PmStudentCoursesSummary } from './pm-student-courses-summary';
 import type { PmStudentExtraCurricularsSummary } from './pm-student-extra-curriculars-summary';
 import { gradeLabel } from './student-options';
 import type { StudentRecordSource } from './student-record';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -59,38 +60,6 @@ styles.replaceSync(`
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .students-table__actions {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-    }
-    .students-table__actions-header {
-      text-align: right;
-    }
-    .students-table__btn {
-      border-radius: var(--pm-radius);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-    }
-    .students-table__btn--edit,
-    .students-table__btn--print {
-      background: transparent;
-      border: 1px solid var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .students-table__btn--edit:hover,
-    .students-table__btn--print:hover {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .students-table__btn--delete {
-      background: var(--pm-danger);
-      border: 1px solid var(--pm-danger);
-      color: #fff;
-    }
-    .students-table__btn--delete:hover {
-      opacity: 0.9;
-    }
     .students-table__chevron-btn {
       background: transparent;
       border: none;
@@ -112,8 +81,6 @@ styles.replaceSync(`
       gap: 4px;
     }
     .students-table__summary-actions {
-      display: flex;
-      justify-content: flex-end;
       padding: 12px 16px 0;
       margin-bottom: 4px;
     }
@@ -150,7 +117,7 @@ template.innerHTML = `
           <th>Class</th>
           <th>Language</th>
           <th>Date of Birth</th>
-          <th class="students-table__actions-header">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -186,7 +153,7 @@ export class PmStudentsTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -294,21 +261,25 @@ export class PmStudentsTable extends HTMLElement {
     dobCell.textContent = student.dateOfBirth;
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('students-table__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.classList.add('students-table__btn', 'students-table__btn--edit');
+    editBtn.classList.add('compact-btn', 'students-table__btn--edit');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => this.handleEdit(student));
-    actionsCell.appendChild(editBtn);
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.classList.add('students-table__btn', 'students-table__btn--delete');
+    deleteBtn.classList.add('compact-btn', 'compact-btn--destructive', 'students-table__btn--delete');
     deleteBtn.textContent = 'Delete';
     deleteBtn.addEventListener('click', () => this.handleDelete(student));
-    actionsCell.appendChild(deleteBtn);
+
+    actions.append(editBtn, deleteBtn);
+    actionsCell.appendChild(actions);
 
     row.append(chevronCell, nameCell, gradeCell, phaseCell, classCell, languageCell, dobCell, actionsCell);
 
@@ -365,10 +336,10 @@ export class PmStudentsTable extends HTMLElement {
 
   private buildPrintBar(student: StudentResult): HTMLDivElement {
     const bar = document.createElement('div');
-    bar.classList.add('students-table__summary-actions');
+    bar.classList.add('students-table__summary-actions', 'compact-actions');
     const printBtn = document.createElement('button');
     printBtn.type = 'button';
-    printBtn.classList.add('students-table__btn', 'students-table__btn--print');
+    printBtn.classList.add('compact-btn', 'students-table__btn--print');
     printBtn.textContent = 'Print';
     printBtn.addEventListener('click', () => this.handlePrint(student));
     bar.appendChild(printBtn);

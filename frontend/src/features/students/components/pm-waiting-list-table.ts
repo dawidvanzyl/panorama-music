@@ -7,6 +7,7 @@ import {
 } from './enrollment-options';
 
 import { formatAddedAt } from './waiting-list-display';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -103,40 +104,13 @@ styles.replaceSync(`
     }
     .wl-table__actions-header,
     .wl-table__actions {
-      text-align: right;
-      width: 190px;
+      width: 260px;
     }
     .wl-table__read-only {
       font-size: 13px;
       color: var(--pm-text-muted);
       display: block;
       text-align: right;
-    }
-    .wl-table__btn {
-      border: 1px solid transparent;
-      border-radius: var(--pm-radius);
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .wl-table__btn + .wl-table__btn {
-      margin-left: 6px;
-    }
-    .wl-table__btn--primary {
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .wl-table__btn--secondary {
-      background: transparent;
-      border-color: var(--pm-accent);
-      color: var(--pm-accent);
-    }
-    .wl-table__btn--danger {
-      background: var(--pm-danger);
-      border-color: var(--pm-danger);
-      color: #fff;
     }
     .wl-table__empty {
       color: var(--pm-text-muted);
@@ -165,7 +139,7 @@ export class PmWaitingListTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -274,7 +248,7 @@ export class PmWaitingListTable extends HTMLElement {
     const notesHeader = document.createElement('th');
     notesHeader.textContent = 'Notes';
     const actionsHeader = document.createElement('th');
-    actionsHeader.classList.add('wl-table__actions-header');
+    actionsHeader.classList.add('compact-actions-col', 'wl-table__actions-header');
     actionsHeader.textContent = 'Actions';
     headerRow.append(positionHeader, studentHeader, notesHeader, actionsHeader);
     thead.appendChild(headerRow);
@@ -317,7 +291,7 @@ export class PmWaitingListTable extends HTMLElement {
     notesCell.textContent = entry.notes || '—';
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('wl-table__actions');
+    actionsCell.classList.add('compact-actions-col', 'wl-table__actions');
     if (this._showActions) {
       actionsCell.appendChild(this.buildActions(entry, occurrenceType));
     } else {
@@ -332,30 +306,32 @@ export class PmWaitingListTable extends HTMLElement {
   }
 
   /**
-   * The row's actions. Edit and Delete announce the entry and the occurrence
+   * The row's actions. Edit and Remove announce the entry and the occurrence
    * type its group was rendered under — that type is the group's, not the
    * row's, so it has to travel with the request rather than be re-derived from
    * the entry later.
    */
   private buildActions(entry: WaitingListGroupResult['entries'][number], occurrenceType: OccurrenceType): HTMLElement {
     const container = document.createElement('div');
+    container.classList.add('compact-actions');
+    container.dataset.testid = 'row-actions';
 
     const enrolBtn = document.createElement('button');
     enrolBtn.type = 'button';
-    enrolBtn.classList.add('wl-table__btn', 'wl-table__btn--primary');
+    enrolBtn.classList.add('compact-btn', 'wl-table__btn--primary');
     enrolBtn.textContent = 'Enrol';
     enrolBtn.addEventListener('click', () => this.emit('waiting-list-enrol-requested', entry, occurrenceType));
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.classList.add('wl-table__btn', 'wl-table__btn--secondary');
+    editBtn.classList.add('compact-btn', 'wl-table__btn--secondary');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => this.emit('waiting-list-edit-requested', entry, occurrenceType));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.classList.add('wl-table__btn', 'wl-table__btn--danger');
-    deleteBtn.textContent = 'Delete';
+    deleteBtn.classList.add('compact-btn', 'compact-btn--destructive', 'wl-table__btn--danger');
+    deleteBtn.textContent = 'Remove';
     deleteBtn.addEventListener('click', () => this.emit('waiting-list-remove-requested', entry, occurrenceType));
 
     container.append(enrolBtn, editBtn, deleteBtn);

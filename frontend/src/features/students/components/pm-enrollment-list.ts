@@ -18,6 +18,8 @@ import type {
   InstrumentType,
   StepType,
 } from '../services/enrollments';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
+import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -70,58 +72,6 @@ styles.replaceSync(`
       letter-spacing: 0.04em;
       color: var(--pm-text-muted);
     }
-    .enrollment-list__actions {
-      text-align: right;
-      white-space: nowrap;
-    }
-    .enrollment-list__btn {
-      background: transparent;
-      border: none;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--pm-radius);
-    }
-    .enrollment-list__btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-    /* A staged row's Change and a persisted row's Edit read the same and differ
-       only in what they act on, as do Remove and Withdraw — so each pair shares
-       its styling while keeping the class name of the action it actually is. */
-    .enrollment-list__btn--change,
-    .enrollment-list__btn--edit {
-      color: var(--pm-accent);
-    }
-    .enrollment-list__btn--change:hover:not(:disabled),
-    .enrollment-list__btn--edit:hover:not(:disabled) {
-      background: rgba(79, 124, 255, 0.1);
-    }
-    .enrollment-list__btn--remove,
-    .enrollment-list__btn--withdraw {
-      color: var(--pm-danger);
-    }
-    .enrollment-list__btn--remove:hover:not(:disabled),
-    .enrollment-list__btn--withdraw:hover:not(:disabled) {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .enrollment-list__btn--cancel {
-      border: 1px solid currentColor;
-      color: var(--pm-text);
-    }
-    .enrollment-list__btn--cancel:hover {
-      background: var(--pm-surface-2);
-    }
-    .enrollment-list__btn--save {
-      background: var(--pm-accent);
-      color: #fff;
-    }
-    .enrollment-list__btn--save:hover {
-      opacity: 0.85;
-    }
-    .enrollment-list__actions .enrollment-list__btn + .enrollment-list__btn {
-      margin-left: 8px;
-    }
     .enrollment-list__empty {
       margin: 8px 0 0;
       color: var(--pm-text-muted);
@@ -161,7 +111,7 @@ template.innerHTML = `
           <th>Instrument</th>
           <th>Step</th>
           <th>Enrolled</th>
-          <th class="enrollment-list__actions">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -178,6 +128,13 @@ interface EditRowInputs {
   stepSelect: HTMLSelectElement;
 }
 
+interface EnrollmentDraft {
+  courseId: string;
+  teacherId: string;
+  instrumentType: string;
+  stepType: string;
+}
+
 export class PmEnrollmentList extends HTMLElement {
   private rowsBody: HTMLElement | null = null;
   private emptyMessage: HTMLElement | null = null;
@@ -186,11 +143,13 @@ export class PmEnrollmentList extends HTMLElement {
   private _teachers: AssignableTeacher[] = [];
   private _editingId: string | null = null;
   private _isPersisted = true;
+  private _draft: EnrollmentDraft | null = null;
+  private _saving = false;
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -222,7 +181,7 @@ export class PmEnrollmentList extends HTMLElement {
   /**
    * Whether these enrollments are already persisted (edit mode) or only staged
    * in memory until the student is saved (create mode). A staged row offers
-   * Change and Remove; a persisted row offers Edit and Withdraw, which act on a
+   * Edit and Remove; a persisted row offers Edit and Withdraw, which act on a
    * record that already exists.
    */
   set isPersisted(value: boolean) {
@@ -232,8 +191,17 @@ export class PmEnrollmentList extends HTMLElement {
 
   /** Exits inline row-edit mode (if any) without saving. Safe to call when no row is being edited. */
   exitEditMode(): void {
+    this._saving = false;
+    this._draft = null;
     if (this._editingId === null) return;
     this._editingId = null;
+    this.render();
+  }
+
+  /** Ends the saving state after a failed save, keeping the row in edit with its entered values. */
+  endSave(): void {
+    if (!this._saving) return;
+    this._saving = false;
     this.render();
   }
 
@@ -272,54 +240,73 @@ export class PmEnrollmentList extends HTMLElement {
     enrolledCell.textContent = enrollment.enrolledDate;
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('enrollment-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = this.buildActionsContainer();
 
     if (this._isPersisted) {
       // Edit stays available on every row: choosing it on a second row closes
       // the first without submitting, rather than being refused.
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--edit');
+      editBtn.classList.add('compact-btn', 'enrollment-list__btn--edit');
       editBtn.textContent = 'Edit';
       editBtn.addEventListener('click', () => this.handleChangeClicked(enrollment));
-      actionsCell.appendChild(editBtn);
+      actions.appendChild(editBtn);
 
       // Withdrawing the last course of a student with no extra-curricular is
       // refused, but the action is still offered — choosing it states the requirement instead of
       // confirming, which the Courses step decides rather than this list.
       const withdrawBtn = document.createElement('button');
       withdrawBtn.type = 'button';
-      withdrawBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--withdraw');
+      withdrawBtn.classList.add('compact-btn', 'compact-btn--destructive', 'enrollment-list__btn--withdraw');
       withdrawBtn.textContent = 'Withdraw';
       withdrawBtn.addEventListener('click', () => this.handleWithdrawClicked(enrollment));
-      actionsCell.appendChild(withdrawBtn);
+      actions.appendChild(withdrawBtn);
     } else {
       const isAnotherRowEditing = this._editingId !== null;
 
       const changeBtn = document.createElement('button');
       changeBtn.type = 'button';
-      changeBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--change');
-      changeBtn.textContent = 'Change';
+      changeBtn.classList.add('compact-btn', 'enrollment-list__btn--change');
+      changeBtn.textContent = 'Edit';
       changeBtn.disabled = isAnotherRowEditing;
       changeBtn.addEventListener('click', () => this.handleChangeClicked(enrollment));
-      actionsCell.appendChild(changeBtn);
+      actions.appendChild(changeBtn);
 
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--remove');
+      removeBtn.classList.add('compact-btn', 'compact-btn--destructive', 'enrollment-list__btn--remove');
       removeBtn.textContent = 'Remove';
       removeBtn.disabled = isAnotherRowEditing;
       removeBtn.addEventListener('click', () => this.handleRemoveClicked(enrollment));
-      actionsCell.appendChild(removeBtn);
+      actions.appendChild(removeBtn);
     }
 
+    actionsCell.appendChild(actions);
     row.append(courseCell, teacherCell, instrumentCell, stepCell, enrolledCell, actionsCell);
     return row;
+  }
+
+  private buildActionsContainer(): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.classList.add('compact-actions');
+    actions.dataset.testid = 'row-actions';
+    return actions;
+  }
+
+  private draftOf(enrollment: EnrollmentResult): EnrollmentDraft {
+    return {
+      courseId: enrollment.courseId,
+      teacherId: enrollment.teacherId,
+      instrumentType: enrollment.instrumentType ?? '',
+      stepType: enrollment.stepType ?? '',
+    };
   }
 
   private buildEditableRow(enrollment: EnrollmentResult): HTMLTableRowElement {
     const row = document.createElement('tr');
     row.dataset.studentCourseId = enrollment.studentCourseId;
+    const draft = (this._draft ??= this.draftOf(enrollment));
 
     // A persisted enrollment's course is settled at enrollment, so it stays
     // read-only text; a staged one may still be changed to another course.
@@ -327,7 +314,7 @@ export class PmEnrollmentList extends HTMLElement {
       ? undefined
       : this.buildSelect(
           this._courses.map((course) => ({ value: course.courseId, label: courseLabel(course) })),
-          enrollment.courseId,
+          draft.courseId,
         );
     const courseCell = document.createElement('td');
     if (courseSelect) {
@@ -341,14 +328,14 @@ export class PmEnrollmentList extends HTMLElement {
         value: teacher.teacherId,
         label: `${teacher.firstName} ${teacher.surname}`,
       })),
-      enrollment.teacherId,
+      draft.teacherId,
     );
     const teacherCell = document.createElement('td');
     teacherCell.appendChild(teacherSelect);
 
     const instrumentSelect = this.buildSelect(
       INSTRUMENT_TYPES.map((instrument) => ({ value: instrument, label: INSTRUMENT_TYPE_LABELS[instrument] })),
-      enrollment.instrumentType ?? '',
+      draft.instrumentType,
     );
     const instrumentCell = document.createElement('td');
     instrumentCell.appendChild(instrumentSelect);
@@ -359,7 +346,7 @@ export class PmEnrollmentList extends HTMLElement {
 
     const stepSelect = this.buildSelect(
       STEP_TYPES.map((step) => ({ value: step, label: STEP_TYPE_LABELS[step] })),
-      enrollment.stepType ?? '',
+      draft.stepType,
     );
     const stepCell = document.createElement('td');
     stepCell.appendChild(stepSelect);
@@ -370,6 +357,12 @@ export class PmEnrollmentList extends HTMLElement {
     enrolledCell.textContent = enrollment.enrolledDate;
 
     const inputs: EditRowInputs = { courseSelect, teacherSelect, instrumentSelect, stepSelect };
+    const syncDraft = (): void => {
+      draft.courseId = courseSelect?.value ?? draft.courseId;
+      draft.teacherId = teacherSelect.value;
+      draft.instrumentType = instrumentSelect.value;
+      draft.stepType = stepSelect.value;
+    };
     // What the row records follows its course type — chosen in the row's own
     // course select while the course is still changeable, and fixed at the
     // enrollment's own course once it is not.
@@ -389,31 +382,38 @@ export class PmEnrollmentList extends HTMLElement {
       stepSelect.required = offersStep;
       stepPlaceholder.hidden = offersStep;
       if (!offersStep) stepSelect.value = '';
+      syncDraft();
     };
     courseSelect?.addEventListener('change', applyCourseTypeRules);
+    for (const select of [teacherSelect, instrumentSelect, stepSelect]) {
+      select.addEventListener('change', syncDraft);
+    }
     applyCourseTypeRules();
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('enrollment-list__actions');
+    actionsCell.classList.add('compact-actions-col');
+    const actions = this.buildActionsContainer();
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--cancel');
+    cancelBtn.classList.add('compact-btn', 'enrollment-list__btn--cancel');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', () => this.handleEditCancelled());
-    actionsCell.appendChild(cancelBtn);
 
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
-    saveBtn.classList.add('enrollment-list__btn', 'enrollment-list__btn--save');
+    saveBtn.classList.add('compact-btn', 'enrollment-list__btn--save');
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => this.handleEditSaved(enrollment, inputs));
-    actionsCell.appendChild(saveBtn);
+
+    if (this._saving) setButtonsBusy(saveBtn, cancelBtn, true);
+
+    actions.append(cancelBtn, saveBtn);
+    actionsCell.appendChild(actions);
 
     row.append(courseCell, teacherCell, instrumentCell, stepCell, enrolledCell, actionsCell);
     return row;
   }
-
   private buildSelect(options: { value: string; label: string }[], selected: string): HTMLSelectElement {
     const select = document.createElement('select');
     select.classList.add('enrollment-list__edit-input');
@@ -434,17 +434,22 @@ export class PmEnrollmentList extends HTMLElement {
 
   private handleChangeClicked(enrollment: EnrollmentResult): void {
     this._editingId = enrollment.studentCourseId;
+    this._draft = this.draftOf(enrollment);
+    this._saving = false;
     this.render();
     this.dispatchEvent(new CustomEvent('enrollment-edit-started', { bubbles: true, composed: true }));
   }
 
   private handleEditCancelled(): void {
     this._editingId = null;
+    this._draft = null;
+    this._saving = false;
     this.render();
     this.dispatchEvent(new CustomEvent('enrollment-edit-cancelled', { bubbles: true, composed: true }));
   }
 
   private handleEditSaved(enrollment: EnrollmentResult, inputs: EditRowInputs): void {
+    if (this._saving) return;
     const required = [inputs.courseSelect, inputs.teacherSelect, inputs.instrumentSelect, inputs.stepSelect].filter(
       (element) => element?.required,
     );
@@ -458,6 +463,8 @@ export class PmEnrollmentList extends HTMLElement {
     if (this._isPersisted) {
       const update: EnrollmentUpdateInput = { teacherId: inputs.teacherSelect.value, instrumentType, stepType };
 
+      this._saving = true;
+      this.render();
       this.dispatchEvent(
         new CustomEvent('enrollment-update-saved', {
           bubbles: true,

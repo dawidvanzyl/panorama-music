@@ -101,8 +101,7 @@ describe('pm-banking-section — reveal asks the server for the full value', { t
     element.showRevealed('1234567890');
 
     expect(byId(element, 'accountNumberValue').textContent).toBe('1234567890');
-    expect(byId(element, 'revealLabel').textContent).toBe('Hide');
-    expect(byId(element, 'revealIcon').textContent).toBe('visibility_off');
+    expect(byId(element, 'revealBtn').textContent).toBe('Hide');
   });
 
   it('hides the number again on its own after fifteen seconds', () => {
@@ -119,8 +118,7 @@ describe('pm-banking-section — reveal asks the server for the full value', { t
       // An unattended screen is the exposure masking exists to prevent, so the
       // reveal expires without anyone having to hide it.
       expect(byId(element, 'accountNumberValue').textContent).toBe('•••• •••• 7890');
-      expect(byId(element, 'revealLabel').textContent).toBe('Reveal');
-      expect(byId(element, 'revealIcon').textContent).toBe('visibility');
+      expect(byId(element, 'revealBtn').textContent).toBe('Reveal');
     } finally {
       vi.useRealTimers();
     }

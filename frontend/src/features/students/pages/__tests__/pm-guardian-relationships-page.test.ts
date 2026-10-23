@@ -204,6 +204,47 @@ describe('pm-guardian-relationships-page — renames a relationship type', { tag
     expect(renameGuardianRelationship).toHaveBeenCalledWith('r2', 'Stepfather');
     expect(rowNamesOf(el)).toEqual(['Mother', 'Stepfather']);
   });
+
+  function startRename(): { save: () => HTMLButtonElement; nameInput: () => HTMLInputElement } {
+    const root = listOf(el).shadowRoot!;
+    const rows = root.querySelectorAll('tbody tr');
+    (rows[1].querySelector('.relationship-list__btn--edit') as HTMLButtonElement).click();
+    const nameInput = (): HTMLInputElement => root.querySelector('.relationship-list__edit-input') as HTMLInputElement;
+    nameInput().value = 'Stepfather';
+    nameInput().dispatchEvent(new Event('input'));
+    (root.querySelector('.relationship-list__btn--save') as HTMLButtonElement).click();
+    return { save: () => root.querySelector('.relationship-list__btn--save') as HTMLButtonElement, nameInput };
+  }
+
+  it('leaves Save enabled with the entered name when the rename is refused', { tags: ['380UC11'] }, async () => {
+    vi.mocked(renameGuardianRelationship).mockRejectedValue(new GuardiansError('Refused.', 400));
+
+    const { save, nameInput } = startRename();
+    expect(save().disabled).toBe(true);
+    await flush();
+
+    expect(save().disabled).toBe(false);
+    expect(save().hasAttribute('aria-busy')).toBe(false);
+    expect(nameInput().value).toBe('Stepfather');
+    expect(errorBannerOf(el).textContent).toContain('Refused.');
+  });
+
+  it(
+    'leaves Save enabled with the saved name when the rename succeeds but the reload fails',
+    { tags: ['380UC11'] },
+    async () => {
+      vi.mocked(renameGuardianRelationship).mockResolvedValue({ guardianRelationshipId: 'r2', name: 'Stepfather' });
+      mockGetGuardianRelationships.mockRejectedValue(new GuardiansError('Could not reload.', 500));
+
+      const { save, nameInput } = startRename();
+      await flush();
+
+      expect(save().disabled).toBe(false);
+      expect(save().hasAttribute('aria-busy')).toBe(false);
+      expect(nameInput().value).toBe('Stepfather');
+      expect(errorBannerOf(el).textContent).toContain('Could not reload.');
+    },
+  );
 });
 
 describe('pm-guardian-relationships-page — blocks deleting a type in use', { tags: ['214UC10'] }, () => {

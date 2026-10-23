@@ -109,7 +109,7 @@ test.describe('A Teacher gets a read-only Waiting List view', { tag: '@272IT26' 
     await expect(waitingListPage.readOnlyMarker(row)).toHaveText('Read only');
     await expect(waitingListPage.enrolButton(row)).toHaveCount(0);
     await expect(waitingListPage.editButton(row)).toHaveCount(0);
-    await expect(waitingListPage.deleteButton(row)).toHaveCount(0);
+    await expect(waitingListPage.removeButton(row)).toHaveCount(0);
   });
 });
 
@@ -125,7 +125,7 @@ test.describe('A Coordinator gets the full Waiting List action set', { tag: '@27
     await expect(row).toBeVisible();
     await expect(waitingListPage.enrolButton(row)).toBeVisible();
     await expect(waitingListPage.editButton(row)).toBeVisible();
-    await expect(waitingListPage.deleteButton(row)).toBeVisible();
+    await expect(waitingListPage.removeButton(row)).toBeVisible();
     await expect(waitingListPage.readOnlyMarker(row)).toHaveCount(0);
   });
 });

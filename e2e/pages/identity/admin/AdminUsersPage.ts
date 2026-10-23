@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../../BasePage';
 
 export type UserRole = 'Teacher' | 'Coordinator' | 'Admin' | 'BankingCoordinator';
@@ -89,7 +89,8 @@ export class AdminUsersPage extends BasePage {
   }
 
   async activateUser(email: string): Promise<void> {
-    await this.row(email).locator('.users-table__btn--activate').click();
+    await this.row(email).getByRole('button', { name: 'Reactivate', exact: true }).click();
+    await expect(this.status(email)).toHaveText('Active');
   }
 
   async permanentlyDeleteUser(email: string): Promise<void> {

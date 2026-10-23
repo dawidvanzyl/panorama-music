@@ -1,4 +1,5 @@
 import type { SessionResult, AdminSessionResult } from '../services/sessions';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -57,26 +58,6 @@ styles.replaceSync(`
       border: 1px solid var(--pm-border);
       color: var(--pm-text-muted);
     }
-    .sessions-table__btn {
-      border-radius: var(--pm-radius);
-      font-size: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-      background: transparent;
-      border: 1px solid var(--pm-danger);
-      color: var(--pm-danger);
-    }
-    .sessions-table__btn:hover {
-      background: rgba(224, 82, 82, 0.1);
-    }
-    .sessions-table__btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      background: transparent;
-    }
-    .sessions-table__actions {
-      text-align: right;
-    }
     .sessions-table__empty {
       padding: 24px 16px;
       color: var(--pm-text-muted);
@@ -94,7 +75,7 @@ template.innerHTML = `
           <th>IP Address</th>
           <th>Created At</th>
           <th>Last Active</th>
-          <th class="sessions-table__actions">Actions</th>
+          <th class="compact-actions-col">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -113,7 +94,7 @@ export class PmSessionsTable extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [styles];
+    this.shadowRoot!.adoptedStyleSheets = [compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -196,14 +177,19 @@ export class PmSessionsTable extends HTMLElement {
     lastActiveCell.textContent = new Date(session.lastSeenAt).toLocaleString();
 
     const actionsCell = document.createElement('td');
-    actionsCell.classList.add('sessions-table__actions');
-    const revokeBtn = document.createElement('button');
-    revokeBtn.type = 'button';
-    revokeBtn.classList.add('sessions-table__btn');
-    revokeBtn.textContent = 'Revoke';
-    revokeBtn.disabled = session.isCurrent;
-    revokeBtn.addEventListener('click', () => this.handleRevoke(session.tokenId));
-    actionsCell.appendChild(revokeBtn);
+    actionsCell.classList.add('compact-actions-col');
+    if (!session.isCurrent) {
+      const actions = document.createElement('div');
+      actions.classList.add('compact-actions');
+      actions.dataset.testid = 'row-actions';
+      const revokeBtn = document.createElement('button');
+      revokeBtn.type = 'button';
+      revokeBtn.classList.add('compact-btn', 'compact-btn--destructive', 'sessions-table__btn');
+      revokeBtn.textContent = 'Revoke';
+      revokeBtn.addEventListener('click', () => this.handleRevoke(session.tokenId));
+      actions.appendChild(revokeBtn);
+      actionsCell.appendChild(actions);
+    }
 
     row.append(deviceCell, ipCell, createdCell, lastActiveCell, actionsCell);
     return row;
