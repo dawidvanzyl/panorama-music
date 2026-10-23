@@ -495,10 +495,14 @@ export class PmUsersTable extends HTMLElement {
 
   removeUser(userId: string): void {
     this._users = this._users.filter((u) => u.userId !== userId);
+    this._rowErrors.delete(userId);
+    this._regenerateErrors.delete(userId);
     this.render();
   }
 
   private handleEdit(user: GetUserResult): void {
+    if (this._editingUserId !== null) this._rowErrors.delete(this._editingUserId);
+    this._rowErrors.delete(user.userId);
     this._editingUserId = user.userId;
     this._rolesDraft = [...user.roles] as UserRole[];
     this.render();
@@ -535,6 +539,7 @@ export class PmUsersTable extends HTMLElement {
   }
 
   private handleCancel(): void {
+    if (this._editingUserId !== null) this._rowErrors.delete(this._editingUserId);
     this._editingUserId = null;
     this.render();
   }

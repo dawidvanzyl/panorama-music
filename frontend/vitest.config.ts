@@ -400,6 +400,8 @@ export default defineConfig({
       { name: '380UC11', description: 'An inline edit Save enters the loading state with its entries kept, and every outcome path restores Save and Cancel' },
       { name: '380UC13', description: 'A running Regenerate stays disabled and shows its failure when another user row saves, fails or re-renders the table' },
       { name: '380UC14', description: 'A role save error stays on screen when another user row re-renders the table' },
+      { name: '380UC15', description: 'A role save error on a user row is cleared when its edit is cancelled' },
+      { name: '380UC16', description: 'A role save error on a user row is cleared when the edit moves to another user' },
       { name: '380UC12', description: 'Every table and list adopts the compact stylesheet, labels its last column Actions and keeps the column class off full-width rows' },
     ],
   },

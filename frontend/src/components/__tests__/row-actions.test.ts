@@ -1235,3 +1235,50 @@ describe('users table keeps in-flight state per user across re-renders', () => {
     expect(regenerateButton(root).disabled).toBe(false);
   });
 });
+
+describe('users table clears a role error when its edit ends or restarts', () => {
+  async function failedSave(): Promise<{ root: ShadowRoot; table: PmUsersTable }> {
+    mockUpdateUserRoles.mockReset();
+    mockRegenerateInvite.mockReset();
+    mockUpdateUserRoles.mockRejectedValue(new AdminError('Refused.', 400));
+    const table = mount<PmUsersTable>('pm-users-table');
+    table.users = [user(), user({ userId: 'u3', email: 'third@test.com' })];
+    const root = table.shadowRoot!;
+    buttonNamed(root.querySelector('tr[data-user-id="u1"]')!, 'Edit').click();
+    buttonNamed(root, 'Save').click();
+    await tick();
+    expect(root.querySelector('.users-table__error-row')).not.toBeNull();
+    return { root, table };
+  }
+
+  it('on Cancel', { tags: ['380UC15'] }, async () => {
+    const { root } = await failedSave();
+
+    buttonNamed(root, 'Cancel').click();
+
+    expect(root.querySelector('.users-table__error-row')).toBeNull();
+  });
+
+  it('when the edit moves to another user', { tags: ['380UC16'] }, async () => {
+    const { root } = await failedSave();
+
+    buttonNamed(root.querySelector('tr[data-user-id="u3"]')!, 'Edit').click();
+
+    expect(root.querySelector('.users-table__error-row')).toBeNull();
+  });
+
+  it('keeps a running Regenerate untouched when an edit is cancelled', { tags: ['380UC15'] }, async () => {
+    const { root } = await failedSave();
+    mockRegenerateInvite.mockReturnValue(new Promise(() => undefined));
+    const table = root.host as PmUsersTable;
+    table.users = [
+      user({ userId: 'u2', email: 'pending@test.com', isActive: false, hasCompletedRegistration: false }),
+      user(),
+    ];
+    buttonNamed(root.querySelector('tr[data-user-id="u2"]')!, 'Regenerate').click();
+    buttonNamed(root.querySelector('tr[data-user-id="u1"]')!, 'Edit').click();
+    buttonNamed(root, 'Cancel').click();
+
+    expect(buttonNamed(root.querySelector('tr[data-user-id="u2"]')!, 'Regenerate').disabled).toBe(true);
+  });
+});
