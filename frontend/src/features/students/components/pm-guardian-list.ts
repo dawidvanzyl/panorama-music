@@ -282,7 +282,10 @@ export class PmGuardianList extends HTMLElement {
       } else {
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.classList.add('compact-btn', 'guardian-list__btn--edit');
+        editBtn.classList.add(
+          'compact-btn',
+          this._isPersisted ? 'guardian-list__btn--edit' : 'guardian-list__btn--change',
+        );
         editBtn.textContent = 'Edit';
         editBtn.disabled = isAnotherRowEditing;
         editBtn.addEventListener('click', () => this.handleEditClicked(guardian));

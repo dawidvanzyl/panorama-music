@@ -525,7 +525,8 @@ export class PmUsersTable extends HTMLElement {
   }
 
   private findUserRow(userId: string): HTMLTableRowElement | null {
-    return this.rowsBody?.querySelector<HTMLTableRowElement>(`tr[data-user-id="${CSS.escape(userId)}"]`) ?? null;
+    const rows = this.rowsBody?.querySelectorAll<HTMLTableRowElement>('tr[data-user-id]') ?? [];
+    return Array.from(rows).find((row) => row.dataset.userId === userId) ?? null;
   }
 
   private handleSave = async (userId: string): Promise<void> => {

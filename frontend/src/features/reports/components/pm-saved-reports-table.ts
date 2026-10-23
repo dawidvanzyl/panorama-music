@@ -109,8 +109,10 @@ export class PmSavedReportsTable extends HTMLElement {
       row.appendChild(lastRunCell);
 
       const actionsCell = document.createElement('td');
+      actionsCell.className = 'compact-actions-col';
       const actionsWrap = document.createElement('div');
-      actionsWrap.className = 'saved-reports-table__actions-wrap';
+      actionsWrap.className = 'compact-actions';
+      actionsWrap.dataset.testid = 'row-actions';
       actionsCell.appendChild(actionsWrap);
       const runButton = document.createElement('button');
       runButton.type = 'button';

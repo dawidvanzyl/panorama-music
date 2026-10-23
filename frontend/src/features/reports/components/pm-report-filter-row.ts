@@ -74,12 +74,17 @@ styles.replaceSync(`
       border: none;
       background: transparent;
       color: var(--pm-text-muted);
-      font-size: 16px;
       cursor: pointer;
       line-height: 1;
     }
     .filter-row__remove:hover {
       color: var(--pm-danger);
+    }
+    .filter-row__remove-icon {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-variation-settings: 'FILL' 0;
+      font-size: 18px;
+      line-height: 1;
     }
   `);
 
@@ -90,7 +95,7 @@ template.innerHTML = `
     <select class="filter-row__select filter-row__attribute" id="attribute"></select>
     <select class="filter-row__select filter-row__operator" id="operator"></select>
     <span id="valueSlot"></span>
-    <button type="button" class="filter-row__remove" id="remove" aria-label="Remove filter">×</button>
+    <button type="button" class="filter-row__remove" id="remove" aria-label="Remove filter"><span class="filter-row__remove-icon" aria-hidden="true">close</span></button>
   </div>
 `;
 

@@ -1,4 +1,5 @@
 import { setButtonsBusy } from '../../../components/button-states';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 import { formButtonStyles } from '../../../components/form-button-styles';
 import { hasRole } from '../../../services/token-storage';
 import { ACCOUNT_TYPE_LABELS, BANK_LABELS, maskAccountNumber } from '../services/banking-display';
@@ -45,10 +46,6 @@ styles.replaceSync(`
       font-size: 13px;
       color: var(--pm-text-muted);
     }
-    .banking__actions {
-      display: flex;
-      gap: 8px;
-    }
     .banking__btn {
       border-radius: var(--pm-radius);
       font-size: 13px;
@@ -58,16 +55,6 @@ styles.replaceSync(`
       background: transparent;
       border: 1px solid var(--pm-accent);
       color: var(--pm-accent);
-    }
-    /* Filled red with white text, the same destructive treatment the delete and
-       unlink confirmations use — a delete should read the same wherever it is. */
-    .banking__btn--danger {
-      background: var(--pm-danger);
-      border-color: var(--pm-danger);
-      color: #fff;
-    }
-    .banking__btn--danger:hover {
-      opacity: 0.9;
     }
     .banking__read-grid {
       display: grid;
@@ -107,20 +94,6 @@ styles.replaceSync(`
       color: var(--pm-text);
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.06em;
-    }
-    .banking__account-actions {
-      display: flex;
-      gap: 8px;
-    }
-    /* Same icon treatment as the header's link/unlink actions. */
-    .banking__btn--icon {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .banking__btn-icon {
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 18px;
     }
     .banking__note {
       margin: 16px 0 0;
@@ -185,9 +158,9 @@ template.innerHTML = `
   <div class="banking__card" id="card">
     <div class="banking__header">
       <h2 class="banking__title">Banking details</h2>
-      <div class="banking__actions" id="readActions">
-        <button type="button" class="banking__btn" id="editBtn">Edit</button>
-        <button type="button" class="banking__btn banking__btn--danger" id="deleteBtn">Delete</button>
+      <div class="compact-actions" id="readActions" data-testid="row-actions">
+        <button type="button" class="compact-btn" id="editBtn">Edit</button>
+        <button type="button" class="compact-btn compact-btn--destructive" id="deleteBtn">Delete</button>
       </div>
     </div>
     <p class="banking__caption" id="caption"></p>
@@ -212,15 +185,9 @@ template.innerHTML = `
           <span class="banking__field-label">Account number</span>
           <span class="banking__account-number" id="accountNumberValue"></span>
         </div>
-        <div class="banking__account-actions">
-          <button type="button" class="banking__btn banking__btn--icon" id="revealBtn">
-            <span class="banking__btn-icon" aria-hidden="true" id="revealIcon">visibility</span>
-            <span id="revealLabel">Reveal</span>
-          </button>
-          <button type="button" class="banking__btn banking__btn--icon" id="activityBtn" hidden>
-            <span class="banking__btn-icon" aria-hidden="true">receipt_long</span>
-            <span>Activity</span>
-          </button>
+        <div class="compact-actions">
+          <button type="button" class="compact-btn" id="revealBtn">Reveal</button>
+          <button type="button" class="compact-btn" id="activityBtn" hidden>Activity</button>
         </div>
       </div>
       <p class="banking__note" id="revealNote"></p>
@@ -318,7 +285,7 @@ export class PmBankingSection extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [formButtonStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -475,8 +442,7 @@ export class PmBankingSection extends HTMLElement {
       this.byId<HTMLElement>('branchCodeValue').textContent = banking.branchCode;
       this.byId<HTMLElement>('accountNumberValue').textContent =
         this.revealedNumber ?? maskAccountNumber(banking.accountNumberLast4);
-      this.byId<HTMLElement>('revealLabel').textContent = this.revealedNumber ? 'Hide' : 'Reveal';
-      this.byId<HTMLElement>('revealIcon').textContent = this.revealedNumber ? 'visibility_off' : 'visibility';
+      this.byId<HTMLElement>('revealBtn').textContent = this.revealedNumber ? 'Hide' : 'Reveal';
     }
 
     if (editing) {

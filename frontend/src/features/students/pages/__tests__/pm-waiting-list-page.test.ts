@@ -378,7 +378,7 @@ describe('pm-waiting-list-page — a Teacher sees a read-only page', { tags: ['2
 });
 
 describe('pm-waiting-list-page — a Coordinator sees the full action set', { tags: ['292UC17'] }, () => {
-  it('shows the Capture Student button and the Enrol, Edit and Delete row actions', async () => {
+  it('shows the Capture Student button and the Enrol, Edit and Remove row actions', async () => {
     mockHasAnyRole.mockReturnValue(true);
     mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
@@ -388,7 +388,7 @@ describe('pm-waiting-list-page — a Coordinator sees the full action set', { ta
     expect(captureBtnOf(el).textContent).toContain('Capture Student');
     const actionsCell = tableOf(el).shadowRoot!.querySelector('tbody tr .wl-table__actions') as HTMLElement;
     const buttons = [...actionsCell.querySelectorAll('button')].map((btn) => btn.textContent);
-    expect(buttons).toEqual(['Enrol', 'Edit', 'Delete']);
+    expect(buttons).toEqual(['Enrol', 'Edit', 'Remove']);
   });
 });
 
@@ -635,7 +635,7 @@ describe(
       mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       const modal = deleteModalOf(el);
 
       expect(modal.hasAttribute('open')).toBe(true);
@@ -650,7 +650,7 @@ describe(
       mockGetWaitingList.mockResolvedValueOnce(bothGroups);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       const modal = deleteModalOf(el);
       (modal.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement).click();
       await flush();
@@ -671,7 +671,7 @@ describe(
       mockRemoveWaitingListStudent.mockResolvedValueOnce(undefined);
 
       const el = await mountPage();
-      actionButton(el, 'Amara Pillay', 'Delete').click();
+      actionButton(el, 'Amara Pillay', 'Remove').click();
       (deleteModalOf(el).shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement).click();
       await flush();
       await flush();

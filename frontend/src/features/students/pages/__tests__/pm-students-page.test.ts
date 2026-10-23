@@ -836,6 +836,39 @@ describe('pm-students-page — edits a guardian from the Guardians tab', { tags:
     expect(addBtn.hidden).toBe(false);
     expect(guardianListShadow.querySelector('.guardian-list__btn--edit')).not.toBeNull();
   });
+
+  it(
+    'a rejected inline update leaves the row in edit with its entries and Save enabled',
+    { tags: ['380UC11'] },
+    async () => {
+      vi.mocked(getGuardians).mockReset();
+      vi.mocked(getGuardians).mockResolvedValue([nomvula]);
+      vi.mocked(updateGuardian).mockRejectedValue(new Error('refused'));
+
+      const wizard = wizardModalOf(el);
+      wizard.openForEdit(alice);
+      (wizard.shadowRoot!.getElementById('tabGuardians') as HTMLButtonElement).click();
+      await flush();
+
+      const guardianListShadow = guardiansStepShadowOf(wizard).getElementById('guardianList')!.shadowRoot!;
+      (guardianListShadow.querySelector('.guardian-list__btn--edit') as HTMLButtonElement).click();
+      const surnameInput = guardianListShadow.querySelectorAll<HTMLInputElement>('.guardian-list__edit-name input')[1];
+      surnameInput.value = 'Khumalo';
+      surnameInput.dispatchEvent(new Event('input'));
+      (guardianListShadow.querySelector('.guardian-list__btn--save') as HTMLButtonElement).click();
+      await flush();
+
+      const save = guardianListShadow.querySelector('.guardian-list__btn--save') as HTMLButtonElement;
+      expect(save.disabled).toBe(false);
+      expect(save.hasAttribute('aria-busy')).toBe(false);
+      expect((guardianListShadow.querySelector('.guardian-list__btn--cancel') as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+      expect(guardianListShadow.querySelectorAll<HTMLInputElement>('.guardian-list__edit-name input')[1].value).toBe(
+        'Khumalo',
+      );
+    },
+  );
 });
 
 describe('pm-students-page — scoped guardian delete from the Guardians tab', { tags: ['212UC17'] }, () => {
@@ -1157,12 +1190,12 @@ describe(
       expect(guardianList.guardians.map((g) => g.readOnly ?? false)).toEqual([true, false]);
 
       // Create mode: the pending own guardian is only staged in memory, so its row
-      // uses "Change"/"Remove" (borderless) rather than the persisted "Edit"/"Delete".
+      // reads "Edit"/"Remove" rather than the persisted "Edit"/"Delete".
       const guardianListShadow = guardiansStepShadow.getElementById('guardianList')!.shadowRoot!;
       const ownRow = [...guardianListShadow.querySelectorAll('tbody tr')].find((row) =>
         row.textContent!.includes('Newly'),
       )!;
-      expect(ownRow.querySelector('.guardian-list__btn--change')?.textContent).toBe('Change');
+      expect(ownRow.querySelector('.guardian-list__btn--change')?.textContent).toBe('Edit');
       expect(ownRow.querySelector('.guardian-list__btn--remove')?.textContent).toBe('Remove');
       expect(ownRow.querySelector('.guardian-list__btn--edit')).toBeNull();
       expect(ownRow.querySelector('.guardian-list__btn--delete')).toBeNull();
@@ -1262,6 +1295,29 @@ describe('pm-students-page — corrects an enrollment from the Courses tab', { t
       'Guitar',
       '3B',
     ]);
+  });
+
+  it('a rejected update leaves the row in edit with its entries and Save enabled', { tags: ['380UC11'] }, async () => {
+    vi.mocked(updateEnrollment).mockRejectedValue(new Error('refused'));
+    vi.mocked(getStudentCourses).mockReset();
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment, recorderEnrollment]);
+
+    const wizard = await openCoursesTab(el);
+    (enrollmentRowsOf(wizard)[0].querySelector('.enrollment-list__btn--edit') as HTMLButtonElement).click();
+
+    const editRow = enrollmentRowsOf(wizard)[0];
+    const [, instrumentSelect] = [...editRow.querySelectorAll('select')];
+    instrumentSelect.value = 'Guitar';
+    instrumentSelect.dispatchEvent(new Event('change'));
+    (editRow.querySelector('.enrollment-list__btn--save') as HTMLButtonElement).click();
+    await flush();
+
+    const rejectedRow = enrollmentRowsOf(wizard)[0];
+    const save = rejectedRow.querySelector('.enrollment-list__btn--save') as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+    expect(save.hasAttribute('aria-busy')).toBe(false);
+    expect((rejectedRow.querySelector('.enrollment-list__btn--cancel') as HTMLButtonElement).disabled).toBe(false);
+    expect([...rejectedRow.querySelectorAll('select')][1].value).toBe('Guitar');
   });
 });
 

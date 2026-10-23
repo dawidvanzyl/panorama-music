@@ -17,6 +17,24 @@ function printRules(sheet: CSSStyleSheet): CSSStyleRule[] {
     .flatMap((rule) => Array.from(rule.cssRules) as CSSStyleRule[]);
 }
 
+describe('the compact stylesheet hides the Actions column in print', { tags: ['380UC12'] }, () => {
+  it('lists the column class beside the button and action-row classes in its print rule', () => {
+    const hidden = printRules(compactButtonStyles).filter((rule) => rule.style.display === 'none');
+    const selectors = hidden.flatMap((rule) => rule.selectorText.split(',').map((selector) => selector.trim()));
+
+    expect(selectors).toEqual(expect.arrayContaining(['.compact-btn', '.compact-actions', '.compact-actions-col']));
+  });
+
+  it('right-aligns the Actions column on screen', () => {
+    const rule = Array.from(compactButtonStyles.cssRules).find(
+      (candidate): candidate is CSSStyleRule =>
+        'selectorText' in candidate && candidate.selectorText === '.compact-actions-col',
+    );
+
+    expect(rule?.style.textAlign).toBe('right');
+  });
+});
+
 describe('button stylesheets hide buttons and action rows in print', { tags: ['377UC5'] }, () => {
   it.each(sheets)('%s hides its button class and its action-row class', (_name, sheet, buttonClass, rowClass) => {
     const hidden = printRules(sheet).filter((rule) => rule.style.display === 'none');

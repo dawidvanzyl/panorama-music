@@ -132,7 +132,12 @@ function enabledActionsOf(el: HTMLElement, rowIndex: number): string[] {
 
 function clickRowAction(el: HTMLElement, rowIndex: number, label: string): void {
   const buttons = [...dataRowsOf(el)[rowIndex].querySelectorAll('button')];
-  buttons.find((button) => button.textContent === label)!.dispatchEvent(new MouseEvent('click'));
+  const labelOf = (button: HTMLButtonElement): string =>
+    [...button.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent)
+      .join('');
+  buttons.find((button) => labelOf(button) === label)!.dispatchEvent(new MouseEvent('click'));
 }
 
 function costInputInRow(el: HTMLElement, rowIndex: number): HTMLInputElement | null {
@@ -360,7 +365,7 @@ describe('pm-course-management-page — narrows the list by the filter selection
     await changeFilter(el, 'courseType', 'Instrument');
 
     expect(rowTextsOf(el)).toEqual([
-      ['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50', 'Edit CostDelete'],
+      ['Instrument', 'Individual · Half Hour', 'After School', 'R 450.50', 'EditDelete'],
     ]);
     expect(mockGetCourses.mock.calls.length).toBe(readsOnLoad);
   });
@@ -372,7 +377,7 @@ describe('pm-course-management-page — narrows the list by the filter selection
     await changeFilter(el, 'durationType', 'Hour');
     await changeFilter(el, 'occurrenceType', 'DuringSchool');
 
-    expect(rowTextsOf(el)).toEqual([['Theory', 'Group · Hour', 'During School', 'R 120.00', 'Edit CostDelete']]);
+    expect(rowTextsOf(el)).toEqual([['Theory', 'Group · Hour', 'During School', 'R 120.00', 'EditDelete']]);
   });
 });
 
@@ -420,15 +425,15 @@ describe('pm-course-management-page — turns one row into a cost edit', { tags:
   it('swaps that row cost for a prefilled input and its actions for Save and Cancel', async () => {
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
 
     expect(costInputInRow(el, 0)!.value).toBe('120.00');
-    expect(actionsOf(el, 0)).toEqual(['Save', 'Cancel']);
+    expect(actionsOf(el, 0)).toEqual(['Cancel', 'Save']);
     // The other row is untouched: still its cost text, still its own actions,
     // and those actions stay live — an edit elsewhere does not disable them.
     expect(costInputInRow(el, 1)).toBeNull();
-    expect(actionsOf(el, 1)).toEqual(['Edit Cost', 'Delete']);
-    expect(enabledActionsOf(el, 1)).toEqual(['Edit Cost', 'Delete']);
+    expect(actionsOf(el, 1)).toEqual(['Edit', 'Delete']);
+    expect(enabledActionsOf(el, 1)).toEqual(['Edit', 'Delete']);
   });
 });
 
@@ -441,7 +446,7 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
     vi.mocked(updateCourseCost).mockResolvedValue({ ...theory, cost: '150.00' });
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '150.00');
     clickRowAction(el, 0, 'Save');
     await flush();
@@ -450,7 +455,7 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
     expect(updateCourseCost).toHaveBeenCalledWith('c1', '150.00');
     expect(costInputInRow(el, 0)).toBeNull();
     expect(rowTextsOf(el)[0]).toContain('R 150.00');
-    expect(actionsOf(el, 0)).toEqual(['Edit Cost', 'Delete']);
+    expect(actionsOf(el, 0)).toEqual(['Edit', 'Delete']);
   });
 
   it('takes the row actions out of service while the save is in flight, so one click sends one request', async () => {
@@ -462,7 +467,7 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
     );
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '150.00');
     clickRowAction(el, 0, 'Save');
     await flush();
@@ -475,7 +480,7 @@ describe('pm-course-management-page — saves a corrected cost', { tags: ['258UC
     await flush();
     await flush();
 
-    expect(enabledActionsOf(el, 0)).toEqual(['Edit Cost', 'Delete']);
+    expect(enabledActionsOf(el, 0)).toEqual(['Edit', 'Delete']);
   });
 });
 
@@ -487,7 +492,7 @@ describe('pm-course-management-page — abandons a cost edit on Cancel', { tags:
   it('restores the original cost and sends nothing', async () => {
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '999.99');
     clickRowAction(el, 0, 'Cancel');
 
@@ -505,7 +510,7 @@ describe('pm-course-management-page — reports a refused cost against its row',
   it('shows an inline row error and sends nothing when the entered cost is invalid', async () => {
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '120.345');
     clickRowAction(el, 0, 'Save');
     await flush();
@@ -518,7 +523,7 @@ describe('pm-course-management-page — reports a refused cost against its row',
   it('drops a minus sign as it is typed, so no negative cost can be entered', async () => {
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '-50.00');
 
     expect(costInputInRow(el, 0)!.value).toBe('50.00');
@@ -528,7 +533,7 @@ describe('pm-course-management-page — reports a refused cost against its row',
     vi.mocked(updateCourseCost).mockRejectedValue(new CoursesError('Course c1 was not found.', 404));
     el = await mountPage();
 
-    clickRowAction(el, 0, 'Edit Cost');
+    clickRowAction(el, 0, 'Edit');
     await typeCost(el, 0, '150.00');
     clickRowAction(el, 0, 'Save');
     await flush();
@@ -536,7 +541,7 @@ describe('pm-course-management-page — reports a refused cost against its row',
 
     expect(rowErrorOf(el)).toContain('was not found');
     expect(costInputInRow(el, 0)!.value).toBe('150.00');
-    expect(actionsOf(el, 0)).toEqual(['Save', 'Cancel']);
+    expect(actionsOf(el, 0)).toEqual(['Cancel', 'Save']);
   });
 });
 

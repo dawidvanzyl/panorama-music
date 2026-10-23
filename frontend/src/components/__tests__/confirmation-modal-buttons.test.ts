@@ -83,7 +83,7 @@ const cases: Case[] = [
   },
   {
     tag: 'pm-delete-waiting-list-entry-modal',
-    label: 'Delete',
+    label: 'Remove',
     confirmId: 'deleteBtn',
     event: 'waiting-list-student-remove-confirmed',
     show: (m) => (m as unknown as { show(a: string, b: string): void }).show('s1', 'Ayesha Khan'),

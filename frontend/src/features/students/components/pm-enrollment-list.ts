@@ -326,7 +326,7 @@ export class PmEnrollmentList extends HTMLElement {
     const teacherSelect = this.buildSelect(
       this._teachers.map((teacher) => ({
         value: teacher.teacherId,
-        label: ${teacher.firstName} ,
+        label: `${teacher.firstName} ${teacher.surname}`,
       })),
       draft.teacherId,
     );
