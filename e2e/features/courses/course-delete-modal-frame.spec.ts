@@ -89,7 +89,7 @@ test.describe('Delete Course modal — close control', { tag: ['@266IT34'] }, ()
 
     await coursesPage.startDelete(row);
     await expect(card).toBeVisible();
-    await expect(coursesPage.modalError()).toHaveCount(0);
+    await expect(coursesPage.modalError()).toBeHidden();
     await expect(coursesPage.modalConfirmButton()).toBeEnabled();
     expect(deletesSent()).toBe(0);
   });
