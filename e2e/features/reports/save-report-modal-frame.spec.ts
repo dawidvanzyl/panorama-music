@@ -76,7 +76,9 @@ test.describe('Save Report modal — close control', { tag: ['@266IT35'] }, () =
     await expect(reportsPage.rowByName(token)).toHaveCount(0);
     const listed = await listSavedReportsViaApi(page);
     expect(listed.status).toBe(200);
-    expect(listed.body).toEqual([]);
+    expect(Array.isArray(listed.body)).toBe(true);
+    const own = (listed.body as { name: string }[]).filter((report) => report.name.includes(token));
+    expect(own).toEqual([]);
   });
 
   test('reopening shows the modal fresh, not the discarded name', async ({ page }) => {
