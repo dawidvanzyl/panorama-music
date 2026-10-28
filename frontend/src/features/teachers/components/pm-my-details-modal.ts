@@ -10,36 +10,11 @@ import type { TeacherResult } from '../services/teachers';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Wider than the shared 420px default: two side-by-side field columns plus a
-       banking form need the room, and the design sets it at 620. */
-    .modal__card {
-      max-width: 620px;
-      max-height: calc(100vh - 64px);
-      overflow-y: auto;
-    }
-    .modal__header {
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
     .my-details__heading {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 0;
-    }
-    .modal__title {
-      color: var(--pm-text);
-    }
-    .my-details__close {
-      display: flex;
-      padding: 4px;
-      border: none;
-      background: none;
-      color: var(--pm-text-muted);
-      cursor: pointer;
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 22px;
     }
     .my-details__section-header {
       display: flex;
@@ -101,13 +76,13 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card modal__card--large" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <div class="my-details__heading">
-          <h2 class="modal__title">My details</h2>
+          <h2 class="modal__title" id="modalTitle">My details</h2>
           <pm-linked-account-badge id="accountBadge"></pm-linked-account-badge>
         </div>
-        <button type="button" class="my-details__close" id="closeBtn" aria-label="Close">close</button>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
 
       <div class="my-details__section-header">

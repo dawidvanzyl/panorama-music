@@ -13,10 +13,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">warning</span>
-        <h2 class="modal__title">Remove from Waiting List</h2>
+        <h2 class="modal__title" id="modalTitle">Remove from Waiting List</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         Are you sure you want to remove <span class="modal__name" id="modalName"></span> from the waiting list? This will delete their student record and <strong>cannot be undone</strong>.
@@ -49,6 +50,7 @@ export class PmDeleteWaitingListEntryModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', () => this.handleDelete());
   }
 
@@ -69,7 +71,10 @@ export class PmDeleteWaitingListEntryModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

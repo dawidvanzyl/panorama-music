@@ -13,10 +13,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">delete</span>
-        <h2 class="modal__title">Delete these banking details?</h2>
+        <h2 class="modal__title" id="modalTitle">Delete these banking details?</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         This action <strong>cannot be undone</strong>. The banking details ending <span class="modal__last4" id="modalLast4"></span> will be permanently removed.
@@ -45,11 +46,13 @@ export class PmBankingDeleteModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', this.handleDelete);
   }
 
   disconnectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')?.removeEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')?.removeEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deleteBtn')?.removeEventListener('click', this.handleDelete);
   }
 
@@ -68,7 +71,10 @@ export class PmBankingDeleteModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

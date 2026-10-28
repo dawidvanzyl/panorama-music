@@ -5,45 +5,16 @@ import type { SessionResult } from '../services/sessions';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Wider than the shared 420px default: the sessions table carries five
-       columns, and anything narrower wraps every row onto three lines. Sized to
-       match the student wizard — the same width calculation, so the two widest
-       dialogs in the application line up rather than each picking a number. */
-    .modal__card {
-      box-sizing: border-box;
-      max-width: none;
-      width: calc(100% - var(--pm-sidebar-width) - (2 * var(--pm-content-padding)));
-      max-height: calc(100vh - 64px);
-      overflow-y: auto;
-    }
-    .modal__header {
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
     .own-sessions__heading {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 4px;
     }
-    .modal__title {
-      color: var(--pm-text);
-    }
     .own-sessions__subtitle {
       color: var(--pm-text-muted);
       font-size: 14px;
       max-width: 40em;
-    }
-    .own-sessions__close {
-      display: flex;
-      padding: 4px;
-      border: none;
-      background: none;
-      color: var(--pm-text-muted);
-      cursor: pointer;
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 22px;
     }
     .own-sessions__error {
       margin-bottom: 16px;
@@ -87,13 +58,13 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__card modal__card--fill" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <div class="own-sessions__heading">
           <h2 class="modal__title" id="modalTitle">Active Sessions</h2>
           <p class="own-sessions__subtitle">Manage your active login sessions across different devices and locations to ensure your account remains secure.</p>
         </div>
-        <button type="button" class="own-sessions__close" id="closeBtn" aria-label="Close">close</button>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="own-sessions__error" id="error"></div>
       <pm-sessions-table id="sessionsTable"></pm-sessions-table>

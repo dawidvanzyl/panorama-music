@@ -13,10 +13,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">link_off</span>
-        <h2 class="modal__title">Unlink this account?</h2>
+        <span class="modal__icon modal__icon--reversible">link_off</span>
+        <h2 class="modal__title" id="modalTitle">Unlink this account?</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         Are you sure you want to unlink <span class="modal__email" id="modalEmail"></span>?<br /><br />The teacher record survives
@@ -43,11 +44,13 @@ export class PmUnlinkAccountModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('unlinkBtn')!.addEventListener('click', this.handleUnlink);
   }
 
   disconnectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')?.removeEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')?.removeEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('unlinkBtn')?.removeEventListener('click', this.handleUnlink);
   }
 
@@ -66,7 +69,10 @@ export class PmUnlinkAccountModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('unlinkBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

@@ -68,7 +68,7 @@ template.innerHTML = `
 const dialogsTemplate = document.createElement('template');
 dialogsTemplate.innerHTML = `
   <pm-my-details-modal id="modal"></pm-my-details-modal>
-  <pm-banking-delete-modal id="bankingDeleteModal"></pm-banking-delete-modal>
+  <pm-banking-delete-modal id="bankingDeleteModal" stacked></pm-banking-delete-modal>
   <pm-banking-activity-modal id="bankingActivityModal"></pm-banking-activity-modal>
   <div class="pm-my-details-error" id="error" hidden></div>
 `;

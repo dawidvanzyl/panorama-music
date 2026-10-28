@@ -55,14 +55,11 @@ export const ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE =
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    .modal__card {
-      max-width: 520px;
-    }
     .enrol__title {
       font-size: 18px;
       font-weight: 700;
       color: var(--pm-text);
-      margin: 0 0 4px;
+      margin: 0;
     }
     .enrol__notice {
       font-size: 13px;
@@ -151,8 +148,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
-      <h2 class="enrol__title">Enrol Student</h2>
+    <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal__header">
+        <h2 class="enrol__title" id="modalTitle">Enrol Student</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
+      </div>
       <p class="enrol__notice" id="notice"></p>
       <p class="enrol__notice-empty" id="noOfferedStructures" hidden></p>
       <p class="enrol__notice-empty enrol__notice-empty--above-form" id="entryStructureNotOffered" hidden></p>
@@ -230,6 +230,7 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   private entryStructureNotOfferedNotice: HTMLElement | null = null;
   private confirmButton: HTMLButtonElement | null = null;
   private cancelButton: HTMLButtonElement | null = null;
+  private closeButton: HTMLButtonElement | null = null;
 
   private _lessonStructures: LessonStructure[] = [];
   private _teachers: AssignableTeacher[] = [];
@@ -273,11 +274,14 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
     this.confirmButton = this.shadowRoot!.getElementById('confirmBtn') as HTMLButtonElement;
     this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
     this.cancelButton.addEventListener('click', this.handleCancel);
+    this.closeButton = this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement;
+    this.closeButton.addEventListener('click', this.handleCancel);
     this.confirmButton.addEventListener('click', this.handleConfirm);
     this.lessonTypeSelect.addEventListener('change', this.handleLessonTypeChange);
   }
 
   disconnectedCallback(): void {
+    this.closeButton?.removeEventListener('click', this.handleCancel);
     this.lessonTypeSelect?.removeEventListener('change', this.handleLessonTypeChange);
   }
 
@@ -345,8 +349,8 @@ export class PmEnrolWaitingListStudentModal extends HTMLElement {
   }
 
   setBusy(busy: boolean): void {
-    if (!this.confirmButton || !this.cancelButton) return;
-    setButtonsBusy(this.confirmButton, this.cancelButton, busy);
+    if (!this.confirmButton || !this.cancelButton || !this.closeButton) return;
+    setButtonsBusy(this.confirmButton, [this.cancelButton, this.closeButton], busy);
   }
 
   private clearError(): void {

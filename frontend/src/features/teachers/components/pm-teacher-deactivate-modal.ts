@@ -13,10 +13,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">warning</span>
-        <h2 class="modal__title">Deactivate Teacher</h2>
+        <h2 class="modal__title" id="modalTitle">Deactivate Teacher</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         Are you sure you want to deactivate <span class="modal__name" id="modalName"></span>?<br /><br /> They will be removed from
@@ -47,11 +48,13 @@ export class PmTeacherDeactivateModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deactivateBtn')!.addEventListener('click', this.handleDeactivate);
   }
 
   disconnectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')?.removeEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')?.removeEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deactivateBtn')?.removeEventListener('click', this.handleDeactivate);
   }
 
@@ -70,7 +73,10 @@ export class PmTeacherDeactivateModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

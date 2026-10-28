@@ -34,10 +34,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">delete_forever</span>
-        <h2 class="modal__title">Permanently Delete User</h2>
+        <h2 class="modal__title" id="modalTitle">Permanently Delete User</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         This action <strong>cannot be undone</strong>. All data for <span class="modal__email" id="modalEmail"></span> will be permanently removed.
@@ -67,6 +68,7 @@ export class PmDeleteUserModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', () => this.handleDelete());
     this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
   }
@@ -90,7 +92,10 @@ export class PmDeleteUserModal extends HTMLElement {
     this.busy = busy;
     setButtonsBusy(
       this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
     this.checkConfirmation();

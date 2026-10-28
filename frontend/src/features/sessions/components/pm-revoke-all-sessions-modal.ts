@@ -31,11 +31,12 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <div class="modal__backdrop" id="backdrop">
+  <div class="modal__backdrop">
     <div class="modal__card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">warning</span>
         <h2 class="modal__title" id="modalTitle">Revoke All Sessions</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         This will immediately terminate every other active session across the entire system. Type <strong>${CONFIRM_PHRASE}</strong> to confirm.
@@ -64,16 +65,9 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('revokeAllBtn')!.addEventListener('click', () => this.handleConfirm());
     this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
-    this.shadowRoot!.getElementById('backdrop')!.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget && !this.busy) this.close();
-    });
-    this.addEventListener('keydown', this.handleKeydown);
-  }
-
-  disconnectedCallback(): void {
-    this.removeEventListener('keydown', this.handleKeydown);
   }
 
   show(): void {
@@ -104,12 +98,6 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
   showError(message: string): void {
     this.shadowRoot!.getElementById('error')!.textContent = message;
   }
-
-  private handleKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && this.hasAttribute('open') && !this.busy) {
-      this.close();
-    }
-  };
 
   private checkConfirmation(): void {
     const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;

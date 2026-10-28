@@ -13,11 +13,7 @@ styles.replaceSync(`
       position: fixed;
       inset: 0;
     }
-    .modal__card {
-      max-width: 440px;
-    }
-    .modal__icon,
-    .modal__title {
+    .modal__icon {
       color: var(--pm-accent);
     }
     .modal__label {
@@ -52,10 +48,11 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">save</span>
-        <h2 class="modal__title" data-testid="save-report-title">Save report</h2>
+        <h2 class="modal__title" id="modalTitle" data-testid="save-report-title">Save report</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="modal__body">
         <p data-testid="save-report-text">Save this report to access it from the Reports list.</p>
@@ -77,6 +74,7 @@ export class PmSaveReportModal extends HTMLElement {
   private errorEl: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
   private cancelButton: HTMLButtonElement | null = null;
+  private closeButton: HTMLButtonElement | null = null;
   private _busy = false;
 
   constructor() {
@@ -91,15 +89,18 @@ export class PmSaveReportModal extends HTMLElement {
     this.errorEl = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.saveButton = this.shadowRoot!.getElementById('saveBtn') as HTMLButtonElement;
     this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    this.closeButton = this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement;
 
     this.nameInput.addEventListener('input', this.handleInput);
     this.cancelButton.addEventListener('click', this.handleCancel);
+    this.closeButton.addEventListener('click', this.handleCancel);
     this.saveButton.addEventListener('click', this.handleSave);
   }
 
   disconnectedCallback(): void {
     this.nameInput?.removeEventListener('input', this.handleInput);
     this.cancelButton?.removeEventListener('click', this.handleCancel);
+    this.closeButton?.removeEventListener('click', this.handleCancel);
     this.saveButton?.removeEventListener('click', this.handleSave);
   }
 
@@ -121,7 +122,7 @@ export class PmSaveReportModal extends HTMLElement {
   setBusy(busy: boolean): void {
     this._busy = busy;
     this.nameInput!.disabled = busy;
-    setButtonsBusy(this.saveButton!, this.cancelButton!, busy);
+    setButtonsBusy(this.saveButton!, [this.cancelButton!, this.closeButton!], busy);
     this.updateSaveButton();
   }
 

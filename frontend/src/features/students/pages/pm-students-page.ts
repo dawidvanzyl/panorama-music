@@ -128,8 +128,8 @@ template.innerHTML = `
   </div>
   <pm-student-wizard-modal id="wizardModal"></pm-student-wizard-modal>
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
-  <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
-  <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal"></pm-withdraw-enrollment-modal>
+  <pm-delete-guardian-modal id="deleteGuardianModal" stacked></pm-delete-guardian-modal>
+  <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal" stacked></pm-withdraw-enrollment-modal>
   <pm-student-print-record id="printRecord"></pm-student-print-record>
 `;
 
