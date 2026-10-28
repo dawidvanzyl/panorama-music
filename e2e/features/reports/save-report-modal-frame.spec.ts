@@ -27,13 +27,13 @@ interface TypedName {
 async function openWithTypedName(page: Page): Promise<TypedName> {
   const token = uniqueToken();
   const reportsPage = await goToReportsPage(page, ['Teacher', 'Coordinator']);
+  await reportsPage.createReport();
+  const builder = new ReportBuilderPage(page);
+  await expect(builder.filtersEmptyMessage).toBeVisible();
   const target = await seedEnrollmentTarget(page);
   await seedReportStudent(page, target, { firstName: 'Nia', lastName: token });
   const postsSent = countPosts(page, '/api/reports');
 
-  await reportsPage.createReport();
-  const builder = new ReportBuilderPage(page);
-  await expect(builder.filtersEmptyMessage).toBeVisible();
   await builder.addFilter();
   await builder.chooseAttribute(0, 'Student · Name');
   await builder.typeTextValue(0, token);
