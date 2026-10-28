@@ -14,6 +14,7 @@ export class WizardActionRows {
   readonly previous: Locator;
   readonly next: Locator;
   readonly confirm: Locator;
+  readonly closeControl: Locator;
   readonly studentStepRow: Locator;
   readonly waitingListStepRow: Locator;
 
@@ -23,6 +24,9 @@ export class WizardActionRows {
     this.previous = this.footer.locator('#previousBtn');
     this.next = this.footer.locator('#nextBtn');
     this.confirm = this.footer.locator('#saveBtn');
+    this.closeControl = wizardModal
+      .locator('.modal__header')
+      .getByRole('button', { name: 'Close', exact: true });
     this.studentStepRow = wizardModal.locator('#studentStepActions');
     this.waitingListStepRow = wizardModal.locator('#waitingListStepActions');
   }

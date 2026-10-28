@@ -175,7 +175,7 @@ function recordDeletes(page: Page): string[] {
 
 async function expectStudentStepRefusal(studentsPage: StudentsPage, text: string): Promise<void> {
   await expect(studentsPage.wizardModal).toHaveAttribute('open', '');
-  await expect(studentsPage.wizardModal.locator('#tabStudent')).toHaveAttribute('aria-selected', 'true');
+  await expect(studentsPage.wizardModal.locator('#tabStudent')).toHaveAttribute('aria-current', 'step');
   await expect(studentsPage.studentStepMessage()).toHaveText(text);
   await expect(studentsPage.phaseSelect()).toHaveCSS('border-color', DANGER_BORDER);
 }

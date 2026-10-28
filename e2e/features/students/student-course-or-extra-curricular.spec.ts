@@ -126,7 +126,7 @@ test.describe('Students — saving needs a course or an extra-curricular', { tag
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).toHaveAttribute('open', '');
-    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-selected', 'true');
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-current', 'step');
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(REQUIRED_ON_SAVE);
     await expect(studentsPage.coursesStepMessage()).toHaveText('');
 

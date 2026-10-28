@@ -275,7 +275,7 @@ test.describe('Students — a Private-grade student is saved holding activities 
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).toHaveAttribute('open', '');
-    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-selected', 'true');
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-current', 'step');
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(REQUIRED_ON_SAVE);
 
     await studentsPage.closeWizard();
@@ -636,7 +636,7 @@ test.describe('Students — activities staged in the create wizard survive a cha
     for (let step = 0; step < 4; step++) await studentsPage.goToPreviousStep();
     await studentsPage.setGrade('Private');
     await studentsPage.advanceToExtraCurriculars();
-    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-selected', 'true');
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-current', 'step');
   }
 
   test('S1 staged activities survive the change to Private', async ({ page }) => {

@@ -407,7 +407,12 @@ export class StudentsPage extends BasePage {
       await bottomDismiss.click();
       return;
     }
-    await this.wizardModal.locator('.wizard__step-actions #studentCancelBtn').click();
+    const studentCancel = this.wizardModal.locator('.wizard__step-actions #studentCancelBtn');
+    if (await studentCancel.isVisible()) {
+      await studentCancel.click();
+      return;
+    }
+    await this.actionRows().closeControl.click();
   }
 
   /** The wizard modal's outer card element, whose fixed dimensions must not change between steps. */
