@@ -1,5 +1,8 @@
 import type { Page } from '@playwright/test';
 import { expect } from './base';
+import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from './testUsers';
+import { LoginPage } from '../pages/identity/auth/LoginPage';
+import { landingUrl } from './navigation';
 
 /**
  * Deactivates a teacher through the real endpoint, from the signed-in
@@ -37,4 +40,37 @@ export async function waitForTeacherInactive(page: Page, teacherId: string): Pro
       { timeout: 10_000 },
     )
     .toBe(true);
+}
+
+const LINKED_TEACHER_PASSWORD = 'TeacherSelfServicePass123!';
+
+export function uniqueTeacherName(label: string): { firstName: string; surname: string } {
+  return {
+    firstName: `E2E-${label}`,
+    surname: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  };
+}
+
+/**
+ * Creates a teacher as a Coordinator, links it to a freshly registered
+ * Teacher-role account, and leaves the browser signed in as that teacher.
+ */
+export async function signInAsLinkedTeacher(
+  page: Page,
+  label: string,
+): Promise<{ email: string; firstName: string; surname: string }> {
+  const email = uniqueTestEmail(label);
+  await createRegisteredUser(page, email, LINKED_TEACHER_PASSWORD, ['Teacher']);
+
+  const teachersPage = await goToTeachersPage(page);
+  const { firstName, surname } = uniqueTeacherName(label);
+  await teachersPage.createTeacher({ firstName, surname, linkedAccountEmail: email });
+  await expect(teachersPage.row(`${firstName} ${surname}`)).toBeVisible();
+
+  const loginPage = new LoginPage(page);
+  await loginPage.gotoLogin();
+  await loginPage.login(email, LINKED_TEACHER_PASSWORD);
+  await expect(page).toHaveURL(landingUrl('Teacher'));
+
+  return { email, firstName, surname };
 }
