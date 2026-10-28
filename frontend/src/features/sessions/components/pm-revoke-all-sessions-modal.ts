@@ -89,7 +89,10 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
     this.busy = busy;
     setButtonsBusy(
       this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
     this.checkConfirmation();

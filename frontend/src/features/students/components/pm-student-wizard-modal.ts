@@ -714,7 +714,6 @@ export class PmStudentWizardModal extends HTMLElement {
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
     this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
     this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
-    this.cancelBtn!.hidden = !isCreate && (onStudentTab || onWaitingListTab);
     this.wizardFooter!.hidden = !isCreate;
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
     this.waitingListStepActions!.hidden = !editingEntry;

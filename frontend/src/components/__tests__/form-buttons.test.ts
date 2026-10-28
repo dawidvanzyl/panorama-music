@@ -695,14 +695,20 @@ describe('confirm labels', () => {
     expect(labelOf(harness.confirm)).toBe('Assign Activity');
   });
 
-  it('the banking activity modal dismiss action reads Cancel and no button reads Close', { tags: ['378UC10'] }, () => {
-    const modal = create('pm-banking-activity-modal');
-    call(modal, 'show', []);
-    const labels = Array.from(modal.shadowRoot!.querySelectorAll('button')).map((button) => labelOf(button));
+  it(
+    'the banking activity modal has no footer and no Cancel, and its only button is the header close control',
+    { tags: ['378UC10'] },
+    () => {
+      const modal = create('pm-banking-activity-modal');
+      call(modal, 'show', []);
+      const buttons = Array.from(modal.shadowRoot!.querySelectorAll('button'));
 
-    expect(labelOf(byId(modal.shadowRoot!, 'closeBtn'))).toBe('Cancel');
-    expect(labels).not.toContain('Close');
-  });
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0].id).toBe('closeBtn');
+      expect(buttons[0].getAttribute('aria-label')).toBe('Close');
+      expect(modal.shadowRoot!.querySelector('.form-actions')).toBeNull();
+    },
+  );
 });
 
 describe('forms adopt the shared form button stylesheet', { tags: ['378UC11'] }, () => {
@@ -758,13 +764,6 @@ describe('forms adopt the shared form button stylesheet', { tags: ['378UC11'] },
 
     expect(buttonRoot.adoptedStyleSheets).toContain(formButtonStyles);
     check(harness.host);
-  });
-
-  it('the banking activity modal adopts formButtonStyles', () => {
-    const modal = create('pm-banking-activity-modal');
-
-    expect(modal.shadowRoot!.adoptedStyleSheets).toContain(formButtonStyles);
-    check(modal);
   });
 
   it('the create user form adopts formButtonStyles', () => {
@@ -824,11 +823,5 @@ describe('Cancel in a form modal or a wizard step form keeps the secondary look'
 
     expect(harness.cancel!.classList.contains('form-btn--secondary')).toBe(true);
     expect(harness.cancel!.classList.contains('form-btn--warning')).toBe(false);
-  });
-
-  it('the banking activity modal dismiss button has no warning variant', () => {
-    const modal = create('pm-banking-activity-modal');
-
-    expect(byId(modal.shadowRoot!, 'closeBtn').classList.contains('form-btn--warning')).toBe(false);
   });
 });

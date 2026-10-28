@@ -912,7 +912,7 @@ describe(
       byId<HTMLButtonElement>('saveBtn').click();
 
       expect(creates).toEqual([]);
-      expect(byId('tabStudent').getAttribute('aria-selected')).toBe('true');
+      expect(byId('tabStudent').getAttribute('aria-current')).toBe('step');
       expect(studentStepMessage().textContent).toBe(PHASE_CONFLICT_ON_CHOIR);
       expect(modal.pendingExtraCurricularIds).toEqual(['ec1']);
     });
@@ -1409,16 +1409,13 @@ describe('pm-student-wizard-modal — dismiss actions in edit mode', { tags: ['3
   }
 
   it.each([['Siblings'], ['Guardians'], ['Courses'], ['ExtraCurriculars']])(
-    'shows only a Cancel in the footer on the %s step',
+    'shows no footer on the %s step',
     (step) => {
       mountModal();
       modal.openForEdit(alice);
       byId<HTMLButtonElement>(`tab${step}`).click();
 
-      const visible = ['cancelBtn', 'previousBtn', 'nextBtn', 'saveBtn'].filter((id) => !byId(id).hidden);
-      expect(visible).toEqual(['cancelBtn']);
-      expect(byId('cancelBtn').textContent).toBe('Cancel');
-      expect(buttonTexts()).not.toContain('Close');
+      expect(byId('wizardFooter').hidden).toBe(true);
     },
   );
 
@@ -1430,7 +1427,7 @@ describe('pm-student-wizard-modal — dismiss actions in edit mode', { tags: ['3
     expect(buttonTexts()).not.toContain('Close');
   });
 
-  it('closes the wizard from either Cancel', () => {
+  it('closes the wizard from the Waiting List step Cancel and from the close control', () => {
     openWaitingListEdit();
     byId<HTMLButtonElement>('tabWaitingList').click();
     byId<HTMLButtonElement>('waitingListCloseBtn').click();
@@ -1438,7 +1435,7 @@ describe('pm-student-wizard-modal — dismiss actions in edit mode', { tags: ['3
 
     modal.openForEdit(alice);
     byId<HTMLButtonElement>('tabSiblings').click();
-    byId<HTMLButtonElement>('cancelBtn').click();
+    byId<HTMLButtonElement>('closeBtn').click();
     expect(modal.hasAttribute('open')).toBe(false);
   });
 });
@@ -1464,4 +1461,85 @@ describe('pm-student-wizard-modal — shared button stylesheet', { tags: ['379UC
       expect(rule.style.getPropertyValue('display')).toBe('');
     }
   });
+});
+
+describe('pm-student-wizard-modal — edit mode has no footer', { tags: ['390UC8'] }, () => {
+  it.each([['Student'], ['Siblings'], ['Guardians'], ['Courses'], ['ExtraCurriculars']])(
+    'hides the footer on the %s tab and closes from the close control',
+    (step) => {
+      mountModal();
+      modal.openForEdit(alice);
+      byId<HTMLButtonElement>(`tab${step}`).click();
+
+      expect(byId('wizardFooter').hidden).toBe(true);
+
+      byId<HTMLButtonElement>('closeBtn').click();
+      expect(modal.hasAttribute('open')).toBe(false);
+    },
+  );
+
+  it('hides the footer on every waiting-list edit tab and closes from the close control', () => {
+    for (const step of ['Student', 'Siblings', 'Guardians', 'WaitingList']) {
+      openWaitingListEdit();
+      byId<HTMLButtonElement>(`tab${step}`).click();
+
+      expect(byId('wizardFooter').hidden).toBe(true);
+
+      byId<HTMLButtonElement>('closeBtn').click();
+      expect(modal.hasAttribute('open')).toBe(false);
+    }
+  });
+
+  it('still shows the footer in create mode', () => {
+    mountModal();
+    modal.openForCreate([]);
+
+    expect(byId('wizardFooter').hidden).toBe(false);
+  });
+
+  it('disables the close control while either save runs, and only then', () => {
+    openWaitingListEdit();
+    expect(byId<HTMLButtonElement>('closeBtn').disabled).toBe(false);
+
+    byId<HTMLButtonElement>('studentSaveBtn').click();
+    expect(byId<HTMLButtonElement>('closeBtn').disabled).toBe(true);
+
+    byId<HTMLButtonElement>('tabWaitingList').click();
+    byId<HTMLButtonElement>('waitingListSaveBtn').click();
+    modal.showWaitingListError('Could not save');
+    expect(byId<HTMLButtonElement>('closeBtn').disabled).toBe(true);
+
+    modal.showStudentError('Could not save');
+    expect(byId<HTMLButtonElement>('closeBtn').disabled).toBe(false);
+  });
+});
+
+describe('pm-student-wizard-modal — steps are a progress indicator, not tabs', { tags: ['390UC9'] }, () => {
+  function stepButtons(): HTMLButtonElement[] {
+    return [...modal.shadowRoot!.querySelectorAll<HTMLButtonElement>('.wizard__tab')];
+  }
+
+  it('carries no tab roles or selection state on any step', () => {
+    mountModal();
+    modal.openForEdit(alice);
+
+    for (const role of ['tablist', 'tab', 'tabpanel']) {
+      expect(modal.shadowRoot!.querySelector(`[role="${role}"]`)).toBeNull();
+    }
+    expect(modal.shadowRoot!.querySelector('[aria-selected]')).toBeNull();
+  });
+
+  it.each([['Student'], ['Siblings'], ['Guardians'], ['Courses'], ['ExtraCurriculars']])(
+    'marks only the %s step button as the current step',
+    (step) => {
+      mountModal();
+      modal.openForEdit(alice);
+      byId<HTMLButtonElement>(`tab${step}`).click();
+
+      const current = modal.shadowRoot!.querySelectorAll('[aria-current="step"]');
+      expect(current).toHaveLength(1);
+      expect(current[0]).toBe(byId(`tab${step}`));
+      expect(stepButtons().filter((button) => button.hasAttribute('aria-current'))).toHaveLength(1);
+    },
+  );
 });

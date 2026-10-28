@@ -1438,7 +1438,7 @@ describe(
 
       expect(vi.mocked(createStudent)).not.toHaveBeenCalled();
       expect(wizard.hasAttribute('open')).toBe(true);
-      expect(wizardShadow.getElementById('tabExtraCurriculars')!.getAttribute('aria-selected')).toBe('true');
+      expect(wizardShadow.getElementById('tabExtraCurriculars')!.getAttribute('aria-current')).toBe('step');
       expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
         COURSE_OR_EXTRA_CURRICULAR_TO_SAVE,
       );
