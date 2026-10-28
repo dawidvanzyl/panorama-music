@@ -15,6 +15,7 @@ styles.replaceSync(`
       color: var(--pm-text-muted);
       font-size: 14px;
       max-width: 40em;
+      margin: 0;
     }
     .own-sessions__error {
       margin-bottom: 16px;

@@ -95,7 +95,6 @@ export class PmDeleteGuardianModal extends HTMLElement {
     this.scopeAllRadio = this.shadowRoot!.getElementById('scopeAll') as HTMLInputElement;
 
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
-
     this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', () => this.handleDelete());
   }

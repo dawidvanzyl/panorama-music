@@ -61,6 +61,7 @@ modalChromeStyles.replaceSync(`
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--pm-text);
+      margin: 0;
     }
     .modal__close {
       box-sizing: border-box;
