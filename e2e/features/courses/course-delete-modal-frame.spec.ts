@@ -3,6 +3,7 @@ import { test, expect } from '../../fixtures/base';
 import { goToCourseManagementPage } from '../../fixtures/testUsers';
 import { ensureCourseOfType, fetchLessonStructureId } from '../../fixtures/waitingList';
 import { blockRequests, clickBackdropLeftThenAbove } from '../../fixtures/modalFrame';
+import { cancelModal, expectBold, expectDestructiveTemplate } from '../../fixtures/destructiveModal';
 import type { CourseManagementPage } from '../../pages/courses/CourseManagementPage';
 
 /**
@@ -121,5 +122,28 @@ test.describe('Delete Course modal — backdrop click', { tag: ['@266IT42'] }, (
 
     await expect(card).toBeHidden();
     await expect(row).toBeVisible();
+  });
+});
+
+test.describe('Delete Course modal — destructive wording', { tag: ['@266IT6'] }, () => {
+  test('S1 the Delete Course modal has the delete template', async ({ page }) => {
+    const { coursesPage, row, deletesSent, card } = await openCoursePage(page);
+
+    await coursesPage.startDelete(row);
+    await expect(card).toBeVisible();
+    const nameElement = coursesPage.deleteModal.locator('#modalName');
+    const name = (await nameElement.innerText()).trim();
+    expect(name).toContain(COURSE_TYPE_LABEL);
+
+    await expectDestructiveTemplate(coursesPage.deleteModal, {
+      title: 'Delete Course',
+      body: `This action cannot be undone. The course ${name} will be permanently removed.`,
+      confirm: 'Delete',
+    });
+    await expectBold(nameElement, name);
+
+    await cancelModal(coursesPage.deleteModal);
+    await expect(row).toBeVisible();
+    expect(deletesSent()).toBe(0);
   });
 });
