@@ -13,10 +13,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">warning</span>
-        <h2 class="modal__title">Withdraw Enrollment</h2>
+        <h2 class="modal__title" id="modalTitle">Withdraw Enrollment</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
         This action <strong>cannot be undone</strong>. <span class="modal__name" id="studentName"></span> will be withdrawn from <span class="modal__name" id="courseName"></span> permanently.
@@ -43,6 +44,7 @@ export class PmWithdrawEnrollmentModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('withdrawBtn')!.addEventListener('click', () => this.handleWithdraw());
   }
 
@@ -66,7 +68,10 @@ export class PmWithdrawEnrollmentModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('withdrawBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

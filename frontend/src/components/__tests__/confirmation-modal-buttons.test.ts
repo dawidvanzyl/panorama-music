@@ -204,7 +204,7 @@ describe('confirmation modals enter the loading state on confirm', { tags: ['377
     const testCase = cases.find((c) => c.tag === 'pm-revoke-all-sessions-modal')!;
     const { modal } = enterLoading(testCase);
 
-    const backdrop = modal.shadowRoot!.getElementById('backdrop')!;
+    const backdrop = modal.shadowRoot!.querySelector('.modal__backdrop')!;
     backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 

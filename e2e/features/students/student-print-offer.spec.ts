@@ -259,7 +259,7 @@ test.describe('Students — Print is not offered in the wizard or on the waiting
     const wizardPrint = studentsPage.wizardModal.getByRole('button', { name: 'Print', exact: true });
     for (const tab of ['#tabStudent', '#tabSiblings', '#tabGuardians', '#tabCourses', '#tabExtraCurriculars']) {
       await studentsPage.wizardModal.locator(tab).click();
-      await expect(studentsPage.wizardModal.locator(tab)).toHaveAttribute('aria-selected', 'true');
+      await expect(studentsPage.wizardModal.locator(tab)).toHaveAttribute('aria-current', 'step');
       await expect(wizardPrint).toHaveCount(0);
     }
   });

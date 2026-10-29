@@ -71,19 +71,6 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
     expect(events).toHaveLength(0);
   });
 
-  it('pressing Escape closes the modal', () => {
-    modal.show();
-    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(modal.hasAttribute('open')).toBe(false);
-  });
-
-  it('clicking the backdrop closes the modal', () => {
-    modal.show();
-    const backdrop = modal.shadowRoot!.getElementById('backdrop') as HTMLElement;
-    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(modal.hasAttribute('open')).toBe(false);
-  });
-
   it('clicking inside the modal card does not close the modal', () => {
     modal.show();
     const card = modal.shadowRoot!.querySelector('.modal__card') as HTMLElement;
@@ -107,5 +94,29 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
 
     expect(document.activeElement).toBe(trigger);
     document.body.removeChild(trigger);
+  });
+});
+
+describe('pm-revoke-all-sessions-modal — dismissal', { tags: ['390UC5'] }, () => {
+  it('ignores Escape on the host and on the confirmation input', () => {
+    const modal = document.createElement('pm-revoke-all-sessions-modal') as PmRevokeAllSessionsModal;
+    document.body.appendChild(modal);
+    const dispatched: Event[] = [];
+    const original = modal.dispatchEvent.bind(modal);
+    modal.dispatchEvent = (event: Event) => {
+      dispatched.push(event);
+      return original(event);
+    };
+    modal.show();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'REVOKE';
+
+    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(input.value).toBe('REVOKE');
+    expect(dispatched.filter((event) => event.type !== 'keydown')).toEqual([]);
+    document.body.removeChild(modal);
   });
 });

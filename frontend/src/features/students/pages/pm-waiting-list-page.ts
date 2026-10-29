@@ -114,7 +114,7 @@ template.innerHTML = `
   <pm-waiting-list-table id="table"></pm-waiting-list-table>
   <pm-student-wizard-modal id="wizardModal"></pm-student-wizard-modal>
   <pm-delete-waiting-list-entry-modal id="deleteModal"></pm-delete-waiting-list-entry-modal>
-  <pm-delete-guardian-modal id="deleteGuardianModal"></pm-delete-guardian-modal>
+  <pm-delete-guardian-modal id="deleteGuardianModal" stacked></pm-delete-guardian-modal>
   <pm-enrol-waiting-list-student-modal id="enrolModal"></pm-enrol-waiting-list-student-modal>
 `;
 

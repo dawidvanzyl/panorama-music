@@ -1,7 +1,8 @@
 import type { Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../../fixtures/base';
-import { goToStudentsPage, goToWaitingListPage, loginAsRoles } from '../../fixtures/testUsers';
-import { seedEnrolledStudent, seedEnrollmentTarget } from '../../fixtures/enrollment';
+import { goToStudentsPage, goToWaitingListPage } from '../../fixtures/testUsers';
+import { seedEnrollmentTarget } from '../../fixtures/enrollment';
+import { openSavedStudent } from '../../fixtures/savedStudent';
 import { ensureInstrumentCourse, seedWaitingListEntry } from '../../fixtures/waitingList';
 import { switchToPrintMedia, switchToScreenMedia } from '../../fixtures/printMedia';
 import { StudentsPage, type StudentInput } from '../../pages/students/StudentsPage';
@@ -103,24 +104,6 @@ async function reachLastStepIntercepted(
   const interceptor = await interceptCreate(page, behaviour);
   await studentsPage.reachLastCreateStep(student);
   return { studentsPage, interceptor };
-}
-
-/** Signs in, seeds one saved student with a course, and opens the Students roster with that student found. */
-async function openSavedStudent(
-  page: Page,
-  label: string
-): Promise<{ studentsPage: StudentsPage; surname: string }> {
-  await loginAsRoles(page, ['Teacher', 'Coordinator']);
-  const target = await seedEnrollmentTarget(page);
-  const surname = uniqueSurname(label);
-  await seedEnrolledStudent(page, target, surname);
-
-  await page.reload();
-  const studentsPage = new StudentsPage(page);
-  await studentsPage.gotoStudents();
-  await studentsPage.filterByName(surname);
-  await expect(studentsPage.row(surname)).toBeVisible();
-  return { studentsPage, surname };
 }
 
 /** Signs in, seeds one waiting-list entry with notes, and finds its row. */
@@ -409,7 +392,7 @@ test.describe(
       expect(names[names.length - 1]).toBe('Create Waiting List Entry');
       await expect(rows.anyButton('Save')).toHaveCount(0);
       await expect(rows.anyButton('Create Student')).toHaveCount(0);
-      await expect(rows.anyButton('Close')).toHaveCount(0);
+      await expect(rows.footer.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0);
     });
 
     test('the label does not carry over to the Students page wizard', async ({ page }) => {
@@ -432,60 +415,68 @@ test.describe(
 );
 
 test.describe(
-  'Student wizard â€” in edit mode every dismiss action reads "Cancel"',
+  'Student wizard: in edit mode only the Student and Waiting List steps keep an action row',
   { tag: ['@267IT26'] },
   () => {
-    test('Students page edit: every tab dismisses with "Cancel"', async ({ page }) => {
+    test('Students page edit: the Student step keeps Cancel and Save, the others show no footer', async ({
+      page,
+    }) => {
       const { studentsPage, surname } = await openSavedStudent(page, 'Edit');
       await studentsPage.openEditWizard(surname);
       const rows = studentsPage.actionRows();
 
       await expect(studentsPage.tab('Student')).toHaveClass(/wizard__tab--active/);
       await expectNames(rows.studentStepRow.getByRole('button'), ['Cancel', 'Save']);
+      await expect(rows.footer).toBeHidden();
       await expect(rows.footerButtons()).toHaveCount(0);
-      await expect(rows.anyButton('Close')).toHaveCount(0);
+      await expect(rows.studentStepRow.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0);
 
       for (const tab of ['Siblings', 'Guardians', 'Courses', 'Extra-Curriculars'] as const) {
         await studentsPage.tab(tab).click();
         await expect(studentsPage.tab(tab)).toHaveClass(/wizard__tab--active/);
-        await expectNames(rows.footerButtons(), ['Cancel']);
+        await expect(rows.footer).toBeHidden();
+        await expect(rows.footerButtons()).toHaveCount(0);
         await expect(rows.previous).toBeHidden();
         await expect(rows.next).toBeHidden();
-        await expect(rows.anyButton('Close')).toHaveCount(0);
+        await expect(rows.closeControl).toBeVisible();
       }
     });
 
-    test('the footer Cancel closes the edit wizard', async ({ page }) => {
+    test('the close control closes the edit wizard', async ({ page }) => {
       const { studentsPage, surname } = await openSavedStudent(page, 'Edit');
       await studentsPage.openGuardiansTab(surname);
       const rows = studentsPage.actionRows();
       await expect(studentsPage.tab('Guardians')).toHaveClass(/wizard__tab--active/);
 
-      await rows.cancel.click();
+      await rows.closeControl.click();
 
       await expect(studentsPage.wizardModal).toBeHidden();
       await expect(studentsPage.row(surname)).toBeVisible();
     });
 
-    test('Waiting List edit: the Waiting List step dismisses with "Cancel"', async ({ page }) => {
+    test('Waiting List edit: the Student and Waiting List steps keep Cancel and Save', async ({
+      page,
+    }) => {
       const { waitingListPage, row } = await openSeededEntry(page);
       await waitingListPage.openEditWizard(row);
       const rows = waitingListPage.actionRows();
 
       await expectNames(rows.studentStepRow.getByRole('button'), ['Cancel', 'Save']);
-      await expect(rows.anyButton('Close')).toHaveCount(0);
+      await expect(rows.studentStepRow.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0);
 
       await waitingListPage.selectTab('Waiting List');
       await expect(waitingListPage.activeTab()).toHaveAttribute('id', 'tabWaitingList');
       await expectNames(rows.waitingListStepRow.getByRole('button'), ['Cancel', 'Save']);
+      await expect(rows.footer).toBeHidden();
       await expect(rows.footerButtons()).toHaveCount(0);
-      await expect(rows.anyButton('Close')).toHaveCount(0);
+      await expect(rows.waitingListStepRow.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0);
 
       for (const tab of ['Siblings', 'Guardians'] as const) {
         await waitingListPage.selectTab(tab);
         await expect(waitingListPage.activeTab()).toHaveAttribute('id', `tab${tab}`);
-        await expectNames(rows.footerButtons(), ['Cancel']);
-        await expect(rows.anyButton('Close')).toHaveCount(0);
+        await expect(rows.footer).toBeHidden();
+        await expect(rows.footerButtons()).toHaveCount(0);
+        await expect(rows.closeControl).toBeVisible();
       }
     });
 

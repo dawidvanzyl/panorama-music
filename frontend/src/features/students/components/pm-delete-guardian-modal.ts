@@ -33,10 +33,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">delete_forever</span>
-        <h2 class="modal__title">Delete Guardian</h2>
+        <h2 class="modal__title" id="modalTitle">Delete Guardian</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body" id="plainBody">
         This action <strong>cannot be undone</strong>. The record for <span class="modal__name" id="modalNamePlain"></span> will be permanently removed.
@@ -94,6 +95,7 @@ export class PmDeleteGuardianModal extends HTMLElement {
     this.scopeAllRadio = this.shadowRoot!.getElementById('scopeAll') as HTMLInputElement;
 
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('deleteBtn')!.addEventListener('click', () => this.handleDelete());
   }
 
@@ -135,7 +137,10 @@ export class PmDeleteGuardianModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

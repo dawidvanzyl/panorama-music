@@ -11,21 +11,37 @@ modalChromeStyles.replaceSync(`
     .modal__backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
+      background: var(--pm-scrim);
       backdrop-filter: blur(2px);
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    :host([stacked]) .modal__backdrop {
+      z-index: 120;
+    }
     .modal__card {
+      box-sizing: border-box;
       background: var(--pm-surface);
       border: 1px solid var(--pm-border);
       border-radius: var(--pm-radius);
       padding: 24px;
-      max-width: 420px;
+      max-width: var(--pm-modal-width-sm);
       width: calc(100% - 32px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      box-shadow: var(--pm-shadow-modal);
+    }
+    .modal__card--medium {
+      max-width: var(--pm-modal-width-md);
+    }
+    .modal__card--large {
+      max-width: var(--pm-modal-width-lg);
+    }
+    .modal__card--fill {
+      max-width: none;
+      width: calc(100% - var(--pm-sidebar-width) - 2 * var(--pm-content-padding));
     }
     .modal__header {
       display: flex;
@@ -38,11 +54,38 @@ modalChromeStyles.replaceSync(`
       color: var(--pm-danger);
       font-size: 24px;
     }
+    .modal__icon--reversible {
+      color: var(--pm-accent);
+    }
     .modal__title {
       font-size: 1.125rem;
       font-weight: 700;
-      color: var(--pm-danger);
+      color: var(--pm-text);
+      margin: 0;
     }
+    .modal__close {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      margin-left: auto;
+      padding: 0;
+      border: none;
+      border-radius: var(--pm-radius-full);
+      background: transparent;
+      color: var(--pm-text-muted);
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .modal__close:hover:not(:disabled) {
+      color: var(--pm-text);
+      background: var(--pm-surface-2);
+    }
+    ${buttonStateRules('.modal__close', [])}
     .modal__body {
       font-size: 14px;
       line-height: 1.6;
@@ -53,6 +96,12 @@ modalChromeStyles.replaceSync(`
       display: flex;
       justify-content: flex-end;
       gap: 12px;
+    }
+    .modal__card > .modal__actions,
+    .modal__card > .form-actions {
+      position: sticky;
+      bottom: 0;
+      background: var(--pm-surface);
     }
     .modal__error {
       margin: 12px 0 var(--pm-modal-body-gap);
@@ -104,6 +153,7 @@ modalChromeStyles.replaceSync(`
     ${buttonStateRules('.modal__btn', ['.modal__btn--primary', '.modal__btn--destructive'])}
     @media print {
       .modal__btn,
+      .modal__close,
       .modal__actions {
         display: none;
       }

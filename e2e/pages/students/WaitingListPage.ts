@@ -476,7 +476,12 @@ export class WaitingListPage extends BasePage {
       await footerCancel.click();
       return;
     }
-    await this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn').click();
+    const stepCancel = this.wizardModal.locator('#waitingListStepActions #waitingListCloseBtn');
+    if (await stepCancel.isVisible()) {
+      await stepCancel.click();
+      return;
+    }
+    await this.actionRows().closeControl.click();
   }
 
   // --- Guardians tab (shared pm-guardians-step, inside this page's wizard) ---

@@ -13,6 +13,7 @@ const EXTRACTED_SELECTORS = [
   '.modal__body',
   '.modal__actions',
   '.modal__btn',
+  '.modal__close',
 ];
 
 function localStyleSheetFor(shadowRoot: ShadowRoot): CSSStyleSheet {

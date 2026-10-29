@@ -1,16 +1,9 @@
-import { formButtonStyles } from '../../../components/form-button-styles';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { activityLabel, formatActivityTimestamp } from '../services/banking-display';
 import type { BankingActivityEntry } from '../services/teachers';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Half again as wide as the shared modal default (420px). Four columns of
-       timestamps, actions and email addresses need the room; at the default
-       width every row wrapped. */
-    .modal__card {
-      max-width: 630px;
-    }
     .activity__intro {
       margin: 0 0 16px;
       font-size: 13px;
@@ -66,12 +59,6 @@ styles.replaceSync(`
       font-size: 14px;
       color: var(--pm-text-muted);
     }
-    /* The shared chrome spaces the actions off a .modal__body, which this modal
-       replaces with a table — so the gap has to be declared here or Cancel sits
-       flush against the last row. */
-    .form-actions {
-      margin-top: 20px;
-    }
     [hidden] {
       display: none !important;
     }
@@ -81,10 +68,11 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card modal__card--large" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <span class="modal__icon">receipt_long</span>
-        <h2 class="modal__title">Banking activity</h2>
+        <h2 class="modal__title" id="modalTitle">Banking activity</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="activity__intro">
         Every reveal, write and delete is audited. Entries record that a value changed, never the value itself,
@@ -110,9 +98,6 @@ template.innerHTML = `
         </table>
       </div>
       <p class="activity__empty" id="empty" hidden>No banking activity recorded.</p>
-      <div class="form-actions" data-testid="form-actions">
-        <button class="form-btn form-btn--secondary" id="closeBtn" type="button">Cancel</button>
-      </div>
     </div>
   </div>
 `;
@@ -127,7 +112,7 @@ export class PmBankingActivityModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, formButtonStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
