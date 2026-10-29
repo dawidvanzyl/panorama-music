@@ -18,7 +18,7 @@ export class SaveReportModal extends BasePage {
     this.title = this.host.locator('[data-testid="save-report-title"]');
     this.text = this.host.locator('[data-testid="save-report-text"]');
     this.nameInput = this.host.getByRole('textbox', { name: 'Report name' });
-    this.saveButton = this.host.getByRole('button', { name: 'Save report', exact: true });
+    this.saveButton = this.host.getByRole('button', { name: 'Save Report', exact: true });
     this.cancelButton = this.host.getByRole('button', { name: 'Cancel', exact: true });
     this.closeButton = this.host.getByRole('button', { name: 'Close', exact: true });
     this.errorBanner = this.host.locator('[data-testid="save-report-error"]');
