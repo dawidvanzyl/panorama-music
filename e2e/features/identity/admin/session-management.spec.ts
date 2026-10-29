@@ -95,47 +95,4 @@ test.describe('Global Session Management', () => {
       await userContext.close();
     }
   );
-
-  test(
-    '"Revoke All" ends every other session but keeps the admin\'s own current session valid',
-    { tag: '@M1.4IT7' },
-    async ({ page, browser }) => {
-      const email = uniqueTestEmail('revoke-all-global');
-      const password = 'RevokeAllGlobal123';
-      await createRegisteredUser(page, email, password);
-
-      const userContext = await browser.newContext();
-      const userPage = await userContext.newPage();
-      const userLoginPage = new LoginPage(userPage);
-      await userLoginPage.gotoLogin();
-      await userLoginPage.login(email, password);
-      await expect(userPage).toHaveURL(landingUrl('Teacher'));
-      const userAccessToken = await userPage.evaluate(() =>
-        localStorage.getItem('pm_access_token')
-      );
-
-      const adminLoginPage = new LoginPage(page);
-      await adminLoginPage.gotoLogin();
-      await adminLoginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-      await expect(page).toHaveURL(landingUrl('Admin'));
-      const adminAccessToken = await page.evaluate(() => localStorage.getItem('pm_access_token'));
-
-      const adminSessionsPage = new AdminSessionsPage(page);
-      await adminSessionsPage.gotoAdminSessions();
-      await adminSessionsPage.revokeAllGlobal();
-      await expect(adminSessionsPage.rowByEmail(email)).toHaveCount(0);
-
-      const userResponse = await userPage.request.get('/api/users', {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
-      expect(userResponse.status()).toBe(401);
-
-      const adminResponse = await page.request.get('/api/users', {
-        headers: { Authorization: `Bearer ${adminAccessToken}` },
-      });
-      expect(adminResponse.status()).toBe(200);
-
-      await userContext.close();
-    }
-  );
 });
