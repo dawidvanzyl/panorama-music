@@ -107,7 +107,7 @@ test.describe('Saving a built report lists it for its creator', { tag: ['@11IT19
     await builder.save();
     const modal = new SaveReportModal(page);
     await modal.waitForOpen();
-    await expect(modal.title).toHaveText('Save report');
+    await expect(modal.title).toHaveText('Save Report');
     await modal.saveAs('Grade 4 Contacts');
     await modal.waitForClosed();
 

@@ -452,6 +452,11 @@ export default defineConfig({
       { name: '393UC2', description: 'The Unlink Account confirm button is the primary Unlink button' },
       { name: '393UC3', description: 'Deactivate User shows the info icon, the reversible body naming the user in strong and no cannot be undone' },
       { name: '393UC4', description: 'The Deactivate User confirm button is the primary Deactivate button' },
+      { name: '394UC1', description: 'Save Report shows no header icon and uses Save Report for the title and the confirm label' },
+      { name: '394UC2', description: 'Link Account shows no header icon and uses Link Account for the title and the confirm label' },
+      { name: '394UC3', description: 'Enrol Student uses the shared modal title, no header icon and Enrol Student for the confirm label' },
+      { name: '394UC4', description: 'My Details and Banking Activity use Title Case titles and show no header icon' },
+      { name: '394UC5', description: 'The student wizard titles every mode correctly and shows no header icon' },
     ],
   },
 })

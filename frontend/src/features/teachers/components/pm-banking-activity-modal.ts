@@ -70,8 +70,7 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card modal__card--large" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">receipt_long</span>
-        <h2 class="modal__title" id="modalTitle">Banking activity</h2>
+        <h2 class="modal__title" id="modalTitle">Banking Activity</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="activity__intro">

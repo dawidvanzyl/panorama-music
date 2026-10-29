@@ -55,12 +55,6 @@ export const ENTRY_STRUCTURE_NO_LONGER_OFFERED_NOTICE =
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    .enrol__title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--pm-text);
-      margin: 0;
-    }
     .enrol__notice {
       font-size: 13px;
       color: var(--pm-text-muted);
@@ -150,7 +144,7 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <h2 class="enrol__title" id="modalTitle">Enrol Student</h2>
+        <h2 class="modal__title" id="modalTitle">Enrol Student</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="enrol__notice" id="notice"></p>
@@ -194,7 +188,7 @@ template.innerHTML = `
       <p class="enrol__error" id="error"></p>
       <div class="form-actions" data-testid="form-actions">
         <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
-        <button class="form-btn form-btn--primary" id="confirmBtn" type="button">Enrol</button>
+        <button class="form-btn form-btn--primary" id="confirmBtn" type="button">Enrol Student</button>
       </div>
     </div>
   </div>

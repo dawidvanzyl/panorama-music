@@ -13,9 +13,6 @@ styles.replaceSync(`
       position: fixed;
       inset: 0;
     }
-    .modal__icon {
-      color: var(--pm-accent);
-    }
     .modal__label {
       display: block;
       font-size: 13px;
@@ -50,8 +47,7 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">save</span>
-        <h2 class="modal__title" id="modalTitle" data-testid="save-report-title">Save report</h2>
+        <h2 class="modal__title" id="modalTitle" data-testid="save-report-title">Save Report</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="modal__body">
@@ -62,7 +58,7 @@ template.innerHTML = `
       </div>
       <div class="form-actions" data-testid="form-actions">
         <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
-        <button class="form-btn form-btn--primary" id="saveBtn" type="button">Save report</button>
+        <button class="form-btn form-btn--primary" id="saveBtn" type="button">Save Report</button>
       </div>
     </div>
   </div>

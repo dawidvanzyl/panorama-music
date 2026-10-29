@@ -279,7 +279,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this._mode = 'create';
     this._wizardMode = wizardMode;
     this._studentId = null;
-    this.titleEl!.textContent = wizardMode === 'waitingList' ? 'Capture Waiting List Student' : 'Create Student';
+    this.titleEl!.textContent = wizardMode === 'waitingList' ? 'Create Waiting List Entry' : 'Create Student';
     // No phase and no grade until they are chosen on the Student step, which
     // announces them. The reset below fires that announcement, so this is the
     // starting point rather than the last student's phase carrying over.
