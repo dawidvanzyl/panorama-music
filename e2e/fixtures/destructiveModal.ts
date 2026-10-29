@@ -6,7 +6,7 @@ export interface DestructiveWording {
   /** The whole visible body paragraph, whitespace collapsed. */
   body: string | RegExp;
   /** The accessible name of the one confirm button. */
-  confirm: 'Delete' | 'Remove' | 'Withdraw';
+  confirm: 'Delete' | 'Remove' | 'Withdraw' | 'Deactivate' | 'Revoke All';
 }
 
 /** The visible body paragraph. A guardian modal holds three, of which one shows. */
@@ -52,4 +52,12 @@ export async function expectBold(name: Locator, text: string): Promise<void> {
 export async function cancelModal(modal: Locator): Promise<void> {
   await modal.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(modal.locator('.modal__card')).toBeHidden();
+}
+
+/** The phrase "cannot be undone" shows in bold inside the body. */
+export async function expectCannotBeUndoneBold(modal: Locator): Promise<void> {
+  await expectBold(
+    visibleBody(modal).locator('strong').filter({ hasText: 'cannot be undone' }),
+    'cannot be undone',
+  );
 }
