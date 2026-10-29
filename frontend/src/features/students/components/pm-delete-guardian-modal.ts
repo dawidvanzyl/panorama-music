@@ -3,10 +3,6 @@ import { setButtonsBusy } from '../../../components/button-states';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    .modal__name {
-      color: var(--pm-text);
-      font-weight: 500;
-    }
     .modal__scope-choice {
       display: flex;
       flex-direction: column;
@@ -35,27 +31,27 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">delete_forever</span>
+        <span class="modal__icon" id="modalIcon" aria-hidden="true">delete_forever</span>
         <h2 class="modal__title" id="modalTitle">Delete Guardian</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body" id="plainBody">
-        This action <strong>cannot be undone</strong>. The record for <span class="modal__name" id="modalNamePlain"></span> will be permanently removed.
+        This action <strong>cannot be undone</strong>. The guardian <strong id="modalNamePlain"></strong> will be permanently removed.
       </p>
       <p class="modal__body" id="restrictedBody" hidden>
-        <span class="modal__name" id="modalNameRestricted"></span> is shared with an enrolled student, so the record itself cannot be removed here. They will be unlinked from this student only.
+        The guardian <strong id="modalNameRestricted"></strong> will be unlinked from this student only. The guardian record stays because it is shared with an enrolled student. You can link the guardian again later.
       </p>
       <div class="modal__scope-choice" id="scopeChoice" hidden>
         <p class="modal__body">
-          <span class="modal__name" id="modalNameScoped"></span> is shared with siblings. Choose what to remove:
+          This action <strong>cannot be undone</strong>. The guardian <strong id="modalNameScoped"></strong> is shared with siblings. Choose one option.
         </p>
         <label class="modal__scope-option">
           <input type="radio" name="scope" id="scopeOne" value="one" checked />
-          Unlink from this student only — the record and other sibling links stay intact.
+          Unlink from this student only — the guardian record and the other sibling links stay.
         </label>
         <label class="modal__scope-option">
           <input type="radio" name="scope" id="scopeAll" value="all" />
-          Delete guardian and remove all links — permanently removes the record and every sibling's link to it.
+          Delete the guardian and all links — the guardian record and every sibling's link are permanently removed.
         </label>
       </div>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
@@ -126,7 +122,19 @@ export class PmDeleteGuardianModal extends HTMLElement {
 
     this.showError('');
     this.setBusy(false);
+    this.applyFamily(restricted);
     this.setAttribute('open', '');
+  }
+
+  private applyFamily(restricted: boolean): void {
+    const icon = this.shadowRoot!.getElementById('modalIcon')!;
+    icon.textContent = restricted ? 'info' : 'delete_forever';
+    icon.classList.toggle('modal__icon--reversible', restricted);
+    this.shadowRoot!.getElementById('modalTitle')!.textContent = restricted ? 'Unlink Guardian' : 'Delete Guardian';
+    const confirm = this.shadowRoot!.getElementById('deleteBtn')!;
+    confirm.textContent = restricted ? 'Unlink' : 'Delete';
+    confirm.classList.toggle('modal__btn--primary', restricted);
+    confirm.classList.toggle('modal__btn--destructive', !restricted);
   }
 
   close(): void {
