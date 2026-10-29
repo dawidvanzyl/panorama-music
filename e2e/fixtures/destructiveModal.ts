@@ -6,7 +6,7 @@ export interface DestructiveWording {
   /** The whole visible body paragraph, whitespace collapsed. */
   body: string | RegExp;
   /** The accessible name of the one confirm button. */
-  confirm: 'Delete' | 'Remove' | 'Withdraw' | 'Deactivate' | 'Revoke All';
+  confirm: 'Delete' | 'Remove' | 'Withdraw' | 'Deactivate' | 'Revoke All' | 'Revoke' | 'Revoke All Others';
 }
 
 /** The visible body paragraph. A guardian modal holds three, of which one shows. */
