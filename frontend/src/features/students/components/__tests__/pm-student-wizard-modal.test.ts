@@ -484,7 +484,7 @@ describe('pm-student-wizard-modal — waiting-list mode tabs', { tags: ['293UC12
     mountModal();
     modal.openForCreate([], 'waitingList');
 
-    expect(byId('title').textContent).toBe('Capture Waiting List Student');
+    expect(byId('title').textContent).toBe('Create Waiting List Entry');
   });
 });
 
@@ -1542,4 +1542,36 @@ describe('pm-student-wizard-modal — steps are a progress indicator, not tabs',
       expect(stepButtons().filter((button) => button.hasAttribute('aria-current'))).toHaveLength(1);
     },
   );
+});
+
+describe('pm-student-wizard-modal — titles and header icon', { tags: ['394UC5'] }, () => {
+  function expectTitle(expected: string): void {
+    expect(byId('title').textContent).toBe(expected);
+    expect(modal.shadowRoot!.querySelector('.modal__header .modal__icon')).toBeNull();
+  }
+
+  it('titles the enrolled create mode Create Student', () => {
+    mountModal();
+    modal.openForCreate([]);
+    expectTitle('Create Student');
+  });
+
+  it('titles the waiting-list create mode Create Waiting List Entry', () => {
+    mountModal();
+    modal.openForCreate([], 'waitingList');
+    expectTitle('Create Waiting List Entry');
+  });
+
+  it('titles the edit mode with the student name', () => {
+    mountModal();
+    modal.openForEdit(alice);
+    expectTitle(`Edit Student: ${alice.firstName} ${alice.lastName}`);
+  });
+
+  it('titles the waiting-list edit mode with the student name', () => {
+    mountModal();
+    modal.lessonStructures = [individualHourDuringSchool];
+    modal.openForWaitingListEdit(alice, amaraEntry);
+    expectTitle(`Edit Waiting List Student: ${alice.firstName} ${alice.lastName}`);
+  });
 });

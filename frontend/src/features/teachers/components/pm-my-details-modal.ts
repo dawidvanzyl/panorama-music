@@ -79,7 +79,7 @@ template.innerHTML = `
     <div class="modal__card modal__card--large" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <div class="my-details__heading">
-          <h2 class="modal__title" id="modalTitle">My details</h2>
+          <h2 class="modal__title" id="modalTitle">My Details</h2>
           <pm-linked-account-badge id="accountBadge"></pm-linked-account-badge>
         </div>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>

@@ -7,12 +7,6 @@ import type { PmAccountLinkPicker } from './pm-account-link-picker';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Neutral tone: linking is a routine action, not a destructive one, so the
-       icon carries the accent rather than the danger colour the shared chrome
-       defaults to. */
-    .modal__icon {
-      color: var(--pm-accent);
-    }
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
@@ -29,8 +23,7 @@ template.innerHTML = `
   <div class="modal__backdrop">
     <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">link</span>
-        <h2 class="modal__title" id="modalTitle">Link a login account</h2>
+        <h2 class="modal__title" id="modalTitle">Link Account</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="modal__body">
@@ -43,7 +36,7 @@ template.innerHTML = `
       </div>
       <div class="form-actions" data-testid="form-actions">
         <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
-        <button class="form-btn form-btn--primary" id="linkBtn" type="button">Link account</button>
+        <button class="form-btn form-btn--primary" id="linkBtn" type="button">Link Account</button>
       </div>
     </div>
   </div>
