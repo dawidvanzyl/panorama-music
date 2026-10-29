@@ -11,11 +11,9 @@ template.innerHTML = `
         <h2 class="modal__title" id="modalTitle">Deactivate Teacher</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
-      <p class="modal__body">
-        This action <strong>cannot be undone</strong>. The teacher <strong id="modalName"></strong> will be deactivated
+      <p class="modal__body">This action <strong>cannot be undone</strong>. The teacher <strong id="modalName"></strong> will be deactivated
         and removed from active selection lists. Their banking details will be permanently removed. The teacher record
-        and its history are kept.
-      </p>
+        and its history are kept.</p>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
