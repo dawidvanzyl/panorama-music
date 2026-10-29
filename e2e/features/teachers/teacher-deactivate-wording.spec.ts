@@ -43,7 +43,7 @@ test.describe('Deactivate Teacher modal — destructive look', { tag: ['@266IT12
 
     await expectDestructiveTemplate(detail.deactivateModal, {
       title: 'Deactivate Teacher',
-      body: /^This action cannot be undone\./,
+      body: /^\s*This action cannot be undone\./,
       confirm: 'Deactivate',
     });
     await expectCannotBeUndoneBold(detail.deactivateModal);
