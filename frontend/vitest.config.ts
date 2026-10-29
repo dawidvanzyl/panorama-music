@@ -444,6 +444,10 @@ export default defineConfig({
       { name: '391UC11', description: 'Waiting list removal follows the remove template and names the student record' },
       { name: '391UC12', description: 'Withdraw enrollment follows the withdraw template with both names in strong' },
       { name: '391UC13', description: 'Delete report follows the delete template without an icon circle' },
+      { name: '392UC1', description: 'Deactivate Teacher follows the destructive template and names the teacher and the banking details' },
+      { name: '392UC2', description: 'The Deactivate Teacher confirm button is the destructive Deactivate button' },
+      { name: '392UC3', description: 'Revoke All Sessions follows the destructive template with the phrase only in the field label' },
+      { name: '392UC4', description: 'Revoke All stays disabled until the exact phrase is typed and then dispatches once' },
     ],
   },
 })

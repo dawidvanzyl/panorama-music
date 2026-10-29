@@ -27,8 +27,8 @@ describe('pm-teacher-deactivate-modal — the confirmation warns about the banki
     expect(text).toContain('Thandi Mokoena');
     // The warning is the point of the step — the deletion is permanent and
     // happens with the same click.
-    expect(text).toContain('banking details will be permanently deleted');
-    expect(text).toContain('The teacher record and its history are preserved.');
+    expect(text).toContain('Their banking details will be permanently removed.');
+    expect(text).toContain('The teacher record and its history are kept.');
   });
 
   it('dispatches the confirmation rather than calling the API itself, and cancels without it', () => {
@@ -47,5 +47,38 @@ describe('pm-teacher-deactivate-modal — the confirmation warns about the banki
 
     expect(confirmed).toHaveBeenCalledTimes(1);
     expect(element.hasAttribute('open')).toBe(true);
+  });
+});
+
+describe('pm-teacher-deactivate-modal — destructive template', { tags: ['392UC1'] }, () => {
+  it('shows the delete icon, the cannot-be-undone body and the teacher name in strong', () => {
+    element = mount();
+    element.show('Ann Lee');
+    const root = element.shadowRoot!;
+
+    const icon = root.querySelector('.modal__header .modal__icon')!;
+    expect(icon.textContent).toBe('delete_forever');
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+    expect(root.getElementById('modalTitle')!.textContent).toBe('Deactivate Teacher');
+
+    const body = root.querySelector('.modal__body')!;
+    expect((body.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'This action cannot be undone. The teacher Ann Lee will be deactivated and removed from active selection lists. ' +
+        'Their banking details will be permanently removed. The teacher record and its history are kept.',
+    );
+    const strongs = Array.from(body.querySelectorAll('strong')).map((s) => s.textContent);
+    expect(strongs[0]).toBe('cannot be undone');
+    expect(strongs).toContain('Ann Lee');
+    expect(body.querySelector('br')).toBeNull();
+    expect(body.textContent).not.toContain('Are you sure');
+  });
+});
+
+describe('pm-teacher-deactivate-modal — confirm button', { tags: ['392UC2'] }, () => {
+  it('is the destructive Deactivate button', () => {
+    element = mount();
+    const button = element.shadowRoot!.getElementById('deactivateBtn')!;
+    expect(button.textContent).toBe('Deactivate');
+    expect(button.classList.contains('modal__btn--destructive')).toBe(true);
   });
 });
