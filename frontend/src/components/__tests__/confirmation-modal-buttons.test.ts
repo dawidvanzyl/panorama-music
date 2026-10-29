@@ -28,6 +28,7 @@ interface Case {
   event: string;
   show: (modal: ConfirmationModal) => void;
   typed?: string;
+  variant?: 'primary';
 }
 
 const cases: Case[] = [
@@ -58,6 +59,7 @@ const cases: Case[] = [
     confirmId: 'unlinkBtn',
     event: 'teacher-account-unlink-confirmed',
     show: (m) => (m as unknown as { show(n: string): void }).show('teacher@test.com'),
+    variant: 'primary',
   },
   {
     tag: 'pm-delete-student-modal',
@@ -116,6 +118,7 @@ const cases: Case[] = [
     confirmId: 'deactivateBtn',
     event: 'user-deactivate-confirmed',
     show: (m) => (m as unknown as { show(a: string, b: string): void }).show('u1', 'user@test.com'),
+    variant: 'primary',
   },
   {
     tag: 'pm-delete-user-modal',
@@ -283,13 +286,16 @@ describe('typed-confirmation modals keep the typed-text gate while busy', { tags
 });
 
 describe('confirmation modal action rows', { tags: ['377UC4'] }, () => {
-  it.each(cases)('$tag holds Cancel then the destructive confirm action', (testCase) => {
+  it.each(cases)('$tag holds Cancel then the confirm action of its family', (testCase) => {
     const { modal, confirm, cancel } = open(testCase);
+    const variant = testCase.variant ?? 'destructive';
+    const other = variant === 'primary' ? 'destructive' : 'primary';
 
     const row = modal.shadowRoot!.querySelector('[data-testid="modal-actions"]')!;
     expect(Array.from(row.children)).toEqual([cancel, confirm]);
     expect(cancel.classList.contains('modal__btn--cancel')).toBe(true);
-    expect(confirm.classList.contains('modal__btn--destructive')).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${variant}`)).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${other}`)).toBe(false);
     expect(row.lastElementChild).toBe(confirm);
   });
 });
@@ -301,6 +307,6 @@ describe('confirmation modals keep their Cancel and confirm look', { tags: ['387
     for (const button of [cancel, confirm]) {
       expect(Array.from(button.classList).some((name) => name.endsWith('--warning'))).toBe(false);
     }
-    expect(confirm.classList.contains('modal__btn--destructive')).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${testCase.variant ?? 'destructive'}`)).toBe(true);
   });
 });

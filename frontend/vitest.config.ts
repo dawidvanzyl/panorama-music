@@ -448,6 +448,10 @@ export default defineConfig({
       { name: '392UC2', description: 'The Deactivate Teacher confirm button is the destructive Deactivate button' },
       { name: '392UC3', description: 'Revoke All Sessions follows the destructive template with the phrase only in the field label' },
       { name: '392UC4', description: 'Revoke All stays disabled until the exact phrase is typed and then dispatches once' },
+      { name: '393UC1', description: 'Unlink Account shows the info icon, the reversible body naming the account in strong and no cannot be undone' },
+      { name: '393UC2', description: 'The Unlink Account confirm button is the primary Unlink button' },
+      { name: '393UC3', description: 'Deactivate User shows the info icon, the reversible body naming the user in strong and no cannot be undone' },
+      { name: '393UC4', description: 'The Deactivate User confirm button is the primary Deactivate button' },
     ],
   },
 })

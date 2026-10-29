@@ -1,31 +1,24 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { setButtonsBusy } from '../../../components/button-states';
 
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-    .modal__email {
-      color: var(--pm-text);
-      font-weight: 500;
-    }
-  `);
-
 const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
     <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon modal__icon--reversible">warning</span>
+        <span class="modal__icon modal__icon--reversible" aria-hidden="true">info</span>
         <h2 class="modal__title" id="modalTitle">Deactivate User</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
-        Are you sure you want to deactivate the user <span class="modal__email" id="modalEmail"></span>? They will no longer be able to log in.
+        The user <strong id="modalEmail"></strong> will be deactivated. They can no longer sign in. You can reactivate
+        this user later.
       </p>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal__btn modal__btn--destructive" id="deactivateBtn" type="button">Deactivate</button>
+        <button class="modal__btn modal__btn--primary" id="deactivateBtn" type="button">Deactivate</button>
       </div>
     </div>
   </div>
@@ -37,7 +30,7 @@ export class PmDeactivateUserModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
