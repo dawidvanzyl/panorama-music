@@ -14,6 +14,8 @@ import '../../features/admin/components/pm-deactivate-user-modal';
 import '../../features/extra-curriculars/components/pm-delete-extra-curricular-modal';
 import '../../features/reports/components/pm-delete-report-modal';
 import '../../features/sessions/components/pm-revoke-all-sessions-modal';
+import '../../features/sessions/components/pm-revoke-session-modal';
+import '../../features/sessions/components/pm-revoke-other-sessions-modal';
 
 interface ConfirmationModal extends HTMLElement {
   setBusy(busy: boolean): void;
@@ -142,6 +144,20 @@ const cases: Case[] = [
     event: 'revoke-all-sessions-confirmed',
     show: (m) => (m as unknown as { show(): void }).show(),
     typed: 'REVOKE ALL',
+  },
+  {
+    tag: 'pm-revoke-session-modal',
+    label: 'Revoke',
+    confirmId: 'revokeBtn',
+    event: 'session-revoke-requested',
+    show: (m) => (m as unknown as { show(t: string, d: string): void }).show('t1', 'Chrome on Windows'),
+  },
+  {
+    tag: 'pm-revoke-other-sessions-modal',
+    label: 'Revoke All Others',
+    confirmId: 'revokeOthersBtn',
+    event: 'own-sessions-revoke-all-requested',
+    show: (m) => (m as unknown as { show(): void }).show(),
   },
 ];
 

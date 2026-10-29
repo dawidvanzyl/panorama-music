@@ -71,6 +71,18 @@ function tableOf(modal: PmOwnSessionsModal): PmSessionsTable {
   return modal.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
 }
 
+function revokeSessionModalOf(el: PmOwnSessionsMenu): HTMLElement {
+  return hostOf(el).querySelector('#revokeSessionModal') as HTMLElement;
+}
+
+function revokeOtherSessionsModalOf(el: PmOwnSessionsMenu): HTMLElement {
+  return hostOf(el).querySelector('#revokeOtherSessionsModal') as HTMLElement;
+}
+
+function clickIn(host: HTMLElement, id: string): void {
+  (host.shadowRoot!.getElementById(id) as HTMLButtonElement).click();
+}
+
 function errorOf(modal: PmOwnSessionsModal): HTMLElement {
   return modal.shadowRoot!.getElementById('error') as HTMLElement;
 }
@@ -183,57 +195,59 @@ describe('own sessions dialog — the list, and revoking from it', { tags: ['M1.
   it('revoking a single session removes it from the table', async () => {
     mockRevokeOwnSession.mockResolvedValue(undefined);
 
-    tableOf(modal).dispatchEvent(
-      new CustomEvent('session-revoke-requested', {
-        detail: { tokenId: 'other' },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    openRevokeSession('other', 'Firefox');
+    clickIn(revokeSessionModalOf(el), 'revokeBtn');
     await flush();
 
     expect(mockRevokeOwnSession).toHaveBeenCalledWith('other');
     expect(tableOf(modal).sessions.some((s) => s.tokenId === 'other')).toBe(false);
   });
 
-  it('shows an error banner when revoking a session fails', async () => {
+  it('keeps a failed single revoke in the confirmation and not in the list banner', async () => {
     mockRevokeOwnSession.mockRejectedValue(new SessionError('Cannot revoke current session', 400));
 
-    tableOf(modal).dispatchEvent(
-      new CustomEvent('session-revoke-requested', {
-        detail: { tokenId: 'current' },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    openRevokeSession('current', 'Chrome');
+    const confirmation = revokeSessionModalOf(el);
+    clickIn(confirmation, 'revokeBtn');
     await flush();
 
-    expect(errorOf(modal).textContent).toBe('Cannot revoke current session');
-    expect(errorOf(modal).classList.contains('own-sessions__error--visible')).toBe(true);
+    expect(confirmation.shadowRoot!.getElementById('error')!.textContent).toBe('Cannot revoke current session');
+    expect(confirmation.hasAttribute('open')).toBe(true);
+    expect((confirmation.shadowRoot!.getElementById('revokeBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect(errorOf(modal).classList.contains('own-sessions__error--visible')).toBe(false);
   });
 
-  it('clicking "Revoke all other sessions" revokes others and reloads the list', async () => {
+  it('clicking "Revoke All Others" and confirming revokes others and reloads the list', async () => {
     mockRevokeOwnOtherSessions.mockResolvedValue(undefined);
     mockGetOwnSessions.mockResolvedValue([sessions[0]]);
 
-    (modal.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement).click();
+    clickIn(modal, 'revokeAllBtn');
+    clickIn(revokeOtherSessionsModalOf(el), 'revokeOthersBtn');
     await flush();
 
     expect(mockRevokeOwnOtherSessions).toHaveBeenCalledTimes(1);
     expect(tableOf(modal).sessions).toEqual([sessions[0]]);
   });
 
-  it('shows an error banner when revoking all other sessions fails', async () => {
+  it('shows a failed revoke of other sessions in the confirmation', async () => {
     mockRevokeOwnOtherSessions.mockRejectedValue(new SessionError('Something went wrong', 500));
 
     const revokeAllBtn = modal.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
     revokeAllBtn.click();
+    const confirmation = revokeOtherSessionsModalOf(el);
+    clickIn(confirmation, 'revokeOthersBtn');
     await flush();
 
-    expect(errorOf(modal).textContent).toBe('Something went wrong');
-    expect(errorOf(modal).classList.contains('own-sessions__error--visible')).toBe(true);
+    expect(confirmation.shadowRoot!.getElementById('error')!.textContent).toBe('Something went wrong');
+    expect(confirmation.hasAttribute('open')).toBe(true);
     expect(revokeAllBtn.disabled).toBe(false);
   });
+
+  function openRevokeSession(tokenId: string, deviceLabel: string): void {
+    tableOf(modal).dispatchEvent(
+      new CustomEvent('session-revoke-clicked', { detail: { tokenId, deviceLabel }, bubbles: true, composed: true }),
+    );
+  }
 
   it('opens from an empty list rather than showing the previous fetch’s rows', async () => {
     expect(tableOf(modal).sessions).toEqual(sessions);
@@ -264,3 +278,100 @@ describe('own sessions dialog — the list, and revoking from it', { tags: ['M1.
     expect(window.location.hash).not.toContain('sessions');
   });
 });
+
+describe(
+  'own sessions dialog — confirming before a revoke',
+  { tags: ['395UC2', '395UC4', '395UC5', '395UC6', '395UC8'] },
+  () => {
+    let el: PmOwnSessionsMenu;
+    let modal: PmOwnSessionsModal;
+
+    beforeEach(async () => {
+      mockGetOwnSessions.mockReset();
+      mockRevokeOwnSession.mockReset();
+      mockRevokeOwnOtherSessions.mockReset();
+      mockGetOwnSessions.mockResolvedValue(sessions);
+
+      el = createMenu();
+      modal = modalOf(el);
+      openBtnOf(el).click();
+      await flush();
+    });
+
+    afterEach(() => {
+      document.body.removeChild(el);
+    });
+
+    function clickRowRevoke(): void {
+      const row = tableOf(modal).shadowRoot!.querySelectorAll('tbody tr')[1];
+      (row.querySelector('button') as HTMLButtonElement).click();
+    }
+
+    it('opens the Revoke Other Sessions confirmation without revoking anything', () => {
+      const requested = vi.fn();
+      hostOf(el).addEventListener('own-sessions-revoke-all-requested', requested);
+
+      clickIn(modal, 'revokeAllBtn');
+
+      const confirmation = revokeOtherSessionsModalOf(el);
+      expect(confirmation.hasAttribute('open')).toBe(true);
+      expect(confirmation.hasAttribute('stacked')).toBe(true);
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(requested).not.toHaveBeenCalled();
+      expect(mockRevokeOwnOtherSessions).not.toHaveBeenCalled();
+    });
+
+    it('opens the Revoke Session confirmation for the clicked row without revoking', () => {
+      clickRowRevoke();
+
+      const confirmation = revokeSessionModalOf(el);
+      expect(confirmation.hasAttribute('open')).toBe(true);
+      expect(confirmation.hasAttribute('stacked')).toBe(true);
+      expect(confirmation.shadowRoot!.getElementById('modalDevice')!.textContent).toBe('Firefox');
+      expect(mockRevokeOwnSession).not.toHaveBeenCalled();
+    });
+
+    it('closes the confirmation and reloads the list when revoking others succeeds', async () => {
+      mockRevokeOwnOtherSessions.mockResolvedValue(undefined);
+      mockGetOwnSessions.mockResolvedValue([sessions[0]]);
+
+      clickIn(modal, 'revokeAllBtn');
+      clickIn(revokeOtherSessionsModalOf(el), 'revokeOthersBtn');
+      await flush();
+
+      expect(mockRevokeOwnOtherSessions).toHaveBeenCalledTimes(1);
+      expect(revokeOtherSessionsModalOf(el).hasAttribute('open')).toBe(false);
+      expect(tableOf(modal).sessions).toEqual([sessions[0]]);
+    });
+
+    it('closes the confirmation and drops only that row when a revoke succeeds', async () => {
+      mockRevokeOwnSession.mockResolvedValue(undefined);
+
+      clickRowRevoke();
+      clickIn(revokeSessionModalOf(el), 'revokeBtn');
+      await flush();
+
+      expect(mockRevokeOwnSession).toHaveBeenCalledTimes(1);
+      expect(mockRevokeOwnSession).toHaveBeenCalledWith('other');
+      expect(revokeSessionModalOf(el).hasAttribute('open')).toBe(false);
+      expect(tableOf(modal).sessions.map((s) => s.tokenId)).toEqual(['current']);
+    });
+
+    it.each([
+      ['cancel', 'cancelBtn'],
+      ['close', 'closeBtn'],
+    ])('leaves the list and the services alone when a confirmation is dismissed with %s', (_name, id) => {
+      clickIn(modal, 'revokeAllBtn');
+      clickIn(revokeOtherSessionsModalOf(el), id);
+      clickRowRevoke();
+      clickIn(revokeSessionModalOf(el), id);
+
+      expect(revokeOtherSessionsModalOf(el).hasAttribute('open')).toBe(false);
+      expect(revokeSessionModalOf(el).hasAttribute('open')).toBe(false);
+      expect(modal.hasAttribute('open')).toBe(true);
+      expect(tableOf(modal).sessions).toEqual(sessions);
+      expect(mockRevokeOwnSession).not.toHaveBeenCalled();
+      expect(mockRevokeOwnOtherSessions).not.toHaveBeenCalled();
+    });
+  },
+);

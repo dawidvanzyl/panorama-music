@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -22,441 +22,1608 @@ export default defineConfig({
       { name: 'M1.1UC12', description: 'Admin updates user roles via PATCH and receives 200 with updated user' },
       { name: 'M1.1UC13', description: 'Non-admin receives 403 on PATCH /api/users/{userId}' },
       { name: 'M1.1UC14', description: 'Edit button transitions active user row to inline role-checkbox edit mode' },
-      { name: 'M1.1UC15', description: 'Saving inline edit sends PATCH and returns row to display mode with updated badges' },
+      {
+        name: 'M1.1UC15',
+        description: 'Saving inline edit sends PATCH and returns row to display mode with updated badges',
+      },
       { name: 'M1.1UC23', description: 'Admin creates user with multiple roles; all roles are persisted' },
-      { name: 'M1.1UC24', description: 'Admin selects multiple roles in create-user form; all role badges appear for new user' },
-      { name: 'M1.1UC18', description: 'Deactivate button opens confirmation modal showing user email; Cancel dismisses with no action' },
-      { name: 'M1.1UC19', description: 'Confirming deactivation calls the PATCH deactivate endpoint; modal closes and the User Directory list refreshes' },
+      {
+        name: 'M1.1UC24',
+        description: 'Admin selects multiple roles in create-user form; all role badges appear for new user',
+      },
+      {
+        name: 'M1.1UC18',
+        description: 'Deactivate button opens confirmation modal showing user email; Cancel dismisses with no action',
+      },
+      {
+        name: 'M1.1UC19',
+        description:
+          'Confirming deactivation calls the PATCH deactivate endpoint; modal closes and the User Directory list refreshes',
+      },
       { name: 'M1.1UC27', description: 'Deactivated user row renders a Delete button' },
       { name: 'M1.1UC28', description: 'Permanent-delete modal Delete button is disabled until email is entered' },
       { name: 'M1.1UC29', description: 'Typing the correct email in permanent-delete modal enables the Delete button' },
-      { name: 'M1.1UC30', description: 'Confirming permanent delete calls the DELETE endpoint; modal closes and row is removed' },
+      {
+        name: 'M1.1UC30',
+        description: 'Confirming permanent delete calls the DELETE endpoint; modal closes and row is removed',
+      },
       { name: 'M1.1UC31', description: 'Cancel on permanent-delete modal closes it with no API call' },
       { name: 'M1.1UC32', description: 'deleteUser service calls DELETE /api/users/{id} and invalidates cache' },
       { name: 'M1.1UC38', description: 'Deactivated user row renders Activate button to the left of Delete' },
-      { name: 'M1.1UC39', description: 'Clicking Activate dispatches user-activate-requested; on success table reloads showing Active row' },
-      { name: 'M1.1UC40', description: 'activateUser service calls PATCH /api/users/{id}/activate and invalidates cache' },
+      {
+        name: 'M1.1UC39',
+        description:
+          'Clicking Activate dispatches user-activate-requested; on success table reloads showing Active row',
+      },
+      {
+        name: 'M1.1UC40',
+        description: 'activateUser service calls PATCH /api/users/{id}/activate and invalidates cache',
+      },
       { name: 'M1.1UC20', description: 'Create-user success banner appears with invite link and Copy Link button' },
-      { name: 'M1.1UC21', description: 'Regenerate-invite compact banner appears with new invite link and Copy Link button' },
-      { name: 'M1.1UC22', description: 'Status filter filters User Directory rows client-side; All restores full list' },
-      { name: 'M1.2UC1', description: 'tryRefresh() distinguishes confirmed rejection from unexpected failure and dedupes concurrent calls' },
-      { name: 'M1.2UC2', description: 'render() shows a retry message on refresh failure and cancels a stale retry timer when navigation triggers a new render first' },
-      { name: 'M1.4UC6', description: 'GetOwnSessions returns only the caller own sessions with the current session identifiable' },
-      { name: 'M1.4UC7', description: 'Revoking an own session or all own other sessions never revokes the current session' },
+      {
+        name: 'M1.1UC21',
+        description: 'Regenerate-invite compact banner appears with new invite link and Copy Link button',
+      },
+      {
+        name: 'M1.1UC22',
+        description: 'Status filter filters User Directory rows client-side; All restores full list',
+      },
+      {
+        name: 'M1.2UC1',
+        description:
+          'tryRefresh() distinguishes confirmed rejection from unexpected failure and dedupes concurrent calls',
+      },
+      {
+        name: 'M1.2UC2',
+        description:
+          'render() shows a retry message on refresh failure and cancels a stale retry timer when navigation triggers a new render first',
+      },
+      {
+        name: 'M1.4UC6',
+        description: 'GetOwnSessions returns only the caller own sessions with the current session identifiable',
+      },
+      {
+        name: 'M1.4UC7',
+        description: 'Revoking an own session or all own other sessions never revokes the current session',
+      },
       { name: 'M1.4UC8', description: 'Admin global session list spans every user with the owning user identified' },
-      { name: 'M1.4UC9', description: 'Admin can revoke a specific session or every session except their own current one' },
-      { name: 'M1.4UC11', description: 'Viewer own current session is distinguishable in the My Active Sessions and Global Session Management views' },
+      {
+        name: 'M1.4UC9',
+        description: 'Admin can revoke a specific session or every session except their own current one',
+      },
+      {
+        name: 'M1.4UC11',
+        description:
+          'Viewer own current session is distinguishable in the My Active Sessions and Global Session Management views',
+      },
       { name: 'M1.4UC12', description: 'The sidebar appears alongside the top nav bar on every authenticated page' },
-      { name: 'M1.5UC15', description: 'Activity Log page loads and displays a paginated table of audit events, with an empty state when none match' },
-      { name: 'M1.5UC16', description: 'Applying filters on the Activity Log page updates results and resets pagination to page 1' },
-      { name: 'M1.5UC17', description: 'A non-admin user navigating to the Activity Log page is redirected to / and no audit data is rendered' },
-      { name: '162UC1', description: 'Each confirmation modal adopts the shared modal-chrome stylesheet and no longer declares the extracted selectors locally' },
-      { name: '161UC1', description: 'Deactivate modal dispatches user-deactivate-confirmed with the userId instead of calling deactivateUser itself' },
-      { name: '161UC2', description: 'Admin users page handles user-deactivate-confirmed by calling deactivateUser and refreshing the list on success' },
-      { name: '161UC3', description: 'Admin users page displays the AdminError message (or generic fallback) when deactivateUser rejects' },
-      { name: '161UC4', description: 'Delete modal dispatches user-delete-confirmed with the userId instead of calling deleteUser itself' },
-      { name: '161UC5', description: 'Admin users page handles user-delete-confirmed by calling deleteUser and removing the row on success' },
-      { name: '161UC6', description: 'Admin users page displays the AdminError message (or generic fallback) when deleteUser rejects' },
-      { name: '200UC5', description: 'Roster is filterable by grade, phase, and class, individually or in combination, client-side against the cached list' },
+      {
+        name: 'M1.5UC15',
+        description:
+          'Activity Log page loads and displays a paginated table of audit events, with an empty state when none match',
+      },
+      {
+        name: 'M1.5UC16',
+        description: 'Applying filters on the Activity Log page updates results and resets pagination to page 1',
+      },
+      {
+        name: 'M1.5UC17',
+        description:
+          'A non-admin user navigating to the Activity Log page is redirected to / and no audit data is rendered',
+      },
+      {
+        name: '162UC1',
+        description:
+          'Each confirmation modal adopts the shared modal-chrome stylesheet and no longer declares the extracted selectors locally',
+      },
+      {
+        name: '161UC1',
+        description:
+          'Deactivate modal dispatches user-deactivate-confirmed with the userId instead of calling deactivateUser itself',
+      },
+      {
+        name: '161UC2',
+        description:
+          'Admin users page handles user-deactivate-confirmed by calling deactivateUser and refreshing the list on success',
+      },
+      {
+        name: '161UC3',
+        description:
+          'Admin users page displays the AdminError message (or generic fallback) when deactivateUser rejects',
+      },
+      {
+        name: '161UC4',
+        description:
+          'Delete modal dispatches user-delete-confirmed with the userId instead of calling deleteUser itself',
+      },
+      {
+        name: '161UC5',
+        description:
+          'Admin users page handles user-delete-confirmed by calling deleteUser and removing the row on success',
+      },
+      {
+        name: '161UC6',
+        description: 'Admin users page displays the AdminError message (or generic fallback) when deleteUser rejects',
+      },
+      {
+        name: '200UC5',
+        description:
+          'Roster is filterable by grade, phase, and class, individually or in combination, client-side against the cached list',
+      },
       { name: '200UC8', description: 'Students page loads and displays the current list of students' },
       { name: '200UC9', description: 'Applying a grade, phase, or class filter displays only matching students' },
       { name: '200UC10', description: 'Submitting the create student form adds the new student to the list' },
       { name: '200UC11', description: 'Submitting the edit student form reflects the updated data in the list' },
       { name: '200UC12', description: 'Confirming student deletion removes the student from the list' },
       { name: '201UC7', description: 'getSiblings returns the students currently linked as siblings of a student' },
-      { name: '201UC8', description: 'addSibling posts the sibling id; the new sibling is reflected by a subsequent getSiblings call' },
-      { name: '201UC9', description: 'removeSibling sends a DELETE request; the removed sibling no longer appears in a subsequent getSiblings call' },
-      { name: '206UC6', description: 'Selecting grade Private hides the class and phase fields and lifts their required constraint' },
-      { name: '206UC7', description: 'Selecting a non-Private grade shows the class and phase fields and requires them' },
-      { name: '207UC1', description: 'Edit wizard modal card has an unconditional fixed height that does not depend on the active step' },
-      { name: '207UC2', description: 'Create wizard step area flexes within the fixed card while header/tabs/actions stay pinned' },
-      { name: '207UC3', description: 'Sibling list gets its own internal scroll container instead of growing the modal unbounded' },
-      { name: '207UC4', description: 'Sibling search input and Add button are marked non-shrinking so they stay pinned above the scrolling list' },
+      {
+        name: '201UC8',
+        description: 'addSibling posts the sibling id; the new sibling is reflected by a subsequent getSiblings call',
+      },
+      {
+        name: '201UC9',
+        description:
+          'removeSibling sends a DELETE request; the removed sibling no longer appears in a subsequent getSiblings call',
+      },
+      {
+        name: '206UC6',
+        description: 'Selecting grade Private hides the class and phase fields and lifts their required constraint',
+      },
+      {
+        name: '206UC7',
+        description: 'Selecting a non-Private grade shows the class and phase fields and requires them',
+      },
+      {
+        name: '207UC1',
+        description: 'Edit wizard modal card has an unconditional fixed height that does not depend on the active step',
+      },
+      {
+        name: '207UC2',
+        description: 'Create wizard step area flexes within the fixed card while header/tabs/actions stay pinned',
+      },
+      {
+        name: '207UC3',
+        description: 'Sibling list gets its own internal scroll container instead of growing the modal unbounded',
+      },
+      {
+        name: '207UC4',
+        description:
+          'Sibling search input and Add button are marked non-shrinking so they stay pinned above the scrolling list',
+      },
       { name: '212UC14', description: 'Opening the Guardians tab displays the student currently linked guardians' },
-      { name: '212UC15', description: 'Submitting the Add Guardian form adds the guardian to the student guardian list' },
+      {
+        name: '212UC15',
+        description: 'Submitting the Add Guardian form adds the guardian to the student guardian list',
+      },
       { name: '212UC16', description: 'Editing a guardian and confirming reflects the updated details in the list' },
-      { name: '212UC17', description: 'Deleting a shared guardian offers a scoped choice; "this student only" unlinks without deleting the record' },
-      { name: '212UC18', description: 'Sync Guardians appears when a sibling-group guardian is missing, and clicking it adds the missing guardians' },
-      { name: '212UC19', description: 'The relationship dropdown in the Add Guardian form is populated from the guardian_relationships lookup' },
-      { name: '212UC20', description: 'Expanding a student row shows a read-only summary of that student linked guardians' },
-      { name: '212UC21', description: 'Entering the Create-wizard Guardians step with siblings selected prepopulates their guardians as read-only rows' },
-      { name: '213UC4', description: 'Coordinator is an assignable role alongside Teacher and Admin in the create-user request' },
-      { name: '213UC5', description: 'Admin assigns the Coordinator role and saves; the user is shown with the Coordinator role' },
-      { name: '213UC6', description: 'Admin removes the Coordinator role and saves; the user no longer shows the Coordinator role' },
-      { name: '214UC7', description: 'Guardian Relationship Management page displays the current relationship types on load' },
+      {
+        name: '212UC17',
+        description:
+          'Deleting a shared guardian offers a scoped choice; "this student only" unlinks without deleting the record',
+      },
+      {
+        name: '212UC18',
+        description:
+          'Sync Guardians appears when a sibling-group guardian is missing, and clicking it adds the missing guardians',
+      },
+      {
+        name: '212UC19',
+        description:
+          'The relationship dropdown in the Add Guardian form is populated from the guardian_relationships lookup',
+      },
+      {
+        name: '212UC20',
+        description: 'Expanding a student row shows a read-only summary of that student linked guardians',
+      },
+      {
+        name: '212UC21',
+        description:
+          'Entering the Create-wizard Guardians step with siblings selected prepopulates their guardians as read-only rows',
+      },
+      {
+        name: '213UC4',
+        description: 'Coordinator is an assignable role alongside Teacher and Admin in the create-user request',
+      },
+      {
+        name: '213UC5',
+        description: 'Admin assigns the Coordinator role and saves; the user is shown with the Coordinator role',
+      },
+      {
+        name: '213UC6',
+        description: 'Admin removes the Coordinator role and saves; the user no longer shows the Coordinator role',
+      },
+      {
+        name: '214UC7',
+        description: 'Guardian Relationship Management page displays the current relationship types on load',
+      },
       { name: '214UC8', description: 'Submitting the create relationship form adds the new type to the list' },
-      { name: '214UC9', description: 'Editing a relationship row inline and saving reflects the updated name in the list' },
-      { name: '214UC10', description: 'Deleting a relationship type that is in use surfaces that it cannot be deleted' },
+      {
+        name: '214UC9',
+        description: 'Editing a relationship row inline and saving reflects the updated name in the list',
+      },
+      {
+        name: '214UC10',
+        description: 'Deleting a relationship type that is in use surfaces that it cannot be deleted',
+      },
       { name: '231UC7', description: 'Teachers list render shows name, classification, and status per row' },
-      { name: '231UC8', description: 'Client-side filter narrows visible teacher rows without a further server request' },
-      { name: '231UC9', description: 'Submitting the create section without first name/surname shows validation messages and issues no request' },
-      { name: '231UC10', description: 'A non-Admin/Coordinator user is not shown the Teachers nav entry or create action' },
-      { name: '231UC11', description: 'Create action expands an inline section on the same screen; Cancel collapses it with no navigation or overlay' },
-      { name: '231UC12', description: 'Profile edit/cancel/save wraps only first name and surname; the classification toggle sits outside the edit gate and persists immediately, reverting on failure' },
-      { name: '232UC9', description: 'The account link picker offers only the accounts the server ruled eligible for linking' },
-      { name: '232UC10', description: 'A linked teacher shows the account, hides the picker, and offers an unlink action' },
-      { name: '232UC11', description: 'A rejected role removal surfaces the reason and restores the persisted role selection' },
-      { name: '233UC12', description: 'The banking section renders with an empty state and an add action for a teacher of either classification with no details captured' },
-      { name: '233UC13', description: 'A captured account number is masked on the record and the full value is absent from the rendered markup' },
+      {
+        name: '231UC8',
+        description: 'Client-side filter narrows visible teacher rows without a further server request',
+      },
+      {
+        name: '231UC9',
+        description:
+          'Submitting the create section without first name/surname shows validation messages and issues no request',
+      },
+      {
+        name: '231UC10',
+        description: 'A non-Admin/Coordinator user is not shown the Teachers nav entry or create action',
+      },
+      {
+        name: '231UC11',
+        description:
+          'Create action expands an inline section on the same screen; Cancel collapses it with no navigation or overlay',
+      },
+      {
+        name: '231UC12',
+        description:
+          'Profile edit/cancel/save wraps only first name and surname; the classification toggle sits outside the edit gate and persists immediately, reverting on failure',
+      },
+      {
+        name: '232UC9',
+        description: 'The account link picker offers only the accounts the server ruled eligible for linking',
+      },
+      {
+        name: '232UC10',
+        description: 'A linked teacher shows the account, hides the picker, and offers an unlink action',
+      },
+      {
+        name: '232UC11',
+        description: 'A rejected role removal surfaces the reason and restores the persisted role selection',
+      },
+      {
+        name: '233UC12',
+        description:
+          'The banking section renders with an empty state and an add action for a teacher of either classification with no details captured',
+      },
+      {
+        name: '233UC13',
+        description:
+          'A captured account number is masked on the record and the full value is absent from the rendered markup',
+      },
       { name: '233UC14', description: 'Activating reveal requests the full account number and displays it' },
-      { name: '233UC15', description: 'A Coordinator is offered no edit, delete or reveal action and the masked-only restriction is explained' },
-      { name: '233UC16', description: 'Each banking activity entry shows the action, actor and timestamp with at most the last four digits' },
-      { name: '233UC17', description: 'The teachers list banking column shows the masked number or that none was captured, for private and school-paid teachers alike' },
-      { name: '234UC8', description: 'An active teacher viewed by an Admin offers a deactivate action and no delete action at all' },
-      { name: '234UC9', description: 'The deactivate confirmation warns that the teacher banking details will be deleted' },
-      { name: '234UC10', description: 'A Coordinator viewing a teacher is offered no deactivate, reactivate or delete action' },
-      { name: '234UC11', description: 'A deactivated teacher shows the deactivated status, reactivate replaces deactivate, and delete is offered alongside it' },
-      { name: '234UC12', description: 'A deactivated teacher banking section shows the empty state with no add action' },
-      { name: '234UC14', description: 'A deactivated teacher offers no link-account action, while unlinking stays available' },
+      {
+        name: '233UC15',
+        description:
+          'A Coordinator is offered no edit, delete or reveal action and the masked-only restriction is explained',
+      },
+      {
+        name: '233UC16',
+        description:
+          'Each banking activity entry shows the action, actor and timestamp with at most the last four digits',
+      },
+      {
+        name: '233UC17',
+        description:
+          'The teachers list banking column shows the masked number or that none was captured, for private and school-paid teachers alike',
+      },
+      {
+        name: '234UC8',
+        description: 'An active teacher viewed by an Admin offers a deactivate action and no delete action at all',
+      },
+      {
+        name: '234UC9',
+        description: 'The deactivate confirmation warns that the teacher banking details will be deleted',
+      },
+      {
+        name: '234UC10',
+        description: 'A Coordinator viewing a teacher is offered no deactivate, reactivate or delete action',
+      },
+      {
+        name: '234UC11',
+        description:
+          'A deactivated teacher shows the deactivated status, reactivate replaces deactivate, and delete is offered alongside it',
+      },
+      {
+        name: '234UC12',
+        description: 'A deactivated teacher banking section shows the empty state with no add action',
+      },
+      {
+        name: '234UC14',
+        description: 'A deactivated teacher offers no link-account action, while unlinking stays available',
+      },
       { name: '235UC9', description: 'The account chip offers My Details to a linked teacher and to nobody else' },
-      { name: '235UC10', description: 'My Details shows the employment classification locked, with the reason it cannot be changed there' },
-      { name: '235UC11', description: 'My Details offers no account-link control and no deactivate, reactivate or delete action' },
-      { name: '235UC12', description: 'My Details banking section offers edit, delete, reveal and activity, with the account number masked until revealed' },
-      { name: '247UC1', description: 'The account chip offers Active Sessions to every signed-in user, with no role gate and no request per page load' },
-      { name: '247UC2', description: 'Choosing Active Sessions opens a dialog mounted on the document, which stays open once the dropdown that offered it closes' },
-      { name: '247UC3', description: 'The sidebar offers neither Active Sessions nor Logout, on any route and for any role' },
-      { name: '247UC4', description: 'Logout from the account chip calls logout once and redirects to the login screen only after it completes' },
-      { name: '239UC1', description: 'The sidebar shows every entry the signed-in user roles permit and hides every entry they do not' },
-      { name: '239UC2', description: 'The set of visible sidebar entries is identical on every route, including unrelated, unrecognised and directly entered ones' },
-      { name: '239UC3', description: 'The nav bar exposes no section navigation links, and the brand and account chip behave as before' },
-      { name: '239UC4', description: 'Exactly the sidebar entry matching the current screen carries the active styling, including on a nested route' },
-      { name: '239UC5', description: 'A user who is neither Coordinator nor BankingCoordinator is offered no Teacher Management entry on any route' },
-      { name: '239UC6', description: 'A user arriving at / is taken to the topmost sidebar entry their roles permit, with no Dashboard rendered' },
-      { name: '239UC7', description: 'The entry a user lands on from / differs by role set, always being the topmost one their own roles permit' },
-      { name: '239UC8', description: 'A route refused by the guard redirects via / to the topmost permitted entry without rendering the refused screen' },
-      { name: '251UC1', description: 'A signed-in user on an unknown route is redirected to the topmost permitted entry and never sees the login page' },
-      { name: '251UC2', description: 'A visitor with no valid session on an unknown route ends on the bare login page' },
-      { name: '273UC4', description: 'BankingCoordinator is offered the Teacher Management sidebar entry and its route guard permits /teachers' },
-      { name: '240UC1', description: 'The Guardian Relationships page renders the create form on load, with no reveal control and no form cancel control' },
-      { name: '240UC2', description: 'A successful relationship create leaves the form visible with its input cleared, ready for a further entry' },
-      { name: '240UC3', description: 'A failed relationship create surfaces the error and leaves the entered value in the form' },
+      {
+        name: '235UC10',
+        description:
+          'My Details shows the employment classification locked, with the reason it cannot be changed there',
+      },
+      {
+        name: '235UC11',
+        description: 'My Details offers no account-link control and no deactivate, reactivate or delete action',
+      },
+      {
+        name: '235UC12',
+        description:
+          'My Details banking section offers edit, delete, reveal and activity, with the account number masked until revealed',
+      },
+      {
+        name: '247UC1',
+        description:
+          'The account chip offers Active Sessions to every signed-in user, with no role gate and no request per page load',
+      },
+      {
+        name: '247UC2',
+        description:
+          'Choosing Active Sessions opens a dialog mounted on the document, which stays open once the dropdown that offered it closes',
+      },
+      {
+        name: '247UC3',
+        description: 'The sidebar offers neither Active Sessions nor Logout, on any route and for any role',
+      },
+      {
+        name: '247UC4',
+        description:
+          'Logout from the account chip calls logout once and redirects to the login screen only after it completes',
+      },
+      {
+        name: '239UC1',
+        description: 'The sidebar shows every entry the signed-in user roles permit and hides every entry they do not',
+      },
+      {
+        name: '239UC2',
+        description:
+          'The set of visible sidebar entries is identical on every route, including unrelated, unrecognised and directly entered ones',
+      },
+      {
+        name: '239UC3',
+        description: 'The nav bar exposes no section navigation links, and the brand and account chip behave as before',
+      },
+      {
+        name: '239UC4',
+        description:
+          'Exactly the sidebar entry matching the current screen carries the active styling, including on a nested route',
+      },
+      {
+        name: '239UC5',
+        description:
+          'A user who is neither Coordinator nor BankingCoordinator is offered no Teacher Management entry on any route',
+      },
+      {
+        name: '239UC6',
+        description:
+          'A user arriving at / is taken to the topmost sidebar entry their roles permit, with no Dashboard rendered',
+      },
+      {
+        name: '239UC7',
+        description:
+          'The entry a user lands on from / differs by role set, always being the topmost one their own roles permit',
+      },
+      {
+        name: '239UC8',
+        description:
+          'A route refused by the guard redirects via / to the topmost permitted entry without rendering the refused screen',
+      },
+      {
+        name: '251UC1',
+        description:
+          'A signed-in user on an unknown route is redirected to the topmost permitted entry and never sees the login page',
+      },
+      {
+        name: '251UC2',
+        description: 'A visitor with no valid session on an unknown route ends on the bare login page',
+      },
+      {
+        name: '273UC4',
+        description:
+          'BankingCoordinator is offered the Teacher Management sidebar entry and its route guard permits /teachers',
+      },
+      {
+        name: '240UC1',
+        description:
+          'The Guardian Relationships page renders the create form on load, with no reveal control and no form cancel control',
+      },
+      {
+        name: '240UC2',
+        description:
+          'A successful relationship create leaves the form visible with its input cleared, ready for a further entry',
+      },
+      {
+        name: '240UC3',
+        description: 'A failed relationship create surfaces the error and leaves the entered value in the form',
+      },
       { name: '257UC6', description: 'A course type filter narrows the cached catalogue to courses of that type' },
-      { name: '257UC7', description: 'Lesson type, duration and occurrence filters narrow the cached catalogue and combine' },
-      { name: '257UC11', description: 'Course Management opens with the create form already open above the filter bar' },
-      { name: '257UC12', description: 'Course type and lesson structure options are offered with their fixed display text' },
+      {
+        name: '257UC7',
+        description: 'Lesson type, duration and occurrence filters narrow the cached catalogue and combine',
+      },
+      {
+        name: '257UC11',
+        description: 'Course Management opens with the create form already open above the filter bar',
+      },
+      {
+        name: '257UC12',
+        description: 'Course type and lesson structure options are offered with their fixed display text',
+      },
       { name: '257UC13', description: 'A complete create form creates the course, lists it, and clears the form' },
-      { name: '257UC14', description: 'A missing value or invalid cost shows an inline form error and creates nothing' },
+      {
+        name: '257UC14',
+        description: 'A missing value or invalid cost shows an inline form error and creates nothing',
+      },
       { name: '257UC15', description: 'A failed create shows the reason inline and retains the entered values' },
       { name: '257UC16', description: 'A filter selection narrows the course list shown in the table' },
       { name: '257UC17', description: 'An empty state is shown in place of rows when no course matches the filters' },
-      { name: '257UC18', description: 'A non-maintainer sees the read-only table with create form, filter bar and actions column absent' },
-      { name: '257UC19', description: 'The Course Management sidebar entry is not offered to a user whose roles do not permit it' },
-      { name: '257UC20', description: 'Course Management sits between Teacher Management and Guardian Relationships in the sidebar' },
-      { name: '258UC9', description: 'Edit Cost turns that row cost into a prefilled input and replaces its actions with Save and Cancel' },
-      { name: '258UC10', description: 'Saving a cost edit updates the course and returns the row to display mode with the new cost' },
+      {
+        name: '257UC18',
+        description: 'A non-maintainer sees the read-only table with create form, filter bar and actions column absent',
+      },
+      {
+        name: '257UC19',
+        description: 'The Course Management sidebar entry is not offered to a user whose roles do not permit it',
+      },
+      {
+        name: '257UC20',
+        description: 'Course Management sits between Teacher Management and Guardian Relationships in the sidebar',
+      },
+      {
+        name: '258UC9',
+        description:
+          'Edit Cost turns that row cost into a prefilled input and replaces its actions with Save and Cancel',
+      },
+      {
+        name: '258UC10',
+        description: 'Saving a cost edit updates the course and returns the row to display mode with the new cost',
+      },
       { name: '258UC11', description: 'Cancelling a cost edit restores the original cost and sends nothing' },
-      { name: '258UC12', description: 'An invalid or rejected cost save shows an inline row error and keeps the row in edit mode' },
-      { name: '258UC13', description: 'Delete opens a confirmation naming the course by type, lesson structure and occurrence' },
+      {
+        name: '258UC12',
+        description: 'An invalid or rejected cost save shows an inline row error and keeps the row in edit mode',
+      },
+      {
+        name: '258UC13',
+        description: 'Delete opens a confirmation naming the course by type, lesson structure and occurrence',
+      },
       { name: '258UC14', description: 'Confirming the deletion removes the course from the list' },
       { name: '258UC15', description: 'Cancelling the deletion closes the confirmation with the course still listed' },
-      { name: '258UC16', description: 'A failed deletion shows the reason against the row and leaves the course listed' },
-      { name: '268UC14', description: 'The Courses tab lists existing enrollments, with an em dash for what the course type does not record' },
+      {
+        name: '258UC16',
+        description: 'A failed deletion shows the reason against the row and leaves the course listed',
+      },
+      {
+        name: '268UC14',
+        description:
+          'The Courses tab lists existing enrollments, with an em dash for what the course type does not record',
+      },
       { name: '268UC15', description: 'The Courses tab shows an empty-state message in place of enrollment rows' },
-      { name: '268UC16', description: 'Enroll in Course reveals a form offering course, teacher, instrument type, step and an enrolled date defaulted to today' },
-      { name: '268UC17', description: 'The chosen course type governs whether instrument type and step are offered and required' },
-      { name: '268UC18', description: 'Enrolling in edit mode submits the enrollment, closes the panel and lists the new row' },
+      {
+        name: '268UC16',
+        description:
+          'Enroll in Course reveals a form offering course, teacher, instrument type, step and an enrolled date defaulted to today',
+      },
+      {
+        name: '268UC17',
+        description: 'The chosen course type governs whether instrument type and step are offered and required',
+      },
+      {
+        name: '268UC18',
+        description: 'Enrolling in edit mode submits the enrollment, closes the panel and lists the new row',
+      },
       { name: '268UC19', description: 'A missing required selection reports itself and submits no enrollment' },
       { name: '268UC20', description: 'Cancel closes the enroll panel and submits no enrollment' },
       { name: '268UC21', description: 'Create mode stages enrollments as Change/Remove rows and sends no request' },
-      { name: '268UC22', description: 'Saving a new student with no staged enrollment and no staged activity is refused and the requirement is stated on the Extra-Curriculars tab' },
+      {
+        name: '268UC22',
+        description:
+          'Saving a new student with no staged enrollment and no staged activity is refused and the requirement is stated on the Extra-Curriculars tab',
+      },
       { name: '268UC23', description: 'Each staged enrollment is created against the newly created student on save' },
       { name: '268UC24', description: 'Removing one of several staged enrollments drops it from the staged list' },
-      { name: '268UC25', description: 'Changing a staged enrollment updates the row under the same course-type rules and sends no request' },
-      { name: '268UC26', description: 'An expanded student row shows a Courses summary beneath Siblings and Guardians' },
-      { name: '268UC27', description: 'The Courses summary reads as an empty state when the student holds no enrollments' },
-      { name: '268UC30', description: 'Deleting a course any student is enrolled in is refused against the row, with no confirmation offered' },
-      { name: '269UC11', description: 'Edit turns an enrollment row teacher, instrument and step editable in place while the course and enrolled date stay fixed' },
-      { name: '269UC12', description: 'Saving an in-place enrollment edit submits the update and returns the row to its read-only form with the new values' },
-      { name: '269UC13', description: 'Saving an in-place enrollment edit with a required selection cleared reports it and submits nothing' },
-      { name: '269UC14', description: 'Cancelling an in-place enrollment edit restores the row previous values and submits nothing' },
-      { name: '269UC15', description: 'Opening a second enrollment row for editing closes the first without submitting' },
-      { name: '269UC16', description: 'Withdraw opens a confirmation naming the student and the course, submitting nothing yet' },
+      {
+        name: '268UC25',
+        description:
+          'Changing a staged enrollment updates the row under the same course-type rules and sends no request',
+      },
+      {
+        name: '268UC26',
+        description: 'An expanded student row shows a Courses summary beneath Siblings and Guardians',
+      },
+      {
+        name: '268UC27',
+        description: 'The Courses summary reads as an empty state when the student holds no enrollments',
+      },
+      {
+        name: '268UC30',
+        description:
+          'Deleting a course any student is enrolled in is refused against the row, with no confirmation offered',
+      },
+      {
+        name: '269UC11',
+        description:
+          'Edit turns an enrollment row teacher, instrument and step editable in place while the course and enrolled date stay fixed',
+      },
+      {
+        name: '269UC12',
+        description:
+          'Saving an in-place enrollment edit submits the update and returns the row to its read-only form with the new values',
+      },
+      {
+        name: '269UC13',
+        description:
+          'Saving an in-place enrollment edit with a required selection cleared reports it and submits nothing',
+      },
+      {
+        name: '269UC14',
+        description: 'Cancelling an in-place enrollment edit restores the row previous values and submits nothing',
+      },
+      {
+        name: '269UC15',
+        description: 'Opening a second enrollment row for editing closes the first without submitting',
+      },
+      {
+        name: '269UC16',
+        description: 'Withdraw opens a confirmation naming the student and the course, submitting nothing yet',
+      },
       { name: '269UC17', description: 'Confirming the withdrawal submits it and removes the row from the list' },
-      { name: '269UC18', description: 'Cancelling the withdrawal closes the confirmation with the enrollment still listed' },
-      { name: '269UC19', description: 'Withdrawing a student only enrollment while they hold no activity is refused with no confirmation, and the requirement is stated on the tab' },
-      { name: '275UC12', description: 'Each activity row shows the description, a phase badge and its practice-time slots joined in day-then-time order' },
-      { name: '275UC13', description: 'The empty-state message is shown in place of rows when no activity matches the filters' },
-      { name: '275UC14', description: 'Add Practice Time stages the slot as a removable chip and leaves the day and start time ready for the next' },
-      { name: '275UC15', description: 'Removing one staged chip drops only that slot, and only the remaining ones are sent' },
-      { name: '275UC16', description: 'Creating with nothing staged shows the at-least-one-practice-time banner and sends no request' },
-      { name: '275UC17', description: 'Staging a slot for a day and start time already staged is refused with a message naming it' },
-      { name: '275UC18', description: 'A successful create clears the description, phase and staged chips and lists the new activity' },
+      {
+        name: '269UC18',
+        description: 'Cancelling the withdrawal closes the confirmation with the enrollment still listed',
+      },
+      {
+        name: '269UC19',
+        description:
+          'Withdrawing a student only enrollment while they hold no activity is refused with no confirmation, and the requirement is stated on the tab',
+      },
+      {
+        name: '275UC12',
+        description:
+          'Each activity row shows the description, a phase badge and its practice-time slots joined in day-then-time order',
+      },
+      {
+        name: '275UC13',
+        description: 'The empty-state message is shown in place of rows when no activity matches the filters',
+      },
+      {
+        name: '275UC14',
+        description:
+          'Add Practice Time stages the slot as a removable chip and leaves the day and start time ready for the next',
+      },
+      {
+        name: '275UC15',
+        description: 'Removing one staged chip drops only that slot, and only the remaining ones are sent',
+      },
+      {
+        name: '275UC16',
+        description: 'Creating with nothing staged shows the at-least-one-practice-time banner and sends no request',
+      },
+      {
+        name: '275UC17',
+        description: 'Staging a slot for a day and start time already staged is refused with a message naming it',
+      },
+      {
+        name: '275UC18',
+        description: 'A successful create clears the description, phase and staged chips and lists the new activity',
+      },
       { name: '275UC19', description: 'The phase filter narrows the cached catalogue to activities of that phase' },
       { name: '275UC20', description: 'The description filter narrows the cached catalogue to matching descriptions' },
       { name: '275UC21', description: 'The day filter keeps activities holding a practice time on that day' },
-      { name: '275UC22', description: 'The Extra-Curriculars sidebar entry is offered to Teacher and Coordinator, after Course Management and before Guardian Relationships' },
-      { name: '275UC23', description: 'A user whose only role is Admin is offered no Extra-Curriculars entry and is refused the route' },
-      { name: '275UC24', description: 'A Teacher who is not a Coordinator sees the filter bar and table with the create form absent' },
-      { name: '276UC10', description: 'Activating a row expander opens a Practice Times panel beneath it listing every slot of that activity' },
-      { name: '276UC11', description: 'Activating the expander again closes the panel and returns the row to its collapsed state' },
-      { name: '276UC12', description: 'Adding a slot lists it in the panel and in the row Practice Times cell without a reload' },
-      { name: '276UC13', description: 'Adding a day and start time the activity already holds is refused with a message naming it and nothing is sent' },
+      {
+        name: '275UC22',
+        description:
+          'The Extra-Curriculars sidebar entry is offered to Teacher and Coordinator, after Course Management and before Guardian Relationships',
+      },
+      {
+        name: '275UC23',
+        description: 'A user whose only role is Admin is offered no Extra-Curriculars entry and is refused the route',
+      },
+      {
+        name: '275UC24',
+        description: 'A Teacher who is not a Coordinator sees the filter bar and table with the create form absent',
+      },
+      {
+        name: '276UC10',
+        description:
+          'Activating a row expander opens a Practice Times panel beneath it listing every slot of that activity',
+      },
+      {
+        name: '276UC11',
+        description: 'Activating the expander again closes the panel and returns the row to its collapsed state',
+      },
+      {
+        name: '276UC12',
+        description: 'Adding a slot lists it in the panel and in the row Practice Times cell without a reload',
+      },
+      {
+        name: '276UC13',
+        description:
+          'Adding a day and start time the activity already holds is refused with a message naming it and nothing is sent',
+      },
       { name: '276UC14', description: 'Removing a slot drops only that one from the panel and the row cell' },
-      { name: '276UC15', description: 'Removing an activity only remaining slot is refused with the at-least-one message and the slot stays' },
-      { name: '276UC16', description: 'The panel and the row cell show slots in day-of-week order from Monday, then by start time' },
-      { name: '276UC17', description: 'A Teacher who is not a Coordinator sees the panel slots with neither the Add control nor a per-slot Remove' },
+      {
+        name: '276UC15',
+        description:
+          'Removing an activity only remaining slot is refused with the at-least-one message and the slot stays',
+      },
+      {
+        name: '276UC16',
+        description: 'The panel and the row cell show slots in day-of-week order from Monday, then by start time',
+      },
+      {
+        name: '276UC17',
+        description:
+          'A Teacher who is not a Coordinator sees the panel slots with neither the Add control nor a per-slot Remove',
+      },
       { name: '277UC11', description: 'The Student modal offers an Extra-Curriculars tab after the Courses tab' },
-      { name: '277UC12', description: 'The Extra-Curriculars tab shows an empty-state message in place of rows when the student is assigned to nothing' },
-      { name: '277UC13', description: 'Each assigned row shows the activity, a phase badge, its practice-time slots and a Remove control' },
-      { name: '277UC14', description: 'Add Activity opens a panel offering the activity picker with no Phase field, the phase note for a student with a phase, and Cancel and Assign' },
-      { name: '277UC15', description: 'The activity picker offers what the read returns less activities already assigned or staged, each labelled {description} ({phase})' },
-      { name: '277UC16', description: 'Assigning a chosen activity closes the panel and lists it in the assigned-activity table' },
+      {
+        name: '277UC12',
+        description:
+          'The Extra-Curriculars tab shows an empty-state message in place of rows when the student is assigned to nothing',
+      },
+      {
+        name: '277UC13',
+        description:
+          'Each assigned row shows the activity, a phase badge, its practice-time slots and a Remove control',
+      },
+      {
+        name: '277UC14',
+        description:
+          'Add Activity opens a panel offering the activity picker with no Phase field, the phase note for a student with a phase, and Cancel and Assign',
+      },
+      {
+        name: '277UC15',
+        description:
+          'The activity picker offers what the read returns less activities already assigned or staged, each labelled {description} ({phase})',
+      },
+      {
+        name: '277UC16',
+        description: 'Assigning a chosen activity closes the panel and lists it in the assigned-activity table',
+      },
       { name: '277UC17', description: 'Cancel closes the Add Activity panel and sends no assignment request' },
       { name: '277UC18', description: 'Pressing Assign with nothing chosen assigns nothing and sends no request' },
-      { name: '277UC19', description: 'Removing an assigned row drops it from the table and the activity is offered by the picker again' },
-      { name: '277UC20', description: 'In edit mode an assignment or removal is written immediately without the student having to be saved' },
-      { name: '277UC21', description: 'In create mode chosen activities are staged and written only once the student has been saved' },
-      { name: '277UC22', description: 'Extra-Curriculars is the create wizard final step and carries Save, with Courses offering Next' },
-      { name: '277UC26', description: 'A Private-grade student has an Extra-Curriculars step in create mode, reached by Next from Courses, and it carries Save' },
-      { name: '277UC27', description: 'Changing the grade to Private in create mode keeps the staged activities and the Extra-Curriculars step' },
-      { name: '277UC28', description: 'A Private-grade student is offered the Extra-Curriculars tab in edit mode, after Courses' },
-      { name: '277UC29', description: 'Changing a student grade to Private in edit mode keeps the tab, and saving deletes none of their assignments' },
-      { name: '277UC30', description: 'Cancelling an edit that changed the grade to Private leaves the student assignments intact' },
-      { name: '277UC31', description: 'Selecting a phase in create mode makes the Extra-Curriculars step available and it carries Save' },
-      { name: '277UC32', description: 'Clearing the phase of a graded student removes the Extra-Curriculars step and Courses carries Save; setting grade Private keeps it' },
-      { name: '277UC33', description: 'Editing a saved Private student to a graded one offers that phase activities without saving first' },
-      { name: '277UC34', description: 'The picker does not offer activities the student already holds, which the phase-scoped read does not exclude' },
-      { name: '277UC35', description: 'Changing a saved graded student to Private keeps the Extra-Curriculars tab, offering every phase' },
-      { name: '278UC11', description: 'Edit makes a row description and phase editable while its practice times stay read-only with no control to change a slot' },
-      { name: '278UC12', description: 'Cancelling an edit reverts the row to its stored description and phase and sends no update' },
-      { name: '278UC13', description: 'Saving an edit sends the update and the row shows the new description and phase badge' },
-      { name: '278UC14', description: 'Saving an edit with an empty description shows a validation message and sends no update' },
-      { name: '278UC15', description: 'Delete on an activity with no assigned students opens a confirmation naming it and its practice-time count, sending nothing yet' },
-      { name: '278UC16', description: 'Cancelling the Delete Activity confirmation closes it with the activity still in the table' },
-      { name: '278UC17', description: 'Confirming the Delete Activity confirmation sends the delete and removes the row' },
-      { name: '278UC18', description: 'Delete on an activity with assigned students shows a row message naming it and the count, and sends nothing' },
-      { name: '278UC19', description: 'A Teacher who is not a Coordinator is offered no Edit or Delete control on any activity row' },
-      { name: '278UC20', description: 'An expanded student row shows a read-only extra-curriculars summary listing each activity with its practice times' },
-      { name: '278UC21', description: 'The extra-curriculars summary shows its empty state for a student taking part in no activities' },
-      { name: '278UC22', description: 'A Private-grade student expanded row shows the extra-curriculars summary populated like any other student' },
-      { name: '278UC23', description: 'The Student modal picker labels an option {description} ({phase}) and names no practice time' },
-      { name: '278UC24', description: 'An assigned activity lists every one of its practice times in day-then-time order' },
-      { name: '278UC30', description: 'A create refused for a duplicate description shows the refusal against the form and adds nothing to the table' },
-      { name: '278UC31', description: 'An edit refused for a duplicate description shows the refusal on the row, which keeps its stored values' },
-      { name: '287UC3', description: 'The create-user form renders a Banking Coordinator checkbox alongside Teacher, Coordinator and Admin' },
-      { name: '287UC4', description: 'Admin ticks Banking Coordinator and saves; the row shows the Banking Coordinator badge' },
-      { name: '292UC10', description: 'A During School list and an After School list are shown, each labelled with its occurrence type and waiting count' },
+      {
+        name: '277UC19',
+        description: 'Removing an assigned row drops it from the table and the activity is offered by the picker again',
+      },
+      {
+        name: '277UC20',
+        description:
+          'In edit mode an assignment or removal is written immediately without the student having to be saved',
+      },
+      {
+        name: '277UC21',
+        description: 'In create mode chosen activities are staged and written only once the student has been saved',
+      },
+      {
+        name: '277UC22',
+        description: 'Extra-Curriculars is the create wizard final step and carries Save, with Courses offering Next',
+      },
+      {
+        name: '277UC26',
+        description:
+          'A Private-grade student has an Extra-Curriculars step in create mode, reached by Next from Courses, and it carries Save',
+      },
+      {
+        name: '277UC27',
+        description:
+          'Changing the grade to Private in create mode keeps the staged activities and the Extra-Curriculars step',
+      },
+      {
+        name: '277UC28',
+        description: 'A Private-grade student is offered the Extra-Curriculars tab in edit mode, after Courses',
+      },
+      {
+        name: '277UC29',
+        description:
+          'Changing a student grade to Private in edit mode keeps the tab, and saving deletes none of their assignments',
+      },
+      {
+        name: '277UC30',
+        description: 'Cancelling an edit that changed the grade to Private leaves the student assignments intact',
+      },
+      {
+        name: '277UC31',
+        description: 'Selecting a phase in create mode makes the Extra-Curriculars step available and it carries Save',
+      },
+      {
+        name: '277UC32',
+        description:
+          'Clearing the phase of a graded student removes the Extra-Curriculars step and Courses carries Save; setting grade Private keeps it',
+      },
+      {
+        name: '277UC33',
+        description:
+          'Editing a saved Private student to a graded one offers that phase activities without saving first',
+      },
+      {
+        name: '277UC34',
+        description:
+          'The picker does not offer activities the student already holds, which the phase-scoped read does not exclude',
+      },
+      {
+        name: '277UC35',
+        description: 'Changing a saved graded student to Private keeps the Extra-Curriculars tab, offering every phase',
+      },
+      {
+        name: '278UC11',
+        description:
+          'Edit makes a row description and phase editable while its practice times stay read-only with no control to change a slot',
+      },
+      {
+        name: '278UC12',
+        description: 'Cancelling an edit reverts the row to its stored description and phase and sends no update',
+      },
+      {
+        name: '278UC13',
+        description: 'Saving an edit sends the update and the row shows the new description and phase badge',
+      },
+      {
+        name: '278UC14',
+        description: 'Saving an edit with an empty description shows a validation message and sends no update',
+      },
+      {
+        name: '278UC15',
+        description:
+          'Delete on an activity with no assigned students opens a confirmation naming it and its practice-time count, sending nothing yet',
+      },
+      {
+        name: '278UC16',
+        description: 'Cancelling the Delete Activity confirmation closes it with the activity still in the table',
+      },
+      {
+        name: '278UC17',
+        description: 'Confirming the Delete Activity confirmation sends the delete and removes the row',
+      },
+      {
+        name: '278UC18',
+        description:
+          'Delete on an activity with assigned students shows a row message naming it and the count, and sends nothing',
+      },
+      {
+        name: '278UC19',
+        description: 'A Teacher who is not a Coordinator is offered no Edit or Delete control on any activity row',
+      },
+      {
+        name: '278UC20',
+        description:
+          'An expanded student row shows a read-only extra-curriculars summary listing each activity with its practice times',
+      },
+      {
+        name: '278UC21',
+        description: 'The extra-curriculars summary shows its empty state for a student taking part in no activities',
+      },
+      {
+        name: '278UC22',
+        description:
+          'A Private-grade student expanded row shows the extra-curriculars summary populated like any other student',
+      },
+      {
+        name: '278UC23',
+        description: 'The Student modal picker labels an option {description} ({phase}) and names no practice time',
+      },
+      {
+        name: '278UC24',
+        description: 'An assigned activity lists every one of its practice times in day-then-time order',
+      },
+      {
+        name: '278UC30',
+        description:
+          'A create refused for a duplicate description shows the refusal against the form and adds nothing to the table',
+      },
+      {
+        name: '278UC31',
+        description:
+          'An edit refused for a duplicate description shows the refusal on the row, which keeps its stored values',
+      },
+      {
+        name: '287UC3',
+        description:
+          'The create-user form renders a Banking Coordinator checkbox alongside Teacher, Coordinator and Admin',
+      },
+      {
+        name: '287UC4',
+        description: 'Admin ticks Banking Coordinator and saves; the row shows the Banking Coordinator badge',
+      },
+      {
+        name: '292UC10',
+        description:
+          'A During School list and an After School list are shown, each labelled with its occurrence type and waiting count',
+      },
       { name: '292UC11', description: 'An occurrence type with no waiting-list entries renders no list at all' },
-      { name: '292UC12', description: 'The empty state is shown in place of any list when there are no waiting-list entries at all' },
+      {
+        name: '292UC12',
+        description: 'The empty state is shown in place of any list when there are no waiting-list entries at all',
+      },
       { name: '292UC13', description: 'Activating an expanded list header collapses it and hides its rows' },
-      { name: '292UC14', description: 'A row shows its position, the student name, lesson/duration/instrument, the date added and notes, with a placeholder when absent' },
+      {
+        name: '292UC14',
+        description:
+          'A row shows its position, the student name, lesson/duration/instrument, the date added and notes, with a placeholder when absent',
+      },
       { name: '292UC15', description: 'A waiting-list row shows no course type' },
-      { name: '292UC16', description: 'A Teacher sees no Capture Student button and no row actions, with the read-only marker shown instead' },
+      {
+        name: '292UC16',
+        description:
+          'A Teacher sees no Capture Student button and no row actions, with the read-only marker shown instead',
+      },
       { name: '292UC17', description: 'A Coordinator sees the row action affordances and the Capture Student button' },
-      { name: '292UC18', description: 'The Waiting List sidebar entry is offered to Teacher and Coordinator, between Students and Teachers' },
-      { name: '292UC19', description: 'A user in a role other than Teacher or Coordinator is offered no Waiting List entry' },
-      { name: '293UC12', description: 'The wizard opened in waiting-list mode presents Student, Siblings, Guardians and Waiting List, with no Courses or Extra-Curriculars tab' },
-      { name: '293UC13', description: 'The wizard opened in enrolled mode presents Student, Siblings, Guardians, Courses and Extra-Curriculars, with no Waiting List tab' },
-      { name: '293UC14', description: 'The capture wizard opens with the Student tab active, the other tabs not directly selectable, and Previous/Next offered' },
-      { name: '293UC15', description: 'Next on the capture wizard advances Student to Siblings to Guardians to Waiting List in order' },
+      {
+        name: '292UC18',
+        description:
+          'The Waiting List sidebar entry is offered to Teacher and Coordinator, between Students and Teachers',
+      },
+      {
+        name: '292UC19',
+        description: 'A user in a role other than Teacher or Coordinator is offered no Waiting List entry',
+      },
+      {
+        name: '293UC12',
+        description:
+          'The wizard opened in waiting-list mode presents Student, Siblings, Guardians and Waiting List, with no Courses or Extra-Curriculars tab',
+      },
+      {
+        name: '293UC13',
+        description:
+          'The wizard opened in enrolled mode presents Student, Siblings, Guardians, Courses and Extra-Curriculars, with no Waiting List tab',
+      },
+      {
+        name: '293UC14',
+        description:
+          'The capture wizard opens with the Student tab active, the other tabs not directly selectable, and Previous/Next offered',
+      },
+      {
+        name: '293UC15',
+        description: 'Next on the capture wizard advances Student to Siblings to Guardians to Waiting List in order',
+      },
       { name: '293UC16', description: 'No Save action is offered on any capture-wizard tab before Waiting List' },
-      { name: '293UC17', description: 'Save is offered and Next is not once the capture wizard reaches the Waiting List tab' },
-      { name: '293UC18', description: 'The Waiting List tab offers Occurrence, Lesson, Duration and Instrument Type and no course field' },
-      { name: '293UC19', description: 'The Waiting List tab shows Date Added is set automatically rather than offering a field for it' },
-      { name: '293UC20', description: "The Waiting List tab's Notes input is constrained to the documented maximum length" },
-      { name: '293UC21', description: 'The Student tab hides Class and Phase when Grade is Private, in waiting-list mode as in enrolled mode' },
-      { name: '293UC22', description: 'Saving the capture wizard dispatches waiting-list-capture-requested carrying the student, siblings, guardians and waiting-list details' },
-      { name: '294UC11', description: 'The wizard opened in waiting-list edit mode presents Student, Siblings, Guardians and Waiting List as directly selectable tabs, with no Courses or Extra-Curriculars' },
-      { name: '294UC12', description: 'The wizard in waiting-list edit mode titles itself with the student being edited and offers no Previous or Next' },
-      { name: '294UC13', description: 'The Student tab in edit mode offers its own save and cancel actions scoped to the student details' },
-      { name: '294UC14', description: 'The Waiting List tab in edit mode offers its own save scoped to occurrence, lesson, duration, instrument type and notes' },
-      { name: '294UC15', description: 'The Waiting List tab in edit mode shows Date Added as a read-only value with no control that can change it' },
-      { name: '294UC16', description: 'Delete on a waiting-list row opens a confirmation naming the student and stating their student record will be deleted' },
-      { name: '294UC17', description: 'Cancelling the waiting-list delete confirmation deletes nothing and leaves the row in place' },
-      { name: '294UC18', description: 'Confirming the waiting-list delete removes the row and shows a success message naming the student' },
-      { name: '300UC8', description: 'A restricted guardian is offered no edit affordance and shows an information affordance in its place' },
-      { name: '300UC9', description: "Activating a restricted guardian's information affordance states it is shared with an enrolled student and not maintainable here" },
+      {
+        name: '293UC17',
+        description: 'Save is offered and Next is not once the capture wizard reaches the Waiting List tab',
+      },
+      {
+        name: '293UC18',
+        description: 'The Waiting List tab offers Occurrence, Lesson, Duration and Instrument Type and no course field',
+      },
+      {
+        name: '293UC19',
+        description: 'The Waiting List tab shows Date Added is set automatically rather than offering a field for it',
+      },
+      {
+        name: '293UC20',
+        description: "The Waiting List tab's Notes input is constrained to the documented maximum length",
+      },
+      {
+        name: '293UC21',
+        description:
+          'The Student tab hides Class and Phase when Grade is Private, in waiting-list mode as in enrolled mode',
+      },
+      {
+        name: '293UC22',
+        description:
+          'Saving the capture wizard dispatches waiting-list-capture-requested carrying the student, siblings, guardians and waiting-list details',
+      },
+      {
+        name: '294UC11',
+        description:
+          'The wizard opened in waiting-list edit mode presents Student, Siblings, Guardians and Waiting List as directly selectable tabs, with no Courses or Extra-Curriculars',
+      },
+      {
+        name: '294UC12',
+        description:
+          'The wizard in waiting-list edit mode titles itself with the student being edited and offers no Previous or Next',
+      },
+      {
+        name: '294UC13',
+        description:
+          'The Student tab in edit mode offers its own save and cancel actions scoped to the student details',
+      },
+      {
+        name: '294UC14',
+        description:
+          'The Waiting List tab in edit mode offers its own save scoped to occurrence, lesson, duration, instrument type and notes',
+      },
+      {
+        name: '294UC15',
+        description:
+          'The Waiting List tab in edit mode shows Date Added as a read-only value with no control that can change it',
+      },
+      {
+        name: '294UC16',
+        description:
+          'Delete on a waiting-list row opens a confirmation naming the student and stating their student record will be deleted',
+      },
+      {
+        name: '294UC17',
+        description: 'Cancelling the waiting-list delete confirmation deletes nothing and leaves the row in place',
+      },
+      {
+        name: '294UC18',
+        description:
+          'Confirming the waiting-list delete removes the row and shows a success message naming the student',
+      },
+      {
+        name: '300UC8',
+        description:
+          'A restricted guardian is offered no edit affordance and shows an information affordance in its place',
+      },
+      {
+        name: '300UC9',
+        description:
+          "Activating a restricted guardian's information affordance states it is shared with an enrolled student and not maintainable here",
+      },
       { name: '300UC10', description: 'A restricted guardian still offers its unlink action' },
       { name: '300UC11', description: 'An unrestricted guardian is fully maintainable with no information affordance' },
-      { name: '295UC12', description: 'The enrol modal opens pre-filled with the entry lesson, duration and instrument types and today enrolled date' },
-      { name: '295UC13', description: 'The enrol modal shows the occurrence type as a fixed value marked locked at waitlist with no control to change it' },
-      { name: '295UC14', description: 'The enrol modal offers lesson type, duration type, instrument type, teacher and enrolled date as changeable' },
-      { name: '295UC15', description: 'The enrol modal states that the named student will be removed from the waiting list once enrolled' },
+      {
+        name: '295UC12',
+        description:
+          'The enrol modal opens pre-filled with the entry lesson, duration and instrument types and today enrolled date',
+      },
+      {
+        name: '295UC13',
+        description:
+          'The enrol modal shows the occurrence type as a fixed value marked locked at waitlist with no control to change it',
+      },
+      {
+        name: '295UC14',
+        description:
+          'The enrol modal offers lesson type, duration type, instrument type, teacher and enrolled date as changeable',
+      },
+      {
+        name: '295UC15',
+        description:
+          'The enrol modal states that the named student will be removed from the waiting list once enrolled',
+      },
       { name: '295UC16', description: 'The enrol modal requires a teacher to be chosen and pre-fills none' },
-      { name: '295UC17', description: 'Cancelling the enrol modal submits no enrolment and leaves the row on the list' },
-      { name: '295UC18', description: 'A successful enrolment closes the modal, removes the row and shows a success message naming the student' },
+      {
+        name: '295UC17',
+        description: 'Cancelling the enrol modal submits no enrolment and leaves the row on the list',
+      },
+      {
+        name: '295UC18',
+        description:
+          'A successful enrolment closes the modal, removes the row and shows a success message naming the student',
+      },
       { name: '295UC19', description: 'An occurrence type whose last row was enrolled off it renders no list at all' },
-      { name: '295UC21', description: 'A refused enrolment shows its reason in the modal and leaves the modal open so the Coordinator can change a choice and retry' },
-      { name: '304UC7', description: "The Siblings tab's candidate list in waiting-list mode contains both waiting-list and enrolled students" },
-      { name: '304UC8', description: "The Siblings tab's candidate list in enrolled mode contains both waiting-list and enrolled students" },
+      {
+        name: '295UC21',
+        description:
+          'A refused enrolment shows its reason in the modal and leaves the modal open so the Coordinator can change a choice and retry',
+      },
+      {
+        name: '304UC7',
+        description:
+          "The Siblings tab's candidate list in waiting-list mode contains both waiting-list and enrolled students",
+      },
+      {
+        name: '304UC8',
+        description:
+          "The Siblings tab's candidate list in enrolled mode contains both waiting-list and enrolled students",
+      },
       { name: '304UC9', description: 'The student being edited is not offered as their own sibling candidate' },
-      { name: '304UC10', description: 'A waiting-list candidate row carries the waiting-list icon and its tooltip says so' },
+      {
+        name: '304UC10',
+        description: 'A waiting-list candidate row carries the waiting-list icon and its tooltip says so',
+      },
       { name: '304UC11', description: 'An enrolled candidate row carries the enrolled icon and its tooltip says so' },
-      { name: '304UC12', description: "A linked sibling row carries the icon for that sibling's own state, in both wizard modes" },
-      { name: '304UC13', description: 'A student captured or changed on the Waiting List page is offered by the candidate list the next time the wizard is opened' },
-      { name: '304UC14', description: 'A role that cannot open a wizard makes no candidate read when the Waiting List page loads' },
-      { name: '309UC6', description: 'The capture wizard Waiting List tab offers only combinations the school runs an instrument course for' },
-      { name: '309UC7', description: 'The edit wizard Waiting List tab offers only combinations the school runs an instrument course for' },
-      { name: '309UC8', description: 'The enrol modal offers only combinations the school runs an instrument course for' },
-      { name: '309UC9', description: 'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control' },
-      { name: '309UC12', description: "The enrol modal states that the entry's own combination is no longer offered, and suppresses that where nothing is offered under the occurrence type at all" },
+      {
+        name: '304UC12',
+        description: "A linked sibling row carries the icon for that sibling's own state, in both wizard modes",
+      },
+      {
+        name: '304UC13',
+        description:
+          'A student captured or changed on the Waiting List page is offered by the candidate list the next time the wizard is opened',
+      },
+      {
+        name: '304UC14',
+        description: 'A role that cannot open a wizard makes no candidate read when the Waiting List page loads',
+      },
+      {
+        name: '309UC6',
+        description:
+          'The capture wizard Waiting List tab offers only combinations the school runs an instrument course for',
+      },
+      {
+        name: '309UC7',
+        description:
+          'The edit wizard Waiting List tab offers only combinations the school runs an instrument course for',
+      },
+      {
+        name: '309UC8',
+        description: 'The enrol modal offers only combinations the school runs an instrument course for',
+      },
+      {
+        name: '309UC9',
+        description:
+          'A school running no instrument courses is stated on each waiting-list surface rather than shown as an empty control',
+      },
+      {
+        name: '309UC12',
+        description:
+          "The enrol modal states that the entry's own combination is no longer offered, and suppresses that where nothing is offered under the occurrence type at all",
+      },
       { name: '317UC1', description: 'A new report builder holds only Student, locked, with the counter at 1 / 10' },
-      { name: '317UC2', description: 'At ten columns selected every unselected column is disabled, and deselecting one re-enables them' },
-      { name: '317UC3', description: 'Choosing a text, list or yes/no attribute resets the operator and value to that type default' },
+      {
+        name: '317UC2',
+        description: 'At ten columns selected every unselected column is disabled, and deselecting one re-enables them',
+      },
+      {
+        name: '317UC3',
+        description: 'Choosing a text, list or yes/no attribute resets the operator and value to that type default',
+      },
       { name: '317UC4', description: "Changing an 'in' filter's operator to 'equals' keeps only the first value" },
       { name: '317UC5', description: 'Run report is unavailable until every filter is completed or removed' },
       { name: '317UC6', description: 'Clear returns the builder to no filters and Student only' },
-      { name: '317UC7', description: 'The reports service maps a run response to ordered columns, sections with rows and the student count' },
-      { name: '317UC16', description: 'An in-operator checklist dropdown renders its options whether set before or after the element connects' },
-      { name: '317UC17', description: 'Switching a filter operator to in starts its values empty rather than carrying over the prior value' },
-      { name: '317UC18', description: 'An in-checklist dropdown stays open across a tick and only closes on the trigger or an outside click' },
-      { name: '317UC19', description: 'The outside-click check uses composedPath, so a tick on the checklist itself never misreads as outside under nested shadow DOM' },
-      { name: '317UC22', description: 'formatReportDate renders yyyy-MM-dd HH:mm in local time, never a locale month name' },
-      { name: '317UC23', description: 'The text filter input and the list equals select survive a values-only re-render, the same way the checklist does' },
-      { name: '318UC1', description: 'Ticking Cell with Guardian unticked also ticks Guardian and raises the counter by two' },
+      {
+        name: '317UC7',
+        description:
+          'The reports service maps a run response to ordered columns, sections with rows and the student count',
+      },
+      {
+        name: '317UC16',
+        description:
+          'An in-operator checklist dropdown renders its options whether set before or after the element connects',
+      },
+      {
+        name: '317UC17',
+        description:
+          'Switching a filter operator to in starts its values empty rather than carrying over the prior value',
+      },
+      {
+        name: '317UC18',
+        description:
+          'An in-checklist dropdown stays open across a tick and only closes on the trigger or an outside click',
+      },
+      {
+        name: '317UC19',
+        description:
+          'The outside-click check uses composedPath, so a tick on the checklist itself never misreads as outside under nested shadow DOM',
+      },
+      {
+        name: '317UC22',
+        description: 'formatReportDate renders yyyy-MM-dd HH:mm in local time, never a locale month name',
+      },
+      {
+        name: '317UC23',
+        description:
+          'The text filter input and the list equals select survive a values-only re-render, the same way the checklist does',
+      },
+      {
+        name: '318UC1',
+        description: 'Ticking Cell with Guardian unticked also ticks Guardian and raises the counter by two',
+      },
       { name: '318UC2', description: 'Unticking Guardian with Cell and Email ticked unticks them with it' },
-      { name: '318UC3', description: 'At nine columns with Guardian unticked, Cell and the other Guardian dependants are disabled' },
-      { name: '318UC4', description: 'The attribute dropdown groups Student, Guardian, Course and Extra-Curricular, each row tagged with its collection badge' },
-      { name: '320UC1', description: 'The print filter summary joins each filter as attribute, operator word and values, prefixing a label shared by more than one collection' },
+      {
+        name: '318UC3',
+        description: 'At nine columns with Guardian unticked, Cell and the other Guardian dependants are disabled',
+      },
+      {
+        name: '318UC4',
+        description:
+          'The attribute dropdown groups Student, Guardian, Course and Extra-Curricular, each row tagged with its collection badge',
+      },
+      {
+        name: '320UC1',
+        description:
+          'The print filter summary joins each filter as attribute, operator word and values, prefixing a label shared by more than one collection',
+      },
       { name: '320UC2', description: 'The print header carries no Filters line for a report with no filters' },
-      { name: '320UC3', description: "The print header's run line reads the timestamp, the pluralised student count and an optional Created by segment" },
-      { name: '321UC1', description: 'canSaveName is false for a blank or whitespace-only name and for 101 characters, true for 1 and 100' },
-      { name: '321UC2', description: 'formatLastRun renders — for a report never run, otherwise the same yyyy-MM-dd HH:mm format' },
-      { name: '321UC3', description: 'resultActions offers only Run again and Print for a saved report the viewer did not create' },
-      { name: '321UC4', description: 'The reports service invalidates the saved-reports list cache on save and on run, and never caches a failed call' },
-      { name: '321UC11', description: 'sameDefinition treats two definitions as equal when their columns match as a set regardless of order' },
-      { name: '319UC6', description: 'A badged section shows the sibling badge beside the name on the first row only and adds no column' },
-      { name: '319UC7', description: 'The reports service maps siblingBadge for both a string and null through runReport and runSavedReport' },
-      { name: '322UC11', description: 'The saved reports table offers Edit and Delete only on the owned row, after Run' },
-      { name: '322UC12', description: 'The edit builder loads a saved report holding its filters, columns and name in the breadcrumb' },
-      { name: '322UC13', description: 'Save in the edit builder pre-fills the modal with the report name and updates it rather than creating another' },
-      { name: '308UC6', description: 'A create refused as a conflict shows the server reason on the form and adds no row' },
-      { name: '343UC6', description: 'Saving a new student with nothing staged is refused and the requirement is stated on the step that carries Save' },
-      { name: '343UC7', description: 'A new student with only an activity staged is created and then assigned that activity, with no enrollment' },
-      { name: '343UC8', description: 'A new student with only a course staged is created and then enrolled, with no activity assigned and no message' },
-      { name: '343UC9', description: 'Withdrawing the only course of a student with no activity opens no confirmation and states the requirement' },
-      { name: '343UC10', description: 'Withdrawing the only course of a student holding an activity opens the confirmation, whichever read lands first and across a tab round trip' },
-      { name: '343UC11', description: 'Removing the only activity of a student with no course is refused and the requirement is stated' },
-      { name: '343UC12', description: 'Removing the only staged enrollment in create mode drops the row and states nothing' },
-      { name: '344UC5', description: 'The wizard offers the Extra-Curriculars tab for a Private-grade student in create and edit mode' },
-      { name: '344UC6', description: 'Expanding a Private-grade student row reads their activities and shows the Extra-Curriculars section' },
+      {
+        name: '320UC3',
+        description:
+          "The print header's run line reads the timestamp, the pluralised student count and an optional Created by segment",
+      },
+      {
+        name: '321UC1',
+        description:
+          'canSaveName is false for a blank or whitespace-only name and for 101 characters, true for 1 and 100',
+      },
+      {
+        name: '321UC2',
+        description: 'formatLastRun renders — for a report never run, otherwise the same yyyy-MM-dd HH:mm format',
+      },
+      {
+        name: '321UC3',
+        description: 'resultActions offers only Run again and Print for a saved report the viewer did not create',
+      },
+      {
+        name: '321UC4',
+        description:
+          'The reports service invalidates the saved-reports list cache on save and on run, and never caches a failed call',
+      },
+      {
+        name: '321UC11',
+        description:
+          'sameDefinition treats two definitions as equal when their columns match as a set regardless of order',
+      },
+      {
+        name: '319UC6',
+        description:
+          'A badged section shows the sibling badge beside the name on the first row only and adds no column',
+      },
+      {
+        name: '319UC7',
+        description:
+          'The reports service maps siblingBadge for both a string and null through runReport and runSavedReport',
+      },
+      {
+        name: '322UC11',
+        description: 'The saved reports table offers Edit and Delete only on the owned row, after Run',
+      },
+      {
+        name: '322UC12',
+        description: 'The edit builder loads a saved report holding its filters, columns and name in the breadcrumb',
+      },
+      {
+        name: '322UC13',
+        description:
+          'Save in the edit builder pre-fills the modal with the report name and updates it rather than creating another',
+      },
+      {
+        name: '308UC6',
+        description: 'A create refused as a conflict shows the server reason on the form and adds no row',
+      },
+      {
+        name: '343UC6',
+        description:
+          'Saving a new student with nothing staged is refused and the requirement is stated on the step that carries Save',
+      },
+      {
+        name: '343UC7',
+        description:
+          'A new student with only an activity staged is created and then assigned that activity, with no enrollment',
+      },
+      {
+        name: '343UC8',
+        description:
+          'A new student with only a course staged is created and then enrolled, with no activity assigned and no message',
+      },
+      {
+        name: '343UC9',
+        description:
+          'Withdrawing the only course of a student with no activity opens no confirmation and states the requirement',
+      },
+      {
+        name: '343UC10',
+        description:
+          'Withdrawing the only course of a student holding an activity opens the confirmation, whichever read lands first and across a tab round trip',
+      },
+      {
+        name: '343UC11',
+        description: 'Removing the only activity of a student with no course is refused and the requirement is stated',
+      },
+      {
+        name: '343UC12',
+        description: 'Removing the only staged enrollment in create mode drops the row and states nothing',
+      },
+      {
+        name: '344UC5',
+        description: 'The wizard offers the Extra-Curriculars tab for a Private-grade student in create and edit mode',
+      },
+      {
+        name: '344UC6',
+        description:
+          'Expanding a Private-grade student row reads their activities and shows the Extra-Curriculars section',
+      },
       { name: '344UC7', description: 'Add Activity for a Private-grade student requests activities of every phase' },
       { name: '344UC8', description: 'Add Activity for a Junior student requests only Junior activities' },
-      { name: '344UC9', description: 'Changing the grade to Private in the create wizard keeps the activities staged for a graded student' },
-      { name: '344UC10', description: 'An activity Choir in the Junior phase is named Choir (Junior) in the Activity list' },
+      {
+        name: '344UC9',
+        description:
+          'Changing the grade to Private in the create wizard keeps the activities staged for a graded student',
+      },
+      {
+        name: '344UC10',
+        description: 'An activity Choir in the Junior phase is named Choir (Junior) in the Activity list',
+      },
       { name: '344UC11', description: 'The Add Activity panel shows the Activity list and no Phase field' },
-      { name: '344UC12', description: 'A Private-grade student Activity list shows every Junior activity before every Senior activity' },
-      { name: '342UC1', description: 'An instrument course in the extended view is headed by its instrument type in place of Instrument' },
-      { name: '342UC2', description: 'The line beneath an instrument course in the extended view reads the teacher and step with no instrument' },
-      { name: '342UC3', description: 'A Theory course in the extended view keeps its course type heading and its teacher and step line' },
-      { name: '342UC4', description: 'The wizard Courses tab, enroll form and withdraw confirmation still name an instrument course Instrument' },
-      { name: '346UC1', description: 'An expanded row offers Print only once its summaries have loaded, and Print emits the student and the lists the row holds' },
+      {
+        name: '344UC12',
+        description: 'A Private-grade student Activity list shows every Junior activity before every Senior activity',
+      },
+      {
+        name: '342UC1',
+        description:
+          'An instrument course in the extended view is headed by its instrument type in place of Instrument',
+      },
+      {
+        name: '342UC2',
+        description:
+          'The line beneath an instrument course in the extended view reads the teacher and step with no instrument',
+      },
+      {
+        name: '342UC3',
+        description: 'A Theory course in the extended view keeps its course type heading and its teacher and step line',
+      },
+      {
+        name: '342UC4',
+        description:
+          'The wizard Courses tab, enroll form and withdraw confirmation still name an instrument course Instrument',
+      },
+      {
+        name: '346UC1',
+        description:
+          'An expanded row offers Print only once its summaries have loaded, and Print emits the student and the lists the row holds',
+      },
       { name: '346UC2', description: 'The printed record opens with the printed-on line' },
-      { name: '346UC3', description: 'The printed record names the student and lists Grade, Phase, Class, Language and Date of Birth in order' },
+      {
+        name: '346UC3',
+        description:
+          'The printed record names the student and lists Grade, Phase, Class, Language and Date of Birth in order',
+      },
       { name: '346UC4', description: 'A Private-grade record leaves out Phase and Class' },
       { name: '346UC5', description: 'The printed siblings line names each sibling as the extended view does' },
       { name: '346UC6', description: 'A printed course entry reads its three lines as the extended view does' },
-      { name: '346UC7', description: 'A printed guardian entry reads its heading, contact and flags as the extended view does' },
+      {
+        name: '346UC7',
+        description: 'A printed guardian entry reads its heading, contact and flags as the extended view does',
+      },
       { name: '346UC8', description: 'The printed activities line lists descriptions only, without practice times' },
       { name: '346UC9', description: 'Sections with nothing to print show the extended view empty states' },
       { name: '346UC10', description: 'Guardians print in two columns when every email fits one column' },
       { name: '346UC11', description: 'Guardians print in one column when any email is wider than a column' },
-      { name: '345UC6', description: 'Saving an edited student whose phase disagrees with a held activity requests no update and names the conflict on the Student step' },
-      { name: '345UC7', description: 'Saving a new student whose phase disagrees with a staged activity requests no create and states the conflict' },
+      {
+        name: '345UC6',
+        description:
+          'Saving an edited student whose phase disagrees with a held activity requests no update and names the conflict on the Student step',
+      },
+      {
+        name: '345UC7',
+        description:
+          'Saving a new student whose phase disagrees with a staged activity requests no create and states the conflict',
+      },
       { name: '345UC8', description: 'Once the conflicting activity is removed, Save requests the update' },
-      { name: '341UC3', description: 'The filter bar offers a Teacher select after Class listing All Teachers then each active teacher, and choosing one emits the teacher id' },
-      { name: '341UC4', description: 'Filtering by a teacher lists only the students holding a course with that teacher' },
+      {
+        name: '341UC3',
+        description:
+          'The filter bar offers a Teacher select after Class listing All Teachers then each active teacher, and choosing one emits the teacher id',
+      },
+      {
+        name: '341UC4',
+        description: 'Filtering by a teacher lists only the students holding a course with that teacher',
+      },
       { name: '341UC5', description: 'A student with no course is excluded under every teacher' },
       { name: '341UC6', description: 'Setting Teacher back to All Teachers lists every student again' },
       { name: '341UC7', description: 'The Teacher filter combines with the other filters' },
-      { name: '341UC8', description: 'With no teacher chosen the name, grade, phase and class filters behave as before' },
-      { name: '341UC9', description: 'An enrollment add, correction or withdrawal refreshes the roster so the Teacher filter reflects current courses' },
-      { name: '252UC1', description: 'The account dropdown and chip declare no menu role or popup, each entry on offer is a labelled button, and a self-hidden entry is not announced' },
-      { name: '377UC1', description: 'A confirmation modal enters the loading state when its confirm action is clicked: the action is disabled, busy, keeps its label and shows the loading icon first, Cancel is disabled and the modal stays open' },
-      { name: '377UC2', description: 'When the request ends in failure the parent restores the modal and shows the message in it; on success the parent closes it' },
-      { name: '377UC3', description: 'A typed-confirmation modal never enables its confirm action while busy and re-applies the typed-text gate when the busy state ends' },
-      { name: '377UC4', description: 'A confirmation modal action row holds Cancel then the destructive confirm action as its last control' },
+      {
+        name: '341UC8',
+        description: 'With no teacher chosen the name, grade, phase and class filters behave as before',
+      },
+      {
+        name: '341UC9',
+        description:
+          'An enrollment add, correction or withdrawal refreshes the roster so the Teacher filter reflects current courses',
+      },
+      {
+        name: '252UC1',
+        description:
+          'The account dropdown and chip declare no menu role or popup, each entry on offer is a labelled button, and a self-hidden entry is not announced',
+      },
+      {
+        name: '377UC1',
+        description:
+          'A confirmation modal enters the loading state when its confirm action is clicked: the action is disabled, busy, keeps its label and shows the loading icon first, Cancel is disabled and the modal stays open',
+      },
+      {
+        name: '377UC2',
+        description:
+          'When the request ends in failure the parent restores the modal and shows the message in it; on success the parent closes it',
+      },
+      {
+        name: '377UC3',
+        description:
+          'A typed-confirmation modal never enables its confirm action while busy and re-applies the typed-text gate when the busy state ends',
+      },
+      {
+        name: '377UC4',
+        description:
+          'A confirmation modal action row holds Cancel then the destructive confirm action as its last control',
+      },
       { name: '377UC5', description: 'Each button stylesheet hides its buttons and action row in print' },
-      { name: '378UC1', description: 'A form confirm action that sends a request is disabled, busy, keeps its label and shows the loading icon first, and Cancel is disabled' },
-      { name: '378UC2', description: 'When the request ends the form keeps its values and the confirm action and Cancel are enabled without the loading icon' },
+      {
+        name: '378UC1',
+        description:
+          'A form confirm action that sends a request is disabled, busy, keeps its label and shows the loading icon first, and Cancel is disabled',
+      },
+      {
+        name: '378UC2',
+        description:
+          'When the request ends the form keeps its values and the confirm action and Cancel are enabled without the loading icon',
+      },
       { name: '378UC3', description: 'A form action row holds Cancel then the confirm action as its last control' },
       { name: '378UC4', description: 'The guardian form confirm action reads Create Guardian' },
-      { name: '378UC5', description: 'The enrollment form confirm action reads Enrol Student for a saved and an unsaved student' },
-      { name: '378UC6', description: 'The banking details form confirm action reads Save when editing and Create Banking Details when creating' },
+      {
+        name: '378UC5',
+        description: 'The enrollment form confirm action reads Enrol Student for a saved and an unsaved student',
+      },
+      {
+        name: '378UC6',
+        description:
+          'The banking details form confirm action reads Save when editing and Create Banking Details when creating',
+      },
       { name: '378UC7', description: 'The practice-time panel confirm action reads Create Practice Time' },
       { name: '378UC8', description: 'The sibling search confirm action reads Link Student' },
       { name: '378UC9', description: 'The assign panel confirm action reads Assign Activity' },
       { name: '378UC10', description: 'The banking activity modal dismiss action reads Cancel' },
-      { name: '378UC11', description: 'Each form in scope adopts the shared form button stylesheet and declares no local button rules' },
-      { name: '379UC1', description: 'The wizard footer on the first create step hides Previous and shows Cancel and Next' },
+      {
+        name: '378UC11',
+        description: 'Each form in scope adopts the shared form button stylesheet and declares no local button rules',
+      },
+      {
+        name: '379UC1',
+        description: 'The wizard footer on the first create step hides Previous and shows Cancel and Next',
+      },
       { name: '379UC2', description: 'The wizard footer on a middle create step shows Cancel, Previous and Next' },
-      { name: '379UC3', description: 'The wizard footer on the last enrolled create step hides Next and the confirm action reads Create Student' },
-      { name: '379UC4', description: 'The wizard footer on the last waiting-list capture step has a confirm action reading Create Waiting List Entry' },
-      { name: '379UC5', description: 'The wizard footer holds Cancel, Previous, Next and the confirm action in order, with Cancel apart at the left edge' },
-      { name: '379UC6', description: 'The wizard create confirm action that sends a request is disabled, busy, keeps its label and shows the loading icon, and Cancel is disabled' },
-      { name: '379UC7', description: 'When the wizard create request fails the step stays, the error shows on the open step and the confirm action and Cancel are enabled' },
-      { name: '379UC8', description: 'The edit-mode Student and Waiting List step Save actions enter and leave the loading state with their Cancel' },
+      {
+        name: '379UC3',
+        description:
+          'The wizard footer on the last enrolled create step hides Next and the confirm action reads Create Student',
+      },
+      {
+        name: '379UC4',
+        description:
+          'The wizard footer on the last waiting-list capture step has a confirm action reading Create Waiting List Entry',
+      },
+      {
+        name: '379UC5',
+        description:
+          'The wizard footer holds Cancel, Previous, Next and the confirm action in order, with Cancel apart at the left edge',
+      },
+      {
+        name: '379UC6',
+        description:
+          'The wizard create confirm action that sends a request is disabled, busy, keeps its label and shows the loading icon, and Cancel is disabled',
+      },
+      {
+        name: '379UC7',
+        description:
+          'When the wizard create request fails the step stays, the error shows on the open step and the confirm action and Cancel are enabled',
+      },
+      {
+        name: '379UC8',
+        description:
+          'The edit-mode Student and Waiting List step Save actions enter and leave the loading state with their Cancel',
+      },
       { name: '379UC9', description: 'Every wizard dismiss action that remains in edit mode reads Cancel' },
-      { name: '379UC10', description: 'The wizard adopts the shared form button stylesheet and declares no local button rules' },
+      {
+        name: '379UC10',
+        description: 'The wizard adopts the shared form button stylesheet and declares no local button rules',
+      },
       { name: '380UC1', description: 'The course table row actions read Edit then Delete, with Delete destructive' },
       { name: '380UC2', description: 'A deactivated user row reads Reactivate then Delete, with Delete destructive' },
       { name: '380UC3', description: 'A pending user row action reads Regenerate' },
-      { name: '380UC4', description: 'The waiting list row actions read Enrol, Edit, Remove with Remove destructive, and the remove modal confirm reads Remove' },
-      { name: '380UC5', description: 'The enrollment list row actions read Edit and Remove when staged, Edit and Withdraw when saved, with the last destructive' },
+      {
+        name: '380UC4',
+        description:
+          'The waiting list row actions read Enrol, Edit, Remove with Remove destructive, and the remove modal confirm reads Remove',
+      },
+      {
+        name: '380UC5',
+        description:
+          'The enrollment list row actions read Edit and Remove when staged, Edit and Withdraw when saved, with the last destructive',
+      },
       { name: '380UC6', description: 'The sibling list row action reads Unlink in the default variant' },
-      { name: '380UC7', description: 'The report filter remove button keeps its accessible name and shows a close icon instead of a multiplication sign' },
-      { name: '380UC8', description: 'The students table row actions read Edit then Delete, and Print stays in the expanded view as a compact button' },
+      {
+        name: '380UC7',
+        description:
+          'The report filter remove button keeps its accessible name and shows a close icon instead of a multiplication sign',
+      },
+      {
+        name: '380UC8',
+        description:
+          'The students table row actions read Edit then Delete, and Print stays in the expanded view as a compact button',
+      },
       { name: '380UC9', description: 'The banking section record actions are compact buttons with text only' },
       { name: '380UC10', description: 'An inline edit row holds Cancel then Save, with Save last' },
-      { name: '380UC11', description: 'An inline edit Save enters the loading state with its entries kept, and every outcome path restores Save and Cancel' },
-      { name: '380UC13', description: 'A running Regenerate stays disabled and shows its failure when another user row saves, fails or re-renders the table' },
+      {
+        name: '380UC11',
+        description:
+          'An inline edit Save enters the loading state with its entries kept, and every outcome path restores Save and Cancel',
+      },
+      {
+        name: '380UC13',
+        description:
+          'A running Regenerate stays disabled and shows its failure when another user row saves, fails or re-renders the table',
+      },
       { name: '380UC14', description: 'A role save error stays on screen when another user row re-renders the table' },
       { name: '380UC15', description: 'A role save error on a user row is cleared when its edit is cancelled' },
-      { name: '380UC16', description: 'A role save error on a user row is cleared when the edit moves to another user' },
-      { name: '380UC12', description: 'Every table and list adopts the compact stylesheet, labels its last column Actions and keeps the column class off full-width rows' },
-      { name: '381UC1', description: 'The sign-in submit is disabled and busy while its request runs, keeps Sign In and shows only the loading icon' },
-      { name: '381UC2', description: 'The forgot-password submit keeps Send Reset Link and shows only the loading icon while its request runs' },
-      { name: '381UC3', description: 'The reset-password submit keeps Complete Password Reset and shows only the loading icon while its request runs' },
-      { name: '381UC4', description: 'The registration submit keeps Complete Setup and shows only the loading icon while its request runs' },
-      { name: '381UC5', description: 'Every auth page submit is a full-width form primary button with no icon at rest' },
+      {
+        name: '380UC16',
+        description: 'A role save error on a user row is cleared when the edit moves to another user',
+      },
+      {
+        name: '380UC12',
+        description:
+          'Every table and list adopts the compact stylesheet, labels its last column Actions and keeps the column class off full-width rows',
+      },
+      {
+        name: '381UC1',
+        description:
+          'The sign-in submit is disabled and busy while its request runs, keeps Sign In and shows only the loading icon',
+      },
+      {
+        name: '381UC2',
+        description:
+          'The forgot-password submit keeps Send Reset Link and shows only the loading icon while its request runs',
+      },
+      {
+        name: '381UC3',
+        description:
+          'The reset-password submit keeps Complete Password Reset and shows only the loading icon while its request runs',
+      },
+      {
+        name: '381UC4',
+        description:
+          'The registration submit keeps Complete Setup and shows only the loading icon while its request runs',
+      },
+      {
+        name: '381UC5',
+        description: 'Every auth page submit is a full-width form primary button with no icon at rest',
+      },
       { name: '381UC6', description: 'Every auth page submit returns to normal with its label when its request fails' },
       { name: '381UC7', description: 'The banking section entry point reads Create Banking Details' },
-      { name: '381UC8', description: 'The Guardians, Courses and Extra-Curriculars step entry points read Create Guardian, Enrol Student and Assign Activity' },
+      {
+        name: '381UC8',
+        description:
+          'The Guardians, Courses and Extra-Curriculars step entry points read Create Guardian, Enrol Student and Assign Activity',
+      },
       { name: '381UC9', description: 'The extra-curricular form practice-time entry point reads Create Practice Time' },
-      { name: '381UC10', description: 'The Waiting List entry point reads Create Waiting List Entry for a user who can capture' },
+      {
+        name: '381UC10',
+        description: 'The Waiting List entry point reads Create Waiting List Entry for a user who can capture',
+      },
       { name: '381UC11', description: 'The report filters panel entry point reads Add Filter with no plus sign' },
       { name: '381UC12', description: 'The admin sessions global revoke button reads Revoke All' },
-      { name: '381UC13', description: 'Every page with page buttons adopts the shared page button stylesheet and keeps a hidden page button hidden' },
-      { name: '387UC1', description: 'A Cancel in an inline form on a page or card, including the My details forms, uses the form warning variant in every state' },
-      { name: '387UC2', description: 'The Cancel of an inline row edit in a table or list uses the compact warning variant in every state' },
-      { name: '387UC3', description: 'A Deactivate row action uses the compact warning variant while Edit keeps the accent colour' },
-      { name: '387UC4', description: 'A Cancel or Deactivate in a confirmation modal, a form modal or the student wizard keeps its current look' },
-      { name: '387UC5', description: 'The warning token has a print value and the buttons that carry it stay hidden in print' },
+      {
+        name: '381UC13',
+        description:
+          'Every page with page buttons adopts the shared page button stylesheet and keeps a hidden page button hidden',
+      },
+      {
+        name: '387UC1',
+        description:
+          'A Cancel in an inline form on a page or card, including the My details forms, uses the form warning variant in every state',
+      },
+      {
+        name: '387UC2',
+        description:
+          'The Cancel of an inline row edit in a table or list uses the compact warning variant in every state',
+      },
+      {
+        name: '387UC3',
+        description: 'A Deactivate row action uses the compact warning variant while Edit keeps the accent colour',
+      },
+      {
+        name: '387UC4',
+        description:
+          'A Cancel or Deactivate in a confirmation modal, a form modal or the student wizard keeps its current look',
+      },
+      {
+        name: '387UC5',
+        description: 'The warning token has a print value and the buttons that carry it stay hidden in print',
+      },
       { name: '390UC1', description: 'Every modal header holds exactly one close control after the title' },
-      { name: '390UC2', description: 'The close control does what Cancel does, and is disabled exactly when Cancel is' },
+      {
+        name: '390UC2',
+        description: 'The close control does what Cancel does, and is disabled exactly when Cancel is',
+      },
       { name: '390UC3', description: 'The close control of an information or form modal closes it and emits nothing' },
       { name: '390UC4', description: 'A click on the backdrop never closes a modal' },
       { name: '390UC5', description: 'Escape never closes the Revoke All Sessions modal' },
       { name: '390UC6', description: 'Every modal card carries a dialog role, aria-modal and a title label' },
-      { name: '390UC7', description: 'Banking activity has no footer, and its only button is the header close control' },
+      {
+        name: '390UC7',
+        description: 'Banking activity has no footer, and its only button is the header close control',
+      },
       { name: '390UC8', description: 'The edit-mode wizard has no footer, and its close control closes it' },
-      { name: '390UC9', description: 'The wizard steps carry no tab roles, and the current step is marked aria-current' },
-      { name: '391UC1', description: 'Every destructive modal shows the delete_forever icon, the cannot-be-undone body, the name in strong and a destructive confirm button' },
+      {
+        name: '390UC9',
+        description: 'The wizard steps carry no tab roles, and the current step is marked aria-current',
+      },
+      {
+        name: '391UC1',
+        description:
+          'Every destructive modal shows the delete_forever icon, the cannot-be-undone body, the name in strong and a destructive confirm button',
+      },
       { name: '391UC2', description: 'Teacher delete names the teacher and has the Delete Teacher title' },
       { name: '391UC3', description: 'Banking delete names the details by their last four digits' },
       { name: '391UC4', description: 'Student, relationship and course delete follow the delete template' },
-      { name: '391UC5', description: 'Delete guardian for one student follows the delete template with no scope choice' },
-      { name: '391UC6', description: 'Delete guardian shared with siblings shows two scope options and sends the chosen scope' },
-      { name: '391UC7', description: 'Delete guardian shared with an enrolled student uses the reversible family and says it can be linked again' },
-      { name: '391UC8', description: 'Delete user labels the typed field with the email and keeps the body free of the instruction' },
+      {
+        name: '391UC5',
+        description: 'Delete guardian for one student follows the delete template with no scope choice',
+      },
+      {
+        name: '391UC6',
+        description: 'Delete guardian shared with siblings shows two scope options and sends the chosen scope',
+      },
+      {
+        name: '391UC7',
+        description:
+          'Delete guardian shared with an enrolled student uses the reversible family and says it can be linked again',
+      },
+      {
+        name: '391UC8',
+        description: 'Delete user labels the typed field with the email and keeps the body free of the instruction',
+      },
       { name: '391UC9', description: 'Delete user stays disabled until the typed text equals the email exactly' },
       { name: '391UC10', description: 'Delete activity names the practice times that are removed with it' },
       { name: '391UC11', description: 'Waiting list removal follows the remove template and names the student record' },
       { name: '391UC12', description: 'Withdraw enrollment follows the withdraw template with both names in strong' },
       { name: '391UC13', description: 'Delete report follows the delete template without an icon circle' },
-      { name: '392UC1', description: 'Deactivate Teacher follows the destructive template and names the teacher and the banking details' },
+      {
+        name: '392UC1',
+        description:
+          'Deactivate Teacher follows the destructive template and names the teacher and the banking details',
+      },
       { name: '392UC2', description: 'The Deactivate Teacher confirm button is the destructive Deactivate button' },
-      { name: '392UC3', description: 'Revoke All Sessions follows the destructive template with the phrase only in the field label' },
-      { name: '392UC4', description: 'Revoke All stays disabled until the exact phrase is typed and then dispatches once' },
-      { name: '393UC1', description: 'Unlink Account shows the info icon, the reversible body naming the account in strong and no cannot be undone' },
+      {
+        name: '392UC3',
+        description: 'Revoke All Sessions follows the destructive template with the phrase only in the field label',
+      },
+      {
+        name: '392UC4',
+        description: 'Revoke All stays disabled until the exact phrase is typed and then dispatches once',
+      },
+      {
+        name: '393UC1',
+        description:
+          'Unlink Account shows the info icon, the reversible body naming the account in strong and no cannot be undone',
+      },
       { name: '393UC2', description: 'The Unlink Account confirm button is the primary Unlink button' },
-      { name: '393UC3', description: 'Deactivate User shows the info icon, the reversible body naming the user in strong and no cannot be undone' },
+      {
+        name: '393UC3',
+        description:
+          'Deactivate User shows the info icon, the reversible body naming the user in strong and no cannot be undone',
+      },
       { name: '393UC4', description: 'The Deactivate User confirm button is the primary Deactivate button' },
-      { name: '394UC1', description: 'Save Report shows no header icon and uses Save Report for the title and the confirm label' },
-      { name: '394UC2', description: 'Link Account shows no header icon and uses Link Account for the title and the confirm label' },
-      { name: '394UC3', description: 'Enrol Student uses the shared modal title, no header icon and Enrol Student for the confirm label' },
+      {
+        name: '394UC1',
+        description: 'Save Report shows no header icon and uses Save Report for the title and the confirm label',
+      },
+      {
+        name: '394UC2',
+        description: 'Link Account shows no header icon and uses Link Account for the title and the confirm label',
+      },
+      {
+        name: '394UC3',
+        description:
+          'Enrol Student uses the shared modal title, no header icon and Enrol Student for the confirm label',
+      },
       { name: '394UC4', description: 'My Details and Banking Activity use Title Case titles and show no header icon' },
       { name: '394UC5', description: 'The student wizard titles every mode correctly and shows no header icon' },
+      {
+        name: '395UC1',
+        description:
+          'Active Sessions has no footer and no icon, and Revoke All Others sits in a toolbar row above the table',
+      },
+      {
+        name: '395UC2',
+        description: 'Revoke All Others opens the Revoke Other Sessions confirmation and revokes nothing',
+      },
+      {
+        name: '395UC3',
+        description: 'The Revoke Other Sessions confirmation uses the standard destructive wording and layout',
+      },
+      {
+        name: '395UC4',
+        description:
+          'Confirming Revoke Other Sessions emits the revoke request, and the opener revokes and reloads the list',
+      },
+      {
+        name: '395UC5',
+        description: 'Cancel and the close control on a session confirmation close it and revoke nothing',
+      },
+      {
+        name: '395UC6',
+        description: 'A row Revoke opens the Revoke Session confirmation for that device and revokes nothing',
+      },
+      {
+        name: '395UC7',
+        description:
+          'The Revoke Session confirmation uses the standard destructive wording and shows the device as text',
+      },
+      {
+        name: '395UC8',
+        description: 'Confirming Revoke Session revokes only that session, and a failure shows in the confirmation',
+      },
     ],
   },
-})
+});

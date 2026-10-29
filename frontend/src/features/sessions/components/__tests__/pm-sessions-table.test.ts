@@ -66,3 +66,43 @@ describe('pm-sessions-table — current session distinguishability', { tags: ['M
     expect(firstCell.textContent).toContain('admin@test.com');
   });
 });
+
+describe('pm-sessions-table — row Revoke asks for confirmation', { tags: ['395UC6'] }, () => {
+  let el: PmSessionsTable;
+
+  beforeEach(() => {
+    el = new PmSessionsTable();
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  function clickRevoke(): { clicked: CustomEvent[]; requested: Event[] } {
+    const clicked: CustomEvent[] = [];
+    const requested: Event[] = [];
+    el.addEventListener('session-revoke-clicked', (e) => clicked.push(e as CustomEvent));
+    el.addEventListener('session-revoke-requested', (e) => requested.push(e));
+    (el.shadowRoot!.querySelector('tbody button') as HTMLButtonElement).click();
+    return { clicked, requested };
+  }
+
+  it('emits the clicked event with the token and device, and no revoke request', () => {
+    el.sessions = [currentSession, otherSession];
+
+    const { clicked, requested } = clickRevoke();
+
+    expect(clicked).toHaveLength(1);
+    expect(clicked[0].detail).toEqual({ tokenId: 'other-session', deviceLabel: 'Firefox on Windows' });
+    expect(requested).toHaveLength(0);
+  });
+
+  it('names a session without a device label "Unknown device"', () => {
+    el.sessions = [{ ...otherSession, deviceLabel: null }];
+
+    const { clicked } = clickRevoke();
+
+    expect(clicked[0].detail.deviceLabel).toBe('Unknown device');
+  });
+});
