@@ -92,6 +92,10 @@ modalChromeStyles.replaceSync(`
       color: var(--pm-text-muted);
       margin-bottom: var(--pm-modal-body-gap);
     }
+    .modal__body strong {
+      color: var(--pm-text);
+      font-weight: 700;
+    }
     .modal__actions {
       display: flex;
       justify-content: flex-end;

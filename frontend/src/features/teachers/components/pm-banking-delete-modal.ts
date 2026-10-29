@@ -1,26 +1,18 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { setButtonsBusy } from '../../../components/button-states';
 
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-    .modal__last4 {
-      color: var(--pm-text);
-      font-weight: 500;
-    }
-  `);
-
 const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
     <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">delete</span>
-        <h2 class="modal__title" id="modalTitle">Delete these banking details?</h2>
+        <span class="modal__icon" aria-hidden="true">delete_forever</span>
+        <h2 class="modal__title" id="modalTitle">Delete Banking Details</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
-        This action <strong>cannot be undone</strong>. The banking details ending <span class="modal__last4" id="modalLast4"></span> will be permanently removed.
+        This action <strong>cannot be undone</strong>. The banking details <strong>ending <span id="modalLast4"></span></strong> will be permanently removed.
       </p>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
@@ -40,7 +32,7 @@ export class PmBankingDeleteModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 

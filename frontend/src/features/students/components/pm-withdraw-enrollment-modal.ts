@@ -1,26 +1,18 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { setButtonsBusy } from '../../../components/button-states';
 
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-    .modal__name {
-      color: var(--pm-text);
-      font-weight: 500;
-    }
-  `);
-
 const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
     <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">warning</span>
+        <span class="modal__icon" aria-hidden="true">delete_forever</span>
         <h2 class="modal__title" id="modalTitle">Withdraw Enrollment</h2>
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
-        This action <strong>cannot be undone</strong>. <span class="modal__name" id="studentName"></span> will be withdrawn from <span class="modal__name" id="courseName"></span> permanently.
+        This action <strong>cannot be undone</strong>. <strong id="studentName"></strong> will be permanently withdrawn from <strong id="courseName"></strong>.
       </p>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
@@ -38,7 +30,7 @@ export class PmWithdrawEnrollmentModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
