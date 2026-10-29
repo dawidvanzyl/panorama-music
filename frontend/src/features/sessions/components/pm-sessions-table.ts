@@ -159,7 +159,8 @@ export class PmSessionsTable extends HTMLElement {
     }
 
     const deviceCell = document.createElement('td');
-    deviceCell.textContent = session.deviceLabel ?? 'Unknown device';
+    const deviceLabel = session.deviceLabel ?? 'Unknown device';
+    deviceCell.textContent = deviceLabel;
     if (session.isCurrent) {
       const badge = document.createElement('span');
       badge.classList.add('sessions-table__badge');
@@ -186,7 +187,7 @@ export class PmSessionsTable extends HTMLElement {
       revokeBtn.type = 'button';
       revokeBtn.classList.add('compact-btn', 'compact-btn--destructive', 'sessions-table__btn');
       revokeBtn.textContent = 'Revoke';
-      revokeBtn.addEventListener('click', () => this.handleRevoke(session.tokenId));
+      revokeBtn.addEventListener('click', () => this.handleRevoke(session.tokenId, deviceLabel));
       actions.appendChild(revokeBtn);
       actionsCell.appendChild(actions);
     }
@@ -195,12 +196,12 @@ export class PmSessionsTable extends HTMLElement {
     return row;
   }
 
-  private handleRevoke(tokenId: string): void {
+  private handleRevoke(tokenId: string, deviceLabel: string): void {
     this.dispatchEvent(
-      new CustomEvent('session-revoke-requested', {
+      new CustomEvent('session-revoke-clicked', {
         bubbles: true,
         composed: true,
-        detail: { tokenId },
+        detail: { tokenId, deviceLabel },
       }),
     );
   }

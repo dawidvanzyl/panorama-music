@@ -20,6 +20,8 @@ import '../../features/extra-curriculars/components/pm-delete-extra-curricular-m
 import '../../features/reports/components/pm-delete-report-modal';
 import '../../features/reports/components/pm-save-report-modal';
 import '../../features/sessions/components/pm-revoke-all-sessions-modal';
+import '../../features/sessions/components/pm-revoke-session-modal';
+import '../../features/sessions/components/pm-revoke-other-sessions-modal';
 import '../../features/sessions/components/pm-own-sessions-modal';
 
 type Opener = (modal: HTMLElement) => void;
@@ -138,6 +140,13 @@ const cases: FrameCase[] = [
     hasBusyState: true,
     role: 'alertdialog',
   },
+  {
+    tag: 'pm-revoke-session-modal',
+    open: (m) => call(m, 'show', 't1', 'Chrome on Windows'),
+    hasCancel: true,
+    hasBusyState: true,
+  },
+  { tag: 'pm-revoke-other-sessions-modal', open: (m) => call(m, 'show'), hasCancel: true, hasBusyState: true },
   { tag: 'pm-student-wizard-modal', open: (m) => call(m, 'openForCreate', []), hasCancel: true, hasBusyState: false },
   {
     tag: 'pm-enrol-waiting-list-student-modal',

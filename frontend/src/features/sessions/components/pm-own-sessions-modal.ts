@@ -1,5 +1,6 @@
 import './pm-sessions-table';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 import type { PmSessionsTable } from './pm-sessions-table';
 import type { SessionResult } from '../services/sessions';
 
@@ -30,28 +31,10 @@ styles.replaceSync(`
     .own-sessions__error--visible {
       display: block;
     }
-    .own-sessions__actions {
+    .own-sessions__toolbar {
       display: flex;
       justify-content: flex-end;
-      margin-top: 20px;
-    }
-    .own-sessions__revoke-all {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-      border-radius: var(--pm-radius);
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .own-sessions__revoke-all:hover:not(:disabled) {
-      filter: brightness(1.1);
-    }
-    .own-sessions__revoke-all:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+      margin-bottom: 12px;
     }
   `);
 
@@ -68,10 +51,10 @@ template.innerHTML = `
         <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="own-sessions__error" id="error"></div>
-      <pm-sessions-table id="sessionsTable"></pm-sessions-table>
-      <div class="own-sessions__actions">
-        <button type="button" class="own-sessions__revoke-all" id="revokeAllBtn">Revoke all other sessions</button>
+      <div class="own-sessions__toolbar">
+        <button type="button" class="compact-btn compact-btn--destructive" id="revokeAllBtn">Revoke All Others</button>
       </div>
+      <pm-sessions-table id="sessionsTable"></pm-sessions-table>
     </div>
   </div>
 `;
@@ -91,7 +74,7 @@ export class PmOwnSessionsModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -152,7 +135,7 @@ export class PmOwnSessionsModal extends HTMLElement {
 
   private handleRevokeAll = (): void => {
     this.dispatchEvent(
-      new CustomEvent('own-sessions-revoke-all-requested', {
+      new CustomEvent('own-sessions-revoke-all-clicked', {
         bubbles: true,
         composed: true,
       }),

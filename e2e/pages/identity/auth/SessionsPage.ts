@@ -15,6 +15,11 @@ export class SessionsPage extends BasePage {
   readonly closeButton: Locator;
   readonly revokeAllBtn: Locator;
   readonly rows: Locator;
+  readonly card: Locator;
+  readonly toolbar: Locator;
+  readonly table: Locator;
+  readonly revokeSessionModal: Locator;
+  readonly revokeOtherSessionsModal: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -26,6 +31,13 @@ export class SessionsPage extends BasePage {
     this.closeButton = this.modal.locator('#closeBtn');
     this.revokeAllBtn = this.modal.locator('#revokeAllBtn');
     this.rows = this.modal.locator('table tbody tr');
+    this.card = this.modal.locator('.modal__card');
+    this.toolbar = this.modal.locator('.own-sessions__toolbar');
+    this.table = this.modal.locator('table');
+    this.revokeSessionModal = page.locator('.pm-own-sessions-dialog pm-revoke-session-modal');
+    this.revokeOtherSessionsModal = page.locator(
+      '.pm-own-sessions-dialog pm-revoke-other-sessions-modal',
+    );
   }
 
   /** Opens the dialog from the account menu, whatever page the user is on. */
@@ -55,5 +67,11 @@ export class SessionsPage extends BasePage {
 
   async revokeRow(row: Locator): Promise<void> {
     await row.getByRole('button', { name: 'Revoke' }).click();
+  }
+
+  /** Clicks Revoke in the Revoke Session confirmation and waits for it to close. */
+  async confirmRevoke(): Promise<void> {
+    await this.revokeSessionModal.getByRole('button', { name: 'Revoke', exact: true }).click();
+    await this.revokeSessionModal.locator('.modal__card').waitFor({ state: 'hidden' });
   }
 }

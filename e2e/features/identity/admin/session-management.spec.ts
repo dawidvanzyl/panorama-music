@@ -40,6 +40,7 @@ test.describe('My Active Sessions', () => {
 
       const otherRow = sessionsPage.rows.filter({ hasNotText: 'Current Session' });
       await sessionsPage.revokeRow(otherRow);
+      await sessionsPage.confirmRevoke();
       await expect(sessionsPage.rows).toHaveCount(1);
 
       const response = await otherPage.request.get('/api/users', {
@@ -85,6 +86,7 @@ test.describe('Global Session Management', () => {
       await expect(userRow).toHaveCount(1);
 
       await adminSessionsPage.revokeRow(userRow);
+      await adminSessionsPage.confirmRevoke();
       await expect(adminSessionsPage.rowByEmail(email)).toHaveCount(0);
 
       const response = await userPage.request.get('/api/users', {
