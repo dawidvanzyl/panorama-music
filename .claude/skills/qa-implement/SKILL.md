@@ -75,6 +75,14 @@ must turn them green before reporting done.
    scenario that needs a hook the table lacks is a `NEEDS_RULING` — never guess one.
 5. Run the *Comment labels* check in `.claude/shared/automated-checks.md` over the
    specs and fix every hit.
+   Also read every assertion for these defects. The base-build run in step 6 stops at
+   the first failing line and cannot reach them:
+   - `toHaveCount(0)` on an element a component always renders hidden: use
+     `toBeHidden()`.
+   - `not.toContainText` on text a component keeps in a hidden element: assert visible
+     content instead.
+   - A list assertion that is not scoped to the test's own unique token.
+   - An anchored regex on text that is not trimmed first.
 6. Type-check the specs (`cd e2e && npx tsc --noEmit`), then dry-run each IT code once
    against a fresh stack built from the base branch. Each spec must fail on its
    feature assertion, not earlier: a timeout or error in seeding, fixtures, locators
@@ -98,6 +106,12 @@ a bug to log.
 Run `git fetch origin` and then `gh pr checkout {pr_number}`. Confirm you're on the
 story's branch and it's current with origin. A stale checkout produces findings about
 code the developer already changed.
+
+Never create a named temp branch. If you must push a spec fix while the developer holds
+unpushed commits on the same branch, work in a detached temporary worktree cut from the
+remote branch head (`git worktree add --detach <path> origin/{branch}`). Push only your
+spec commit, then remove the worktree without `--force`. The developer fetches and
+rebases onto your commit.
 
 ### 2) Read before writing
 

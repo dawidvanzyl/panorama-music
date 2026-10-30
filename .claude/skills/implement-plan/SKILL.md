@@ -168,6 +168,12 @@ nothing.
     `frontend/src/services/__tests__/`; install vitest if absent
     (`npm install -D vitest`); register any new tag (name + description) in the
     `tags` array of `frontend/vitest.config.ts`.
+- **Never run `prettier --write` on a shared config file** such as
+  `frontend/vitest.config.ts`. Add only the new lines by hand, then check that
+  `git diff --numstat origin/{base_branch}...HEAD -- {file}` shows added lines only.
+- **Never create a named temp branch.** If your unpushed commits clash with another
+  worker on the same branch, raise it. After QA pushes a spec commit, run
+  `git fetch origin {branch}` and rebase your commits onto it.
 - An empty `## Acceptance Criteria (G/W/T)` means no unit tests — a valid state; IT
   coverage is independent and QA's to prove.
 - **No tests for IT codes, and never tag a unit test with one.** IT codes are proven

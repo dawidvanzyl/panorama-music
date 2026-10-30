@@ -120,7 +120,12 @@ gh pr view {pr_number} --json commits --jq '.commits[-1].oid'
 - **CI green against the head SHA:** that is your evidence. A green tick on a superseded
   commit is not, so confirm the SHA matches; fetch logs only for failures.
 - **A failing check** is a ❌ Blocker.
-- **CI pending, absent, or green only on a stale SHA:** the PR isn't reviewable yet —
+- **CI pending on the head SHA:** wait once with `gh run watch <id> --exit-status`.
+  Never return a procedural finding for pending CI. If the run then fails, or ends with
+  one failed job, judge it as below.
+- **One job fails only on a spec that `rulings.md` lists as known flaky, or on an infra
+  error:** return `NEEDS_RULING` with the run id. Do not raise a Blocker.
+- **CI absent, or green only on a stale SHA:** the PR isn't reviewable yet —
   don't run the checks locally to fill the gap. Raise a ❌ Blocker ("CI not green against
   head SHA {sha}") and return the review; the developer's next push re-runs CI. With no
   PR at all (a standalone `interactive` review), note that CI can't be confirmed and

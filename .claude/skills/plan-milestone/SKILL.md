@@ -285,6 +285,8 @@ plan against itself. For each `AC{n}`:
    including meaningful negative and boundary cases.
 3. Code each `{epic_issue_number}IT{n}`, numbered sequentially across the epic, and
    attach it to exactly one sub-issue.
+4. Check that the actor in each code can perform the action (route policy, nav
+   entries). Name the exact role in the code text.
 
 One code per behaviour a single Playwright spec can prove: one sentence spanning six
 meaningful states earns six codes. IT codes are E2E only — behaviour only a unit test

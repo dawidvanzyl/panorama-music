@@ -125,6 +125,9 @@ coding-standards §5 and §6 honoured.
 End every brief with the same two lines: create your report file before starting work,
 and commit as you go.
 
+Add one more line to every `planner`, `plan-critique` and `reviewer` brief: "You have a
+turn limit. Write your output file early and deliver the report before the limit."
+
 **Check the developer before QA.** A `PR_OPEN` or `FIXED` goes to `testing` only
 after you grep its `implement-{n}.md` for: an unticked checklist item, an IT code
 without a local pass, a backend test command narrower than the solution, and a
