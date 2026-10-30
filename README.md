@@ -93,9 +93,9 @@ Copy `.env.example` to `.env` and adjust values as needed:
 cp .env.example .env
 ```
 
-### Dev profile — PostgreSQL only
+### Dev profile — PostgreSQL and smtp4dev
 
-Starts a PostgreSQL container on port `5432`. Use this for local development alongside `dotnet run`.
+Starts a PostgreSQL container on port `5432` and a `smtp4dev-dev` container (SMTP `1025`, UI `http://localhost:5000`). Use this for local development alongside `dotnet run`. The `qa` profile has its own `smtp4dev-qa` (SMTP `1026`, UI `5001`), so the two mailboxes never mix.
 
 ```bash
 docker compose --profile dev up -d
@@ -153,7 +153,7 @@ Specs that log in (e.g. `auth/session.spec.ts`) authenticate as the seeded admin
 
 Some specs need a precondition that can't be produced through the UI/API alone (e.g. `auth/registration.spec.ts` simulating an already-expired invite token). These use `e2e/fixtures/db.ts` to connect directly to the `qa` Postgres database (`localhost:5433`), reading the same `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB_QA` environment variables the Compose stack is seeded with.
 
-Specs that need a real outgoing email (e.g. `auth/password-reset.spec.ts`) read it back via `e2e/fixtures/mailbox.ts`, which queries the `qa` profile's `smtp4dev` REST API at `http://localhost:5000/api/Messages`. Since `smtp4dev` is a single shared mailbox for the whole run, the helper always filters by the test's own recipient address rather than assuming the latest message belongs to the current test.
+Specs that need a real outgoing email (e.g. `auth/password-reset.spec.ts`) read it back via `e2e/fixtures/mailbox.ts`, which queries the `qa` profile's `smtp4dev-qa` REST API at `http://localhost:5001/api/Messages`. Since `smtp4dev-qa` is a single shared mailbox for the whole run, the helper always filters by the test's own recipient address rather than assuming the latest message belongs to the current test.
 
 Linting and formatting (ESLint + Prettier, mirroring `frontend/`'s setup):
 

@@ -28,18 +28,31 @@ services:
       timeout: 5s
       retries: 10
 
-  smtp4dev:
+  smtp4dev-dev:
     image: rnwood/smtp4dev:v3
-    profiles: [dev, qa]
+    profiles: [dev]
     restart: always
     ports:
-      - "127.0.0.1:${QA_SMTP_PORT:-1025}:25"
-      - "127.0.0.1:${QA_SMTP_UI_PORT:-5000}:80"
+      - "127.0.0.1:1025:25"
+      - "127.0.0.1:5000:80"
     volumes:
-      - smtp4dev-data:/smtp4dev
+      - smtp4dev-dev-data:/smtp4dev
     environment:
       - ServerOptions__Urls=http://*:80
-      - ServerOptions__HostName=smtp4dev
+      - ServerOptions__HostName=smtp4dev-dev
+
+  smtp4dev-qa:
+    image: rnwood/smtp4dev:v3
+    profiles: [qa]
+    restart: always
+    ports:
+      - "127.0.0.1:${QA_SMTP_PORT:-1026}:25"
+      - "127.0.0.1:${QA_SMTP_UI_PORT:-5001}:80"
+    volumes:
+      - smtp4dev-qa-data:/smtp4dev
+    environment:
+      - ServerOptions__Urls=http://*:80
+      - ServerOptions__HostName=smtp4dev-qa
 
   api:
     image: panorama-music-api:${QA_IMAGE_TAG:-qa}
@@ -77,7 +90,7 @@ services:
       Email__From: ${Email__From:-noreply@panorama-music.qa}
       Email__ReplyTo: ${Email__ReplyTo:-noreply@panorama-music.qa}
       Email__FromDisplayName: ${Email__FromDisplayName:-Panorama Music (QA)}
-      Smtp__Host: ${Smtp__Host:-smtp4dev}
+      Smtp__Host: ${Smtp__Host:-smtp4dev-qa}
       Smtp__Port: ${Smtp__Port:-25}
       AppBaseUrl: ${AppBaseUrl:-http://localhost:${QA_API_PORT:-3000}}
       Hibp__Enabled: ${Hibp__Enabled:-false}
@@ -88,10 +101,11 @@ services:
     depends_on:
       db-qa:
         condition: service_healthy
-      smtp4dev:
+      smtp4dev-qa:
         condition: service_started
 
 volumes:
   db-dev-data:
   db-qa-data:
-  smtp4dev-data:
+  smtp4dev-dev-data:
+  smtp4dev-qa-data:
