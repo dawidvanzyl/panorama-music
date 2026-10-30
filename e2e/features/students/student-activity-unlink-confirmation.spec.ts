@@ -30,6 +30,7 @@ interface Opened {
   surname: string;
   studentId: string;
   deletePath: string;
+  courseLabel: string;
 }
 
 /** Seeds an enrolled student holding one activity, and opens the wizard on its Extra-Curriculars step. */
@@ -59,6 +60,7 @@ async function openEnrolledStudent(page: Page, label: string): Promise<Opened> {
     surname,
     studentId,
     deletePath: `/api/students/${studentId}/extra-curriculars/${extraCurricularId}`,
+    courseLabel: target.courseLabel,
   };
 }
 
@@ -135,7 +137,7 @@ test.describe('Students — Unlink Activity confirmation wording', { tag: ['@266
 
 test.describe('Students — confirming an activity unlink', { tag: ['@266IT22'] }, () => {
   test('S1 confirming unlinks the activity, and it stays unlinked', async ({ page }) => {
-    const { studentsPage, description, surname, deletePath } = await openEnrolledStudent(page, 'act-confirm');
+    const { studentsPage, description, surname, deletePath, courseLabel } = await openEnrolledStudent(page, 'act-confirm');
     const deletesSent = countRequests(page, 'DELETE', deletePath);
 
     await studentsPage.unlinkActivityAndConfirm(description);
@@ -151,7 +153,7 @@ test.describe('Students — confirming an activity unlink', { tag: ['@266IT22'] 
     await expect(studentsPage.row(surname)).toBeVisible();
     await studentsPage.toggleRowExpanded(surname);
     await expect(studentsPage.visibleExtraCurricularsSummary()).toContainText('No extra-curricular activities assigned.');
-    await expect(studentsPage.visibleCoursesSummary()).not.toContainText('No course enrollments.');
+    await expect(studentsPage.visibleCoursesSummary()).toContainText(courseLabel);
   });
 
   test('S2 a failed unlink shows in the confirmation and keeps it open', async ({ page }) => {
