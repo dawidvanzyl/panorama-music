@@ -7,55 +7,21 @@ styles.replaceSync(`
       position: fixed;
       inset: 0;
     }
-    .modal__backdrop {
-      background: rgba(0, 0, 0, 0.65);
-    }
-    .modal__card {
-      box-sizing: border-box;
-      max-width: 440px;
-      padding: 32px;
-      border-radius: 12px;
-    }
-    .modal__header {
-      gap: 14px;
-    }
-    .modal__icon-circle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(224, 82, 82, 0.12);
-      flex-shrink: 0;
-    }
-    .modal__icon {
-      color: var(--pm-danger);
-    }
-    .modal__title {
-      color: var(--pm-text);
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      margin: 0;
-    }
-    .modal__message {
-      color: var(--pm-text);
-      margin: 0 0 24px;
-    }
   `);
 
 const template = document.createElement('template');
 template.innerHTML = `
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon-circle"><span class="modal__icon">warning</span></span>
-        <h2 class="modal__title" data-testid="delete-report-title">Delete report</h2>
+        <span class="modal__icon" aria-hidden="true">delete_forever</span>
+        <h2 class="modal__title" id="modalTitle" data-testid="delete-report-title">Delete Report</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
-      <div class="modal__body">
-        <p class="modal__message" data-testid="delete-report-text">Are you sure you want to delete the report <strong id="reportName" data-testid="delete-report-name"></strong>? This cannot be undone.</p>
-        <p class="modal__error" id="error" data-testid="delete-report-error"></p>
-      </div>
+      <p class="modal__body" data-testid="delete-report-text">
+        This action <strong>cannot be undone</strong>. The report <strong id="reportName" data-testid="delete-report-name"></strong> will be permanently removed.
+      </p>
+      <p class="modal__error" id="error" data-testid="delete-report-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
         <button class="modal__btn modal__btn--destructive" id="deleteBtn" type="button">Delete</button>
@@ -70,6 +36,7 @@ export class PmDeleteReportModal extends HTMLElement {
   private errorEl: HTMLElement | null = null;
   private deleteButton: HTMLButtonElement | null = null;
   private cancelButton: HTMLButtonElement | null = null;
+  private closeButton: HTMLButtonElement | null = null;
   private _id = '';
 
   constructor() {
@@ -84,13 +51,16 @@ export class PmDeleteReportModal extends HTMLElement {
     this.errorEl = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.deleteButton = this.shadowRoot!.getElementById('deleteBtn') as HTMLButtonElement;
     this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    this.closeButton = this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement;
 
     this.cancelButton.addEventListener('click', this.handleCancel);
+    this.closeButton.addEventListener('click', this.handleCancel);
     this.deleteButton.addEventListener('click', this.handleDelete);
   }
 
   disconnectedCallback(): void {
     this.cancelButton?.removeEventListener('click', this.handleCancel);
+    this.closeButton?.removeEventListener('click', this.handleCancel);
     this.deleteButton?.removeEventListener('click', this.handleDelete);
   }
 
@@ -112,7 +82,7 @@ export class PmDeleteReportModal extends HTMLElement {
   }
 
   setBusy(busy: boolean): void {
-    setButtonsBusy(this.deleteButton!, this.cancelButton, busy);
+    setButtonsBusy(this.deleteButton!, [this.cancelButton!, this.closeButton!], busy);
   }
 
   private handleCancel = (): void => this.close();

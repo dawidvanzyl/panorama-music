@@ -3,6 +3,7 @@ import { uniqueTestEmail, createRegisteredUser, goToTeachersPage } from '../../f
 import { LoginPage } from '../../pages/identity/auth/LoginPage';
 import { MyDetailsPage } from '../../pages/teachers/MyDetailsPage';
 import { landingUrl } from '../../fixtures/navigation';
+import { signInAsLinkedTeacher } from '../../fixtures/teachers';
 
 const PASSWORD = 'TeacherSelfServicePass123!';
 const ACCOUNT_NUMBER = '1122334455';
@@ -20,30 +21,6 @@ function uniqueName(label: string): { firstName: string; surname: string } {
     firstName: `E2E-${label}`,
     surname: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   };
-}
-
-/**
- * Creates a teacher as a Coordinator, links it to a freshly registered
- * Teacher-role account, and leaves the browser signed in as that teacher.
- */
-async function signInAsLinkedTeacher(
-  page: import('@playwright/test').Page,
-  label: string,
-): Promise<{ email: string; firstName: string; surname: string }> {
-  const email = uniqueTestEmail(label);
-  await createRegisteredUser(page, email, PASSWORD, ['Teacher']);
-
-  const teachersPage = await goToTeachersPage(page);
-  const { firstName, surname } = uniqueName(label);
-  await teachersPage.createTeacher({ firstName, surname, linkedAccountEmail: email });
-  await expect(teachersPage.row(`${firstName} ${surname}`)).toBeVisible();
-
-  const loginPage = new LoginPage(page);
-  await loginPage.gotoLogin();
-  await loginPage.login(email, PASSWORD);
-  await expect(page).toHaveURL(landingUrl('Teacher'));
-
-  return { email, firstName, surname };
 }
 
 test.describe('A linked teacher maintains their own record', { tag: ['@7IT12'] }, () => {

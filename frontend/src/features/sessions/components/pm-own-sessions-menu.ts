@@ -1,6 +1,10 @@
 import './pm-own-sessions-modal';
+import './pm-revoke-session-modal';
+import './pm-revoke-other-sessions-modal';
 import { getOwnSessions, revokeOwnSession, revokeOwnOtherSessions, SessionError } from '../services/sessions';
 import type { PmOwnSessionsModal } from './pm-own-sessions-modal';
+import type { PmRevokeSessionModal } from './pm-revoke-session-modal';
+import type { PmRevokeOtherSessionsModal } from './pm-revoke-other-sessions-modal';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
@@ -51,6 +55,8 @@ template.innerHTML = `
 const dialogTemplate = document.createElement('template');
 dialogTemplate.innerHTML = `
   <pm-own-sessions-modal id="modal"></pm-own-sessions-modal>
+  <pm-revoke-session-modal id="revokeSessionModal" stacked></pm-revoke-session-modal>
+  <pm-revoke-other-sessions-modal id="revokeOtherSessionsModal" stacked></pm-revoke-other-sessions-modal>
 `;
 
 /**
@@ -66,6 +72,8 @@ export class PmOwnSessionsMenu extends HTMLElement {
   private openBtn: HTMLButtonElement | null = null;
   private dialogHostElement: HTMLElement | null = null;
   private modal: PmOwnSessionsModal | null = null;
+  private revokeSessionModal: PmRevokeSessionModal | null = null;
+  private revokeOtherSessionsModal: PmRevokeOtherSessionsModal | null = null;
 
   constructor() {
     super();
@@ -82,6 +90,8 @@ export class PmOwnSessionsMenu extends HTMLElement {
 
   disconnectedCallback(): void {
     this.openBtn?.removeEventListener('click', this.handleOpen);
+    this.dialogHostElement?.removeEventListener('session-revoke-clicked', this.handleRevokeClicked);
+    this.dialogHostElement?.removeEventListener('own-sessions-revoke-all-clicked', this.handleRevokeAllClicked);
     this.dialogHostElement?.removeEventListener('session-revoke-requested', this.handleRevoke);
     this.dialogHostElement?.removeEventListener('own-sessions-revoke-all-requested', this.handleRevokeAll);
     this.dialogHostElement?.remove();
@@ -103,6 +113,15 @@ export class PmOwnSessionsMenu extends HTMLElement {
 
     this.modal = this.dialogHostElement.querySelector('#modal') as unknown as PmOwnSessionsModal;
 
+    this.revokeSessionModal = this.dialogHostElement.querySelector(
+      '#revokeSessionModal',
+    ) as unknown as PmRevokeSessionModal;
+    this.revokeOtherSessionsModal = this.dialogHostElement.querySelector(
+      '#revokeOtherSessionsModal',
+    ) as unknown as PmRevokeOtherSessionsModal;
+
+    this.dialogHostElement.addEventListener('session-revoke-clicked', this.handleRevokeClicked);
+    this.dialogHostElement.addEventListener('own-sessions-revoke-all-clicked', this.handleRevokeAllClicked);
     this.dialogHostElement.addEventListener('session-revoke-requested', this.handleRevoke);
     this.dialogHostElement.addEventListener('own-sessions-revoke-all-requested', this.handleRevokeAll);
   }
@@ -121,32 +140,47 @@ export class PmOwnSessionsMenu extends HTMLElement {
     }
   };
 
+  private handleRevokeClicked = (event: Event): void => {
+    const { tokenId, deviceLabel } = (event as CustomEvent<{ tokenId: string; deviceLabel: string }>).detail;
+    this.revokeSessionModal!.show(tokenId, deviceLabel);
+  };
+
+  private handleRevokeAllClicked = (): void => {
+    this.revokeOtherSessionsModal!.show();
+  };
+
   private handleRevoke = async (event: Event): Promise<void> => {
     const { tokenId } = (event as CustomEvent<{ tokenId: string }>).detail;
-    this.modal!.clearError();
     try {
       await revokeOwnSession(tokenId);
+      this.revokeSessionModal!.close();
       this.modal!.removeSession(tokenId);
     } catch (err) {
-      this.showError(err);
+      this.revokeSessionModal!.setBusy(false);
+      this.revokeSessionModal!.showError(this.messageOf(err));
     }
   };
 
   private handleRevokeAll = async (): Promise<void> => {
-    this.modal!.clearError();
     this.modal!.revokeAllPending = true;
     try {
       await revokeOwnOtherSessions();
+      this.revokeOtherSessionsModal!.close();
       await this.loadSessions();
     } catch (err) {
-      this.showError(err);
+      this.revokeOtherSessionsModal!.setBusy(false);
+      this.revokeOtherSessionsModal!.showError(this.messageOf(err));
     } finally {
       this.modal!.revokeAllPending = false;
     }
   };
 
+  private messageOf(err: unknown): string {
+    return err instanceof SessionError ? err.message : 'An unexpected error occurred';
+  }
+
   private showError(err: unknown): void {
-    this.modal!.showError(err instanceof SessionError ? err.message : 'An unexpected error occurred');
+    this.modal!.showError(this.messageOf(err));
   }
 }
 

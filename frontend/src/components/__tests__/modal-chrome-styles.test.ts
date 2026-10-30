@@ -13,14 +13,16 @@ const EXTRACTED_SELECTORS = [
   '.modal__body',
   '.modal__actions',
   '.modal__btn',
+  '.modal__close',
 ];
 
-function localStyleSheetFor(shadowRoot: ShadowRoot): CSSStyleSheet {
+function localStyleSheetFor(shadowRoot: ShadowRoot): CSSStyleSheet | undefined {
   const [, localSheet] = shadowRoot.adoptedStyleSheets;
   return localSheet;
 }
 
-function selectorsIn(sheet: CSSStyleSheet): string[] {
+function selectorsIn(sheet: CSSStyleSheet | undefined): string[] {
+  if (!sheet) return [];
   return Array.from(sheet.cssRules).map((rule) => (rule as CSSStyleRule).selectorText);
 }
 

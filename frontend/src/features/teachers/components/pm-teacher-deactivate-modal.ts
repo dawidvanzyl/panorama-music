@@ -1,28 +1,19 @@
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
 import { setButtonsBusy } from '../../../components/button-states';
 
-const styles = new CSSStyleSheet();
-styles.replaceSync(`
-    .modal__name {
-      color: var(--pm-text);
-      font-weight: 500;
-    }
-  `);
-
 const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">warning</span>
-        <h2 class="modal__title">Deactivate Teacher</h2>
+        <span class="modal__icon" aria-hidden="true">delete_forever</span>
+        <h2 class="modal__title" id="modalTitle">Deactivate Teacher</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
-      <p class="modal__body">
-        Are you sure you want to deactivate <span class="modal__name" id="modalName"></span>?<br /><br /> They will be removed from
-        active selection lists and their banking details will be permanently deleted in the same operation. The teacher
-        record and its history are preserved.
-      </p>
+      <p class="modal__body">This action <strong>cannot be undone</strong>. The teacher <strong id="modalName"></strong> will be deactivated
+        and removed from active selection lists. Their banking details will be permanently removed. The teacher record
+        and its history are kept.</p>
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
         <button class="modal__btn modal__btn--cancel" id="cancelBtn" type="button">Cancel</button>
@@ -41,17 +32,19 @@ export class PmTeacherDeactivateModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deactivateBtn')!.addEventListener('click', this.handleDeactivate);
   }
 
   disconnectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')?.removeEventListener('click', this.handleCancel);
+    this.shadowRoot!.getElementById('closeBtn')?.removeEventListener('click', this.handleCancel);
     this.shadowRoot!.getElementById('deactivateBtn')?.removeEventListener('click', this.handleDeactivate);
   }
 
@@ -70,7 +63,10 @@ export class PmTeacherDeactivateModal extends HTMLElement {
   setBusy(busy: boolean): void {
     setButtonsBusy(
       this.shadowRoot!.getElementById('deactivateBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
   }

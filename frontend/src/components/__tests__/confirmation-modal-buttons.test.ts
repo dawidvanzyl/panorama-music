@@ -14,6 +14,10 @@ import '../../features/admin/components/pm-deactivate-user-modal';
 import '../../features/extra-curriculars/components/pm-delete-extra-curricular-modal';
 import '../../features/reports/components/pm-delete-report-modal';
 import '../../features/sessions/components/pm-revoke-all-sessions-modal';
+import '../../features/sessions/components/pm-revoke-session-modal';
+import '../../features/sessions/components/pm-revoke-other-sessions-modal';
+import '../../features/extra-curriculars/components/pm-remove-practice-time-modal';
+import '../../features/students/components/pm-unlink-activity-modal';
 
 interface ConfirmationModal extends HTMLElement {
   setBusy(busy: boolean): void;
@@ -28,6 +32,7 @@ interface Case {
   event: string;
   show: (modal: ConfirmationModal) => void;
   typed?: string;
+  variant?: 'primary';
 }
 
 const cases: Case[] = [
@@ -58,6 +63,7 @@ const cases: Case[] = [
     confirmId: 'unlinkBtn',
     event: 'teacher-account-unlink-confirmed',
     show: (m) => (m as unknown as { show(n: string): void }).show('teacher@test.com'),
+    variant: 'primary',
   },
   {
     tag: 'pm-delete-student-modal',
@@ -116,6 +122,7 @@ const cases: Case[] = [
     confirmId: 'deactivateBtn',
     event: 'user-deactivate-confirmed',
     show: (m) => (m as unknown as { show(a: string, b: string): void }).show('u1', 'user@test.com'),
+    variant: 'primary',
   },
   {
     tag: 'pm-delete-user-modal',
@@ -139,6 +146,47 @@ const cases: Case[] = [
     event: 'revoke-all-sessions-confirmed',
     show: (m) => (m as unknown as { show(): void }).show(),
     typed: 'REVOKE ALL',
+  },
+  {
+    tag: 'pm-revoke-session-modal',
+    label: 'Revoke',
+    confirmId: 'revokeBtn',
+    event: 'session-revoke-requested',
+    show: (m) => (m as unknown as { show(t: string, d: string): void }).show('t1', 'Chrome on Windows'),
+  },
+  {
+    tag: 'pm-revoke-other-sessions-modal',
+    label: 'Revoke All Others',
+    confirmId: 'revokeOthersBtn',
+    event: 'own-sessions-revoke-all-requested',
+    show: (m) => (m as unknown as { show(): void }).show(),
+  },
+  {
+    tag: 'pm-remove-practice-time-modal',
+    label: 'Remove',
+    confirmId: 'removeBtn',
+    event: 'extra-curricular-practice-time-remove-requested',
+    show: (m) =>
+      (m as unknown as { show(a: string, b: string, c: string, d: string): void }).show(
+        'ec1',
+        'pt1',
+        'Monday 08:00',
+        'Choir',
+      ),
+  },
+  {
+    tag: 'pm-unlink-activity-modal',
+    label: 'Unlink',
+    confirmId: 'unlinkBtn',
+    event: 'extra-curricular-remove-requested',
+    show: (m) =>
+      (m as unknown as { show(a: string, b: string, c: string, d: string): void }).show(
+        's1',
+        'ec1',
+        'Choir',
+        'Ayesha Khan',
+      ),
+    variant: 'primary',
   },
 ];
 
@@ -204,7 +252,7 @@ describe('confirmation modals enter the loading state on confirm', { tags: ['377
     const testCase = cases.find((c) => c.tag === 'pm-revoke-all-sessions-modal')!;
     const { modal } = enterLoading(testCase);
 
-    const backdrop = modal.shadowRoot!.getElementById('backdrop')!;
+    const backdrop = modal.shadowRoot!.querySelector('.modal__backdrop')!;
     backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
@@ -283,13 +331,16 @@ describe('typed-confirmation modals keep the typed-text gate while busy', { tags
 });
 
 describe('confirmation modal action rows', { tags: ['377UC4'] }, () => {
-  it.each(cases)('$tag holds Cancel then the destructive confirm action', (testCase) => {
+  it.each(cases)('$tag holds Cancel then the confirm action of its family', (testCase) => {
     const { modal, confirm, cancel } = open(testCase);
+    const variant = testCase.variant ?? 'destructive';
+    const other = variant === 'primary' ? 'destructive' : 'primary';
 
     const row = modal.shadowRoot!.querySelector('[data-testid="modal-actions"]')!;
     expect(Array.from(row.children)).toEqual([cancel, confirm]);
     expect(cancel.classList.contains('modal__btn--cancel')).toBe(true);
-    expect(confirm.classList.contains('modal__btn--destructive')).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${variant}`)).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${other}`)).toBe(false);
     expect(row.lastElementChild).toBe(confirm);
   });
 });
@@ -301,6 +352,6 @@ describe('confirmation modals keep their Cancel and confirm look', { tags: ['387
     for (const button of [cancel, confirm]) {
       expect(Array.from(button.classList).some((name) => name.endsWith('--warning'))).toBe(false);
     }
-    expect(confirm.classList.contains('modal__btn--destructive')).toBe(true);
+    expect(confirm.classList.contains(`modal__btn--${testCase.variant ?? 'destructive'}`)).toBe(true);
   });
 });

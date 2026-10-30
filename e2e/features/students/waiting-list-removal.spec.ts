@@ -16,7 +16,7 @@ test.describe('Removing a waiting-list row asks for confirmation first', { tag: 
     await waitingListPage.openDeleteConfirmation(row);
 
     await expect(waitingListPage.deleteConfirmationMessage()).toContainText(`${entry.firstName} ${entry.lastName}`);
-    await expect(waitingListPage.deleteConfirmationMessage()).toContainText('delete their student record');
+    await expect(waitingListPage.deleteConfirmationMessage()).toContainText('The student record will also be permanently removed.');
 
     // Nothing has happened yet — the row and the record are both still there.
     await expect(waitingListPage.rowFor('During School', entry.lastName)).toBeVisible();

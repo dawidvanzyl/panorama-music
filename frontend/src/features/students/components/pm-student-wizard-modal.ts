@@ -40,10 +40,9 @@ type WizardMode = 'enrolled' | 'waitingList';
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
     .modal__card {
-      box-sizing: border-box;
-      max-width: none;
-      width: calc(100% - var(--pm-sidebar-width) - (2 * var(--pm-content-padding)));
       height: 600px;
+      max-height: none;
+      overflow: visible;
       display: flex;
       flex-direction: column;
     }
@@ -108,45 +107,46 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card modal__card--fill" role="dialog" aria-modal="true" aria-labelledby="title">
       <div class="modal__header">
         <h2 class="modal__title" id="title">Create Student</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
-      <div class="wizard__tabs" role="tablist">
-        <button type="button" class="wizard__tab wizard__tab--active" id="tabStudent" role="tab" aria-selected="true" aria-controls="stepStudent">Student</button>
-        <button type="button" class="wizard__tab" id="tabSiblings" role="tab" aria-selected="false" aria-controls="stepSiblings">Siblings</button>
-        <button type="button" class="wizard__tab" id="tabGuardians" role="tab" aria-selected="false" aria-controls="stepGuardians">Guardians</button>
-        <button type="button" class="wizard__tab" id="tabCourses" role="tab" aria-selected="false" aria-controls="stepCourses">Courses</button>
-        <button type="button" class="wizard__tab" id="tabExtraCurriculars" role="tab" aria-selected="false" aria-controls="stepExtraCurriculars">Extra-Curriculars</button>
-        <button type="button" class="wizard__tab" id="tabWaitingList" role="tab" aria-selected="false" aria-controls="stepWaitingList" hidden>Waiting List</button>
+      <div class="wizard__tabs">
+        <button type="button" class="wizard__tab wizard__tab--active" id="tabStudent" aria-current="step">Student</button>
+        <button type="button" class="wizard__tab" id="tabSiblings">Siblings</button>
+        <button type="button" class="wizard__tab" id="tabGuardians">Guardians</button>
+        <button type="button" class="wizard__tab" id="tabCourses">Courses</button>
+        <button type="button" class="wizard__tab" id="tabExtraCurriculars">Extra-Curriculars</button>
+        <button type="button" class="wizard__tab" id="tabWaitingList" hidden>Waiting List</button>
       </div>
-      <div class="wizard__step wizard__step--visible" id="stepStudent" role="tabpanel" aria-labelledby="tabStudent">
+      <div class="wizard__step wizard__step--visible" id="stepStudent">
         <pm-student-step id="studentStep"></pm-student-step>
         <div class="wizard__step-actions form-actions" id="studentStepActions" hidden>
           <button type="button" class="form-btn form-btn--secondary" id="studentCancelBtn">Cancel</button>
           <button type="button" class="form-btn form-btn--primary" id="studentSaveBtn">Save</button>
         </div>
       </div>
-      <div class="wizard__step" id="stepSiblings" role="tabpanel" aria-labelledby="tabSiblings">
+      <div class="wizard__step" id="stepSiblings">
         <pm-siblings-step id="siblingsStep"></pm-siblings-step>
       </div>
-      <div class="wizard__step" id="stepGuardians" role="tabpanel" aria-labelledby="tabGuardians">
+      <div class="wizard__step" id="stepGuardians">
         <pm-guardians-step id="guardiansStep"></pm-guardians-step>
       </div>
-      <div class="wizard__step" id="stepCourses" role="tabpanel" aria-labelledby="tabCourses">
+      <div class="wizard__step" id="stepCourses">
         <pm-courses-step id="coursesStep"></pm-courses-step>
       </div>
-      <div class="wizard__step" id="stepExtraCurriculars" role="tabpanel" aria-labelledby="tabExtraCurriculars">
+      <div class="wizard__step" id="stepExtraCurriculars">
         <pm-extra-curriculars-step id="extraCurricularsStep"></pm-extra-curriculars-step>
       </div>
-      <div class="wizard__step" id="stepWaitingList" role="tabpanel" aria-labelledby="tabWaitingList">
+      <div class="wizard__step" id="stepWaitingList">
         <pm-waiting-list-step id="waitingListStep"></pm-waiting-list-step>
         <div class="wizard__step-actions form-actions" id="waitingListStepActions" hidden>
           <button type="button" class="form-btn form-btn--secondary" id="waitingListCloseBtn">Cancel</button>
           <button type="button" class="form-btn form-btn--primary" id="waitingListSaveBtn">Save</button>
         </div>
       </div>
-      <div class="wizard__actions form-actions" data-testid="wizard-footer">
+      <div class="wizard__actions form-actions" id="wizardFooter" data-testid="wizard-footer">
         <button type="button" class="form-btn form-btn--secondary" id="cancelBtn">Cancel</button>
         <button type="button" class="form-btn form-btn--secondary" id="previousBtn" hidden>Previous</button>
         <button type="button" class="form-btn form-btn--primary" id="nextBtn" hidden>Next</button>
@@ -176,6 +176,8 @@ export class PmStudentWizardModal extends HTMLElement {
   private guardiansStep: PmGuardiansStep | null = null;
   private coursesStep: PmCoursesStep | null = null;
   private waitingListStep: PmWaitingListStep | null = null;
+  private closeBtn: HTMLButtonElement | null = null;
+  private wizardFooter: HTMLElement | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
   private previousBtn: HTMLButtonElement | null = null;
   private nextBtn: HTMLButtonElement | null = null;
@@ -199,6 +201,8 @@ export class PmStudentWizardModal extends HTMLElement {
   private _privateGrade = false;
   /** Set while a create request runs, so the open step, which an error is shown on, cannot change. */
   private _stepsLocked = false;
+  private _studentSaveBusy = false;
+  private _entrySaveBusy = false;
 
   constructor() {
     super();
@@ -229,6 +233,8 @@ export class PmStudentWizardModal extends HTMLElement {
     this.studentStep = this.shadowRoot!.getElementById('studentStep') as unknown as PmStudentStep;
     this.siblingsStep = this.shadowRoot!.getElementById('siblingsStep') as unknown as PmSiblingsStep;
     this.guardiansStep = this.shadowRoot!.getElementById('guardiansStep') as unknown as PmGuardiansStep;
+    this.closeBtn = this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement;
+    this.wizardFooter = this.shadowRoot!.getElementById('wizardFooter') as HTMLElement;
     this.cancelBtn = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
     this.previousBtn = this.shadowRoot!.getElementById('previousBtn') as HTMLButtonElement;
     this.nextBtn = this.shadowRoot!.getElementById('nextBtn') as HTMLButtonElement;
@@ -250,6 +256,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabExtraCurriculars.addEventListener('click', () => this.handleExtraCurricularsTabClick());
     this.tabWaitingList.addEventListener('click', () => this.handleWaitingListTabClick());
     this.shadowRoot!.addEventListener('student-phase-changed', this.handlePhaseChanged);
+    this.closeBtn.addEventListener('click', () => this.close());
     this.cancelBtn.addEventListener('click', () => this.close());
     this.previousBtn.addEventListener('click', () => this.handlePrevious());
     this.nextBtn.addEventListener('click', () => this.handleNext());
@@ -272,7 +279,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this._mode = 'create';
     this._wizardMode = wizardMode;
     this._studentId = null;
-    this.titleEl!.textContent = wizardMode === 'waitingList' ? 'Capture Waiting List Student' : 'Create Student';
+    this.titleEl!.textContent = wizardMode === 'waitingList' ? 'Create Waiting List Entry' : 'Create Student';
     // No phase and no grade until they are chosen on the Student step, which
     // announces them. The reset below fires that announcement, so this is the
     // starting point rather than the last student's phase carrying over.
@@ -363,14 +370,22 @@ export class PmStudentWizardModal extends HTMLElement {
   }
 
   private setStudentSaveBusy(busy: boolean): void {
+    this._studentSaveBusy = busy;
     setButtonsBusy(this.saveBtn!, this.cancelBtn!, busy);
     setButtonsBusy(this.studentSaveBtn!, this.studentCancelBtn!, busy);
+    this.syncCloseButton();
     this.previousBtn!.disabled = busy;
     this._stepsLocked = busy && this._mode === 'create';
   }
 
   private setEntrySaveBusy(busy: boolean): void {
+    this._entrySaveBusy = busy;
     setButtonsBusy(this.waitingListSaveBtn!, this.waitingListCloseBtn!, busy);
+    this.syncCloseButton();
+  }
+
+  private syncCloseButton(): void {
+    this.closeBtn!.disabled = this._studentSaveBusy || this._entrySaveBusy;
   }
 
   get studentId(): string | null {
@@ -605,12 +620,21 @@ export class PmStudentWizardModal extends HTMLElement {
     this.tabCourses!.classList.toggle('wizard__tab--active', step === 'courses');
     this.tabExtraCurriculars!.classList.toggle('wizard__tab--active', step === 'extraCurriculars');
     this.tabWaitingList!.classList.toggle('wizard__tab--active', step === 'waitingList');
-    this.tabStudent!.setAttribute('aria-selected', String(step === 'student'));
-    this.tabSiblings!.setAttribute('aria-selected', String(step === 'siblings'));
-    this.tabGuardians!.setAttribute('aria-selected', String(step === 'guardians'));
-    this.tabCourses!.setAttribute('aria-selected', String(step === 'courses'));
-    this.tabExtraCurriculars!.setAttribute('aria-selected', String(step === 'extraCurriculars'));
-    this.tabWaitingList!.setAttribute('aria-selected', String(step === 'waitingList'));
+    const stepTabs: [Step, HTMLButtonElement][] = [
+      ['student', this.tabStudent!],
+      ['siblings', this.tabSiblings!],
+      ['guardians', this.tabGuardians!],
+      ['courses', this.tabCourses!],
+      ['extraCurriculars', this.tabExtraCurriculars!],
+      ['waitingList', this.tabWaitingList!],
+    ];
+    for (const [tabStep, tab] of stepTabs) {
+      if (tabStep === step) {
+        tab.setAttribute('aria-current', 'step');
+      } else {
+        tab.removeAttribute('aria-current');
+      }
+    }
 
     if (step === 'siblings' && this._mode === 'edit' && this._studentId) {
       this.siblingsStep!.activate(this._studentId);
@@ -690,7 +714,7 @@ export class PmStudentWizardModal extends HTMLElement {
     this.previousBtn!.hidden = !(isCreate && this._activeStep !== 'student');
     this.nextBtn!.hidden = !(isCreate && this._activeStep !== this.finalStep);
     this.saveBtn!.hidden = isCreate ? this._activeStep !== this.finalStep : true;
-    this.cancelBtn!.hidden = !isCreate && (onStudentTab || onWaitingListTab);
+    this.wizardFooter!.hidden = !isCreate;
     this.studentStepActions!.hidden = isCreate || !onStudentTab;
     this.waitingListStepActions!.hidden = !editingEntry;
   }

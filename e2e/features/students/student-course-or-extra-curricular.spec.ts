@@ -126,7 +126,7 @@ test.describe('Students — saving needs a course or an extra-curricular', { tag
     await studentsPage.saveStudent();
 
     await expect(studentsPage.wizardModal).toHaveAttribute('open', '');
-    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-selected', 'true');
+    await expect(studentsPage.wizardModal.locator('#tabExtraCurriculars')).toHaveAttribute('aria-current', 'step');
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(REQUIRED_ON_SAVE);
     await expect(studentsPage.coursesStepMessage()).toHaveText('');
 
@@ -344,7 +344,7 @@ test.describe('Students — the last extra-curricular is removed when a course i
 
     await findOnRoster(studentsPage, surname);
     await studentsPage.openExtraCurricularsTab(surname);
-    await studentsPage.removeActivity(activity.description);
+    await studentsPage.unlinkActivityAndConfirm(activity.description);
 
     await expect(studentsPage.assignedActivityRow(activity.description)).toHaveCount(0);
     await expect(studentsPage.noActivitiesMessage()).toBeVisible();
@@ -375,7 +375,7 @@ test.describe('Students — the last extra-curricular is removed when a course i
     await studentsPage.openExtraCurricularsTab(surname);
     await studentsPage.wizardModal.locator('#tabCourses').click();
     await studentsPage.wizardModal.locator('#tabExtraCurriculars').click();
-    await studentsPage.removeActivity(activity.description);
+    await studentsPage.unlinkActivityAndConfirm(activity.description);
 
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText('');
     await expect(studentsPage.assignedActivityRow(activity.description)).toHaveCount(0);
@@ -393,7 +393,7 @@ test.describe('Students — the last extra-curricular cannot be removed with no 
 
     await findOnRoster(studentsPage, surname);
     await studentsPage.openExtraCurricularsTab(surname);
-    await studentsPage.removeActivity(activity.description);
+    await studentsPage.unlinkActivity(activity.description);
 
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(ENROLL_BEFORE_REMOVING);
     expect(deletes).toHaveLength(0);
@@ -413,7 +413,7 @@ test.describe('Students — the last extra-curricular cannot be removed with no 
 
     await findOnRoster(studentsPage, surname);
     await studentsPage.openExtraCurricularsTab(surname);
-    await studentsPage.removeActivity(activity.description);
+    await studentsPage.unlinkActivity(activity.description);
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(ENROLL_BEFORE_REMOVING);
 
     await studentsPage.wizardModal.locator('#tabCourses').click();
@@ -421,7 +421,7 @@ test.describe('Students — the last extra-curricular cannot be removed with no 
     await expect(studentsPage.enrollmentListRow(target.courseLabel)).toBeVisible();
 
     await studentsPage.wizardModal.locator('#tabExtraCurriculars').click();
-    await studentsPage.removeActivity(activity.description);
+    await studentsPage.unlinkActivityAndConfirm(activity.description);
 
     await expect(studentsPage.assignedActivityRow(activity.description)).toHaveCount(0);
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText('');

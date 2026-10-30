@@ -452,10 +452,14 @@ export class PmExtraCurricularsStep extends HTMLElement {
 
     this.clearError();
     this.dispatchEvent(
-      new CustomEvent('extra-curricular-remove-requested', {
+      new CustomEvent('extra-curricular-unlink-clicked', {
         bubbles: true,
         composed: true,
-        detail: { studentId: this._studentId, extraCurricularId: activity.extraCurricularId },
+        detail: {
+          studentId: this._studentId,
+          extraCurricularId: activity.extraCurricularId,
+          description: activity.description,
+        },
       }),
     );
   }
@@ -509,8 +513,10 @@ export class PmExtraCurricularsStep extends HTMLElement {
     actionRow.dataset.testid = 'row-actions';
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.classList.add('compact-btn', 'compact-btn--destructive', 'ec-step__remove');
-    remove.textContent = 'Remove';
+    const staged = this._mode === 'create';
+    remove.classList.add('compact-btn', 'ec-step__remove');
+    remove.classList.toggle('compact-btn--destructive', staged);
+    remove.textContent = staged ? 'Remove' : 'Unlink';
     remove.addEventListener('click', () => this.handleRemoveClicked(activity));
     actionRow.appendChild(remove);
     actions.appendChild(actionRow);

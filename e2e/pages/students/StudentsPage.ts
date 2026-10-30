@@ -51,6 +51,7 @@ export class StudentsPage extends BasePage {
   readonly wizardModal: Locator;
   readonly deleteModal: Locator;
   readonly deleteGuardianModal: Locator;
+  readonly unlinkActivityModal: Locator;
   readonly filterNameInput: Locator;
   readonly filterGradeSelect: Locator;
   readonly filterPhaseSelect: Locator;
@@ -63,6 +64,7 @@ export class StudentsPage extends BasePage {
     this.wizardModal = page.locator('#wizardModal');
     this.deleteModal = page.locator('#deleteModal');
     this.deleteGuardianModal = page.locator('#deleteGuardianModal');
+    this.unlinkActivityModal = page.locator('#unlinkActivityModal');
     this.filterNameInput = page.locator('#filterBar').locator('#name');
     this.filterGradeSelect = page.locator('#filterBar').locator('#grade');
     this.filterPhaseSelect = page.locator('#filterBar').locator('#phase');
@@ -407,7 +409,12 @@ export class StudentsPage extends BasePage {
       await bottomDismiss.click();
       return;
     }
-    await this.wizardModal.locator('.wizard__step-actions #studentCancelBtn').click();
+    const studentCancel = this.wizardModal.locator('.wizard__step-actions #studentCancelBtn');
+    if (await studentCancel.isVisible()) {
+      await studentCancel.click();
+      return;
+    }
+    await this.actionRows().closeControl.click();
   }
 
   /** The wizard modal's outer card element, whose fixed dimensions must not change between steps. */
@@ -821,8 +828,20 @@ export class StudentsPage extends BasePage {
     return this.extraCurricularsStep().locator('#rows').locator('tr').filter({ hasText: description });
   }
 
-  async removeActivity(description: string): Promise<void> {
-    await this.assignedActivityRow(description).getByRole('button', { name: 'Remove' }).click();
+  /** Presses Unlink on a saved activity row (edit mode). It opens the Unlink Activity confirmation. */
+  async unlinkActivity(description: string): Promise<void> {
+    await this.assignedActivityRow(description).getByRole('button', { name: 'Unlink', exact: true }).click();
+  }
+
+  /** Presses Unlink on the row, then Unlink in the confirmation, and waits for it to close. */
+  async unlinkActivityAndConfirm(description: string): Promise<void> {
+    await this.unlinkActivity(description);
+    await this.confirmUnlinkActivity();
+  }
+
+  async confirmUnlinkActivity(): Promise<void> {
+    await this.unlinkActivityModal.getByRole('button', { name: 'Unlink', exact: true }).click();
+    await expect(this.unlinkActivityModal.locator('.modal__card')).toBeHidden();
   }
 
   /** The "No extra-curricular activities assigned." line shown in place of rows. */

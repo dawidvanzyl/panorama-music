@@ -640,7 +640,7 @@ describe(
 
       expect(modal.hasAttribute('open')).toBe(true);
       expect(modal.shadowRoot!.textContent).toContain('Amara Pillay');
-      expect(modal.shadowRoot!.textContent).toContain('delete their student record');
+      expect(modal.shadowRoot!.textContent).toContain('The student record will also be permanently removed');
       expect(modal.shadowRoot!.textContent).toContain('cannot be undone');
       expect(mockRemoveWaitingListStudent).not.toHaveBeenCalled();
     });

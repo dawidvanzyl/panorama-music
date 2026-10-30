@@ -6,6 +6,7 @@ export class AdminSessionsPage extends BasePage {
   readonly filterInput: Locator;
   readonly revokeAllBtn: Locator;
   readonly rows: Locator;
+  readonly revokeSessionModal: Locator;
   readonly revokeAllModalConfirmInput: Locator;
   readonly revokeAllModalConfirmButton: Locator;
 
@@ -15,6 +16,7 @@ export class AdminSessionsPage extends BasePage {
     this.filterInput = page.locator('#filterInput');
     this.revokeAllBtn = page.getByRole('button', { name: 'Revoke All', exact: true });
     this.rows = page.locator('table tbody tr');
+    this.revokeSessionModal = page.locator('pm-admin-sessions-page #revokeSessionModal');
     this.revokeAllModalConfirmInput = page.locator('#revokeAllModal').locator('#confirmInput');
     this.revokeAllModalConfirmButton = page.locator('#revokeAllModal').locator('#revokeAllBtn');
   }
@@ -29,6 +31,12 @@ export class AdminSessionsPage extends BasePage {
 
   async revokeRow(row: Locator): Promise<void> {
     await row.getByRole('button', { name: 'Revoke' }).click();
+  }
+
+  /** Clicks Revoke in the Revoke Session confirmation and waits for it to close. */
+  async confirmRevoke(): Promise<void> {
+    await this.revokeSessionModal.getByRole('button', { name: 'Revoke', exact: true }).click();
+    await this.revokeSessionModal.locator('.modal__card').waitFor({ state: 'hidden' });
   }
 
   async revokeAllGlobal(): Promise<void> {

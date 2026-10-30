@@ -14,7 +14,8 @@ styles.replaceSync(`
     .modal__confirm-input {
       width: 100%;
       box-sizing: border-box;
-      padding: 8px 12px;
+      height: 40px;
+      padding: 0 12px;
       border-radius: var(--pm-radius);
       border: 1px solid var(--pm-border);
       background: var(--pm-surface-2);
@@ -31,16 +32,17 @@ styles.replaceSync(`
 const template = document.createElement('template');
 template.innerHTML = `
 
-  <div class="modal__backdrop" id="backdrop">
+  <div class="modal__backdrop">
     <div class="modal__card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">warning</span>
+        <span class="modal__icon" aria-hidden="true">delete_forever</span>
         <h2 class="modal__title" id="modalTitle">Revoke All Sessions</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <p class="modal__body">
-        This will immediately terminate every other active session across the entire system. Type <strong>${CONFIRM_PHRASE}</strong> to confirm.
+        This action <strong>cannot be undone</strong>. Every other session of every user will be ended. Those users must sign in again.
       </p>
-      <label class="modal__confirm-label" for="confirmInput">Type "${CONFIRM_PHRASE}" to confirm</label>
+      <label class="modal__confirm-label" id="confirmLabel" for="confirmInput">Type "${CONFIRM_PHRASE}" to confirm</label>
       <input class="modal__confirm-input" id="confirmInput" type="text" autocomplete="off" />
       <p class="modal__error" id="error" data-testid="modal-error"></p>
       <div class="modal__actions" data-testid="modal-actions">
@@ -64,16 +66,9 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
 
   connectedCallback(): void {
     this.shadowRoot!.getElementById('cancelBtn')!.addEventListener('click', () => this.close());
+    this.shadowRoot!.getElementById('closeBtn')!.addEventListener('click', () => this.close());
     this.shadowRoot!.getElementById('revokeAllBtn')!.addEventListener('click', () => this.handleConfirm());
     this.shadowRoot!.getElementById('confirmInput')!.addEventListener('input', () => this.checkConfirmation());
-    this.shadowRoot!.getElementById('backdrop')!.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget && !this.busy) this.close();
-    });
-    this.addEventListener('keydown', this.handleKeydown);
-  }
-
-  disconnectedCallback(): void {
-    this.removeEventListener('keydown', this.handleKeydown);
   }
 
   show(): void {
@@ -95,7 +90,10 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
     this.busy = busy;
     setButtonsBusy(
       this.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement,
-      this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+      [
+        this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement,
+        this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement,
+      ],
       busy,
     );
     this.checkConfirmation();
@@ -104,12 +102,6 @@ export class PmRevokeAllSessionsModal extends HTMLElement {
   showError(message: string): void {
     this.shadowRoot!.getElementById('error')!.textContent = message;
   }
-
-  private handleKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && this.hasAttribute('open') && !this.busy) {
-      this.close();
-    }
-  };
 
   private checkConfirmation(): void {
     const input = this.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;

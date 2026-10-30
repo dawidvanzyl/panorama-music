@@ -279,7 +279,7 @@ describe('pm-extra-curriculars-page — confirming a deletion', { tags: ['278UC1
 
     expect(modalIsOpen(el)).toBe(true);
     expect(modalTextOf(el)).toBe(
-      'This action cannot be undone. The activity Marimba Band and its 2 practice time(s) will be permanently removed.',
+      'This action cannot be undone. The activity Marimba Band will be permanently removed. Its 2 practice times will also be permanently removed.',
     );
     expect(vi.mocked(deleteExtraCurricular)).not.toHaveBeenCalled();
   });

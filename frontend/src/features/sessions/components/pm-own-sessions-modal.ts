@@ -1,49 +1,22 @@
 import './pm-sessions-table';
 import { modalChromeStyles } from '../../../components/modal-chrome-styles';
+import { compactButtonStyles } from '../../../components/compact-button-styles';
 import type { PmSessionsTable } from './pm-sessions-table';
 import type { SessionResult } from '../services/sessions';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Wider than the shared 420px default: the sessions table carries five
-       columns, and anything narrower wraps every row onto three lines. Sized to
-       match the student wizard — the same width calculation, so the two widest
-       dialogs in the application line up rather than each picking a number. */
-    .modal__card {
-      box-sizing: border-box;
-      max-width: none;
-      width: calc(100% - var(--pm-sidebar-width) - (2 * var(--pm-content-padding)));
-      max-height: calc(100vh - 64px);
-      overflow-y: auto;
-    }
-    .modal__header {
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
     .own-sessions__heading {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 4px;
     }
-    .modal__title {
-      color: var(--pm-text);
-    }
     .own-sessions__subtitle {
       color: var(--pm-text-muted);
       font-size: 14px;
       max-width: 40em;
-    }
-    .own-sessions__close {
-      display: flex;
-      padding: 4px;
-      border: none;
-      background: none;
-      color: var(--pm-text-muted);
-      cursor: pointer;
-      font-family: 'Material Symbols Outlined', sans-serif;
-      font-size: 22px;
+      margin: 0;
     }
     .own-sessions__error {
       margin-bottom: 16px;
@@ -58,28 +31,10 @@ styles.replaceSync(`
     .own-sessions__error--visible {
       display: block;
     }
-    .own-sessions__actions {
+    .own-sessions__toolbar {
       display: flex;
       justify-content: flex-end;
-      margin-top: 20px;
-    }
-    .own-sessions__revoke-all {
-      background: var(--pm-accent);
-      border: 1px solid var(--pm-accent);
-      color: #fff;
-      border-radius: var(--pm-radius);
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .own-sessions__revoke-all:hover:not(:disabled) {
-      filter: brightness(1.1);
-    }
-    .own-sessions__revoke-all:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+      margin-bottom: 12px;
     }
   `);
 
@@ -87,19 +42,19 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__card modal__card--fill" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
         <div class="own-sessions__heading">
           <h2 class="modal__title" id="modalTitle">Active Sessions</h2>
           <p class="own-sessions__subtitle">Manage your active login sessions across different devices and locations to ensure your account remains secure.</p>
         </div>
-        <button type="button" class="own-sessions__close" id="closeBtn" aria-label="Close">close</button>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="own-sessions__error" id="error"></div>
-      <pm-sessions-table id="sessionsTable"></pm-sessions-table>
-      <div class="own-sessions__actions">
-        <button type="button" class="own-sessions__revoke-all" id="revokeAllBtn">Revoke all other sessions</button>
+      <div class="own-sessions__toolbar">
+        <button type="button" class="compact-btn compact-btn--destructive" id="revokeAllBtn">Revoke All Others</button>
       </div>
+      <pm-sessions-table id="sessionsTable"></pm-sessions-table>
     </div>
   </div>
 `;
@@ -119,7 +74,7 @@ export class PmOwnSessionsModal extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, styles];
+    this.shadowRoot!.adoptedStyleSheets = [modalChromeStyles, compactButtonStyles, styles];
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
   }
 
@@ -180,7 +135,7 @@ export class PmOwnSessionsModal extends HTMLElement {
 
   private handleRevokeAll = (): void => {
     this.dispatchEvent(
-      new CustomEvent('own-sessions-revoke-all-requested', {
+      new CustomEvent('own-sessions-revoke-all-clicked', {
         bubbles: true,
         composed: true,
       }),

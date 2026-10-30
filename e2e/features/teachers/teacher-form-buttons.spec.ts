@@ -309,7 +309,7 @@ test.describe(
 );
 
 test.describe(
-  'Form buttons — the banking activity modal dismisses with Cancel',
+  'Form buttons — the banking activity modal dismisses with its close control',
   { tag: ['@267IT24'] },
   () => {
     const openActivityModal = async (page: Page): Promise<TeacherDetailPage> => {
@@ -323,17 +323,19 @@ test.describe(
       return detail;
     };
 
-    test('the dismiss action reads "Cancel"', async ({ page }) => {
+    test('the modal has no footer button, only the header close control', async ({ page }) => {
       const detail = await openActivityModal(page);
+      const modal = detail.bankingActivityModal;
 
-      await expect(detail.bankingActivityModal.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
-      await expect(detail.bankingActivityModal.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0);
+      await expect(modal.getByRole('button')).toHaveCount(1);
+      await expect(modal.getByRole('button', { name: 'Close', exact: true })).toBeVisible();
+      await expect(modal.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0);
     });
 
-    test('Cancel closes the modal', async ({ page }) => {
+    test('the close control closes the modal', async ({ page }) => {
       const detail = await openActivityModal(page);
 
-      await detail.bankingActivityModal.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await detail.bankingActivityModal.getByRole('button', { name: 'Close', exact: true }).click();
 
       await expect(detail.bankingActivityModal).not.toHaveAttribute('open', '');
       await expect(detail.header).toBeVisible();

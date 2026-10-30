@@ -128,6 +128,16 @@ async function pressRemove(el: HTMLElement, slot: string): Promise<void> {
   await flush();
 }
 
+function removeModalOf(el: HTMLElement): HTMLElement {
+  return el.shadowRoot!.getElementById('removePracticeTimeModal')!;
+}
+
+async function confirmRemove(el: HTMLElement): Promise<void> {
+  (removeModalOf(el).shadowRoot!.getElementById('removeBtn') as HTMLButtonElement).click();
+  await flush();
+  await flush();
+}
+
 /** What the catalogue reads as on the next load, once a change has landed. */
 function thenCatalogueIs(...activities: ExtraCurricular[]): void {
   mockGetExtraCurriculars.mockResolvedValue(activities);
@@ -350,6 +360,7 @@ describe('practice-times panel — removes a slot', { tags: ['276UC14'] }, () =>
     // The middle slot: a removal written against a position rather than an
     // identity takes out a neighbour, which the first or last would hide.
     await pressRemove(el, 'Wednesday 15:00');
+    await confirmRemove(el);
 
     expect(vi.mocked(removePracticeTime)).toHaveBeenCalledWith('ec1', 'pt2');
     expect(panelSlotsOf(el)).toEqual(['Monday 15:00', 'Friday 14:00']);
@@ -390,6 +401,7 @@ describe('practice-times panel — refuses removing the last slot', { tags: ['27
     vi.mocked(removePracticeTime).mockResolvedValue();
     thenCatalogueIs(marimba, withSlots(choir, choir.practiceTimes[0]));
     await pressRemove(el, 'Friday 08:00');
+    await confirmRemove(el);
 
     expect(panelSlotsOf(el)).toEqual(['Tuesday 14:30']);
 
@@ -501,5 +513,64 @@ describe('practice-times panel — loading state of Create Practice Time', { tag
 
     expect(isBusy()).toBe(false);
     expect((inPanel(el, 'addBtn') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe('practice-times panel — asks before removing a slot', { tags: ['396UC1', '396UC3'] }, () => {
+  let el: HTMLElement;
+
+  afterEach(() => document.body.removeChild(el));
+
+  it('opens the confirmation naming the slot and the activity, and removes nothing', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Marimba Band');
+
+    await pressRemove(el, 'Wednesday 15:00');
+
+    const modal = removeModalOf(el);
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('practiceTime')!.textContent).toBe('Wednesday 15:00');
+    expect(modal.shadowRoot!.getElementById('activityName')!.textContent).toBe('Marimba Band');
+    expect(vi.mocked(removePracticeTime)).not.toHaveBeenCalled();
+    expect(panelSlotsOf(el)).toHaveLength(3);
+  });
+
+  it('does not open the confirmation for the last slot', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Junior Choir');
+
+    await pressRemove(el, 'Tuesday 14:30');
+
+    expect(removeModalOf(el).hasAttribute('open')).toBe(false);
+  });
+
+  it('removes once on confirm and closes the confirmation', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Marimba Band');
+    vi.mocked(removePracticeTime).mockResolvedValue();
+    thenCatalogueIs(withSlots(marimba, marimba.practiceTimes[0], marimba.practiceTimes[2]), choir);
+
+    await pressRemove(el, 'Wednesday 15:00');
+    await confirmRemove(el);
+
+    expect(vi.mocked(removePracticeTime)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(removePracticeTime)).toHaveBeenCalledWith('ec1', 'pt2');
+    expect(removeModalOf(el).hasAttribute('open')).toBe(false);
+  });
+
+  it('shows a failure in the confirmation and keeps it open', async () => {
+    el = await mountPage();
+    await toggleRow(el, 'Marimba Band');
+    vi.mocked(removePracticeTime).mockRejectedValue(
+      new ExtraCurricularsError('Could not remove the practice time.', 500),
+    );
+
+    await pressRemove(el, 'Wednesday 15:00');
+    await confirmRemove(el);
+
+    const modal = removeModalOf(el);
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('Could not remove the practice time.');
+    expect(panelSlotsOf(el)).toHaveLength(3);
   });
 });

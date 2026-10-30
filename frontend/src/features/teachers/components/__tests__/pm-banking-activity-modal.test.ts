@@ -51,3 +51,19 @@ describe('pm-banking-activity-modal — entries name the action, actor and last 
     expect(element.shadowRoot!.textContent).toContain('No banking activity recorded.');
   });
 });
+
+describe('pm-banking-activity-modal — no footer', { tags: ['390UC7'] }, () => {
+  it('has no action row and its only button is the header close control', () => {
+    element = document.createElement('pm-banking-activity-modal') as PmBankingActivityModal;
+    document.body.appendChild(element);
+    element.show(entries);
+    const root = element.shadowRoot!;
+
+    expect(root.querySelector('.form-actions')).toBeNull();
+    expect(root.querySelector('.modal__actions')).toBeNull();
+    const buttons = root.querySelectorAll('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].id).toBe('closeBtn');
+    expect(buttons[0].closest('.modal__header')).not.toBeNull();
+  });
+});

@@ -150,7 +150,7 @@ test.describe('Extra-Curriculars — removing one of an activity’s slots', { t
 
     // The middle one: an off-by-one that removes by index rather than by
     // identity takes out a neighbour, and is invisible at either end.
-    await activitiesPage.removeSlotFromPanel(activityId, tuesday);
+    await activitiesPage.removeSlotFromPanelAndConfirm(activityId, tuesday);
 
     await expectPanelSlots(activitiesPage, activityId, monday, thursday);
     const expected = slotsText(monday, thursday);
@@ -177,7 +177,7 @@ test.describe('Extra-Curriculars — removing one of an activity’s slots', { t
     const betaId = await seedActivity(activitiesPage, beta, 'Senior', [shared, betaOwn]);
 
     await activitiesPage.toggleRow(alpha);
-    await activitiesPage.removeSlotFromPanel(alphaId, shared);
+    await activitiesPage.removeSlotFromPanelAndConfirm(alphaId, shared);
     await expectPanelSlots(activitiesPage, alphaId, alphaOwn);
     await expect(activitiesPage.practiceTimesCell(activitiesPage.row(alpha))).toHaveText(slotsText(alphaOwn));
 
@@ -203,7 +203,7 @@ test.describe('Extra-Curriculars — removing one of an activity’s slots', { t
     await activitiesPage.toggleRow(description);
     // The identifier the panel's own Remove sends to the endpoint.
     const practiceTimeId = await activitiesPage.panelSlotId(activityId, second);
-    await activitiesPage.removeSlotFromPanel(activityId, second);
+    await activitiesPage.removeSlotFromPanelAndConfirm(activityId, second);
     await expectPanelSlots(activitiesPage, activityId, first);
 
     const status = await fetchFromPage(
@@ -348,7 +348,7 @@ test.describe('Extra-Curriculars — an activity may not be left with no slots',
     const activityId = await seedActivity(activitiesPage, description, 'Junior', [first, second]);
 
     await activitiesPage.toggleRow(description);
-    await activitiesPage.removeSlotFromPanel(activityId, second);
+    await activitiesPage.removeSlotFromPanelAndConfirm(activityId, second);
     await expectPanelSlots(activitiesPage, activityId, first);
 
     // A guard evaluated once at page load, against the count the panel was

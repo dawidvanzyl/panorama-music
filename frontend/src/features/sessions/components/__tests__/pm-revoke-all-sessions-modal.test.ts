@@ -71,19 +71,6 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
     expect(events).toHaveLength(0);
   });
 
-  it('pressing Escape closes the modal', () => {
-    modal.show();
-    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(modal.hasAttribute('open')).toBe(false);
-  });
-
-  it('clicking the backdrop closes the modal', () => {
-    modal.show();
-    const backdrop = modal.shadowRoot!.getElementById('backdrop') as HTMLElement;
-    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(modal.hasAttribute('open')).toBe(false);
-  });
-
   it('clicking inside the modal card does not close the modal', () => {
     modal.show();
     const card = modal.shadowRoot!.querySelector('.modal__card') as HTMLElement;
@@ -107,5 +94,86 @@ describe('pm-revoke-all-sessions-modal — confirmation dialog', { tags: ['M1.4U
 
     expect(document.activeElement).toBe(trigger);
     document.body.removeChild(trigger);
+  });
+});
+
+describe('pm-revoke-all-sessions-modal — dismissal', { tags: ['390UC5'] }, () => {
+  it('ignores Escape on the host and on the confirmation input', () => {
+    const modal = document.createElement('pm-revoke-all-sessions-modal') as PmRevokeAllSessionsModal;
+    document.body.appendChild(modal);
+    const dispatched: Event[] = [];
+    const original = modal.dispatchEvent.bind(modal);
+    modal.dispatchEvent = (event: Event) => {
+      dispatched.push(event);
+      return original(event);
+    };
+    modal.show();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    input.value = 'REVOKE';
+
+    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(input.value).toBe('REVOKE');
+    expect(dispatched.filter((event) => event.type !== 'keydown')).toEqual([]);
+    document.body.removeChild(modal);
+  });
+});
+
+describe('pm-revoke-all-sessions-modal — destructive template', { tags: ['392UC3'] }, () => {
+  it('shows the delete icon and the cannot-be-undone body, with the phrase only in the field label', () => {
+    const modal = new PmRevokeAllSessionsModal();
+    document.body.appendChild(modal);
+    modal.show();
+    const root = modal.shadowRoot!;
+
+    const icon = root.querySelector('.modal__header .modal__icon')!;
+    expect(icon.textContent).toBe('delete_forever');
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+    expect(root.getElementById('modalTitle')!.textContent).toBe('Revoke All Sessions');
+
+    const body = root.querySelector('.modal__body')!;
+    expect((body.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'This action cannot be undone. Every other session of every user will be ended. Those users must sign in again.',
+    );
+    expect(body.textContent).not.toContain('Type');
+    expect(body.textContent).not.toContain('to confirm');
+    expect(body.textContent).not.toContain('REVOKE ALL');
+
+    const label = root.getElementById('confirmLabel') as HTMLLabelElement;
+    expect(label.textContent).toBe('Type "REVOKE ALL" to confirm');
+    expect(label.htmlFor).toBe('confirmInput');
+
+    const button = root.getElementById('revokeAllBtn')!;
+    expect(button.textContent).toBe('Revoke All');
+    expect(button.classList.contains('modal__btn--destructive')).toBe(true);
+    document.body.removeChild(modal);
+  });
+});
+
+describe('pm-revoke-all-sessions-modal — typed gate', { tags: ['392UC4'] }, () => {
+  it('stays disabled until the exact phrase is typed, then dispatches once', () => {
+    const modal = new PmRevokeAllSessionsModal();
+    document.body.appendChild(modal);
+    const events: Event[] = [];
+    modal.addEventListener('revoke-all-sessions-confirmed', (e) => events.push(e));
+    modal.show();
+    const input = modal.shadowRoot!.getElementById('confirmInput') as HTMLInputElement;
+    const button = modal.shadowRoot!.getElementById('revokeAllBtn') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    for (const value of ['', 'REVOKE', 'revoke all', 'Revoke All', ' REVOKE ALL', 'REVOKE ALL ']) {
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      expect(button.disabled).toBe(true);
+    }
+
+    input.value = 'REVOKE ALL';
+    input.dispatchEvent(new Event('input'));
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(events).toHaveLength(1);
+    document.body.removeChild(modal);
   });
 });

@@ -7,13 +7,6 @@ import type { PmAccountLinkPicker } from './pm-account-link-picker';
 
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
-    /* Neutral tone: linking is a routine action, not a destructive one, so the
-       header carries the accent rather than the danger colour the shared chrome
-       defaults to. */
-    .modal__icon,
-    .modal__title {
-      color: var(--pm-accent);
-    }
     .modal__error {
       margin-top: 12px;
       font-size: 13px;
@@ -28,10 +21,10 @@ const template = document.createElement('template');
 template.innerHTML = `
 
   <div class="modal__backdrop">
-    <div class="modal__card">
+    <div class="modal__card modal__card--medium" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal__header">
-        <span class="modal__icon">link</span>
-        <h2 class="modal__title">Link a login account</h2>
+        <h2 class="modal__title" id="modalTitle">Link Account</h2>
+        <button type="button" class="modal__close" id="closeBtn" aria-label="Close">close</button>
       </div>
       <div class="modal__body">
         <pm-account-link-picker
@@ -43,7 +36,7 @@ template.innerHTML = `
       </div>
       <div class="form-actions" data-testid="form-actions">
         <button class="form-btn form-btn--secondary" id="cancelBtn" type="button">Cancel</button>
-        <button class="form-btn form-btn--primary" id="linkBtn" type="button">Link account</button>
+        <button class="form-btn form-btn--primary" id="linkBtn" type="button">Link Account</button>
       </div>
     </div>
   </div>
@@ -55,6 +48,7 @@ export class PmLinkAccountModal extends HTMLElement {
   private errorEl: HTMLElement | null = null;
   private linkButton: HTMLButtonElement | null = null;
   private cancelButton: HTMLButtonElement | null = null;
+  private closeButton: HTMLButtonElement | null = null;
 
   constructor() {
     super();
@@ -67,13 +61,16 @@ export class PmLinkAccountModal extends HTMLElement {
     this.picker = this.shadowRoot!.getElementById('picker') as unknown as PmAccountLinkPicker;
     this.errorEl = this.shadowRoot!.getElementById('error') as HTMLElement;
     this.cancelButton = this.shadowRoot!.getElementById('cancelBtn') as HTMLButtonElement;
+    this.closeButton = this.shadowRoot!.getElementById('closeBtn') as HTMLButtonElement;
     this.linkButton = this.shadowRoot!.getElementById('linkBtn') as HTMLButtonElement;
     this.cancelButton.addEventListener('click', this.handleCancel);
+    this.closeButton.addEventListener('click', this.handleCancel);
     this.linkButton.addEventListener('click', this.handleLink);
   }
 
   disconnectedCallback(): void {
     this.cancelButton?.removeEventListener('click', this.handleCancel);
+    this.closeButton?.removeEventListener('click', this.handleCancel);
     this.linkButton?.removeEventListener('click', this.handleLink);
   }
 
@@ -97,8 +94,8 @@ export class PmLinkAccountModal extends HTMLElement {
   }
 
   setBusy(busy: boolean): void {
-    if (!this.linkButton || !this.cancelButton) return;
-    setButtonsBusy(this.linkButton, this.cancelButton, busy);
+    if (!this.linkButton || !this.cancelButton || !this.closeButton) return;
+    setButtonsBusy(this.linkButton, [this.cancelButton, this.closeButton], busy);
   }
 
   private handleCancel = (): void => this.close();

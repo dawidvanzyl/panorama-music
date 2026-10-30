@@ -119,6 +119,7 @@ import type { PmStudentWizardModal } from '../../components/pm-student-wizard-mo
 import type { PmDeleteStudentModal } from '../../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal } from '../../components/pm-delete-guardian-modal';
 import type { PmWithdrawEnrollmentModal } from '../../components/pm-withdraw-enrollment-modal';
+import type { PmUnlinkActivityModal } from '../../components/pm-unlink-activity-modal';
 import type { PmGuardianList } from '../../components/pm-guardian-list';
 import type { PmStudentGuardiansSummary } from '../../components/pm-student-guardians-summary';
 import type { PmStudentCoursesSummary } from '../../components/pm-student-courses-summary';
@@ -258,6 +259,14 @@ function guardiansStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
 
 function coursesStepShadowOf(wizard: PmStudentWizardModal): ShadowRoot {
   return wizard.shadowRoot!.getElementById('coursesStep')!.shadowRoot!;
+}
+
+function unlinkActivityModalOf(el: HTMLElement): PmUnlinkActivityModal {
+  return el.shadowRoot!.getElementById('unlinkActivityModal') as unknown as PmUnlinkActivityModal;
+}
+
+function confirmUnlink(el: HTMLElement): void {
+  (unlinkActivityModalOf(el).shadowRoot!.getElementById('unlinkBtn') as HTMLButtonElement).click();
 }
 
 function withdrawEnrollmentModalOf(el: HTMLElement): PmWithdrawEnrollmentModal {
@@ -1438,7 +1447,7 @@ describe(
 
       expect(vi.mocked(createStudent)).not.toHaveBeenCalled();
       expect(wizard.hasAttribute('open')).toBe(true);
-      expect(wizardShadow.getElementById('tabExtraCurriculars')!.getAttribute('aria-selected')).toBe('true');
+      expect(wizardShadow.getElementById('tabExtraCurriculars')!.getAttribute('aria-current')).toBe('step');
       expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
         COURSE_OR_EXTRA_CURRICULAR_TO_SAVE,
       );
@@ -1802,7 +1811,7 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
     expect(extraCurricularRowsOf(wizard).map((row) => row.querySelector('td')!.textContent)).toEqual(['Choir']);
   });
 
-  it('removes straight away, and the activity is offered by the picker again', async () => {
+  it('removes once the unlink is confirmed, and the activity is offered by the picker again', async () => {
     vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir, orchestra]);
     const wizard = wizardModalOf(el);
     wizard.openForEdit(alice);
@@ -1811,6 +1820,7 @@ describe('pm-students-page — edit mode writes an assignment immediately', { ta
 
     vi.mocked(getStudentExtraCurriculars).mockResolvedValue([orchestra]);
     (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+    confirmUnlink(el);
     await flush();
 
     expect(vi.mocked(removeExtraCurricular)).toHaveBeenCalledWith('s1', 'ec1');
@@ -2305,6 +2315,7 @@ describe('pm-students-page — saving once the conflicting activity is removed',
     await flush();
     vi.mocked(getStudentExtraCurriculars).mockResolvedValue([]);
     (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+    confirmUnlink(el);
     await flush();
     (wizardShadow.getElementById('tabStudent') as HTMLButtonElement).click();
     (wizardShadow.getElementById('studentSaveBtn') as HTMLButtonElement).click();
@@ -2499,3 +2510,90 @@ describe(
     );
   },
 );
+
+describe('pm-students-page — unlinking an activity asks first', { tags: ['396UC4', '396UC6', '396UC8'] }, () => {
+  let el: HTMLElement;
+
+  async function openActivities(): Promise<PmStudentWizardModal> {
+    const wizard = wizardModalOf(el);
+    wizard.openForEdit(alice);
+    (wizard.shadowRoot!.getElementById('tabExtraCurriculars') as HTMLButtonElement).click();
+    await flush();
+    return wizard;
+  }
+
+  function pressUnlink(wizard: PmStudentWizardModal): void {
+    (extraCurricularRowsOf(wizard)[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+  }
+
+  beforeEach(async () => {
+    vi.mocked(removeExtraCurricular).mockReset();
+    vi.mocked(removeExtraCurricular).mockResolvedValue(undefined);
+    vi.mocked(getStudentCourses).mockResolvedValue([pianoEnrollment]);
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir, orchestra]);
+    el = await mountPage();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('opens the stacked unlink confirmation and sends nothing while the wizard stays open', async () => {
+    const wizard = await openActivities();
+
+    pressUnlink(wizard);
+    await flush();
+
+    const modal = unlinkActivityModalOf(el);
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.hasAttribute('stacked')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('activityName')!.textContent).toBe('Choir');
+    expect(modal.shadowRoot!.getElementById('studentName')!.textContent).toBe('Alice Vance');
+    expect(wizard.hasAttribute('open')).toBe(true);
+    expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+  });
+
+  it('sends one request on confirm, closes the modal and refreshes the rows', async () => {
+    const wizard = await openActivities();
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([orchestra]);
+
+    pressUnlink(wizard);
+    confirmUnlink(el);
+    await flush();
+
+    expect(vi.mocked(removeExtraCurricular)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(removeExtraCurricular)).toHaveBeenCalledWith('s1', 'ec1');
+    expect(unlinkActivityModalOf(el).hasAttribute('open')).toBe(false);
+    expect(extraCurricularRowsOf(wizard)).toHaveLength(1);
+  });
+
+  it('shows a failure in the modal and keeps it open', async () => {
+    const wizard = await openActivities();
+    vi.mocked(removeExtraCurricular).mockRejectedValue(new Error('boom'));
+
+    pressUnlink(wizard);
+    confirmUnlink(el);
+    await flush();
+
+    const modal = unlinkActivityModalOf(el);
+    expect(modal.hasAttribute('open')).toBe(true);
+    expect(modal.shadowRoot!.getElementById('error')!.textContent).toBe('An unexpected error occurred');
+    expect((modal.shadowRoot!.getElementById('unlinkBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect(extraCurricularRowsOf(wizard)).toHaveLength(2);
+  });
+
+  it('does not open the confirmation for the last activity of a student with no course', async () => {
+    vi.mocked(getStudentCourses).mockResolvedValue([]);
+    vi.mocked(getStudentExtraCurriculars).mockResolvedValue([choir]);
+    const wizard = await openActivities();
+
+    pressUnlink(wizard);
+    await flush();
+
+    expect(unlinkActivityModalOf(el).hasAttribute('open')).toBe(false);
+    expect(vi.mocked(removeExtraCurricular)).not.toHaveBeenCalled();
+    expect((extraCurricularsStepShadowOf(wizard).getElementById('message') as HTMLElement).textContent).toBe(
+      COURSE_OR_EXTRA_CURRICULAR_TO_REMOVE,
+    );
+  });
+});

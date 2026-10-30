@@ -444,9 +444,9 @@ test.describe(
 
       const modal = new DeleteReportModal(page);
       await modal.waitForOpen();
-      await expect(modal.title).toHaveText('Delete report');
+      await expect(modal.title).toHaveText('Delete Report');
       await expect(modal.text).toHaveText(
-        `Are you sure you want to delete the report ${token} Doomed? This cannot be undone.`
+        `This action cannot be undone. The report ${token} Doomed will be permanently removed.`
       );
       await expect(modal.name).toHaveText(`${token} Doomed`);
 

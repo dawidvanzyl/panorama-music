@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { AdminSessionResult } from '../../services/sessions';
-import { revokeAllSessions, SessionError } from '../../services/sessions';
+import { revokeAllSessions, revokeSession, SessionError } from '../../services/sessions';
 
 const mockGetAllSessions = vi.fn();
 vi.mock('../../services/sessions', async () => {
@@ -18,6 +18,8 @@ import '../../components/pm-sessions-table';
 import '../../components/pm-revoke-all-sessions-modal';
 import type { PmSessionsTable } from '../../components/pm-sessions-table';
 import type { PmRevokeAllSessionsModal } from '../../components/pm-revoke-all-sessions-modal';
+import '../../components/pm-revoke-session-modal';
+import type { PmRevokeSessionModal } from '../../components/pm-revoke-session-modal';
 
 const sessions: AdminSessionResult[] = [
   {
@@ -202,5 +204,76 @@ describe('pm-admin-sessions-page — the global revoke button', { tags: ['381UC1
     revokeAllBtn.click();
 
     expect(modal.hasAttribute('open')).toBe(true);
+  });
+});
+
+describe('pm-admin-sessions-page — Revoke Session confirmation', { tags: ['395UC5', '395UC6', '395UC8'] }, () => {
+  let el: HTMLElement;
+
+  const flush = (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0));
+  const modalOf = (): PmRevokeSessionModal =>
+    el.shadowRoot!.getElementById('revokeSessionModal') as unknown as PmRevokeSessionModal;
+  const tableOf = (): PmSessionsTable => el.shadowRoot!.getElementById('sessionsTable') as unknown as PmSessionsTable;
+  const clickRowRevoke = (): void => {
+    const row = tableOf().shadowRoot!.querySelectorAll('tbody tr')[1];
+    (row.querySelector('button') as HTMLButtonElement).click();
+  };
+  const clickIn = (id: string): void => (modalOf().shadowRoot!.getElementById(id) as HTMLButtonElement).click();
+
+  beforeEach(async () => {
+    mockGetAllSessions.mockReset();
+    mockGetAllSessions.mockResolvedValue(sessions);
+    vi.mocked(revokeSession).mockReset();
+    el = document.createElement('pm-admin-sessions-page');
+    document.body.appendChild(el);
+    await flush();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(el);
+  });
+
+  it('opens the confirmation for the clicked row without revoking', () => {
+    clickRowRevoke();
+
+    expect(modalOf().hasAttribute('open')).toBe(true);
+    expect(modalOf().hasAttribute('stacked')).toBe(false);
+    expect(modalOf().shadowRoot!.getElementById('modalDevice')!.textContent).toBe('Firefox');
+    expect(vi.mocked(revokeSession)).not.toHaveBeenCalled();
+  });
+
+  it.each(['cancelBtn', 'closeBtn'])('leaves the rows and the service alone when dismissed with %s', (id) => {
+    clickRowRevoke();
+    clickIn(id);
+
+    expect(modalOf().hasAttribute('open')).toBe(false);
+    expect(tableOf().sessions).toHaveLength(2);
+    expect(vi.mocked(revokeSession)).not.toHaveBeenCalled();
+  });
+
+  it('revokes only the chosen session on confirm, closes the confirmation and drops that row', async () => {
+    vi.mocked(revokeSession).mockResolvedValue(undefined);
+
+    clickRowRevoke();
+    clickIn('revokeBtn');
+    await flush();
+
+    expect(vi.mocked(revokeSession)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(revokeSession)).toHaveBeenCalledWith('s2');
+    expect(modalOf().hasAttribute('open')).toBe(false);
+    expect(tableOf().sessions.map((s) => s.tokenId)).toEqual(['s1']);
+  });
+
+  it('keeps the confirmation open with the message and enabled buttons when the revoke fails', async () => {
+    vi.mocked(revokeSession).mockRejectedValue(new SessionError('Revocation refused', 500));
+
+    clickRowRevoke();
+    clickIn('revokeBtn');
+    await flush();
+
+    expect(modalOf().hasAttribute('open')).toBe(true);
+    expect(modalOf().shadowRoot!.getElementById('error')!.textContent).toBe('Revocation refused');
+    expect((modalOf().shadowRoot!.getElementById('revokeBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect(tableOf().sessions).toHaveLength(2);
   });
 });

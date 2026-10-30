@@ -51,6 +51,7 @@ import '../../features/students/components/pm-extra-curriculars-step';
 import '../../features/reports/components/pm-saved-reports-table';
 import '../../features/reports/components/pm-report-filter-row';
 import '../../features/sessions/components/pm-sessions-table';
+import '../../features/sessions/components/pm-own-sessions-modal';
 import '../../features/teachers/components/pm-teacher-table';
 import '../../features/teachers/components/pm-banking-section';
 import '../../features/teachers/components/pm-teacher-profile-section';
@@ -1101,6 +1102,7 @@ describe('tables and lists adopt the compact stylesheet and label the Actions co
       'pm-banking-section',
       'pm-teacher-profile-section',
       'pm-my-details-modal',
+      'pm-own-sessions-modal',
       'pm-user-created-banner',
       'pm-reinvite-banner',
     ]) {
@@ -1120,6 +1122,7 @@ describe('tables and lists adopt the compact stylesheet and label the Actions co
       ],
       ['pm-waiting-list-table', ['wl-table__btn']],
       ['pm-sessions-table', ['sessions-table__btn', 'sessions-table__actions']],
+      ['pm-own-sessions-modal', ['own-sessions__revoke-all', 'own-sessions__actions']],
       ['pm-teacher-table', ['teacher-table__actions-header']],
       ['pm-relationship-list', ['relationship-list__btn', 'relationship-list__actions']],
       ['pm-guardian-list', ['guardian-list__btn', 'guardian-list__actions']],
