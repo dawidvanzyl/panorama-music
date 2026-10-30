@@ -369,7 +369,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
 
     await findOnRoster(studentsPage, surname);
     await studentsPage.openExtraCurricularsTab(surname);
-    await studentsPage.removeActivity(junior.description);
+    await studentsPage.unlinkActivityAndConfirm(junior.description);
 
     await expect(studentsPage.assignedActivityRow(junior.description)).toHaveCount(0);
     await expect(studentsPage.noActivitiesMessage()).toBeVisible();
@@ -392,7 +392,7 @@ test.describe('Students — the Extra-Curriculars tab behaves for a Private-grad
 
     await findOnRoster(studentsPage, surname);
     await studentsPage.openExtraCurricularsTab(surname);
-    await studentsPage.removeActivity(junior.description);
+    await studentsPage.unlinkActivity(junior.description);
 
     await expect(studentsPage.extraCurricularsStepMessage()).toHaveText(ENROLL_BEFORE_REMOVING);
     expect(deletes).toHaveLength(0);

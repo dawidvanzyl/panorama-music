@@ -277,7 +277,7 @@ test.describe('Students — a refused phase change is saved once the conflict is
     await expectStudentStepRefusal(studentsPage, refusal('Junior', [choir.description], 'Senior'));
 
     await studentsPage.wizardModal.locator('#tabExtraCurriculars').click();
-    await studentsPage.removeActivity(choir.description);
+    await studentsPage.unlinkActivityAndConfirm(choir.description);
     await expect(studentsPage.assignedActivityRow(choir.description)).toHaveCount(0);
 
     await studentsPage.wizardModal.locator('#tabStudent').click();
@@ -345,7 +345,7 @@ test.describe('Students — a refused phase change is saved once the conflict is
     await expectStudentStepRefusal(studentsPage, refusal('Junior', heldOrder, 'Senior'));
 
     await studentsPage.wizardModal.locator('#tabExtraCurriculars').click();
-    await studentsPage.removeActivity(first.description);
+    await studentsPage.unlinkActivityAndConfirm(first.description);
     await expect(studentsPage.assignedActivityRow(first.description)).toHaveCount(0);
     await studentsPage.wizardModal.locator('#tabStudent').click();
     const writes = recordStudentWrites(page);
