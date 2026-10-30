@@ -2,6 +2,7 @@ import '../components/pm-extra-curricular-form';
 import '../components/pm-extra-curricular-filter-bar';
 import '../components/pm-extra-curricular-table';
 import '../components/pm-delete-extra-curricular-modal';
+import '../components/pm-remove-practice-time-modal';
 import { hasAnyRole } from '../../../services/token-storage';
 import {
   ExtraCurricularsError,
@@ -23,6 +24,7 @@ import type { PmExtraCurricularFilterBar } from '../components/pm-extra-curricul
 import type { PmExtraCurricularForm } from '../components/pm-extra-curricular-form';
 import type { PmExtraCurricularTable } from '../components/pm-extra-curricular-table';
 import type { PmDeleteExtraCurricularModal } from '../components/pm-delete-extra-curricular-modal';
+import type { PmRemovePracticeTimeModal } from '../components/pm-remove-practice-time-modal';
 
 /**
  * Who may maintain the catalogue. Admin is deliberately absent: this area is
@@ -71,6 +73,7 @@ template.innerHTML = `
   <pm-extra-curricular-filter-bar id="filterBar"></pm-extra-curricular-filter-bar>
   <pm-extra-curricular-table id="table"></pm-extra-curricular-table>
   <pm-delete-extra-curricular-modal id="deleteModal"></pm-delete-extra-curricular-modal>
+  <pm-remove-practice-time-modal id="removePracticeTimeModal"></pm-remove-practice-time-modal>
 `;
 
 export class PmExtraCurricularsPage extends HTMLElement {
@@ -78,6 +81,7 @@ export class PmExtraCurricularsPage extends HTMLElement {
   private filterBar: PmExtraCurricularFilterBar | null = null;
   private activityTable: PmExtraCurricularTable | null = null;
   private deleteModal: PmDeleteExtraCurricularModal | null = null;
+  private removePracticeTimeModal: PmRemovePracticeTimeModal | null = null;
   private errorBanner: HTMLElement | null = null;
   private filters: ExtraCurricularFilters = {};
   /** The whole catalogue, read once and narrowed in place by the filter bar. */
@@ -95,6 +99,9 @@ export class PmExtraCurricularsPage extends HTMLElement {
     this.filterBar = this.shadowRoot!.getElementById('filterBar') as unknown as PmExtraCurricularFilterBar;
     this.activityTable = this.shadowRoot!.getElementById('table') as unknown as PmExtraCurricularTable;
     this.deleteModal = this.shadowRoot!.getElementById('deleteModal') as unknown as PmDeleteExtraCurricularModal;
+    this.removePracticeTimeModal = this.shadowRoot!.getElementById(
+      'removePracticeTimeModal',
+    ) as unknown as PmRemovePracticeTimeModal;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
 
     // A Teacher who is not a Coordinator gets a read-only page: the filter bar
@@ -107,6 +114,10 @@ export class PmExtraCurricularsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('extra-curricular-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.addEventListener('extra-curricular-filter-changed', this.handleFilterChanged);
     this.shadowRoot!.addEventListener('extra-curricular-practice-time-add-requested', this.handlePracticeTimeAdd);
+    this.shadowRoot!.addEventListener(
+      'extra-curricular-practice-time-remove-clicked',
+      this.handlePracticeTimeRemoveClicked,
+    );
     this.shadowRoot!.addEventListener('extra-curricular-practice-time-remove-requested', this.handlePracticeTimeRemove);
     this.shadowRoot!.addEventListener('extra-curricular-save-requested', this.handleSaveRequested);
     this.shadowRoot!.addEventListener('extra-curricular-delete-clicked', this.handleDeleteClicked);
@@ -119,6 +130,10 @@ export class PmExtraCurricularsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener('extra-curricular-form-submitted', this.handleFormSubmitted);
     this.shadowRoot!.removeEventListener('extra-curricular-filter-changed', this.handleFilterChanged);
     this.shadowRoot!.removeEventListener('extra-curricular-practice-time-add-requested', this.handlePracticeTimeAdd);
+    this.shadowRoot!.removeEventListener(
+      'extra-curricular-practice-time-remove-clicked',
+      this.handlePracticeTimeRemoveClicked,
+    );
     this.shadowRoot!.removeEventListener(
       'extra-curricular-practice-time-remove-requested',
       this.handlePracticeTimeRemove,
@@ -238,15 +253,30 @@ export class PmExtraCurricularsPage extends HTMLElement {
     }
   };
 
+  private handlePracticeTimeRemoveClicked = (event: Event): void => {
+    const { extraCurricularId, practiceTimeId, practiceTime, description } = (
+      event as CustomEvent<{
+        extraCurricularId: string;
+        practiceTimeId: string;
+        practiceTime: string;
+        description: string;
+      }>
+    ).detail;
+    this.removePracticeTimeModal!.show(extraCurricularId, practiceTimeId, practiceTime, description);
+  };
+
   private handlePracticeTimeRemove = async (event: Event): Promise<void> => {
     const detail = (event as CustomEvent<{ extraCurricularId: string; practiceTimeId: string }>).detail;
 
     try {
       await removePracticeTime(detail.extraCurricularId, detail.practiceTimeId);
-      await this.loadExtraCurriculars();
     } catch (err) {
-      this.activityTable!.showPanelError(this.messageFor(err));
+      this.removePracticeTimeModal!.setBusy(false);
+      this.removePracticeTimeModal!.showError(this.messageFor(err));
+      return;
     }
+    this.removePracticeTimeModal!.close();
+    await this.loadExtraCurriculars();
   };
 
   private handleFilterChanged = (event: Event): void => {

@@ -4,6 +4,7 @@ import '../components/pm-student-wizard-modal';
 import '../components/pm-delete-student-modal';
 import '../components/pm-delete-guardian-modal';
 import '../components/pm-withdraw-enrollment-modal';
+import '../components/pm-unlink-activity-modal';
 import '../components/pm-student-print-record';
 import {
   getStudents,
@@ -66,6 +67,7 @@ import type { PmStudentWizardModal } from '../components/pm-student-wizard-modal
 import type { PmDeleteStudentModal } from '../components/pm-delete-student-modal';
 import type { PmDeleteGuardianModal, GuardianDeleteScope } from '../components/pm-delete-guardian-modal';
 import type { PmWithdrawEnrollmentModal } from '../components/pm-withdraw-enrollment-modal';
+import type { PmUnlinkActivityModal } from '../components/pm-unlink-activity-modal';
 import type { PmStudentPrintRecord } from '../components/pm-student-print-record';
 import type { StudentRecordSource } from '../components/student-record';
 
@@ -130,6 +132,7 @@ template.innerHTML = `
   <pm-delete-student-modal id="deleteModal"></pm-delete-student-modal>
   <pm-delete-guardian-modal id="deleteGuardianModal" stacked></pm-delete-guardian-modal>
   <pm-withdraw-enrollment-modal id="withdrawEnrollmentModal" stacked></pm-withdraw-enrollment-modal>
+  <pm-unlink-activity-modal id="unlinkActivityModal" stacked></pm-unlink-activity-modal>
   <pm-student-print-record id="printRecord"></pm-student-print-record>
 `;
 
@@ -139,6 +142,7 @@ export class PmStudentsPage extends HTMLElement {
   private deleteModal: PmDeleteStudentModal | null = null;
   private deleteGuardianModal: PmDeleteGuardianModal | null = null;
   private withdrawEnrollmentModal: PmWithdrawEnrollmentModal | null = null;
+  private unlinkActivityModal: PmUnlinkActivityModal | null = null;
   private printRecord: PmStudentPrintRecord | null = null;
   private _expandReads = new Map<string, number>();
   private _expandReadCounter = 0;
@@ -173,6 +177,7 @@ export class PmStudentsPage extends HTMLElement {
     this.withdrawEnrollmentModal = this.shadowRoot!.getElementById(
       'withdrawEnrollmentModal',
     ) as unknown as PmWithdrawEnrollmentModal;
+    this.unlinkActivityModal = this.shadowRoot!.getElementById('unlinkActivityModal') as unknown as PmUnlinkActivityModal;
     this.printRecord = this.shadowRoot!.getElementById('printRecord') as unknown as PmStudentPrintRecord;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
@@ -205,6 +210,7 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.addEventListener('extra-curriculars-tab-activated', this.handleExtraCurricularsTabActivated);
     this.shadowRoot!.addEventListener('extra-curriculars-assignable-requested', this.handleAssignableRequested);
     this.shadowRoot!.addEventListener('extra-curricular-assign-requested', this.handleExtraCurricularAssignRequested);
+    this.shadowRoot!.addEventListener('extra-curricular-unlink-clicked', this.handleExtraCurricularUnlinkClicked);
     this.shadowRoot!.addEventListener('extra-curricular-remove-requested', this.handleExtraCurricularRemoveRequested);
 
     clearStudentsCache();
@@ -247,6 +253,10 @@ export class PmStudentsPage extends HTMLElement {
     this.shadowRoot!.removeEventListener(
       'extra-curricular-assign-requested',
       this.handleExtraCurricularAssignRequested,
+    );
+    this.shadowRoot!.removeEventListener(
+      'extra-curricular-unlink-clicked',
+      this.handleExtraCurricularUnlinkClicked,
     );
     this.shadowRoot!.removeEventListener(
       'extra-curricular-remove-requested',
@@ -752,10 +762,27 @@ export class PmStudentsPage extends HTMLElement {
       .detail;
     try {
       await removeExtraCurricular(studentId, extraCurricularId);
-      await this.refreshWizardExtraCurriculars(studentId);
     } catch (err) {
-      this.wizardModal!.showExtraCurricularsError(this.extraCurricularMessage(err));
+      this.unlinkActivityModal!.setBusy(false);
+      this.unlinkActivityModal!.showError(this.extraCurricularMessage(err));
+      return;
     }
+    this.unlinkActivityModal!.close();
+    await this.refreshWizardExtraCurriculars(studentId);
+  };
+
+  private handleExtraCurricularUnlinkClicked = (event: Event): void => {
+    const { studentId, extraCurricularId, description } = (
+      event as CustomEvent<{ studentId: string; extraCurricularId: string; description: string }>
+    ).detail;
+    const student = this._allStudents.find((s) => s.studentId === studentId);
+
+    this.unlinkActivityModal!.show(
+      studentId,
+      extraCurricularId,
+      description,
+      student ? `${student.firstName} ${student.lastName}` : 'This student',
+    );
   };
 
   private refreshWizardExtraCurriculars = async (studentId: string): Promise<void> => {
