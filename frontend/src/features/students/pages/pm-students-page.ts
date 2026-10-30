@@ -177,7 +177,9 @@ export class PmStudentsPage extends HTMLElement {
     this.withdrawEnrollmentModal = this.shadowRoot!.getElementById(
       'withdrawEnrollmentModal',
     ) as unknown as PmWithdrawEnrollmentModal;
-    this.unlinkActivityModal = this.shadowRoot!.getElementById('unlinkActivityModal') as unknown as PmUnlinkActivityModal;
+    this.unlinkActivityModal = this.shadowRoot!.getElementById(
+      'unlinkActivityModal',
+    ) as unknown as PmUnlinkActivityModal;
     this.printRecord = this.shadowRoot!.getElementById('printRecord') as unknown as PmStudentPrintRecord;
     this.createBtn = this.shadowRoot!.getElementById('createBtn') as HTMLButtonElement;
     this.errorBanner = this.shadowRoot!.getElementById('error') as HTMLElement;
@@ -254,10 +256,7 @@ export class PmStudentsPage extends HTMLElement {
       'extra-curricular-assign-requested',
       this.handleExtraCurricularAssignRequested,
     );
-    this.shadowRoot!.removeEventListener(
-      'extra-curricular-unlink-clicked',
-      this.handleExtraCurricularUnlinkClicked,
-    );
+    this.shadowRoot!.removeEventListener('extra-curricular-unlink-clicked', this.handleExtraCurricularUnlinkClicked);
     this.shadowRoot!.removeEventListener(
       'extra-curricular-remove-requested',
       this.handleExtraCurricularRemoveRequested,

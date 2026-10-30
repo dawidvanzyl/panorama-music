@@ -103,10 +103,10 @@ describe('pm-extra-curriculars-step — assigned rows', { tags: ['277UC13'] }, (
     step.assigned = [choir, orchestra];
   });
 
-  it('shows the activity, its phase, its practice-time slots and a Remove control per row', () => {
+  it('shows the activity, its phase, its practice-time slots and an Unlink control per row', () => {
     expect(rows().map(cellsOf)).toEqual([
-      ['Choir', 'Junior', 'Tuesday 14:30 · Thursday 15:30', 'Remove'],
-      ['String Orchestra', 'Junior', 'Monday 14:30', 'Remove'],
+      ['Choir', 'Junior', 'Tuesday 14:30 · Thursday 15:30', 'Unlink'],
+      ['String Orchestra', 'Junior', 'Monday 14:30', 'Unlink'],
     ]);
   });
 
@@ -316,16 +316,23 @@ describe('pm-extra-curriculars-step — removing an assignment', { tags: ['277UC
     expect(pickerOptions()).toEqual(['Choir (Junior)', 'Junior Drumline (Junior)']);
   });
 
-  it('asks the page to remove a persisted assignment rather than dropping it in memory', () => {
+  it('asks the page to confirm unlinking a persisted assignment rather than dropping it in memory', () => {
     step.activate('s1', 'Junior');
     step.assigned = [choir, orchestra];
     const requests: CustomEvent[] = [];
-    step.addEventListener('extra-curricular-remove-requested', (event) => requests.push(event as CustomEvent));
+    step.addEventListener('extra-curricular-unlink-clicked', (event) => requests.push(event as CustomEvent));
+    const removals: CustomEvent[] = [];
+    step.addEventListener('extra-curricular-remove-requested', (event) => removals.push(event as CustomEvent));
 
     (rows()[1].querySelector('.ec-step__remove') as HTMLButtonElement).click();
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].detail).toEqual({ studentId: 's1', extraCurricularId: orchestra.extraCurricularId });
+    expect(requests[0].detail).toEqual({
+      studentId: 's1',
+      extraCurricularId: orchestra.extraCurricularId,
+      description: 'String Orchestra',
+    });
+    expect(removals).toHaveLength(0);
     // Nothing is dropped locally — the table is refreshed from the server once
     // the removal actually lands.
     expect(rows()).toHaveLength(2);
@@ -357,5 +364,40 @@ describe('pm-extra-curriculars-step — create mode stages, edit mode does not',
 
     expect(requests).toHaveLength(1);
     expect(requests[0].detail).toEqual({ studentId: 's1', extraCurricularId: 'ec1' });
+  });
+});
+
+describe('pm-extra-curriculars-step — the row action by mode', { tags: ['396UC4', '396UC8'] }, () => {
+  it('reads Unlink in the default compact variant when the student is saved', () => {
+    step.activate('s1', 'Junior');
+    step.assigned = [choir, orchestra];
+
+    const button = rows()[0].querySelector('.ec-step__remove') as HTMLButtonElement;
+
+    expect(button.textContent).toBe('Unlink');
+    expect(button.classList.contains('compact-btn')).toBe(true);
+    expect(button.classList.contains('compact-btn--destructive')).toBe(false);
+  });
+
+  it('still reads Remove in the destructive variant for a staged activity', () => {
+    step.activateForCreate('Junior');
+    assign([choir, orchestra], choir.extraCurricularId);
+
+    const button = rows()[0].querySelector('.ec-step__remove') as HTMLButtonElement;
+
+    expect(button.textContent).toBe('Remove');
+    expect(button.classList.contains('compact-btn--destructive')).toBe(true);
+  });
+
+  it('emits no unlink request for the last activity of a student with no course', () => {
+    step.activate('s1', 'Junior');
+    step.assigned = [choir];
+    const requests: CustomEvent[] = [];
+    step.addEventListener('extra-curricular-unlink-clicked', (event) => requests.push(event as CustomEvent));
+
+    (rows()[0].querySelector('.ec-step__remove') as HTMLButtonElement).click();
+
+    expect(requests).toHaveLength(0);
+    expect(rows()).toHaveLength(1);
   });
 });
