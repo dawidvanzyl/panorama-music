@@ -1,0 +1,67 @@
+# Production stack: PostgreSQL + the API (which serves the built frontend).
+#
+# Run it with its own env file, kept separate from the dev/qa `.env`:
+#   cp .env.prod.example .env.prod
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# The API listens on plain HTTP and is published on loopback only. Put exactly
+# one reverse proxy in front of it to terminate HTTPS. The API trusts one
+# forwarded hop (X-Forwarded-For / X-Forwarded-Proto); published directly to
+# the internet, clients could forge their IP address.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-panorama_music}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: panorama-music-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:3000
+      # The application connects as the restricted panorama_app role; migrations
+      # run over the privileged connection, which also provisions that role.
+      ConnectionStrings__DefaultConnection: >-
+        Host=db;Port=5432;Database=${POSTGRES_DB:-panorama_music};Username=panorama_app;Password=${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env.prod}
+      ConnectionStrings__Migrations: >-
+        Host=db;Port=5432;Database=${POSTGRES_DB:-panorama_music};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      JWT__Secret: ${JWT__Secret:?Set JWT__Secret in .env.prod}
+      JWT__Issuer: ${JWT__Issuer:-panorama-music-api}
+      JWT__Audience: ${JWT__Audience:-panorama-music-client}
+      JWT__AbsoluteSessionLifetimeDays: ${JWT__AbsoluteSessionLifetimeDays:-30}
+      Admin__Email: ${Admin__Email:?Set Admin__Email in .env.prod}
+      Admin__Password: ${Admin__Password:?Set Admin__Password in .env.prod}
+      AppBaseUrl: ${AppBaseUrl:?Set AppBaseUrl in .env.prod}
+      Email__Provider: Smtp
+      Email__From: ${Email__From:?Set Email__From in .env.prod}
+      Email__ReplyTo: ${Email__ReplyTo:-${Email__From}}
+      Email__FromDisplayName: ${Email__FromDisplayName:-Panorama Music}
+      Smtp__Host: ${Smtp__Host:?Set Smtp__Host in .env.prod}
+      Smtp__Port: ${Smtp__Port:-25}
+      DataProtection__KeyProtection: Certificate
+      DataProtection__CertificateBase64: ${DataProtection__CertificateBase64:?Set DataProtection__CertificateBase64 in .env.prod}
+      DataProtection__CertificatePassword: ${DataProtection__CertificatePassword:?Set DataProtection__CertificatePassword in .env.prod}
+      DataProtection__ApplicationName: ${DataProtection__ApplicationName:-PanoramaMusic}
+      Serilog__MinimumLevel__Default: ${Serilog__MinimumLevel__Default:-Information}
+    ports:
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
