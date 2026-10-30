@@ -16,6 +16,8 @@ import '../../features/reports/components/pm-delete-report-modal';
 import '../../features/sessions/components/pm-revoke-all-sessions-modal';
 import '../../features/sessions/components/pm-revoke-session-modal';
 import '../../features/sessions/components/pm-revoke-other-sessions-modal';
+import '../../features/extra-curriculars/components/pm-remove-practice-time-modal';
+import '../../features/students/components/pm-unlink-activity-modal';
 
 interface ConfirmationModal extends HTMLElement {
   setBusy(busy: boolean): void;
@@ -158,6 +160,33 @@ const cases: Case[] = [
     confirmId: 'revokeOthersBtn',
     event: 'own-sessions-revoke-all-requested',
     show: (m) => (m as unknown as { show(): void }).show(),
+  },
+  {
+    tag: 'pm-remove-practice-time-modal',
+    label: 'Remove',
+    confirmId: 'removeBtn',
+    event: 'extra-curricular-practice-time-remove-requested',
+    show: (m) =>
+      (m as unknown as { show(a: string, b: string, c: string, d: string): void }).show(
+        'ec1',
+        'pt1',
+        'Monday 08:00',
+        'Choir',
+      ),
+  },
+  {
+    tag: 'pm-unlink-activity-modal',
+    label: 'Unlink',
+    confirmId: 'unlinkBtn',
+    event: 'extra-curricular-remove-requested',
+    show: (m) =>
+      (m as unknown as { show(a: string, b: string, c: string, d: string): void }).show(
+        's1',
+        'ec1',
+        'Choir',
+        'Ayesha Khan',
+      ),
+    variant: 'primary',
   },
 ];
 

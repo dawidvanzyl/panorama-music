@@ -281,7 +281,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
       remove.type = 'button';
       remove.classList.add('compact-btn', 'compact-btn--destructive', 'ec-panel__remove');
       remove.textContent = 'Remove';
-      remove.addEventListener('click', () => this.handleRemove(slot.practiceTimeId));
+      remove.addEventListener('click', () => this.handleRemove(slot));
 
       actions.appendChild(remove);
       actionsCell.appendChild(actions);
@@ -322,7 +322,7 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
     );
   };
 
-  private handleRemove(practiceTimeId: string): void {
+  private handleRemove(slot: { practiceTimeId: string; day: DayType; startTime: string }): void {
     // An activity must keep at least one practice time, so the last one is
     // refused without a request. Remove is still offered on it — the refusal is
     // what states the rule.
@@ -333,10 +333,15 @@ export class PmExtraCurricularPracticeTimes extends HTMLElement {
 
     this.clearError();
     this.dispatchEvent(
-      new CustomEvent('extra-curricular-practice-time-remove-requested', {
+      new CustomEvent('extra-curricular-practice-time-remove-clicked', {
         bubbles: true,
         composed: true,
-        detail: { extraCurricularId: this._extraCurricular!.extraCurricularId, practiceTimeId },
+        detail: {
+          extraCurricularId: this._extraCurricular!.extraCurricularId,
+          practiceTimeId: slot.practiceTimeId,
+          practiceTime: `${DAY_LABELS[slot.day]} ${startTimeText(slot.startTime)}`,
+          description: this._extraCurricular!.description,
+        },
       }),
     );
   }

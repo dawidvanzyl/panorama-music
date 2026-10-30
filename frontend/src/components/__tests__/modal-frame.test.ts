@@ -22,6 +22,8 @@ import '../../features/reports/components/pm-save-report-modal';
 import '../../features/sessions/components/pm-revoke-all-sessions-modal';
 import '../../features/sessions/components/pm-revoke-session-modal';
 import '../../features/sessions/components/pm-revoke-other-sessions-modal';
+import '../../features/extra-curriculars/components/pm-remove-practice-time-modal';
+import '../../features/students/components/pm-unlink-activity-modal';
 import '../../features/sessions/components/pm-own-sessions-modal';
 
 type Opener = (modal: HTMLElement) => void;
@@ -147,6 +149,18 @@ const cases: FrameCase[] = [
     hasBusyState: true,
   },
   { tag: 'pm-revoke-other-sessions-modal', open: (m) => call(m, 'show'), hasCancel: true, hasBusyState: true },
+  {
+    tag: 'pm-remove-practice-time-modal',
+    open: (m) => call(m, 'show', 'ec1', 'pt1', 'Monday 08:00', 'Choir'),
+    hasCancel: true,
+    hasBusyState: true,
+  },
+  {
+    tag: 'pm-unlink-activity-modal',
+    open: (m) => call(m, 'show', 's1', 'ec1', 'Choir', 'Ayesha Khan'),
+    hasCancel: true,
+    hasBusyState: true,
+  },
   { tag: 'pm-student-wizard-modal', open: (m) => call(m, 'openForCreate', []), hasCancel: true, hasBusyState: false },
   {
     tag: 'pm-enrol-waiting-list-student-modal',

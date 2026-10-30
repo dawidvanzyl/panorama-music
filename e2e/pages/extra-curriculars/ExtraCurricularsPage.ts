@@ -1,4 +1,4 @@
-import { type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { BasePage } from '../BasePage';
 
 export type Phase = 'Junior' | 'Senior';
@@ -27,9 +27,11 @@ export class ExtraCurricularsPage extends BasePage {
   readonly filterBar: Locator;
   readonly activityTable: Locator;
   readonly deleteModal: Locator;
+  readonly removePracticeTimeModal: Locator;
 
   constructor(page: Page) {
     super(page);
+    this.removePracticeTimeModal = page.locator('#removePracticeTimeModal');
     this.activityForm = page.locator('#form');
     this.filterBar = page.locator('#filterBar');
     this.activityTable = page.locator('#table');
@@ -243,6 +245,17 @@ export class ExtraCurricularsPage extends BasePage {
   async removeSlotFromPanel(activityId: string, slot: PracticeSlot): Promise<void> {
     const practiceTimeId = await this.panelSlotId(activityId, slot);
     await this.panelSlotRow(activityId, practiceTimeId).getByRole('button', { name: 'Remove' }).click();
+  }
+
+  /** Presses Remove on the slot, then Remove in the confirmation, and waits for it to close. */
+  async removeSlotFromPanelAndConfirm(activityId: string, slot: PracticeSlot): Promise<void> {
+    await this.removeSlotFromPanel(activityId, slot);
+    await this.confirmRemovePracticeTime();
+  }
+
+  async confirmRemovePracticeTime(): Promise<void> {
+    await this.removePracticeTimeModal.getByRole('button', { name: 'Remove', exact: true }).click();
+    await expect(this.removePracticeTimeModal.locator('.modal__card')).toBeHidden();
   }
 
   // --- the row's Edit and Delete controls (#278) -----------------------------
