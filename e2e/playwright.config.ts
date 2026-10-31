@@ -10,6 +10,8 @@ if (existsSync(repoEnvPath)) {
   process.loadEnvFile(repoEnvPath);
 }
 
+const GLOBAL_REVOKE_SPEC = '**/revoke-all-sessions.spec.ts';
+
 export default defineConfig({
   testDir: './features',
   fullyParallel: true,
@@ -28,7 +30,8 @@ export default defineConfig({
       // The empty-state Waiting List spec needs the whole WaitingList table
       // clean at read time (see that file's own comment), so it runs in its
       // own project instead — excluded here to avoid running it twice.
-      testIgnore: '**/waiting-list-empty-state.spec.ts',
+      testIgnore: ['**/waiting-list-empty-state.spec.ts', GLOBAL_REVOKE_SPEC],
+      teardown: 'global-revoke',
     },
     {
       name: 'waiting-list-empty-state',
@@ -45,6 +48,18 @@ export default defineConfig({
       // Running the whole suite in one shot (no --grep) can still interleave
       // the two projects' workers; running each IT code through its own
       // `--grep` invocation, as the QA process does, does not.
+      fullyParallel: false,
+      teardown: 'global-revoke',
+    },
+    {
+      // "Revoke All" ends every session in the system, including the ones
+      // other specs are signed in with. It runs as the teardown of the other
+      // projects, so it starts only after they finish and still runs when
+      // some of their tests fail. A single-code `--grep` run filters it like
+      // any other project, so it costs nothing there.
+      name: 'global-revoke',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: GLOBAL_REVOKE_SPEC,
       fullyParallel: false,
     },
   ],
