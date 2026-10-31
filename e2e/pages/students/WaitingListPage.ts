@@ -451,7 +451,13 @@ export class WaitingListPage extends BasePage {
    * `addSibling` does.
    */
   async addSibling(siblingName: string): Promise<void> {
-    await this.searchSiblingCandidates(siblingName);
+    // The candidate list loads after the tab opens, and its arrival clears the
+    // search box. A query typed before that is lost, so type it again until the
+    // result shows.
+    await expect(async () => {
+      await this.searchSiblingCandidates(siblingName);
+      await expect(this.siblingCandidateResult(siblingName)).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
     await this.siblingCandidateResult(siblingName).click();
     await this.siblingsSearchSelect().locator('#addBtn').click();
     await expect(this.siblingListRow(siblingName)).toBeVisible();

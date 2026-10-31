@@ -21,8 +21,17 @@ export class AdminSessionsPage extends BasePage {
     this.revokeAllModalConfirmButton = page.locator('#revokeAllModal').locator('#revokeAllBtn');
   }
 
+  /**
+   * Opens the page and waits for the session list to arrive. The table fills
+   * only after that request, so a row count read earlier sees zero rows.
+   */
   async gotoAdminSessions(): Promise<void> {
+    const loaded = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/auth/admin/sessions',
+    );
     await this.goto('/#/admin/sessions');
+    await loaded;
   }
 
   rowByEmail(email: string): Locator {

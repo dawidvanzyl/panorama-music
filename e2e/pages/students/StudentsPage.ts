@@ -374,8 +374,15 @@ export class StudentsPage extends BasePage {
 
   async addSibling(siblingName: string): Promise<void> {
     const searchSelect = this.wizardModal.locator('#siblingsStep').locator('#searchSelect');
-    await searchSelect.locator('#query').fill(siblingName);
-    await searchSelect.locator('#results').getByRole('button', { name: siblingName }).click();
+    const result = searchSelect.locator('#results').getByRole('button', { name: siblingName });
+    // The candidate list loads after the tab opens, and its arrival clears the
+    // search box. A query typed before that is lost, so type it again until the
+    // result shows.
+    await expect(async () => {
+      await searchSelect.locator('#query').fill(siblingName);
+      await expect(result).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await result.click();
     await searchSelect.locator('#addBtn').click();
     // Wait for the add round trip (candidates refresh clears/re-renders #results) to settle
     // before a caller starts the next add — otherwise a rapid second fill/click can race the
@@ -765,8 +772,11 @@ export class StudentsPage extends BasePage {
   async openAddActivityPanel(): Promise<void> {
     await expect(this.extraCurricularsStep().locator('#panel')).toBeHidden();
     await this.extraCurricularsStep().locator('#addBtn').click();
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- no DOM signal exists for "the CSS transition has finished"; see the doc comment above.
-    await this.page.waitForTimeout(300);
+    // The browser reports a running CSS transition through getAnimations(), so
+    // this waits for the real end of the transition rather than a fixed time.
+    await this.extraCurricularsStep()
+      .locator('#panel')
+      .evaluate((panel) => Promise.all(panel.getAnimations({ subtree: true }).map((animation) => animation.finished)));
   }
 
   async cancelAddActivityPanel(): Promise<void> {

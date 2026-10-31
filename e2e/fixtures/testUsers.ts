@@ -45,6 +45,32 @@ export async function getAdminAccessToken(page: Page): Promise<string> {
   return accessToken;
 }
 
+const TOKEN_SAFETY_MARGIN_MS = 60_000;
+
+let sharedAdminToken: { value: string; expiresAt: number } | undefined;
+
+/**
+ * An Admin token that every user seeded by this worker shares. Each sign-in
+ * hashes a password and adds a session row, and seeding signs the Admin in once
+ * per user, so one token per worker saves hundreds of sign-ins per run. The
+ * token is renewed shortly before it expires, and on demand when the API
+ * refuses it.
+ */
+async function sharedAdminAccessToken(page: Page, renew = false): Promise<string> {
+  if (!renew && sharedAdminToken && sharedAdminToken.expiresAt - TOKEN_SAFETY_MARGIN_MS > Date.now()) {
+    return sharedAdminToken.value;
+  }
+  const response = await page.request.post('/api/auth/login', {
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  const { accessToken, accessTokenExpiresAt } = (await response.json()) as {
+    accessToken: string;
+    accessTokenExpiresAt: string;
+  };
+  sharedAdminToken = { value: accessToken, expiresAt: Date.parse(accessTokenExpiresAt) };
+  return accessToken;
+}
+
 export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
   await loginAsAdmin(page);
 
@@ -60,13 +86,21 @@ export async function goToAdminUsersPage(page: Page): Promise<AdminUsersPage> {
  * the role that actually maintains it — so every navigation helper below
  * signs in as a purpose-built account instead of the seeded Admin.
  */
-export async function loginAsRoles(page: Page, roles: UserRole[]): Promise<string> {
+export async function loginAsRoles(
+  page: Page,
+  roles: UserRole[],
+  { land = true }: { land?: boolean } = {}
+): Promise<string> {
   const email = uniqueTestEmail(roles.join('-').toLowerCase());
   const password = 'RolesPass123!';
   await createRegisteredUser(page, email, password, roles);
   await signInThroughApi(page, email, password);
-  await page.goto('/#/');
-  await expect(page).toHaveURL(landingUrl(...roles));
+  // A caller that opens its own page next passes `land: false`: the landing
+  // page it would wait for here is a page load that caller throws away.
+  if (land) {
+    await page.goto('/#/');
+    await expect(page).toHaveURL(landingUrl(...roles));
+  }
   return email;
 }
 
@@ -98,17 +132,15 @@ async function signInThroughApi(page: Page, email: string, password: string): Pr
  * A student must hold at least one course or one extra-curricular, so a course
  * and a teacher are seeded before the screen is opened — the enroll form reads both once on
  * mount and holds them for the session. Student Management is this account's
- * own landing page (Teacher is topmost among its roles), so signing in has
- * already mounted it before the seed call below runs; a same-hash `goto` to a
- * path the browser is already on is a no-op, not a remount, so the reload is
- * what actually makes the enroll form's lookups see the just-seeded data.
+ * own landing page (Teacher is topmost among its roles), so it must not be
+ * mounted before the seed call below runs. Signing in without landing, then
+ * opening the screen once, gives the first mount the just-seeded data.
  * Seeding a teacher and a course needs Coordinator alongside the Teacher role
  * this screen itself requires, so the signed-in account holds both.
  */
 export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
-  await loginAsRoles(page, ['Teacher', 'Coordinator']);
+  await loginAsRoles(page, ['Teacher', 'Coordinator'], { land: false });
   await seedEnrollmentTarget(page);
-  await page.reload();
 
   const studentsPage = new StudentsPage(page);
   await studentsPage.gotoStudents();
@@ -118,7 +150,7 @@ export async function goToStudentsPage(page: Page): Promise<StudentsPage> {
 export async function goToGuardianRelationshipsPage(
   page: Page
 ): Promise<GuardianRelationshipsPage> {
-  await loginAsRoles(page, ['Coordinator']);
+  await loginAsRoles(page, ['Coordinator'], { land: false });
 
   const guardianRelationshipsPage = new GuardianRelationshipsPage(page);
   await guardianRelationshipsPage.gotoGuardianRelationships();
@@ -126,7 +158,7 @@ export async function goToGuardianRelationshipsPage(
 }
 
 export async function goToCourseManagementPage(page: Page): Promise<CourseManagementPage> {
-  await loginAsRoles(page, ['Coordinator']);
+  await loginAsRoles(page, ['Coordinator'], { land: false });
 
   const courseManagementPage = new CourseManagementPage(page);
   await courseManagementPage.gotoCourses();
@@ -140,7 +172,7 @@ export async function goToCourseManagementPage(page: Page): Promise<CourseManage
 export async function goToExtraCurricularsPageAsCoordinator(
   page: Page
 ): Promise<ExtraCurricularsPage> {
-  await loginAsRoles(page, ['Coordinator']);
+  await loginAsRoles(page, ['Coordinator'], { land: false });
 
   const extraCurricularsPage = new ExtraCurricularsPage(page);
   await extraCurricularsPage.gotoExtraCurriculars();
@@ -149,7 +181,7 @@ export async function goToExtraCurricularsPageAsCoordinator(
 
 /** Signs in holding exactly these roles and opens Waiting List — Teacher and Coordinator both read it. */
 export async function goToWaitingListPage(page: Page, roles: UserRole[]): Promise<WaitingListPage> {
-  await loginAsRoles(page, roles);
+  await loginAsRoles(page, roles, { land: false });
 
   const waitingListPage = new WaitingListPage(page);
   await waitingListPage.gotoWaitingList();
@@ -165,7 +197,7 @@ export async function goToReportsPage(
   page: Page,
   roles: UserRole[] = ['Teacher']
 ): Promise<ReportsPage & { email: string }> {
-  const email = await loginAsRoles(page, roles);
+  const email = await loginAsRoles(page, roles, { land: false });
 
   const reportsPage = new ReportsPage(page);
   await reportsPage.gotoReports();
@@ -173,7 +205,7 @@ export async function goToReportsPage(
 }
 
 export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
-  await loginAsRoles(page, ['Coordinator']);
+  await loginAsRoles(page, ['Coordinator'], { land: false });
 
   const teachersPage = new TeachersPage(page);
   await teachersPage.gotoTeachers();
@@ -181,7 +213,7 @@ export async function goToTeachersPage(page: Page): Promise<TeachersPage> {
 }
 
 export async function goToTeachersPageAsBankingCoordinator(page: Page): Promise<TeachersPage> {
-  await loginAsRoles(page, ['BankingCoordinator']);
+  await loginAsRoles(page, ['BankingCoordinator'], { land: false });
 
   const teachersPage = new TeachersPage(page);
   await teachersPage.gotoTeachers();
@@ -215,11 +247,13 @@ export async function createRegisteredUser(
   password: string,
   roles: UserRole[] = ['Teacher']
 ): Promise<void> {
-  const accessToken = await getAdminAccessToken(page);
-  const created = await page.request.post('/api/users', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    data: { email, roles },
-  });
+  const createUser = async (renew: boolean) =>
+    page.request.post('/api/users', {
+      headers: { Authorization: `Bearer ${await sharedAdminAccessToken(page, renew)}` },
+      data: { email, roles },
+    });
+  let created = await createUser(false);
+  if (created.status() === 401) created = await createUser(true);
   expect(created.status()).toBe(201);
   const { inviteUrl } = (await created.json()) as { inviteUrl: string };
 
