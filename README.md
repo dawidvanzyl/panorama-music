@@ -22,10 +22,11 @@ cp .env.prod.example .env.prod
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
-Each setting is explained in [`.env.prod.example`](.env.prod.example). The API listens on `127.0.0.1:3000` and trusts one forwarded hop, so run exactly one reverse proxy in front of it.
+Each setting is explained in [`.env.prod.example`](.env.prod.example). The [wiki](https://github.com/dawidvanzyl/panorama-music/wiki) has the full guide. The API listens on `127.0.0.1:3000` and trusts one forwarded hop, so run exactly one reverse proxy in front of it.
 
 ## Documentation
 
+- [Wiki](https://github.com/dawidvanzyl/panorama-music/wiki) — the self-hosting guide: configuration, reverse proxy, backups and security
 - [CONTRIBUTING.md](CONTRIBUTING.md) — local development, CI and end-to-end tests
 - [docs/hosting.md](docs/hosting.md) — how the maintainer's own instance is deployed
 - [docs/](docs/) — coding, design and security standards
